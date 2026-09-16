@@ -70,8 +70,8 @@ Four drawing rules are applied across every plan; keep new parts consistent with
 
 ## HUD
 
-`src/ui/hud.ts` is all DOM over the canvas — bars, mutation marks, draft cards, tier
-cards, pause sheet, death and win screens — and `ui/icons.ts` is the stroke-glyph set.
-Nothing in the HUD is drawn on the canvas, and nothing in the game reads the DOM. The
-one coupling is `hud.gateLabel(text, screenY, screenH)`, which `main.render` feeds a
+`src/ui/` is all DOM over the canvas — `UI.ts` is the game-facing facade, `hud/`
+holds the in-play chrome, `screens/` the overlays, and `icons.ts` the stroke-glyph
+set. Nothing in the HUD is drawn on the canvas, and nothing in the game reads the DOM.
+The one coupling is `ui.gateLabel(text, screenY, screenH)`, which `main.render` feeds a
 screen position computed from the seal's world depth.

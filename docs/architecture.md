@@ -17,7 +17,7 @@ main.ts (Game: loop, camera, input, run state)
 ├── game/fx.ts        pooled hit particles and rings
 ├── game/tiers.ts     the five depth tiers, their size gates, the descent limit
 ├── game/traits.ts    the mutation pool and the rarity-weighted draft
-└── ui/hud.ts         all DOM — bars, cards, screens, toasts (ui/icons.ts for glyphs)
+└── ui/               DOM UI — UI.ts facade, hud/*, screens/*, icons.ts
 ```
 
 `game/scenery.ts` and `game/silhouettes.ts` exist but are **parked** — nothing imports

@@ -9,7 +9,7 @@ import { descentLimit, nextGate, TIERS, tierAt } from './game/tiers';
 import { draftTraits, type Trait } from './game/traits';
 import { clamp, dist2, hsl, lerp, Rng } from './game/util';
 import { Creature, DEPTH_MAX, World } from './game/world';
-import { Hud } from './ui/hud';
+import { UI } from './ui/UI';
 
 const POP_SHALLOW = 105;
 const POP_DEEP = 46;
@@ -24,7 +24,7 @@ type Phase = 'title' | 'play' | 'draft' | 'paused' | 'over';
 
 class Game {
   private app = new Application();
-  private hud = new Hud();
+  private ui = new UI();
   private camera = new Container();
   private fx = new Fx();
   /** The membrane of awareness around your own body, so you never lose yourself. */
@@ -61,8 +61,6 @@ class Game {
   private zoom = 1;
   private camX = 0;
   private camY = 0;
-  private pauseNode: HTMLElement | null = null;
-
   async boot() {
     await this.app.init({
       // one GLSL program for the water, so pin the renderer to WebGL
@@ -75,7 +73,7 @@ class Game {
     this.reset();
     this.bindInput();
     this.app.ticker.add(t => this.frame(Math.min(t.deltaMS / 1000, 1 / 20)));
-    this.hud.title(() => { this.phase = 'play'; });
+    this.ui.showTitle(() => { this.phase = 'play'; });
   }
 
   private reset() {
@@ -134,7 +132,7 @@ class Game {
   private togglePause() {
     if (this.phase === 'play') {
       this.phase = 'paused';
-      this.pauseNode = this.hud.paused({
+      this.ui.showPause({
         genome: this.player.genome,
         traits: this.takenNames,
         stage: this.stage,
@@ -144,7 +142,7 @@ class Game {
         elapsed: this.elapsed,
       });
     }
-    else { this.phase = 'play'; this.pauseNode?.remove(); this.hud.clear(); }
+    else { this.phase = 'play'; this.ui.hideOverlay(); }
   }
 
   private get W() { return this.app.screen.width; }
@@ -281,7 +279,7 @@ class Game {
       this.player.hp = Math.min(this.player.hpMax, this.player.hp + back);
       this.fx.ring(this.player.x, this.player.y, 0x8ef0b4, this.player.radius * 2.4);
       this.fx.burst(this.player.x, this.player.y, 0x8ef0b4, 12, 90, this.player.radius * 0.2);
-      this.hud.toast(`Stinging cells digested — +${back} health`);
+      this.ui.toast(`Stinging cells digested — +${back} health`);
     }
     if (this.world.leviathanKilled) { this.finish(true); return; }
     if (this.xp >= this.xpNeed) this.levelUp();
@@ -296,13 +294,13 @@ class Game {
     const open = TIERS.filter(t => p.genome.size >= t.gate).length;
     if (open > this.gatesOpen) {
       this.gatesOpen = open;
-      if (open > 1) this.hud.toast(`The thermocline parts — ${TIERS[open - 1].name} is open`);
+      if (open > 1) this.ui.toast(`The thermocline parts — ${TIERS[open - 1].name} is open`);
     }
 
     if (this.world.blocked && this.hintCd <= 0) {
       this.hintCd = 2.6;
       const gate = nextGate(p.genome.size);
-      if (gate) this.hud.toast(`Too small — ${gate.tier.gate} cm to enter ${gate.tier.name}`);
+      if (gate) this.ui.toast(`Too small — ${gate.tier.gate} cm to enter ${gate.tier.name}`);
       this.fx.burst(p.x, p.y + p.radius, 0xcfe4ff, 8, 60, 2.2);
     }
 
@@ -311,7 +309,7 @@ class Game {
       this.maxTier = tier;
       this.phase = 'draft';
       this.fx.ring(p.x, p.y, 0xcfe4ff, p.radius * 4);
-      this.hud.tierCard(tier, () => this.offerDraft(`${TIERS[tier].name} — thermocline reward`));
+      this.ui.showTier(tier, () => this.offerDraft(`${TIERS[tier].name} — thermocline reward`));
     }
   }
 
@@ -341,7 +339,7 @@ class Game {
     const reach = Math.max(this.stage, this.maxTier * 2 + 1);
     const offer = draftTraits(this.rng, reach, this.taken, 3);
     this.phase = 'draft';
-    this.hud.draft(heading, offer, t => this.applyTrait(t));
+    this.ui.showMutation(heading, offer, t => this.applyTrait(t));
   }
 
   private applyTrait(t: Trait) {
@@ -355,7 +353,7 @@ class Game {
     this.player.view.rebuild(this.player.genome);
     this.player.hpMax = maxHp(this.player.genome);
     this.player.hp = this.player.hpMax;
-    this.hud.toast(`${t.name} acquired`);
+    this.ui.toast(`${t.name} acquired`);
     this.fx.ring(this.player.x, this.player.y, 0xfff0b0, this.player.radius * 4);
     this.phase = 'play';
   }
@@ -373,8 +371,8 @@ class Game {
       `${Math.floor(this.elapsed / 60)}m ${Math.floor(this.elapsed % 60)}s survived`,
     ];
     const restart = () => { this.reset(); this.phase = 'play'; };
-    if (won) this.hud.win(stats, restart);
-    else this.hud.death(this.food <= 0 ? 'You starved' : 'Something bigger found you', stats, restart);
+    if (won) this.ui.showWin(stats, restart);
+    else this.ui.showDeath(this.food <= 0 ? 'You starved' : 'Something bigger found you', stats, restart);
   }
 
   private render(dt: number) {
@@ -454,7 +452,7 @@ class Game {
 
     // the requirement floats on the barrier itself while it is sealed and in frame
     const gateScreenY = (gateTier.top - this.camY) * this.zoom + this.H / 2;
-    this.hud.gateLabel(
+    this.ui.gateLabel(
       !gateOpen && this.phase !== 'over' ? `${gateTier.gate} cm to enter ${gateTier.name}` : null,
       // sit just above the shear line: the seal itself is the brightest thing on screen
       gateScreenY - 34, this.H);
@@ -466,7 +464,7 @@ class Game {
       this.world.spawnAround(p.x, p.y, this.viewR(), pop, this.maxTier >= TIERS.length - 1);
     }
 
-    this.hud.update({
+    this.ui.update({
       hp: Math.max(0, p.hp), hpMax: p.hpMax,
       food: this.food, foodMax: FOOD_MAX,
       xp: this.xp, xpNeed: this.xpNeed,

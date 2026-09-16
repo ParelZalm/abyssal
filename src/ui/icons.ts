@@ -32,9 +32,19 @@ export const ICONS: Record<IconName, string> = {
   funnel: 'M3 5h18l-7 8v7l-4-2v-5z',
 };
 
-/** Inline SVG markup for an icon, sized in px. Rarity is carried by colour, not by style. */
-export function iconSvg(name: IconName, size = 18) {
-  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none"
-    stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-    stroke-linejoin="round"><path d="${ICONS[name]}"/></svg>`;
+/** DOM SVG for an icon, sized in px. Rarity is carried by colour, not by style. */
+export function createIcon(name: IconName, size = 18): SVGSVGElement {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', String(size));
+  svg.setAttribute('height', String(size));
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.8');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', ICONS[name]);
+  svg.append(path);
+  return svg;
 }

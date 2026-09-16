@@ -169,7 +169,7 @@ undone. [`CLAUDE.md`](CLAUDE.md) is the short version, aimed at agents.
 | `src/game/fx.ts` | Pooled particles — sprites for dots, Graphics only for rings. |
 | `src/game/textures.ts` | The two shared canvas textures everything batches against. |
 | `src/main.ts` | Loop, camera, input, progression, run state. |
-| `src/ui/hud.ts` | HUD, draft cards, title/death/win screens. |
+| `src/ui/UI.ts` | DOM UI facade — HUD chrome + overlay screens. |
 | `src/ui/icons.ts` | The abstract glyph set mutations are shown by. |
 
 ## Look
