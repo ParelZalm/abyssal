@@ -3,18 +3,17 @@
 Read this before rebuilding anything here. Most of it is failure, which is the useful
 part.
 
-## Parked: the parallax background (`scenery.ts`, `silhouettes.ts`)
+## Parallax background (`scenery.ts`, `props.ts`)
 
-Nothing imports either file. The wiring was two lines in `Game.reset()` and
-`Game.render()`.
+Third try. The placement machinery (bands at 0.3 / 0.58 / 1.35, `1/zoom` sizing, depth
+contrast flip, hashed cells, lissajous wander) survived the first two passes; the art
+did not. Hand-drawn props and blurred body-plan silhouettes both read as mush at
+background scale. The current props are purpose-drawn soft primitives — discs, blobs,
+masses, wisps — with blur baked into the texture at boot. Cues from *Pathogenic*'s
+chamber backgrounds (soft bokeh cells, amorphous distant masses with a faint rim);
+corridor walls were ignored on purpose.
 
-**What works and is worth keeping.** Three parallax bands at 0.3, 0.58 and 1.35 of
-camera motion; hashed per-cell placement so a shape is in the same place every time you
-pass it; pooled sprites recycled by a mark-and-sweep over visible cells; per-kind
-orientation rules; a slow lissajous wander (not a velocity — a shape that genuinely
-drifted would leave the cell it is keyed to and vanish mid-screen when that cell exits).
-
-Two findings in there are load-bearing for any retry:
+Two findings that remain load-bearing:
 
 - **Bands must hold their apparent size**, scaling by `1/zoom`. The camera pulls back
   fourfold over a run, so world-sized props fill the screen at hatchling zoom and are
@@ -24,11 +23,8 @@ Two findings in there are load-bearing for any retry:
   invisible at 8000 m; below the twilight the shapes have to emit the biome's own
   colour, and the band switches to additive blending.
 
-**What failed, twice.** First with hand-drawn props (kelp, coral, spires, whale falls,
-vents, driftwood, a whale); then with heavily blurred silhouettes extracted from the
-real body plans. Both read as mush at background scale — the detail was either invisible
-or wrong, and it did not look like the rest of the game. The conclusion was that the
-problem is the art, not the system. Revisit with proper sprites.
+The old silhouette extractor lived in `silhouettes.ts` and is gone — the extraction
+trick (render a plan, keep alpha as white, blur) is no longer used.
 
 ## Things that were tried and rejected inside the shader
 

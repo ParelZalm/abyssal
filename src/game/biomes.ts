@@ -1,4 +1,4 @@
-import type { Plan } from './fishview';
+import type { PropKind } from './props';
 import { TIERS, tierAt } from './tiers';
 import { clamp, lerp } from './util';
 
@@ -41,11 +41,11 @@ export interface Biome {
   };
   /** What drifts past in the background here, and how much of it. */
   scenery: {
-    /** Body plans, weighted by how often they appear in the list. */
-    kinds: Plan[];
+    /** Prop kinds, weighted by how often they appear in the list. */
+    kinds: PropKind[];
     /** Chance that any one placement cell holds a shape, 0..1. */
     density: number;
-    /** World size of the long side, before the plan's and the band's own scaling. */
+    /** World size of the long side, before the kind's and the band's own scaling. */
     scale: [number, number];
   };
 }
@@ -58,7 +58,8 @@ export const BIOMES: Biome[] = [
     turbid: 0.34, cloudScale: 1.7, cloudEdge: 0.35, rays: 1.5, shimmer: 0.9,
     accent: [0.72, 1.0, 0.86], ambient: 0.1,
     mote: { tint: 0xdcfff0, fall: -26, current: 6, sway: 9, size: 1, alpha: 1.15, twinkle: 0.55 },
-    scenery: { kinds: ['microbe', 'darter', 'darter', 'darter', 'jelly'],
+    // busy field of soft discs — the shallow column is full of small life
+    scenery: { kinds: ['disc', 'disc', 'disc', 'blob', 'wisp'],
       density: 0.5, scale: [120, 280] },
   },
   // Reef Shelf — thick, warm, sediment-heavy water pushed sideways by a steady current.
@@ -67,7 +68,7 @@ export const BIOMES: Biome[] = [
     turbid: 0.62, cloudScale: 0.85, cloudEdge: 0.8, rays: 0.7, shimmer: 0.35,
     accent: [0.86, 0.92, 0.6], ambient: 0.1,
     mote: { tint: 0xe4dcae, fall: 5, current: 34, sway: 5, size: 1.5, alpha: 0.95, twinkle: 0.12 },
-    scenery: { kinds: ['darter', 'darter', 'squid', 'shark', 'eel'],
+    scenery: { kinds: ['blob', 'blob', 'mass', 'disc', 'wisp'],
       density: 0.5, scale: [135, 310] },
   },
   // Twilight Zone — thin, cold, empty water. Almost no cloud, no rays worth the name,
@@ -76,7 +77,7 @@ export const BIOMES: Biome[] = [
     turbid: 0.3, cloudScale: 0.55, cloudEdge: 0.2, rays: 0.28, shimmer: 0.18,
     accent: [0.5, 0.78, 1.0], ambient: 0.1,
     mote: { tint: 0xcfe0ea, fall: 20, current: -4, sway: 3, size: 1.2, alpha: 0.7, twinkle: 0.08 },
-    scenery: { kinds: ['eel', 'squid', 'shark', 'jelly', 'darter'],
+    scenery: { kinds: ['disc', 'wisp', 'wisp', 'blob', 'disc'],
       density: 0.38, scale: [150, 345] },
   },
   // Midnight Zone — black, still, and the only light is alive. Nearly no cloud at all;
@@ -85,7 +86,7 @@ export const BIOMES: Biome[] = [
     turbid: 0.14, cloudScale: 0.4, cloudEdge: 0.12, rays: 0.0, shimmer: 0.85,
     accent: [0.24, 0.9, 0.98], ambient: 0.1,
     mote: { tint: 0x7fe6ff, fall: 6, current: 2, sway: 2, size: 2.1, alpha: 1.6, twinkle: 1 },
-    scenery: { kinds: ['angler', 'eel', 'jelly', 'squid'],
+    scenery: { kinds: ['disc', 'disc', 'wisp', 'blob'],
       density: 0.36, scale: [160, 370] },
   },
   // The Abyss — hot vents below. Slow enormous masses, a red-violet cast, and embers
@@ -94,7 +95,7 @@ export const BIOMES: Biome[] = [
     turbid: 0.5, cloudScale: 0.3, cloudEdge: 0.5, rays: 0.0, shimmer: 1.2,
     accent: [1.0, 0.42, 0.3], ambient: 0.24,
     mote: { tint: 0xff9c63, fall: -34, current: 3, sway: 7, size: 1.8, alpha: 1.7, twinkle: 0.8 },
-    scenery: { kinds: ['leviathan', 'angler', 'eel', 'jelly'],
+    scenery: { kinds: ['mass', 'mass', 'blob', 'disc'],
       density: 0.34, scale: [175, 410] },
   },
 ];

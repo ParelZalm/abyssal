@@ -3,6 +3,7 @@ import './style.css';
 import { baseGenome, maxHp, type Genome } from './game/genome';
 import { Fx } from './game/fx';
 import { Ocean } from './game/ocean';
+import { Scenery } from './game/scenery';
 import { lightAt, Water } from './game/water';
 import type { Species } from './game/species';
 import { descentLimit, nextGate, TIERS, tierAt } from './game/tiers';
@@ -31,6 +32,7 @@ class Game {
   private focus = new Graphics();
   private rng!: Rng;
   private ocean!: Ocean;
+  private scenery!: Scenery;
   private water = new Water();
   private world!: World;
   private player!: Creature;
@@ -82,6 +84,7 @@ class Game {
 
     this.rng = new Rng((Math.random() * 2 ** 32) >>> 0);
     this.ocean = new Ocean(this.rng);
+    this.scenery = new Scenery();
 
     const g: Genome = baseGenome();
     g.hue = this.rng.range(18, 48);
@@ -95,7 +98,10 @@ class Game {
     this.focus.clear()
       .circle(0, 0, 100).stroke({ color: 0xdffdf2, width: 4.5, alpha: 0.5 })
       .circle(0, 0, 94).stroke({ color: 0xdffdf2, width: 12, alpha: 0.07 });
-    this.camera.addChild(this.ocean.world, this.focus, this.world.layer, this.fx.layer);
+    this.camera.addChild(
+      this.scenery.back, this.ocean.world, this.focus,
+      this.world.layer, this.fx.layer, this.scenery.front,
+    );
     this.app.stage.addChild(this.water.layer, this.camera);
     this.camX = this.player.x;
     this.camY = this.player.y;
@@ -403,6 +409,7 @@ class Game {
     this.water.resize(this.W, this.H);
     const viewW = this.W / this.zoom, viewH = this.H / this.zoom;
     this.ocean.update(dt, this.camX, this.camY, viewW, viewH, this.elapsed);
+    this.scenery.update(this.camX, this.camY, viewW, viewH, this.elapsed, this.zoom);
 
     // Visibility: the deeper you are, the more you rely on sense and their glow.
     const light = lightAt(p.y);

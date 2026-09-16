@@ -1,28 +1,14 @@
 /**
- * PARKED — not wired into the game. `main.ts` no longer builds a Scenery.
- *
- * The parallax machinery here works (bands, zoom-stable sizing, depth contrast,
- * hashed placement, orientation rules); what it had to draw did not. Both the
- * hand-drawn props and the blurred body-plan silhouettes that replaced them read as
- * mush at background scale. Revisit with proper sprites: re-add the two lines in
- * `reset()` and `render()` and point `Biome.scenery.kinds` at whatever they are.
+ * Parallax background — soft organic props drifting on bands behind and in front of
+ * the action. The placement machinery is the survivor of two art passes; the props
+ * themselves are the third try. See `docs/decisions.md`.
  */
-import { Container, Sprite, type Renderer } from 'pixi.js';
+import { Container, Sprite } from 'pixi.js';
 import { tierBiome } from './biomes';
-import type { Plan } from './fishview';
-import { drifts, PLAN_SIZE, silhouette } from './silhouettes';
+import { drifts, PROP_SIZE, propTexture, type PropKind } from './props';
 import { clamp, lerp, TAU } from './util';
 import { lightAt, waterColor } from './water';
 
-/**
- * Blurred creature silhouettes, drifting on parallax bands behind and in front of the
- * action.
- *
- * Two things come out of this. Depth: the far band slides at a fraction of the camera,
- * so the water reads as a volume you are inside rather than a flat plane. And place:
- * which body plans drift past is chosen by the tier they are in, so the shapes in the
- * haze are darters and jellies up top and anglers and a leviathan at the bottom.
- */
 interface Band {
   /** Camera follow factor: below 1 sits behind you, above 1 passes in front. */
   parallax: number;
@@ -41,12 +27,14 @@ interface Band {
 }
 
 const BANDS: Band[] = [
-  { parallax: 0.3, cell: 440, scale: 1, dark: 0.26, lit: 0.72, alpha: 0.85, sway: 0.05, blur: 2 },
-  { parallax: 0.58, cell: 390, scale: 0.68, dark: 0.2, lit: 0.6, alpha: 0.8, sway: 0.08, blur: 1 },
+  // dark is lower than the old silhouette pass — soft props need more contrast against
+  // the water shader's own clouds or they vanish into the same haze
+  { parallax: 0.3, cell: 440, scale: 1, dark: 0.14, lit: 0.95, alpha: 0.9, sway: 0.05, blur: 2 },
+  { parallax: 0.58, cell: 390, scale: 0.68, dark: 0.12, lit: 0.8, alpha: 0.85, sway: 0.08, blur: 1 },
   // the foreground stays a silhouette at every depth: in black water it simply
   // disappears, which is what a shape between you and nothing should do. It is blurred
   // as hard as the far band — it is out of focus in the other direction.
-  { parallax: 1.35, cell: 950, scale: 1.25, dark: 0.1, lit: 0.14, alpha: 0.75, sway: 0.12, blur: 2 },
+  { parallax: 1.35, cell: 950, scale: 1.25, dark: 0.08, lit: 0.18, alpha: 0.7, sway: 0.12, blur: 2 },
 ];
 
 /** Stable per-cell noise, so a landmark is in the same place every time you pass it. */
@@ -61,7 +49,7 @@ interface Placed {
   /** Where the shape sits before it wanders, in band-local coordinates. */
   homeX: number; homeY: number;
   base: number; phase: number;
-  /** Turn rate for tumbling plans; 0 for anything with a forward axis. */
+  /** Turn rate for tumbling props; 0 for anything with a forward axis. */
   spin: number;
   /** How far this one drifts from home, in band-local units. */
   wander: number;
@@ -92,7 +80,7 @@ class BandLayer {
   private live = new Map<string, Placed>();
   private free: Sprite[] = [];
 
-  constructor(private band: Band, private renderer: Renderer) {}
+  constructor(private band: Band) {}
 
   update(camX: number, camY: number, viewW: number, viewH: number, t: number, zoom: number) {
     const b = this.band;
@@ -144,27 +132,26 @@ class BandLayer {
   }
 
   private place(key: string, gx: number, gy: number, depth: number,
-                s: { kinds: Plan[]; scale: [number, number] }) {
+                s: { kinds: PropKind[]; scale: [number, number] }) {
     const b = this.band;
-    const plan = s.kinds[Math.floor(hash2(gx, gy, 2) * s.kinds.length)];
-    const tex = silhouette(this.renderer, plan, b.blur);
+    const kind = s.kinds[Math.floor(hash2(gx, gy, 2) * s.kinds.length)];
+    const tex = propTexture(kind, b.blur);
     const sprite = this.free.pop() ?? new Sprite();
     sprite.texture = tex;
     sprite.anchor.set(0.5);
     const span = s.scale[0] + hash2(gx, gy, 3) * (s.scale[1] - s.scale[0]);
-    const long = span * b.scale * PLAN_SIZE[plan];
+    const long = span * b.scale * PROP_SIZE[kind];
     const k = long / Math.max(tex.width, tex.height);
 
     const roll = hash2(gx, gy, 6);
     let base: number, spin = 0;
-    if (drifts(plan) === 'tumble') {
+    if (drifts(kind) === 'tumble') {
       base = roll * TAU;
       spin = (hash2(gx, gy, 9) - 0.5) * 0.06;
     } else {
       base = (roll - 0.5) * 0.34;
     }
-    // mirroring is the only flip a swimmer gets: it varies a field of one plan without
-    // ever turning an animal upside down
+    // mirroring varies a field of one kind without ever flipping a filament upside down
     sprite.scale.set(hash2(gx, gy, 8) < 0.5 ? -k : k, k);
     sprite.rotation = base;
 
@@ -196,8 +183,8 @@ export class Scenery {
   front = new Container();
   private layers: BandLayer[];
 
-  constructor(renderer: Renderer) {
-    this.layers = BANDS.map(b => new BandLayer(b, renderer));
+  constructor() {
+    this.layers = BANDS.map(b => new BandLayer(b));
     this.back.addChild(this.layers[0].root, this.layers[1].root);
     this.front.addChild(this.layers[2].root);
   }

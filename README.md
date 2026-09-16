@@ -162,8 +162,8 @@ undone. [`CLAUDE.md`](CLAUDE.md) is the short version, aimed at agents.
 | `src/game/fishview.ts` | Eight top-down body plans, drawn from the genome and animated by transform. |
 | `src/game/world.ts` | Simulation — steering, perception, schooling, contacts, biting. |
 | `src/game/biomes.ts` | Per-tier visual identity: cloud, light and what drifts in the water. |
-| `src/game/scenery.ts` | Parallax background bands. Parked — see the note in the file. |
-| `src/game/silhouettes.ts` | Body plans rendered to blurred silhouettes. Parked with the above. |
+| `src/game/scenery.ts` | Parallax soft props behind and in front of the creatures. |
+| `src/game/props.ts` | Disc / blob / mass / wisp textures for the scenery bands. |
 | `src/game/water.ts` | The GLSL water: fog, thermoclines and the tier below, as one full-screen filter. |
 | `src/game/ocean.ts` | Suspended particulate drifting past the camera. |
 | `src/game/fx.ts` | Pooled particles — sprites for dots, Graphics only for rings. |

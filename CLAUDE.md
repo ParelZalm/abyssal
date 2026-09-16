@@ -79,5 +79,3 @@ Read `docs/decisions.md` before rebuilding anything that looks missing.
 - Comment the *why*, especially the constraint that made a value what it is. The
   existing comments carry the reasoning for the drag ratio, the octave counts and the
   shader's failure modes; match that, and do not narrate what the code already says.
-- `game/scenery.ts` and `game/silhouettes.ts` are **parked** and intentionally
-  unreferenced. Leave them unwired unless the task is to bring them back.

@@ -14,14 +14,17 @@ main.ts (Game: loop, camera, input, run state)
 ├── game/water.ts     full-screen GLSL pass; also owns the depth→colour palette
 │   └── game/biomes.ts    per-tier look, blended by depth, feeding water + ocean
 ├── game/ocean.ts     suspended particulate
+├── game/scenery.ts   parallax soft props (bands behind + in front of creatures)
+│   └── game/props.ts     disc / blob / mass / wisp textures, blur baked at boot
 ├── game/fx.ts        pooled hit particles and rings
 ├── game/tiers.ts     the five depth tiers, their size gates, the descent limit
 ├── game/traits.ts    the mutation pool and the rarity-weighted draft
 └── ui/               DOM UI — UI.ts facade, hud/*, screens/*, icons.ts
 ```
 
-`game/scenery.ts` and `game/silhouettes.ts` exist but are **parked** — nothing imports
-them. See [decisions.md](decisions.md).
+`game/scenery.ts` draws soft organic props on parallax bands. See
+[decisions.md](decisions.md) for why the art is primitives rather than creature
+silhouettes.
 
 ## Dependency direction
 
@@ -64,10 +67,12 @@ app.stage
 ├── water.layer    a screen-sized Sprite with the GLSL filter — shaded from world
 │                  coordinates passed in as uniforms, so it never moves or scales
 └── camera         a Container, scaled by zoom and translated by the camera position
+    ├── scenery.back   far parallax props
     ├── ocean.world
     ├── focus      the ring drawn around the player
     ├── world.layer  every creature's FishView
-    └── fx.layer
+    ├── fx.layer
+    └── scenery.front  near parallax props (out of focus the other way)
 ```
 
 Because the water is a filter over a static sprite rather than a child of the camera,
