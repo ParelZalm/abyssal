@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite } from 'pixi.js';
+import { AlphaFilter, Container, Graphics, Sprite } from 'pixi.js';
 import { menace, type Genome } from './genome';
 import { glowTexture } from './textures';
 import { hsl, lerp, TAU } from './util';
@@ -8,7 +8,8 @@ const R = 10;
 
 /** Silhouettes, seen from directly above. A species picks one. */
 export type Plan =
-  | 'microbe' | 'darter' | 'shark' | 'eel' | 'jelly' | 'squid' | 'angler' | 'leviathan';
+  | 'microbe' | 'darter' | 'shark' | 'eel' | 'jelly' | 'squid' | 'angler' | 'leviathan'
+  | 'wraith';
 
 interface Motion {
   /** Links in the tail chain; 0 for things that do not swim with a tail. */
@@ -20,6 +21,12 @@ interface Motion {
   /** Bell/mantle contraction, for jellies and squid. */
   pulse: number;
   finFlap: number;
+  /**
+   * Give every link the same share of the sway instead of weighting it toward the tip.
+   * Link rotations compound down the chain, so past two links a rising weight whips the
+   * tip out to an angle the body never reaches. Only long, smooth tails want this.
+   */
+  evenSway?: boolean;
 }
 
 const MOTION: Record<Plan, Motion> = {
@@ -31,6 +38,7 @@ const MOTION: Record<Plan, Motion> = {
   squid:     { links: 3, amp: 0.4,  lag: 1.2,  pulse: 0.22, finFlap: 0.25 },
   angler:    { links: 2, amp: 0.34, lag: 0.9,  pulse: 0,    finFlap: 0.3 },
   leviathan: { links: 4, amp: 0.3,  lag: 0.75, pulse: 0,    finFlap: 0.2 },
+  wraith:    { links: 5, amp: 0.17, lag: 0.5,  pulse: 0,    finFlap: 0.3, evenSway: true },
 };
 
 /**
@@ -42,6 +50,14 @@ export class FishView extends Container {
   private halo = new Sprite(glowTexture());
   /** A bruised red bloom that grows as the animal becomes something to run from. */
   private aura = new Sprite(glowTexture());
+  /**
+   * Every solid part of the animal, so a plan that wants to be see-through can fade the
+   * lot in one pass. The bioluminescence sprites stay outside it: they blend additively
+   * against the water, and inside a filter they would composite against an empty texture
+   * instead and lose the glow.
+   */
+  private form = new Container();
+  private fade = new AlphaFilter();
   private membrane = new Graphics();
   private chain: Graphics[] = [];
   private finL = new Graphics();
@@ -60,14 +76,15 @@ export class FishView extends Container {
     this.halo.blendMode = 'add';
     this.aura.anchor.set(0.5);
     this.aura.blendMode = 'add';
-    this.addChild(this.aura, this.halo, this.membrane, this.finL, this.finR, this.body);
+    this.addChild(this.aura, this.halo, this.form);
+    this.form.addChild(this.membrane, this.finL, this.finR, this.body);
     this.rebuild(g);
   }
 
   private resetChain(n: number) {
     for (const link of this.chain) link.destroy();
     this.chain = [];
-    let parent: Container = this;
+    let parent: Container = this.form;
     for (let i = 0; i < n; i++) {
       const link = new Graphics();
       parent.addChild(link);
@@ -75,7 +92,7 @@ export class FishView extends Container {
       parent = link;
     }
     // the chain sits behind the head
-    if (this.chain.length) this.setChildIndex(this.chain[0], 2);
+    if (this.chain.length) this.form.setChildIndex(this.chain[0], 0);
   }
 
   rebuild(g: Genome) {
@@ -89,7 +106,15 @@ export class FishView extends Container {
                        0.55 + men * 0.3, 0.55);
     const dark = hsl(g.hue, 0.5, 0.1);
     this.rim = hsl(g.accentHue + 6, 0.72, 0.7 - men * 0.06);
-    const alpha = 0.94 - Math.min(0.6, g.translucent * 0.62);
+    // The wraith is drawn solid and faded whole by `this.fade`. Drawing its parts
+    // translucent instead composites every overlap twice, and the joints, fin roots and
+    // tail all outline themselves — it stops reading as one animal.
+    const ghost = this.plan === 'wraith';
+    const alpha = ghost ? 1 : 0.94 - Math.min(0.6, g.translucent * 0.62);
+    this.form.filters = ghost ? [this.fade] : [];
+    // 0.7 is the floor at which your own body still reads against sunlit water at
+    // hatchling size; below that the focus ring is doing all the work.
+    if (ghost) this.fade.alpha = 0.7 - Math.min(0.3, g.translucent * 0.4);
 
     this.resetChain(m.links);
     this.body.clear();
@@ -105,6 +130,7 @@ export class FishView extends Container {
       case 'shark': this.drawShark(skin, inner, accent, dark, alpha); break;
       case 'angler': this.drawAngler(skin, inner, accent, dark, alpha); break;
       case 'leviathan': this.drawLeviathan(skin, inner, accent, dark, alpha); break;
+      case 'wraith': this.drawWraith(accent, dark); break;
       default: this.drawDarter(skin, inner, accent, dark, alpha); break;
     }
 
@@ -221,13 +247,13 @@ export class FishView extends Container {
   /** Roughly where each plan's nose sits, as a fraction of R. */
   private static readonly NOSE: Record<Plan, number> = {
     microbe: 0.85, darter: 1.15, shark: 1.32, eel: 1.0,
-    jelly: 0.95, squid: 0.95, angler: 0.95, leviathan: 1.35,
+    jelly: 0.95, squid: 0.95, angler: 0.95, leviathan: 1.35, wraith: 1.15,
   };
 
   /** Roughly where each plan's flank sits, as a fraction of R. */
   private static readonly FLANK: Record<Plan, number> = {
     microbe: 0.66, darter: 0.78, shark: 0.6, eel: 0.42,
-    jelly: 0.9, squid: 0.62, angler: 0.86, leviathan: 0.84,
+    jelly: 0.9, squid: 0.62, angler: 0.86, leviathan: 0.84, wraith: 0.78,
   };
 
   /**
@@ -243,7 +269,8 @@ export class FishView extends Container {
       this.aura.tint = hsl(lerp(24, 2, men), 0.85, 0.4);
       this.aura.alpha = (men - 0.25) * 0.3;
     }
-    const bladed: Plan[] = ['darter', 'shark', 'eel', 'angler', 'leviathan', 'squid'];
+    const bladed: Plan[] = ['darter', 'shark', 'eel', 'angler', 'leviathan', 'squid',
+                            'wraith'];
     if (!bladed.includes(this.plan)) return;
     const n = Math.min(7, Math.round(men * 4 + spikes * 1.4));
     if (n < 1) return;
@@ -666,6 +693,140 @@ export class FishView extends Container {
     if (this.chain.length) this.chain[0].x = tailBase;
   }
 
+  /**
+   * The player. A body of smoke with a hard spine, ribs and one opaque gut read through
+   * it, trailing filaments off the fins, and a long veiled tail. Every part is opaque
+   * here — `this.fade` is what makes it see-through, in one pass over the whole form.
+   */
+  private drawWraith(accent: number, dark: number) {
+    const g = this.g;
+    const L = R * 2.3;
+    const W = R * (0.86 - Math.min(0.2, g.segments * 0.04));
+    const nose = L * 0.5;
+    const tailBase = -L * 0.4;
+    const flesh = hsl(g.hue + 210, 0.26, 0.3);
+    // the gut turns from bruise to wound as the animal becomes something to run from
+    const organ = hsl(lerp(280, 340, this.menace), 0.55, 0.28 - this.menace * 0.08);
+    const lit = hsl(lerp(160, 96, this.menace), 0.8, 0.6);
+    this.rim = hsl(200, 0.4, 0.75);
+
+    const outline = (gr: Graphics, s: number) => {
+      gr.moveTo(nose * s, 0)
+        .bezierCurveTo(nose * 0.78 * s, -W * 0.8 * s, L * 0.08 * s, -W * s, -L * 0.14 * s, -W * 0.72 * s)
+        .bezierCurveTo(-L * 0.28 * s, -W * 0.5 * s, tailBase * s, -W * 0.3 * s, tailBase * s, 0)
+        .bezierCurveTo(tailBase * s, W * 0.3 * s, -L * 0.28 * s, W * 0.5 * s, -L * 0.14 * s, W * 0.72 * s)
+        .bezierCurveTo(L * 0.08 * s, W * s, nose * 0.78 * s, W * 0.8 * s, nose * s, 0);
+    };
+
+    const m = this.membrane;
+    outline(m, 1.22);
+    m.fill({ color: flesh, alpha: 0.3 });
+
+    const b = this.body;
+    outline(b, 1);
+    b.fill({ color: flesh, alpha: 1 });
+
+    // skeleton, read through the skin: the spine, then ribs splaying toward the head
+    b.moveTo(nose * 0.86, 0).lineTo(tailBase * 0.95, 0)
+      .stroke({ color: 0x060a10, width: R * 0.09, alpha: 0.75 });
+    for (let i = 0; i < 6; i++) {
+      const t = i / 5;
+      const x = nose * 0.6 - t * (nose * 0.6 - tailBase * 0.9);
+      const hw = W * (0.85 - t * 0.5);
+      for (const dir of [-1, 1]) {
+        b.moveTo(x, 0).quadraticCurveTo(x - R * 0.1, dir * hw * 0.6, x - R * 0.26, dir * hw)
+          .stroke({ color: 0x070c12, width: R * 0.055, alpha: 0.6 });
+      }
+    }
+    for (let i = 0; i < g.segments; i++) {
+      const x = L * 0.16 - i * R * 0.38;
+      b.moveTo(x, -W * 0.7).quadraticCurveTo(x - R * 0.2, 0, x, W * 0.7)
+        .stroke({ color: dark, width: R * 0.07, alpha: 0.5 });
+    }
+
+    // the gut: the one solid mass in the animal, and it shows what it has been eating
+    b.ellipse(-L * 0.04, 0, R * 0.42, R * 0.3).fill({ color: organ, alpha: 0.95 });
+    b.ellipse(-L * 0.04, 0, R * 0.2, R * 0.13)
+      .fill({ color: lit, alpha: 0.5 + g.glow * 0.4 });
+
+    outline(b, 1);
+    b.stroke({ color: 0x050a10, width: R * 0.085, alpha: 0.8 })
+      .stroke({ color: this.rim, width: R * 0.03, alpha: 0.45 });
+
+    this.mouth(b, nose, R * (0.32 + Math.min(g.jaw, 1.2) * 0.58), 0x04070c, 1,
+               g.jaw > 0.4 ? 6 : 3);
+    this.eyes(b, nose - R * 0.34, W * 0.42, R * 0.105 * g.eyeSize, 1, true);
+
+    this.paired((f, dir) => {
+      const w = R * (0.55 + g.finSize * 0.45);
+      f.moveTo(0, 0)
+        .quadraticCurveTo(-w * 0.2, dir * w * 0.8, -w * 1.1, dir * w * 1.05)
+        .quadraticCurveTo(-w * 0.5, dir * w * 0.3, 0, 0)
+        .fill({ color: flesh, alpha: 0.55 })
+        .stroke({ color: this.rim, width: R * 0.03, alpha: 0.5 });
+      // filaments trailing off the fin edge, the one part of the animal that is not solid
+      for (let i = 0; i < 3; i++) {
+        const s = 0.6 + i * 0.2;
+        f.moveTo(-w * 0.5, dir * w * 0.5)
+          .quadraticCurveTo(-w * 1.2 * s, dir * w * 0.9, -w * 1.8 * s, dir * w * 0.7)
+          .stroke({ color: lit, width: R * 0.022, alpha: 0.35 });
+      }
+    }, L * 0.08, W * 0.6);
+
+    this.smoothChain(flesh, lit, W * 0.6, L * (0.3 + g.finSize * 0.08),
+                     W * (0.6 + g.tailSplit * 0.7));
+    if (this.chain.length) this.chain[0].x = tailBase;
+  }
+
+  /**
+   * A tail with no joints to see. Each link's leading edge is wider than the previous
+   * link's trailing edge and starts back inside it, so a bend can never open a notch in
+   * the outline, and no link carries a dark edge — `buildChain`'s outline is exactly what
+   * reads as a line drawn across the body at every joint once the animal is translucent.
+   */
+  private smoothChain(color: number, lit: number, w0: number, finLen: number, spread: number) {
+    const n = this.chain.length;
+    const len = R * 0.3;
+    for (let i = 0; i < n; i++) {
+      const link = this.chain[i];
+      // taper on a curve: width has to fall off slowly at the root and fast at the tip,
+      // or the tail reads as a stiff wedge hinged onto the body
+      const wAt = (k: number) => w0 * (1 - (k / n) ** 1.25) + R * 0.035;
+      const a = wAt(i);
+      const b = wAt(i + 1);
+      const over = len * 0.9;
+      link.moveTo(over, 0)
+        .bezierCurveTo(over, -a * 0.95, -len * 0.3, -a, -len, -b)
+        .lineTo(-len, b)
+        .bezierCurveTo(-len * 0.3, a, over, a * 0.95, over, 0)
+        .fill({ color, alpha: 1 });
+      link.moveTo(over * 0.4, -a * 0.8)
+        .quadraticCurveTo(-len * 0.4, -a * 0.75, -len * 0.95, -b * 0.85)
+        .stroke({ color: this.rim, width: R * 0.03, alpha: 0.18 });
+      if (i > 0) link.x = -len;
+      if (i === n - 1) {
+        link.moveTo(-len, -b)
+          .bezierCurveTo(-len - finLen * 0.45, -spread * 0.5, -len - finLen * 0.9, -spread * 0.9,
+                         -len - finLen, -spread)
+          .quadraticCurveTo(-len - finLen * 0.55, 0, -len - finLen, spread)
+          .bezierCurveTo(-len - finLen * 0.9, spread * 0.9, -len - finLen * 0.45, spread * 0.5,
+                         -len, b)
+          .closePath().fill({ color, alpha: 0.5 })
+          .stroke({ color: this.rim, width: R * 0.028, alpha: 0.35 });
+        // ribs through the veil: what makes it read as membrane rather than as a flag
+        for (const dir of [-1, 1]) {
+          for (let k = 1; k <= 2; k++) {
+            const t = k / 3;
+            link.moveTo(-len, dir * b * 0.4)
+              .quadraticCurveTo(-len - finLen * 0.5, dir * spread * t * 0.7,
+                                -len - finLen * (0.9 + t * 0.1), dir * spread * t)
+              .stroke({ color: lit, width: R * 0.02, alpha: 0.22 });
+          }
+        }
+      }
+    }
+  }
+
   // ------------------------------------------------------------- animation
 
   /**
@@ -693,9 +854,12 @@ export class FishView extends Container {
     this.scale.y = unit * sy;
 
     const amp = m.amp * (0.45 + thrust * 0.75);
-    for (let i = 0; i < this.chain.length; i++) {
-      const w = (i + 1) / this.chain.length;
-      this.chain[i].rotation = Math.sin(beat - i * m.lag) * amp * (0.5 + w) + bank * 0.22 * w;
+    const n = this.chain.length;
+    for (let i = 0; i < n; i++) {
+      const w = (i + 1) / n;
+      const share = m.evenSway ? 2 / n : 0.5 + w;
+      this.chain[i].rotation = Math.sin(beat - i * m.lag) * amp * share
+        + bank * 0.22 * (m.evenSway ? w / n : w);
     }
     if (m.finFlap) {
       const f = Math.sin(beat) * m.finFlap;
