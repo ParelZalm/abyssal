@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prototype": "vite --open /prototype-fish.html"
   },
   "dependencies": {
     "pixi.js": "^8.20.1"
