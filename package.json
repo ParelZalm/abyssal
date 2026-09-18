@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "prototype": "vite --open /prototype-fish.html"
+    "design": "vite --open /design.html"
   },
   "dependencies": {
     "pixi.js": "^8.20.1"
