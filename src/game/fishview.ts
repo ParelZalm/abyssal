@@ -49,6 +49,8 @@ export class FishView extends Container {
   /** A bruised red bloom that grows as the animal becomes something to run from. */
   private aura = new Sprite(glowTexture());
   private halo = new Sprite(glowTexture());
+  /** A tight, hot centre inside the halo — the halo alone reads as fog, not as a light. */
+  private core = new Sprite(glowTexture());
   private mesh: MeshSimple | null = null;
   private verts = new Float32Array(0);
   private colX: number[] = [];
@@ -59,11 +61,11 @@ export class FishView extends Container {
 
   constructor(private g: Genome, private plan: Plan = 'darter') {
     super();
-    for (const s of [this.aura, this.halo]) {
+    for (const s of [this.aura, this.halo, this.core]) {
       s.anchor.set(0.5);
       s.blendMode = 'add';
     }
-    this.addChild(this.aura, this.halo);
+    this.addChild(this.aura, this.halo, this.core);
     this.rebuild(g);
   }
 
@@ -99,15 +101,27 @@ export class FishView extends Container {
                                  indices: idx });
     this.addChild(this.mesh);
 
-    // emission and dread stay sprites: they are light, not body
-    this.halo.visible = g.glow > 0.01;
-    if (this.halo.visible) {
-      const gr = R * (5 + g.glow * 6);
-      this.halo.width = this.halo.height = gr * 2;
-      this.halo.tint = hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, men * 0.75),
-                           0.6 + men * 0.3, 0.55);
-      this.halo.alpha = Math.min(0.85, 0.28 + g.glow * 0.55);
-    }
+    // emission and dread stay sprites: they are light, not body.
+    // Every animal carries a floor of it, glowing organs or not — against water this dark
+    // an unlit body is a hole in the frame, and the bloom is what gives it a silhouette
+    // without stroking one.
+    const tint = hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, men * 0.75),
+                     0.6 + men * 0.3, 0.55);
+    this.halo.visible = true;
+    const gr = R * (4 + g.glow * 7);
+    this.halo.width = this.halo.height = gr * 2;
+    this.halo.tint = tint;
+    this.halo.alpha = Math.min(0.95, 0.26 + g.glow * 0.65);
+    // the core sits inside the body's own width, so it lifts the animal's value rather
+    // than spilling a second disc of light around it
+    // and only a real light organ gets one: on an unlit animal it lands as a hot white
+    // spot in the middle of the body, which reads as a bug rather than as bioluminescence
+    this.core.visible = g.glow > 0.05;
+    const cr = R * (1.5 + g.glow * 1.6);
+    this.core.width = this.core.height = cr * 2;
+    this.core.tint = hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, men * 0.75),
+                         0.45 + men * 0.35, 0.72);
+    this.core.alpha = Math.min(0.8, g.glow * 0.75);
     this.aura.visible = men > 0.25;
     if (this.aura.visible) {
       const ar = R * (3 + men * 3.4);

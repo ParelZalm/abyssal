@@ -87,8 +87,8 @@ void main() {
 
   // --- base column gradient -------------------------------------------------
   vec3 tint = mix(uNear, uFar, smoothstep(0.0, 1.0, uv.y));
-  vec3 base = tint * 0.5;
-  vec3 mass = tint * 1.75;
+  vec3 base = tint * 0.34;
+  vec3 mass = tint * 1.15;
 
   // --- drifting organic matter: two domain-warped noise fields --------------
   vec2 q = world * 0.0013 * uCloudScale;
@@ -172,7 +172,7 @@ void main() {
   }
 
   // --- vignette -------------------------------------------------------------
-  col *= mix(1.0, 0.44, smoothstep(0.3, 1.02, rad));
+  col *= mix(1.0, 0.30, smoothstep(0.22, 1.02, rad));
 
   // a touch of ordered dither: these gradients are wide, dark and upscaled from a
   // lower-resolution pass, which is exactly where 8-bit banding shows up
@@ -184,13 +184,16 @@ void main() {
 `;
 
 /** Colour of the water column at a given depth, sampled from the tier palette. */
+// Deliberately dim: the creatures are the only bright thing in the frame, and every
+// step of this ramp was pulled down until a mid-tier fish reads as a light source
+// against it rather than as a shape cut out of it.
 const TINTS: [number, [number, number, number]][] = [
-  [0, [0.16, 0.62, 0.58]],
-  [1300, [0.09, 0.47, 0.46]],
-  [3000, [0.05, 0.30, 0.34]],
-  [5200, [0.03, 0.17, 0.22]],
-  [7400, [0.02, 0.09, 0.13]],
-  [DEPTH_MAX, [0.01, 0.04, 0.07]],
+  [0, [0.10, 0.42, 0.40]],
+  [1300, [0.055, 0.30, 0.31]],
+  [3000, [0.030, 0.18, 0.21]],
+  [5200, [0.017, 0.10, 0.135]],
+  [7400, [0.011, 0.05, 0.077]],
+  [DEPTH_MAX, [0.006, 0.022, 0.042]],
 ];
 
 export function waterColor(y: number): [number, number, number] {
