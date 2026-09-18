@@ -41,6 +41,8 @@ const MOTION: Record<Plan, Motion> = {
   squid:     { cols: 22, waves: 0.7, amp: 0.3, pulse: 0.22 },
   angler:    { cols: 20, waves: 0.8, amp: 0.42, pulse: 0 },
   leviathan: { cols: 32, waves: 0.95, amp: 0.4, pulse: 0 },
+  // more columns than its length asks for: a veil shows every kink a coarse strip has
+  wraith:    { cols: 34, waves: 1.15, amp: 0.55, pulse: 0 },
 };
 
 export class FishView extends Container {

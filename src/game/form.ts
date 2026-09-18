@@ -19,7 +19,9 @@ export const R = 10;
 
 /** Silhouettes, seen from directly above. A species picks one. */
 export type Plan =
-  | 'microbe' | 'darter' | 'shark' | 'eel' | 'jelly' | 'squid' | 'angler' | 'leviathan';
+  | 'microbe' | 'darter' | 'shark' | 'eel' | 'jelly' | 'squid' | 'angler' | 'leviathan'
+  /** Player only. The thing the ocean should be worried about. */
+  | 'wraith';
 
 export interface Form {
   /** Nose to tail root, in R units. */
@@ -62,6 +64,9 @@ export const PLAN_FORMS: Record<Plan, Form> = {
                fluke: 0.26, fork: 0.3 },
   leviathan: { len: 3.1, width: 0.64, fore: 0.85, aft: 1.4, peduncle: 0.13, cheek: 0.13,
                fluke: 0.38, fork: 0.9 },
+  // long, narrow, and trailing half its length in veil: nothing that schools looks like this
+  wraith:    { len: 2.7, width: 0.48, fore: 0.72, aft: 1.15, peduncle: 0.26, cheek: 0.06,
+               fluke: 0.52, fork: 0.22 },
 };
 
 /** Where the width function peaks, 0 at the nose and 1 at the tail root. */

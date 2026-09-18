@@ -119,6 +119,13 @@ function paint(g: Genome, plan: Plan): Baked {
   const seed = Math.round(g.hue * 7 + g.accentHue * 3 + g.spikes * 11) % 9973;
   const wob = 0.035;
 
+  // The player's own plan. Main's wraith needed every part drawn opaque and the whole form
+  // faded by one AlphaFilter, because per-part alpha composites every overlap twice and the
+  // joints then outline themselves. A single surface has no overlaps to composite, so the
+  // render target that cost is simply gone — the body is drawn see-through and that is all.
+  const smoke = plan === 'wraith';
+  if (smoke) pal.alpha *= 0.6;
+
   const art = new Graphics();
 
   // --- bounds ------------------------------------------------------------
@@ -152,6 +159,7 @@ function paint(g: Genome, plan: Plan): Baked {
   if (plan === 'microbe') cilia(art, f, pal);
 
   // --- on top ------------------------------------------------------------
+  if (smoke) viscera(art, f, pal);
   fins(art, f, pal, g);
   spines(art, f, pal, g, men, plan);
   organs(art, f, pal, g);
@@ -336,6 +344,43 @@ function organs(gr: Graphics, f: Form, pal: Palette, g: Genome) {
         .fill({ color: toxic, alpha: 0.35 + Math.min(0.35, g.venom * 0.1) });
     }
   }
+}
+
+/**
+ * What shows through a body of smoke: a hard spine, ribs off it, and one opaque gut. These
+ * are the only opaque things on the animal, which is what stops it reading as a pale blob —
+ * a translucent shape with nothing inside it has no scale and no direction.
+ */
+function viscera(gr: Graphics, f: Form, pal: Palette) {
+  // spine: a taper down the centre line, hard at the shoulder and gone by the fluke
+  const n = 40;
+  const pts: { x: number; y: number }[] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = 0.12 + (i / n) * 0.84;
+    pts.push({ x: spineAt(t, f), y: halfWidth(t, f) * 0.1 * (1 - t) });
+  }
+  gr.moveTo(pts[0].x, -pts[0].y);
+  for (const p of pts) gr.lineTo(p.x, -p.y);
+  for (let i = pts.length - 1; i >= 0; i--) gr.lineTo(pts[i].x, pts[i].y);
+  gr.closePath().fill({ color: pal.dark, alpha: 0.85 });
+
+  // ribs: short slivers off the spine, leaning back down the body
+  for (let i = 0; i < 7; i++) {
+    const t = 0.24 + i * 0.075;
+    const w = halfWidth(t, f);
+    const x = spineAt(t, f);
+    for (const dir of [-1, 1] as const) {
+      gr.moveTo(x, 0)
+        .quadraticCurveTo(x - w * 0.2, dir * w * 0.4, x - w * 0.55, dir * w * 0.72)
+        .quadraticCurveTo(x - w * 0.22, dir * w * 0.36, x, w * 0.06 * dir)
+        .closePath().fill({ color: pal.dark, alpha: 0.5 });
+    }
+  }
+
+  // the gut: one opaque mass, the only thing on the animal you cannot see through
+  const tg = 0.42;
+  gr.ellipse(spineAt(tg, f), 0, halfWidth(tg, f) * 0.85, halfWidth(tg, f) * 0.44)
+    .fill({ color: pal.back, alpha: 1 });
 }
 
 /** The illicium: a stalk out in front with a lit bulb on the end. */

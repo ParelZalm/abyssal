@@ -18,7 +18,7 @@ const POP_DEEP = 46;
 const FOOD_MAX = 100;
 
 const PLAYER_SPECIES: Species = {
-  id: 'player', name: 'You', behavior: 'hunter', plan: 'darter', depth: [0, DEPTH_MAX],
+  id: 'player', name: 'You', behavior: 'hunter', plan: 'wraith', depth: [0, DEPTH_MAX],
   size: [14, 14], hue: [30, 30], accent: 200, speed: 150, bite: 6, nutrition: 0, weight: 0,
 };
 
