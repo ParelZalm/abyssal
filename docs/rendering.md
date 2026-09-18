@@ -39,32 +39,75 @@ tiers are indistinguishable. Same reason `shimmer` does not scale away with `uLi
 
 ## Creatures
 
-`src/game/fishview.ts`. One `FishView extends Container` per creature.
+`src/game/form.ts` (shape), `src/game/fishbake.ts` (art), `src/game/fishview.ts` (the view).
+One `FishView extends Container` per creature, holding one `MeshSimple` and two additive
+Sprites (`aura`, `halo`).
 
-**The invariant: geometry is drawn once per `rebuild(genome)` and animated only by
-transform.** `animate(dt, thrust, beat, bank)` sets rotations and scales on the chain
-links, the paired fins and the body — it never re-issues a path. Anything that needs to
-change shape has to go through `rebuild`, which happens on mutation, not per frame.
+**The invariant: the art is painted once into a texture, and swimming moves vertices, not
+geometry.** `animate(dt, thrust, beat, bank)` writes `2 x cols` floats and nothing else. No
+path is re-issued and no `Graphics` is touched. Anything that changes how a creature looks
+has to go through `rebuild(genome)`, which happens on mutation, not per frame.
 
-Structure of a view: `aura` and `halo` (Sprites, additive, from the shared glow
-texture), `membrane`, the `chain` (a parented list of `Graphics`, each a child of the
-previous, which is what makes the phase-lagged sway read as a travelling wave), `finL`,
-`finR`, `body`. `R = 10` is the reference half-length everything is drawn against; the
-container is then scaled to `genome.size / R`.
+### The shape is a spine and one width curve
+
+A body seen from above is a line from nose to tail plus a half-width at each point along
+it. `halfWidth(t, form)` is a beta curve, `t^fore * (1-t)^aft`, normalised so its peak is
+always 1 and always lands at `fore/(fore+aft)`. That normalisation is what makes the
+parameters honest — the widest point moves on its own instead of being a third number to
+keep in sync. `PLAN_FORMS` holds one `Form` per plan and `formFor(genome, plan)` bends it
+with the genome, so a mutation that changes how an animal feeds changes its profile too.
+
+This replaced a hand-drawn path per body plan. That system could not interpolate between
+any two of its shapes, so growth and mutation could only ever swap one drawing for another.
+
+### Nothing is stroked
+
+A contour is a line with a position of its own, so the moment two parts of an animal move
+across each other it draws twice and the join shows. The old jointed view did this at every
+bend, and no draw order fixes it: two rigid pieces that rotate about different points always
+reveal their shared boundary. Every shape in `fishbake.ts` is a fill.
+
+What the outline used to do is done by value instead, all from the same value noise the
+water shader runs on (`noise.ts`, matching the GLSL construction in `water.ts` — an animal
+textured with a different noise than its water reads as a sticker on the scene):
+
+1. **A noise-ragged edge.** The flank samples are nudged by fbm, which is what keeps a
+   parametric curve from reading as machinery.
+2. **Countershading.** A dark back narrowing to the tail, in two passes each bounded by its
+   own noise curve. This is the cue that makes a shape read as a fish from above, and it is
+   now what carries the silhouette against the water.
+3. **Mottling.** Speckle on a body-space grid, dark over the spine and pale toward the
+   belly, so one pass reads as scale on top and as counter-lighting at the edge.
+
+Legibility was the risk here, since the contour used to carry the read at the 0.34 zoom the
+deep tiers run at. It was checked in near-black water at 7600 m: the pale flank and belly
+values hold the silhouette on their own, but only because the palette separates them hard.
+A mid-value creature would disappear.
+
+### Skinning
+
+The baked texture is mapped onto a triangle strip of `cols` columns, whose centre line is a
+travelling wave. Vertex normals come from each column's neighbours, so the body keeps its
+width perpendicular to the curve instead of shearing.
+
+The sway amplitude rides `quintic(s)` — Perlin's `6t^5 - 15t^4 + 10t^3`, whose first *and
+second* derivatives vanish at both ends. The wave has to arrive at the skull with no slope
+and no curvature or there is a crease there, and a crease reads as exactly the joint this
+approach exists to remove. A linear or cubic envelope is not enough.
+
+Watch the UVs: the columns run nose to tail (decreasing x) while the texture's u increases
+to the right. Reading the column index straight into u renders every creature mirrored, and
+it renders perfectly happily that way.
 
 Eight plans — microbe, darter, shark, eel, jelly, squid, angler, leviathan — each with a
-`MOTION` record (chain links, sway amplitude, phase lag, bell pulse, fin flap).
+`MOTION` record (columns, waves along the body, sway amplitude, bell pulse).
 
-Four drawing rules are applied across every plan; keep new parts consistent with them:
+### Baking
 
-1. **`shell()`** — a heavy near-black outline and a thin lit rim, as two strokes on one
-   path. This is the main reason a creature reads against water of its own colour.
-2. **Chain links outline their two long edges only**, plus a lit crescent along one
-   flank. Stroking the closed path draws the joint caps, which land as straight lines
-   across the body.
-3. **`socket()`** — grown parts are seated on a dark disc with a lit ring, carry a
-   highlight down the arm, and put the brightest value on the working tip.
-4. **Fins are membranes** — translucent fill plus a lit edge.
+`bakeFish` caches by a deliberately coarse key: two genomes that differ by less than a hue
+step are the same picture, so a school of forty krill is one texture. The cache is capped at
+160 entries. Baking needs a live renderer, so `setBakeRenderer` must be called before the
+first creature exists — in `main.ts` that is before `reset()`.
 
 `menace` is read inside the view, so the same genome always produces the same animal.
 

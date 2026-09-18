@@ -44,6 +44,29 @@ trick (render a plan, keep alpha as white, blur) is no longer used.
   are wide soft discs, they swamp the extracted bounds, and every plan comes back as the
   same round blob.
 
+## Creatures are one deforming surface, not a chain of parts
+
+Three passes died on the same problem, in this order: a jointed chain of `Graphics` links;
+the same chain with only its long edges stroked; and then a strokeless version whose
+sections overlapped so the joins could not be seen. Each fixed the previous one's seam and
+found a new one — the last because nested children render *above* their parent, so the tail
+painted over the head and every per-section shading pass doubled in the overlap.
+
+The answer was to stop having parts. The art is baked into a texture and skinned onto a
+single triangle strip. There is nothing to order, nothing to overlap, and nothing that can
+draw twice. If a future part has to move independently — a flapping pectoral, a lure on a
+stalk — it should ride the deformed spine as its own object rather than being cut out of
+the body.
+
+Rejected along the way:
+
+- A heavy contour in the style of the old art, at a thinner weight. A thin dark line on a
+  dark body is invisible, and a line thick enough to see is the thing that doubles at joins.
+- Building a growing body as a colony of drawn cells wrapped in the adult outline. It reads
+  as circles poured into a shape, because that is what it is.
+- Per-section countershading with the sections overlapped. The overlap is invisible while
+  every section fills the same flat colour, and obvious the moment any of them shades.
+
 ## Proximity is measured between bodies, not centres
 
 `main.render` computes the dread/danger term from `d - c.radius - p.radius`. A leviathan

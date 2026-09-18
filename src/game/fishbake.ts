@@ -1,0 +1,437 @@
+/**
+ * Creature art, painted flat and baked into a texture.
+ *
+ * Nothing here is stroked. A contour is a line with a position of its own, so the moment
+ * two parts of an animal move across each other it draws twice and the join shows — which
+ * is what the old jointed views did at every bend. With fills only, the body can be skinned
+ * onto a single deforming surface (`fishview.ts`) and no part of it can ever overlap another.
+ * What the outline used to do is done by value instead: a noise-ragged edge, countershading,
+ * and mottling, all from the same value noise the water shader runs on.
+ *
+ * Painting happens once per distinct genome and is then cached — a school of forty krill is
+ * one texture. The cost that matters is the bake, so the cache key is deliberately coarse:
+ * two animals that differ by less than a hue step are the same picture.
+ */
+import { Graphics, type Renderer, type Texture } from 'pixi.js';
+import { menace, type Genome } from './genome';
+import { formFor, halfWidth, shoulderAt, spineAt, R, type Form, type Plan } from './form';
+import { fbm, fbmSigned } from './noise';
+import { hsl, lerp, TAU } from './util';
+
+let renderer: Renderer | null = null;
+/** Called once at boot; baking needs a GPU context to render into. */
+export function setBakeRenderer(r: Renderer) {
+  renderer = r;
+}
+
+export interface Baked {
+  texture: Texture;
+  /** Front and back of the painted strip, in R units — the mesh spans exactly this. */
+  front: number;
+  back: number;
+  /** Half-height of the strip. Constant along its length, so the texture keeps proportion. */
+  halfH: number;
+}
+
+const cache = new Map<string, Baked>();
+/** Enough for every species at a few mutation steps; past this the oldest goes. */
+const CACHE_MAX = 160;
+
+const q = (v: number, step: number) => Math.round(v / step) * step;
+
+function key(g: Genome, plan: Plan) {
+  return [plan, q(g.hue, 12), q(g.accentHue, 18), q(menace(g), 0.12), q(g.glow, 0.25),
+          q(g.translucent, 0.2), q(g.finSize, 0.25), q(g.jaw, 0.25), q(g.spikes, 1),
+          q(g.segments, 1), q(g.armor, 3), g.lure > 0 ? 1 : 0, Math.min(3, g.claws),
+          Math.min(3, g.coral), Math.min(3, g.frill), g.jet > 0 ? 1 : 0,
+          g.venom > 0 ? 1 : 0].join('|');
+}
+
+export function bakeFish(g: Genome, plan: Plan): Baked {
+  const k = key(g, plan);
+  const hit = cache.get(k);
+  if (hit) return hit;
+  const made = paint(g, plan);
+  if (cache.size >= CACHE_MAX) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) {
+      cache.get(oldest)?.texture.destroy(true);
+      cache.delete(oldest);
+    }
+  }
+  cache.set(k, made);
+  return made;
+}
+
+/** Drop everything; only used when the renderer goes away. */
+export function clearBakeCache() {
+  for (const b of cache.values()) b.texture.destroy(true);
+  cache.clear();
+}
+
+interface Palette {
+  skin: number; back: number; belly: number; accent: number; dark: number; bone: number;
+  alpha: number;
+}
+
+function palette(g: Genome, men: number): Palette {
+  return {
+    // the more dangerous it is, the darker the mass and the hotter its accent
+    skin: hsl(g.hue, 0.3 + men * 0.08, 0.36 - men * 0.1),
+    back: hsl(g.hue + 10, 0.42, 0.14 - men * 0.04),
+    belly: hsl(g.hue - 16, 0.2, 0.64 - men * 0.1),
+    accent: hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, men * 0.75),
+                0.6 + men * 0.3, 0.55),
+    dark: hsl(g.hue, 0.5, 0.08),
+    bone: hsl(72, 0.22, 0.62),
+    alpha: 1 - Math.min(0.55, g.translucent * 0.6),
+  };
+}
+
+/**
+ * One flank of the body, sampled and smoothed through midpoints so the outline has no
+ * vertex to find. The edge is nudged by noise, which is what keeps a parametric curve from
+ * reading as machinery.
+ */
+function flank(gr: Graphics, f: Form, t0: number, t1: number, dir: -1 | 1, n: number,
+               move: boolean, wob: number, seed: number) {
+  const pts: { x: number; y: number }[] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = lerp(t0, t1, i / n);
+    const k = 1 + fbmSigned(t * 7, dir * 3.7, seed) * wob * (1 - Math.abs(t * 2 - 1) * 0.35);
+    pts.push({ x: spineAt(t, f), y: halfWidth(t, f) * k * dir });
+  }
+  if (move) gr.moveTo(pts[0].x, pts[0].y);
+  else gr.lineTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length - 1; i++) {
+    gr.quadraticCurveTo(pts[i].x, pts[i].y, (pts[i].x + pts[i + 1].x) / 2,
+                        (pts[i].y + pts[i + 1].y) / 2);
+  }
+  const last = pts[pts.length - 1];
+  gr.lineTo(last.x, last.y);
+}
+
+function paint(g: Genome, plan: Plan): Baked {
+  if (!renderer) throw new Error('setBakeRenderer() must be called before any creature is built');
+  const f = formFor(g, plan);
+  const men = menace(g);
+  const pal = palette(g, men);
+  const seed = Math.round(g.hue * 7 + g.accentHue * 3 + g.spikes * 11) % 9973;
+  const wob = 0.035;
+
+  const art = new Graphics();
+
+  // --- bounds ------------------------------------------------------------
+  let widest = 0;
+  for (let i = 0; i <= 40; i++) widest = Math.max(widest, halfWidth(i / 40, f));
+  const caudal = halfWidth(1, f) * (2.4 + f.fork * 1.8);
+  const arms = plan === 'squid' || plan === 'jelly' ? widest * 1.15 : 0;
+  const frill = g.frill > 0 ? widest * 0.3 : 0;
+  const halfH = Math.max(widest * (1 + wob), caudal, arms, widest + frill) * 1.08 + R * 0.1;
+  // a lure hangs out in front of the face, so the strip has to be longer than the body
+  const front = spineAt(0, f) + (g.lure > 0 ? R * (0.9 + g.lure * 0.5) : R * 0.12);
+  const back = spineAt(1, f) - f.len * f.fluke * R * 1.06 - (arms ? R * 0.6 : 0);
+
+  // an invisible rect pins the texture to exactly this rect, so the UVs line up with the
+  // body rather than with whatever the art happened to touch
+  art.rect(back, -halfH, front - back, halfH * 2).fill({ color: 0, alpha: 0 });
+
+  // --- behind the body ---------------------------------------------------
+  if (plan === 'jelly' || plan === 'squid') tentacles(art, f, pal, plan, g);
+  caudalFin(art, f, pal, g, plan);
+  if (g.lure > 0) lure(art, f, pal, g);
+
+  // --- the body itself ---------------------------------------------------
+  const n = plan === 'eel' ? 120 : 90;
+  flank(art, f, 0, 1, -1, n, true, wob, seed);
+  flank(art, f, 1, 0, 1, n, false, wob, seed);
+  art.closePath().fill({ color: pal.skin, alpha: pal.alpha });
+
+  countershade(art, f, pal, seed);
+  mottle(art, f, pal, g, seed);
+  if (plan === 'microbe') cilia(art, f, pal);
+
+  // --- on top ------------------------------------------------------------
+  fins(art, f, pal, g);
+  spines(art, f, pal, g, men, plan);
+  organs(art, f, pal, g);
+  head(art, f, pal, g, plan, men);
+
+  const tex = renderer.generateTexture({ target: art, resolution: 6, antialias: true });
+  art.destroy();
+  return { texture: tex, front, back, halfH };
+}
+
+/** The dark back that makes a shape read as an animal from above, in two ragged passes. */
+function countershade(gr: Graphics, f: Form, pal: Palette, seed: number) {
+  for (const [k, alpha, salt] of [[0.78, 0.3, 13], [0.44, 0.55, 29]] as const) {
+    const n = 70;
+    const pts: { x: number; y: number }[] = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const edge = fbmSigned(t * 13, salt * 0.11, seed + salt) * 0.12;
+      pts.push({ x: spineAt(t, f), y: halfWidth(t, f) * (k + edge) * (1 - t * 0.3) });
+    }
+    const run = (sign: 1 | -1, list: { x: number; y: number }[]) => {
+      for (let i = 1; i < list.length - 1; i++) {
+        gr.quadraticCurveTo(list[i].x, sign * list[i].y, (list[i].x + list[i + 1].x) / 2,
+                            sign * (list[i].y + list[i + 1].y) / 2);
+      }
+      gr.lineTo(list[list.length - 1].x, sign * list[list.length - 1].y);
+    };
+    gr.moveTo(pts[0].x, -pts[0].y);
+    run(-1, pts);
+    gr.lineTo(pts[n].x, pts[n].y);
+    run(1, [...pts].reverse());
+    gr.closePath().fill({ color: pal.back, alpha: alpha * pal.alpha });
+  }
+}
+
+/** Speckle: dark over the spine, pale toward the belly, from one noise field. */
+function mottle(gr: Graphics, f: Form, pal: Palette, g: Genome, seed: number) {
+  const step = f.len > 3 ? 0.016 : 0.022;
+  for (let t = 0; t < 1; t += step) {
+    const w = halfWidth(t, f);
+    const rows = Math.max(3, Math.round(w / (R * 0.12)));
+    for (let j = 0; j < rows; j++) {
+      const v = (j + 0.5) / rows;
+      const y = (v * 2 - 1) * w * 0.94;
+      const d = fbm(t * 16, v * 9, seed + 101);
+      if (d < 0.58) continue;
+      const r = R * 0.035 * (0.6 + d);
+      const dark = Math.abs(y) < w * 0.55;
+      gr.ellipse(spineAt(t, f), y, r * 1.5, r)
+        .fill({ color: dark ? pal.back : pal.belly,
+                alpha: (dark ? 0.22 : 0.16) * pal.alpha * (1 - g.translucent * 0.4) });
+    }
+  }
+}
+
+function caudalFin(gr: Graphics, f: Form, pal: Palette, g: Genome, plan: Plan) {
+  const x = spineAt(1, f);
+  const w = halfWidth(1, f);
+  const len = f.len * f.fluke * R;
+  const spread = w * (2.4 + f.fork * 1.8) * (plan === 'jelly' ? 0.6 : 1);
+  const notch = len * (0.18 + f.fork * 0.42);
+  gr.moveTo(x + w * 1.6, -w * 0.9)
+    .quadraticCurveTo(x - len * 0.5, -spread * 0.72, x - len, -spread)
+    .quadraticCurveTo(x - len + notch * 0.7, -spread * 0.3, x - len + notch, 0)
+    .quadraticCurveTo(x - len + notch * 0.7, spread * 0.3, x - len, spread)
+    .quadraticCurveTo(x - len * 0.5, spread * 0.72, x + w * 1.6, w * 0.9)
+    .closePath()
+    .fill({ color: pal.skin, alpha: 0.86 * pal.alpha });
+  for (let i = -3; i <= 3; i++) {
+    const v = i / 3;
+    const ty = spread * v * 0.82;
+    const tx = x - len * (1 - Math.abs(v) * 0.24) + notch * (1 - Math.abs(v)) * 0.8;
+    gr.moveTo(x, 0).lineTo(tx, ty).lineTo(tx, ty + spread * 0.06)
+      .closePath().fill({ color: pal.belly, alpha: 0.16 * pal.alpha });
+  }
+  void g;
+}
+
+/** Pectorals and pelvics, baked in: they bend with the body that carries them. */
+function fins(gr: Graphics, f: Form, pal: Palette, g: Genome) {
+  const pairs: [number, number][] = [[shoulderAt(f) * 1.15, 0.85], [0.56, 0.6]];
+  for (const [t, scale] of pairs) {
+    const len = halfWidth(t, f) * scale * (0.7 + g.finSize * 0.35);
+    for (const dir of [-1, 1] as const) {
+      const x = spineAt(t, f), y = halfWidth(t, f) * dir * 0.7;
+      gr.moveTo(x, y)
+        .quadraticCurveTo(x - len * 0.1, y + dir * len * 0.5, x - len * 0.78,
+                          y + dir * len * 0.82)
+        .quadraticCurveTo(x - len * 0.6, y + dir * len * 0.16, x, y)
+        .closePath().fill({ color: pal.back, alpha: 0.6 * pal.alpha });
+    }
+  }
+}
+
+/** Dorsal spines along the flank. Count rides menace: evolving grows the weapon. */
+function spines(gr: Graphics, f: Form, pal: Palette, g: Genome, men: number, plan: Plan) {
+  if (plan === 'jelly' || plan === 'microbe') return;
+  const n = Math.min(7, Math.round(men * 4 + g.spikes * 1.4));
+  for (let i = 0; i < n; i++) {
+    const t = 0.38 + (i / Math.max(1, n)) * 0.34;
+    const w = halfWidth(t, f);
+    const len = w * (0.3 + men * 0.4) * (1 - i * 0.05);
+    for (const dir of [-1, 1] as const) {
+      const x = spineAt(t, f), y = w * dir * 0.96;
+      gr.moveTo(x + len * 0.3, y * 0.9)
+        .lineTo(x - len * 0.5, y + dir * len)
+        .lineTo(x - len * 0.55, y * 0.9)
+        .closePath().fill({ color: pal.dark, alpha: 0.9 * pal.alpha });
+    }
+  }
+}
+
+/**
+ * Organs grown by mutation — the parts that make a build legible at a glance. Each one is a
+ * mechanic in `world.ts` as well as a shape here; a stat with no visible consequence is not
+ * how this game communicates.
+ */
+function organs(gr: Graphics, f: Form, pal: Palette, g: Genome) {
+  const toxic = hsl(78, 0.8, 0.5);
+  const reef = hsl(348, 0.38, 0.5);
+
+  // coral: irregular plates crusting the back
+  for (let i = 0; i < g.coral; i++) {
+    for (let k = 0; k < 5; k++) {
+      const t = 0.3 + k * 0.1;
+      const w = halfWidth(t, f);
+      const y = ((k % 2) ? 1 : -1) * w * (0.22 + (k % 3) * 0.16);
+      const r = w * (0.16 + ((k * 7 + i * 3) % 4) * 0.04);
+      gr.circle(spineAt(t, f) - i * R * 0.06, y, r).fill({ color: reef, alpha: 0.7 * pal.alpha });
+      gr.circle(spineAt(t, f) - i * R * 0.06 - r * 0.25, y - r * 0.25, r * 0.36)
+        .fill({ color: 0xffffff, alpha: 0.18 });
+    }
+  }
+
+  // frill: a fringe of stinging tentacles along the rear margin
+  if (g.frill > 0) {
+    const n = Math.round(7 + g.frill * 3);
+    for (let i = 0; i < n; i++) {
+      const v = n === 1 ? 0.5 : i / (n - 1);
+      const t = 0.72 + v * 0.26;
+      const w = halfWidth(t, f);
+      const dir = i % 2 ? 1 : -1;
+      const x = spineAt(t, f), y = w * dir * 0.9;
+      const len = R * (0.16 + g.frill * 0.08);
+      gr.moveTo(x, y)
+        .quadraticCurveTo(x - len * 0.7, y + dir * len * 0.5, x - len * 1.1, y + dir * len * 0.3)
+        .quadraticCurveTo(x - len * 0.5, y + dir * len * 0.15, x, y)
+        .closePath().fill({ color: pal.accent, alpha: 0.6 * pal.alpha });
+    }
+  }
+
+  // claws: pincers on the shoulders, opened toward the prey
+  for (let i = 0; i < g.claws; i++) {
+    const t = shoulderAt(f) * (0.8 - i * 0.12);
+    const w = halfWidth(t, f);
+    const len = w * 0.9;
+    for (const dir of [-1, 1] as const) {
+      const x = spineAt(t, f), y = w * dir * 0.8;
+      gr.moveTo(x, y)
+        .quadraticCurveTo(x + len * 0.7, y + dir * len * 0.2, x + len, y + dir * len * 0.7)
+        .quadraticCurveTo(x + len * 0.35, y + dir * len * 0.15, x + len * 0.55, y - dir * len * 0.1)
+        .closePath().fill({ color: pal.bone, alpha: 0.9 * pal.alpha });
+    }
+  }
+
+  // jet: a siphon at the peduncle, the only organ that points backwards
+  if (g.jet > 0) {
+    const t = 0.86;
+    const w = halfWidth(t, f);
+    gr.ellipse(spineAt(t, f), 0, w * 0.9, w * 0.55)
+      .fill({ color: pal.dark, alpha: 0.8 * pal.alpha });
+    gr.ellipse(spineAt(t, f) - w * 0.3, 0, w * 0.45, w * 0.3)
+      .fill({ color: pal.accent, alpha: 0.5 });
+  }
+
+  // venom: the sacs show through the flank as two bright patches
+  if (g.venom > 0) {
+    const t = 0.62;
+    const w = halfWidth(t, f);
+    for (const dir of [-1, 1]) {
+      gr.ellipse(spineAt(t, f), w * dir * 0.45, w * 0.5, w * 0.3)
+        .fill({ color: toxic, alpha: 0.35 + Math.min(0.35, g.venom * 0.1) });
+    }
+  }
+}
+
+/** The illicium: a stalk out in front with a lit bulb on the end. */
+function lure(gr: Graphics, f: Form, pal: Palette, g: Genome) {
+  const x0 = spineAt(0.06, f);
+  const x1 = spineAt(0, f) + R * (0.8 + g.lure * 0.45);
+  const y1 = -R * 0.3;
+  gr.moveTo(x0, -R * 0.06)
+    .quadraticCurveTo(x1 * 0.8, y1 * 1.5, x1, y1)
+    .quadraticCurveTo(x1 * 0.78, y1 * 1.2, x0, R * 0.06)
+    .closePath().fill({ color: pal.dark, alpha: 0.85 * pal.alpha });
+  gr.circle(x1, y1, R * (0.14 + g.lure * 0.05)).fill({ color: pal.accent, alpha: 0.95 });
+  gr.circle(x1, y1, R * (0.08 + g.lure * 0.03)).fill({ color: 0xffffff, alpha: 0.75 });
+}
+
+/** Trailing arms for the things that swim by contracting. */
+function tentacles(gr: Graphics, f: Form, pal: Palette, plan: Plan, g: Genome) {
+  const n = plan === 'jelly' ? 9 : 6;
+  const root = spineAt(0.92, f);
+  const spread = halfWidth(0.92, f);
+  const len = R * (plan === 'jelly' ? 1.1 : 1.5) * (1 + g.segments * 0.1);
+  for (let i = 0; i < n; i++) {
+    const v = (i / (n - 1)) * 2 - 1;
+    const y = v * spread * 1.1;
+    const w = R * (plan === 'jelly' ? 0.07 : 0.12);
+    gr.moveTo(root, y - w)
+      .quadraticCurveTo(root - len * 0.6, y + v * len * 0.35, root - len, y + v * len * 0.55)
+      .lineTo(root - len, y + v * len * 0.55 + w)
+      .quadraticCurveTo(root - len * 0.55, y + v * len * 0.35 + w, root, y + w)
+      .closePath().fill({ color: pal.skin, alpha: 0.7 * pal.alpha });
+  }
+}
+
+/** A ring of cilia — the only thing that makes a single cell read as alive. */
+function cilia(gr: Graphics, f: Form, pal: Palette) {
+  const n = 16;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * TAU;
+    const t = 0.5 - Math.cos(a) * 0.48;
+    const w = halfWidth(t, f);
+    const x = spineAt(t, f), y = Math.sin(a) * w;
+    const len = R * 0.16;
+    gr.moveTo(x, y).lineTo(x + Math.cos(a) * len * 0.3, y + Math.sin(a) * len)
+      .lineTo(x + Math.cos(a) * len * 0.6, y + Math.sin(a) * len * 0.5)
+      .closePath().fill({ color: pal.belly, alpha: 0.5 });
+  }
+}
+
+/** Eyes, mouth and gill cover — as fills, since nothing on this animal is a line. */
+function head(gr: Graphics, f: Form, pal: Palette, g: Genome, plan: Plan, men: number) {
+  const peak = shoulderAt(f);
+
+  // mouth: a dark sliver across the snout, opening with the jaw
+  const tm = 0.05;
+  const mw = halfWidth(tm, f) * (0.6 + Math.min(1.2, g.jaw) * 0.5);
+  gr.moveTo(spineAt(tm * 0.2, f), -mw * 0.7)
+    .quadraticCurveTo(spineAt(tm * 2.4, f), 0, spineAt(tm * 0.2, f), mw * 0.7)
+    .quadraticCurveTo(spineAt(tm * 0.1, f), 0, spineAt(tm * 0.2, f), -mw * 0.7)
+    .closePath().fill({ color: pal.dark, alpha: 0.85 * pal.alpha });
+
+  // teeth, once the jaw is worth showing
+  if (g.jaw > 0.55) {
+    const teeth = Math.min(7, Math.round(2 + g.jaw * 4));
+    for (let i = 0; i < teeth; i++) {
+      const v = (i + 0.5) / teeth;
+      const dir = i % 2 ? 1 : -1;
+      const y = dir * mw * 0.66 * (0.3 + v * 0.7);
+      const x = spineAt(tm * (0.4 + v * 1.6), f);
+      const s = mw * 0.16;
+      gr.moveTo(x, y - s).lineTo(x - s * 1.4, y).lineTo(x, y + s)
+        .closePath().fill({ color: 0xf2f4e6, alpha: 0.9 * pal.alpha });
+    }
+  }
+
+  // eyes: a dark bead each side with a wet highlight
+  const te = peak * 0.42;
+  const r = Math.max(R * 0.06, halfWidth(te, f) * 0.2 * g.eyeSize);
+  const pale = plan === 'angler' || plan === 'leviathan';
+  for (const dir of [-1, 1]) {
+    const y = dir * halfWidth(te, f) * 0.64;
+    gr.circle(spineAt(te, f), y, r)
+      .fill({ color: pale ? hsl(lerp(46, 14, men), 0.9, 0.55) : 0x0b0d14, alpha: 0.95 });
+    gr.circle(spineAt(te, f) + r * 0.3, y - r * 0.3, r * 0.3)
+      .fill({ color: 0xeaf4f6, alpha: 0.75 });
+  }
+
+  // gill cover: a crescent of the back colour at the edge of the head
+  if (plan !== 'microbe' && plan !== 'jelly') {
+    const tg = peak * 0.95;
+    for (const dir of [-1, 1]) {
+      gr.moveTo(spineAt(tg - 0.07, f), dir * halfWidth(tg - 0.07, f) * 0.98)
+        .quadraticCurveTo(spineAt(tg + 0.03, f), dir * halfWidth(tg, f) * 0.5,
+                          spineAt(tg + 0.1, f), dir * halfWidth(tg + 0.1, f) * 0.96)
+        .quadraticCurveTo(spineAt(tg + 0.02, f), dir * halfWidth(tg, f) * 0.78,
+                          spineAt(tg - 0.07, f), dir * halfWidth(tg - 0.07, f) * 0.98)
+        .closePath().fill({ color: pal.back, alpha: 0.4 * pal.alpha });
+    }
+  }
+}

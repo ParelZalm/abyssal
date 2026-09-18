@@ -1,6 +1,7 @@
 import { Application, Container, Graphics } from 'pixi.js';
 import './style.css';
 import { baseGenome, maxHp, type Genome } from './game/genome';
+import { setBakeRenderer } from './game/fishbake';
 import { Fx } from './game/fx';
 import { Ocean } from './game/ocean';
 import { Scenery } from './game/scenery';
@@ -71,6 +72,11 @@ class Game {
       resolution: Math.min(devicePixelRatio, 2), autoDensity: true,
     });
     document.getElementById('stage')!.append(this.app.canvas);
+    // creature art is baked into textures, which needs a live renderer before the first
+    // creature exists — so this has to come before reset()
+    setBakeRenderer(this.app.renderer);
+
+    if (import.meta.env.DEV) devSwitch();
 
     this.reset();
     this.bindInput();
@@ -479,6 +485,23 @@ class Game {
       traits: this.takenNames, danger: this.phase === 'over' ? 0 : danger,
     });
   }
+}
+
+/**
+ * Development only — a link to `/design.html`, the board that shows every drawing the game
+ * makes. Guarded by `import.meta.env.DEV`, so it is not in a production build at all.
+ */
+function devSwitch() {
+  const a = document.createElement('a');
+  a.href = '/design.html';
+  a.textContent = 'design ▸';
+  a.style.cssText = 'position:fixed;left:10px;bottom:8px;z-index:60;text-decoration:none;'
+    + 'font:11px ui-monospace,monospace;letter-spacing:.08em;color:#8fb4c8;'
+    + 'background:rgba(3,8,12,.7);border:1px solid rgba(120,200,210,.25);'
+    + 'border-radius:4px;padding:4px 8px;opacity:.55';
+  a.onmouseenter = () => { a.style.opacity = '1'; };
+  a.onmouseleave = () => { a.style.opacity = '.55'; };
+  document.body.appendChild(a);
 }
 
 const game = new Game();

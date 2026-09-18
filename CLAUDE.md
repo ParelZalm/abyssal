@@ -9,6 +9,7 @@ npm install
 npm run dev      # vite dev server with HMR
 npm run build    # tsc --noEmit && vite build  — this is the only gate
 npm run preview  # serve dist/
+npm run design   # vite, opened on /design.html — the design board
 ```
 
 There is **no test suite and no linter**. `npm run build` type-checks (strict) and is
@@ -17,6 +18,21 @@ what "does it pass" means here. `npx tsc --noEmit` alone is the fast inner loop.
 Do not start the dev server with `Bash`. `.claude/launch.json` defines an `abyssal`
 configuration — use the preview tooling (`preview_start` with `{name: "abyssal"}`) so the
 browser pane attaches to it.
+
+## Design mode
+
+`/design.html` (`src/game/design/`) lays out every drawing the game makes — the fish form
+and its parameters, the eight body plans, all 18 species, the background props, and the
+water and biome palettes — each over the real water colour at its own depth. It imports the
+shipping drawing code and is never imported by it, so it cannot drift from the game. Click
+a cell to focus it with its source file; the URL carries the whole state, so a link to one
+cell is a link to one design question.
+
+It is a development tool: `design.html` is not a build entry, so it is dev-served only, and
+both pages carry a corner link to the other (`import.meta.env.DEV` in `main.ts`).
+
+Reach for it first when a change is about how something looks in isolation. Reach for the
+game itself when the question is how it reads in motion, at depth, or against the HUD.
 
 ## Verifying visual work
 
@@ -64,11 +80,15 @@ Read `docs/decisions.md` before rebuilding anything that looks missing.
 
 ## Conventions that matter
 
-- **`FishView` geometry is drawn once per `rebuild(genome)` and animated only by
-  transform.** Never issue paths per frame; a per-frame `Graphics` rebuild across
-  hundreds of creatures would undo the entire performance budget.
+- **Creature art is baked into a texture once per `rebuild(genome)`; swimming moves mesh
+  vertices, never geometry.** Never issue paths per frame. The shape lives in `form.ts`
+  (a spine and one width curve), the painting in `fishbake.ts`, the skinned mesh in
+  `fishview.ts`.
+- **Nothing on a creature is stroked.** A contour has a position of its own, so it draws
+  twice wherever parts cross and the join shows. Silhouettes are carried by value —
+  noise-ragged edges, countershading, mottling. See `docs/decisions.md`.
 - **Organs carry a mechanic and a morphology together.** Adding one to `Genome` means
-  touching both `world.ts` and `fishview.ts`; a stat with no visible consequence is not
+  touching both `world.ts` and `fishbake.ts`; a stat with no visible consequence is not
   how this game communicates.
 - **Use `waterColor(y)` and `lightAt(y)` from `water.ts`** for anything that needs to
   know what the water looks like at a depth. `biomeAt(y)` blends across thermoclines;

@@ -10,7 +10,10 @@ main.ts (Game: loop, camera, input, run state)
 ├── game/world.ts     simulation — creatures, steering, perception, biting
 │   ├── game/species.ts   the 18-species table, and the genome rolled from it
 │   ├── game/genome.ts    the stat block, and the derived stats read off it
-│   └── game/fishview.ts  one Container per creature; the drawing
+│   └── game/fishview.ts  one deforming mesh per creature; swims it
+│       ├── game/form.ts      the spine + width curve every body is made of
+│       ├── game/fishbake.ts  paints a genome flat, caches it as a texture
+│       └── game/noise.ts     CPU value noise, matching the water shader's
 ├── game/water.ts     full-screen GLSL pass; also owns the depth→colour palette
 │   └── game/biomes.ts    per-tier look, blended by depth, feeding water + ocean
 ├── game/ocean.ts     suspended particulate
@@ -33,7 +36,8 @@ fields — `bites`, `playerGain`, `playerHeal`, `leviathanKilled`, `blocked` —
 reads them in `digest()` and turns them into particles, growth, toasts and phase
 changes. Keep it that way: the simulation should stay runnable without the presentation.
 
-`fishview` knows about `genome` and nothing else. It never reads world state.
+`fishview`, `form` and `fishbake` know about `genome` and nothing else. They never
+read world state.
 
 ## The frame
 

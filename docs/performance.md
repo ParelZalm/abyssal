@@ -35,9 +35,11 @@ Four changes fixed it, in order of what they bought:
   `textures.ts`, so a whole fight is one draw call. Anything new that draws many small
   things should reuse those textures, and additive things should be grouped in their own
   container rather than interleaved — a blend-mode change breaks the batch.
-- **Rebuild, don't redraw.** `FishView` geometry is issued once per mutation. A per-frame
-  `Graphics` rebuild for hundreds of creatures is the one thing that would undo all of
-  the above.
+- **Rebuild, don't redraw.** Creature art is painted once into a texture per distinct
+  genome; swimming writes `2 x cols` vertex floats and nothing else. Measured in the
+  running game: 94 creatures cost 0.074 ms a frame to pose, under a microsecond each. A
+  per-frame `Graphics` rebuild for hundreds of creatures is the one thing that would undo
+  all of the above.
 - **Pool.** `fx.ts` pools particles; any recycling background system should pool sprites
   the same way rather than constructing per placement.
 - **Prefer a baked texture to a filter.** A `BlurFilter` on a container costs a
