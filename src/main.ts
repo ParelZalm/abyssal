@@ -8,10 +8,11 @@ import { Scenery } from './game/scenery';
 import type { View } from './game/view';
 import { lightAt, Water } from './game/water';
 import type { Species } from './game/species';
-import { bandAt, BANDS, depthLabel, descentLimit, nextGate, placeName } from './game/zones';
+import { bandAt, BANDS, depthLabel, descentLimit, FINAL_GUARDIAN, nextGate,
+         placeName } from './game/zones';
 import { draftTraits, type Trait } from './game/traits';
 import { clamp, dist2, hsl, lerp, Rng } from './game/util';
-import { Creature, DEPTH_MAX, World } from './game/world';
+import { Creature, DEPTH_MAX, speciesById, World } from './game/world';
 import { UI } from './ui/UI';
 
 const POP_SHALLOW = 105;
@@ -19,7 +20,7 @@ const POP_DEEP = 46;
 const FOOD_MAX = 100;
 
 const PLAYER_SPECIES: Species = {
-  id: 'player', name: 'You', behavior: 'hunter', plan: 'wraith', depth: [0, DEPTH_MAX],
+  id: 'player', name: 'You', behavior: 'hunter', plan: 'wraith', zone: 'sunlit',
   size: [14, 14], hue: [30, 30], accent: 200, speed: 150, bite: 6, nutrition: 0, weight: 0,
 };
 
@@ -54,6 +55,17 @@ class Game {
   private deepest = 0;
   private elapsed = 0;
   private shake = 0;
+  /**
+   * Terror, as an attack and a sustain rather than a level.
+   *
+   * The proximity term already swells for "something large is near". What it cannot say is
+   * *it turned toward you*, because that is a discontinuity and the easing is deliberately
+   * slow. So a guardian's notice fires `dreadSpike`, which decays fast, over `dreadHold`,
+   * which lasts as long as the hunt does. Both feed the same `uDread` uniform — stacking a
+   * second full-screen treatment was tried and turns the corners to mud (docs/decisions.md).
+   */
+  private dreadSpike = 0;
+  private dreadHold = 0;
   private maxBand = 0;
   private hintCd = 0;
   private gatesOpen = 0;
@@ -118,10 +130,11 @@ class Game {
     this.stage = 1; this.xp = 0; this.food = FOOD_MAX;
     this.taken.clear(); this.takenNames = [];
     this.eaten = 0; this.deepest = 0; this.elapsed = 0; this.shake = 0;
+    this.dreadSpike = 0; this.dreadHold = 0;
     this.maxBand = 0; this.hintCd = 0; this.gatesOpen = 0;
     this.wakeCd = 0; this.sprinting = false; this.boostHeld = 0; this.hitStop = 0;
     this.zoom = this.zoomFor(g.size);
-    this.world.spawnAround(this.player.x, this.player.y, this.viewR(), POP_SHALLOW, false);
+    this.world.spawnAround(this.player.x, this.player.y, this.viewR(), POP_SHALLOW);
   }
 
   private bindInput() {
@@ -295,7 +308,19 @@ class Game {
       this.fx.burst(this.player.x, this.player.y, 0x8ef0b4, 12, 90, this.player.radius * 0.2);
       this.ui.toast(`Stinging cells digested — +${back} health`);
     }
-    if (this.world.leviathanKilled) { this.finish(true); return; }
+    if (this.world.noticedBy) {
+      const who = speciesById(this.world.noticedBy);
+      this.world.noticedBy = null;
+      this.dreadSpike = 1;
+      this.shake = Math.min(13, this.shake + 7);
+      this.ui.toast(`${who.name} has seen you`);
+    }
+    if (this.world.killedGuardian) {
+      const killed = this.world.killedGuardian;
+      this.world.killedGuardian = null;
+      if (killed === FINAL_GUARDIAN) { this.finish(true); return; }
+      this.ui.toast(`${speciesById(killed).name} falls — the zone is yours`);
+    }
     if (this.xp >= this.xpNeed) this.levelUp();
     if (this.player.hp <= 0) this.finish(false);
   }
@@ -336,6 +361,12 @@ class Game {
     this.food = Math.max(0, this.food - burn * dt);
     if (this.food <= 0) this.player.hp -= 5 * dt;
     this.shake = Math.max(0, this.shake - dt * 22);
+    // the spike is the turn of the head and is gone in half a second; the hold is the hunt,
+    // and it only lets go once nothing is chasing you any more
+    this.dreadSpike = Math.max(0, this.dreadSpike - dt * 2.2);
+    this.dreadHold = this.world.hunted
+      ? Math.min(1, this.dreadHold + dt * 2.5)
+      : Math.max(0, this.dreadHold - dt * 0.5);
   }
 
   private levelUp() {
@@ -469,7 +500,8 @@ class Game {
       }
     }
     const gateOpen = p.genome.size >= gateBand.gate;
-    this.water.update(view, p.genome.glow, this.phase === 'play' ? danger : 0,
+    const dread = Math.max(danger, this.dreadSpike, this.dreadHold * 0.62);
+    this.water.update(view, p.genome.glow, this.phase === 'play' ? dread : 0,
                       gateBand.top, gateOpen);
 
     // the requirement floats on the barrier itself while it is sealed and in frame
@@ -483,7 +515,7 @@ class Game {
       // deep creatures are far larger, so the abyss stays sparse
       const pop = Math.round(lerp(POP_SHALLOW, POP_DEEP, clamp(p.y / DEPTH_MAX, 0, 1)));
       this.world.cull(p.x, p.y, this.viewR());
-      this.world.spawnAround(p.x, p.y, this.viewR(), pop, this.maxBand >= BANDS.length - 1);
+      this.world.spawnAround(p.x, p.y, this.viewR(), pop);
     }
 
     this.ui.update({
@@ -491,7 +523,7 @@ class Game {
       food: this.food, foodMax: FOOD_MAX,
       xp: this.xp, xpNeed: this.xpNeed,
       stage: this.stage, size: p.genome.size, depth: p.y,
-      traits: this.takenNames, danger: this.phase === 'over' ? 0 : danger,
+      traits: this.takenNames, danger: this.phase === 'over' ? 0 : dread,
     });
   }
 }

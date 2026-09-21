@@ -1,7 +1,7 @@
 import { Container } from 'pixi.js';
 import { FishView } from './fishview';
 import { armourOf, biteDamage, maxHp, type Genome } from './genome';
-import { genomeFor, rollSpecies, SPECIES, type Species } from './species';
+import { genomeFor, rangeOf, rollSpecies, SPECIES, type Species } from './species';
 import { angleDelta, clamp, dist2, Rng, TAU } from './util';
 
 export const WORLD_HALF_W = 7000;
@@ -9,7 +9,8 @@ export const WORLD_HALF_W = 7000;
 const DRAG_FWD = 3.1;
 /** Sideways drag — a body with a keel barely slides. */
 const DRAG_LAT = 9;
-export const DEPTH_MAX = 9000;
+import { DEPTH_MAX, noticeSize } from './zones';
+export { DEPTH_MAX };
 
 export interface Bite {
   x: number; y: number; amount: number; fatal: boolean; onPlayer: boolean;
@@ -32,6 +33,8 @@ export class Creature {
   bank = 0;
   /** Ambushers hold still until this drops to zero. */
   lunge = 0;
+  /** Guardians only: whether this one has currently registered the player as worth eating. */
+  aware = false;
   /** Venom left in the wound: damage per second, and who is owed the kill. */
   poison = 0;
   poisonT = 0;
@@ -124,23 +127,34 @@ export class World {
   descentLimit = DEPTH_MAX;
   /** True on any frame the player pressed against a sealed thermocline. */
   blocked = false;
-  leviathanKilled = false;
+  /** Species id of a guardian killed this run, or null. Drained by `Game.digest`. */
+  killedGuardian: string | null = null;
+  /**
+   * Species id of a guardian that has just this instant turned toward the player, or null.
+   * An event, drained by `Game.digest` — the moment, not the state.
+   */
+  noticedBy: string | null = null;
+  /** Whether any guardian is currently hunting the player. A level, recomputed each frame. */
+  hunted = false;
+  /** Guardians already killed. A guardian is gone for the run, not on a respawn timer. */
+  private readonly deadGuardians = new Set<string>();
 
   constructor(private rng: Rng, private player: Creature) {
     this.layer.addChild(player.view);
     this.glow.addChild(player.view.glow);
   }
 
-  spawnAround(cx: number, cy: number, viewR: number, target: number, allowApex: boolean) {
+  spawnAround(cx: number, cy: number, viewR: number, target: number) {
     let guard = 0;
     while (this.creatures.length < target && guard++ < 40) {
       const a = this.rng.next() * TAU;
       const r = viewR * this.rng.range(0.75, 1.6);
       const x = clamp(cx + Math.cos(a) * r, -WORLD_HALF_W, WORLD_HALF_W);
       const y = clamp(cy + Math.sin(a) * r, 40, DEPTH_MAX);
-      const sp = rollSpecies(this.rng, y, allowApex);
+      const sp = rollSpecies(this.rng, y);
       if (!sp) continue;
-      if (sp.behavior === 'apex' && this.count('leviathan') >= 1) continue;
+      // one guardian at a time, and never again once it is dead
+      if (sp.guardian && (this.deadGuardians.has(sp.id) || this.count(sp.id) >= 1)) continue;
       this.add(sp, x, y);
       // schools arrive as schools, and plankton as a bloom you can graze through
       if (sp.behavior === 'school' || sp.behavior === 'plankton') {
@@ -197,6 +211,7 @@ export class World {
     this.playerGain = 0;
     this.playerHeal = 0;
     this.blocked = false;
+    this.hunted = false;
     const p = this.player;
 
     for (const c of this.creatures) this.think(c, dt, p);
@@ -250,10 +265,18 @@ export class World {
           }
         }
         const prey = this.nearest(c, sense * (c.species.behavior === 'apex' ? 3 : 1),
-          o => o !== c && c.canEat(o) && o.species.id !== c.species.id);
+          o => o !== c && c.canEat(o) && o.species.id !== c.species.id && this.notices(c, o));
         const wantsToHunt = c.species.behavior === 'hunter' || c.species.behavior === 'apex' ||
           (c.species.behavior === 'ambush' && c.lunge <= 0);
         if (prey && wantsToHunt) {
+          // a guardian turning toward you is the moment the zone stops being scenery, so it
+          // is published once on the edge rather than every frame it holds
+          if (c.species.guardian && prey.isPlayer) {
+            if (!c.aware) { c.aware = true; this.noticedBy = c.species.id; }
+            this.hunted = true;
+          } else if (c.species.guardian) {
+            c.aware = false;
+          }
           desired = Math.atan2(prey.y - c.y, prey.x - c.x);
           if (c.species.behavior === 'ambush') {
             const close = dist2(c.x, c.y, prey.x, prey.y) < (sense * 0.4) ** 2;
@@ -280,7 +303,7 @@ export class World {
     }
 
     // creatures hold to their own depth band, which is what makes a tier feel like a place
-    const [bandTop, bandBottom] = c.species.depth;
+    const [bandTop, bandBottom] = rangeOf(c.species);
     if (c.y < bandTop + 90) desired = Math.PI / 2;
     else if (c.y > bandBottom - 90) desired = -Math.PI / 2;
     if (c.y < 120) desired = Math.PI / 2;
@@ -318,6 +341,26 @@ export class World {
     if (!c.view.visible) return;
     c.view.animate(dt, clamp(c.thrust, 0, 1.6), c.beat, c.bank);
     c.syncView();
+  }
+
+/**
+   * Whether a hunter has registered something as worth turning for.
+   *
+   * Only guardians decline. A guardian is alive in its zone from the first minute, which
+   * means the Great White shares the tutorial water with a 14 cm hatchling — and the scene
+   * that sells the zone is it swimming past without turning its head. Being ignored by
+   * something that could obviously eat you says more about where you are than any amount of
+   * being chased. Below the threshold it has seen you and does not care.
+   *
+   * Stealth raises the bar rather than lowering it: a quiet animal has to grow larger before
+   * it registers at all, which is what lets a stealth build cross a zone a bruiser cannot.
+   *
+   * The threshold comes from the zone, not from the guardian — see `noticeSize`.
+   */
+  private notices(hunter: Creature, o: Creature): boolean {
+    if (!hunter.species.guardian) return true;
+    const shy = o.isPlayer ? clamp(o.genome.stealth, 0, 1) : 0;
+    return o.genome.size >= noticeSize(hunter.species.zone) * (1 + shy * 0.5);
   }
 
   private nearest(from: Creature, radius: number, ok: (c: Creature) => boolean): Creature | null {
@@ -418,7 +461,11 @@ export class World {
     if (!byPlayer) return;
     this.playerGain += def.genome.size * def.species.nutrition;
     this.playerHeal += def.species.heal ?? 0;
-    if (def.species.behavior === 'apex') this.leviathanKilled = true;
+    if (def.species.guardian) {
+      this.hunted = false;
+      this.deadGuardians.add(def.species.id);
+      this.killedGuardian = def.species.id;
+    }
   }
 }
 

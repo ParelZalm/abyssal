@@ -64,6 +64,16 @@ parameters honest — the widest point moves on its own instead of being a third
 keep in sync. `PLAN_FORMS` holds one `Form` per plan and `formFor(genome, plan)` bends it
 with the genome, so a mutation that changes how an animal feeds changes its profile too.
 
+A plan is three records and nothing else: its `Form` in `PLAN_FORMS`, its swim signature
+in `MOTION` (`fishview.ts`), and its art in `PLAN_ART` — arms, spines, gills, cilia, pale
+eyes, caudal scale, outline samples, smoke. All three are `Record<Plan, …>`, so adding a
+plan is a data edit the compiler walks you through. `PLAN_ART` replaced eleven scattered
+`plan === …` conditionals in `fishbake.ts`; there are none left, and adding a plan no
+longer means auditing the bake for branches it might belong in.
+
+Guardians are the exception to plans being shared: each has a body nothing else wears,
+because a guardian is the animal the player is meant to recognise on sight.
+
 This replaced a hand-drawn path per body plan. That system could not interpolate between
 any two of its shapes, so growth and mutation could only ever swap one drawing for another.
 
@@ -106,7 +116,8 @@ Watch the UVs: the columns run nose to tail (decreasing x) while the texture's u
 to the right. Reading the column index straight into u renders every creature mirrored, and
 it renders perfectly happily that way.
 
-Nine plans — microbe, darter, shark, eel, jelly, squid, angler, leviathan, and `wraith`,
+Thirteen plans — microbe, darter, shark, eel, jelly, squid, angler, leviathan, the four
+guardian bodies (greatshark, whale, longsquid, broadsquid), and `wraith`,
 which only the player wears — each with a `MOTION` record (columns, waves along the body,
 sway amplitude, bell pulse). `PLAN_FORMS` is the list; the design board reads its keys, so
 a plan cannot be added to the game without appearing there.

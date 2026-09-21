@@ -20,6 +20,12 @@ export const R = 10;
 /** Silhouettes, seen from directly above. A species picks one. */
 export type Plan =
   | 'microbe' | 'darter' | 'shark' | 'eel' | 'jelly' | 'squid' | 'angler' | 'leviathan'
+  /**
+   * Guardians. Each is one animal rather than a family, and each gets a silhouette of its
+   * own: a guardian sharing a body with its prey is the one place the roster cannot afford
+   * to look generic, because it is the thing the player is supposed to recognise on sight.
+   */
+  | 'greatshark' | 'whale' | 'longsquid' | 'broadsquid'
   /** Player only. The thing the ocean should be worried about. */
   | 'wraith';
 
@@ -64,9 +70,88 @@ export const PLAN_FORMS: Record<Plan, Form> = {
                fluke: 0.26, fork: 0.3 },
   leviathan: { len: 3.1, width: 0.64, fore: 0.85, aft: 1.4, peduncle: 0.13, cheek: 0.13,
                fluke: 0.38, fork: 0.9 },
+  // heavier than the reef shark in every direction, and forked almost to a crescent —
+  // the shape of something that crosses open water rather than patrolling a reef
+  greatshark:  { len: 3.1, width: 0.64, fore: 1.0, aft: 1.5, peduncle: 0.1, cheek: 0.14,
+                 fluke: 0.36, fork: 0.95 },
+  // a box on the front of a taper. `fore` this low puts the widest point at t≈0.18, which
+  // is the whole animal: a third of a sperm whale is head, and nothing else in the ocean
+  // is shaped like that
+  whale:       { len: 3.4, width: 0.6, fore: 0.42, aft: 1.9, peduncle: 0.09, cheek: 0.3,
+                 fluke: 0.3, fork: 0.75 },
+  // a long narrow mantle that trails far more than its own length in arms
+  longsquid:   { len: 3.2, width: 0.42, fore: 1.8, aft: 0.8, peduncle: 0.24, cheek: 0.04,
+                 fluke: 0.34, fork: 0.35 },
+  // the same animal built short and heavy instead: stubbier mantle, far broader fins
+  broadsquid:  { len: 2.3, width: 0.74, fore: 1.6, aft: 0.9, peduncle: 0.34, cheek: 0.06,
+                 fluke: 0.42, fork: 0.25 },
   // long, narrow, and trailing half its length in veil: nothing that schools looks like this
   wraith:    { len: 2.7, width: 0.48, fore: 0.72, aft: 1.15, peduncle: 0.26, cheek: 0.06,
                fluke: 0.52, fork: 0.22 },
+};
+
+/**
+ * The per-plan art decisions — everything about drawing a plan that is not its form.
+ *
+ * These were eleven `plan === …` conditionals scattered through `fishbake.ts`, which meant
+ * adding a plan was an archaeology exercise: find every branch, decide whether the new one
+ * belongs in it. As a table, a plan is a row, and `Record<Plan, …>` makes TypeScript insist
+ * you fill it in.
+ */
+export interface PlanArt {
+  /** Trailing arms: spread as a fraction of the widest half-width. 0 for none. */
+  arms: number;
+  armCount: number;
+  /** Arm length, in R units. */
+  armLen: number;
+  /** Arm half-width, in R units. */
+  armWidth: number;
+  /** Length multiplier on the outermost pair. 1 is a uniform crown. */
+  armPair: number;
+  /** How much room behind the body the arms need, in R units. */
+  armReach: number;
+  /** Dorsal blades along the flank. */
+  spines: boolean;
+  /** The gill-cover crescent. */
+  gills: boolean;
+  /** A ring of cilia — single cells only. */
+  cilia: boolean;
+  /** Eyes that catch the light rather than swallowing it. */
+  paleEyes: boolean;
+  /** Multiplier on the caudal spread. */
+  caudal: number;
+  /** Outline samples. Long thin bodies need more before the curve reads as smooth. */
+  samples: number;
+  /** Drawn see-through with its viscera showing. The player only. */
+  smoke: boolean;
+}
+
+const art = (o: Partial<PlanArt> = {}): PlanArt => ({
+  arms: 0, armCount: 0, armLen: 0, armWidth: 0, armPair: 1, armReach: 0, spines: true,
+  gills: true,
+  cilia: false, paleEyes: false, caudal: 1, samples: 90, smoke: false, ...o,
+});
+
+export const PLAN_ART: Record<Plan, PlanArt> = {
+  microbe:    art({ spines: false, gills: false, cilia: true }),
+  darter:     art(),
+  shark:      art(),
+  eel:        art({ samples: 120 }),
+  jelly:      art({ arms: 1.15, armCount: 9, armLen: 1.1, armWidth: 0.07, armReach: 0.6,
+                    spines: false, gills: false, caudal: 0.6 }),
+  squid:      art({ arms: 1.15, armCount: 6, armLen: 1.5, armWidth: 0.12, armReach: 0.6 }),
+  angler:     art({ paleEyes: true }),
+  leviathan:  art({ paleEyes: true, samples: 110 }),
+  greatshark: art({ samples: 100 }),
+  // no dorsal fin on a sperm whale, so no blades either — the back is a smooth hump
+  whale:      art({ spines: false, samples: 110 }),
+  // two feeding tentacles far beyond the other eight, which is the giant squid's whole
+  // silhouette and the reason it needs a plan rather than a bigger `squid`
+  longsquid:  art({ arms: 1.5, armCount: 10, armLen: 2.6, armWidth: 0.085, armReach: 2.2,
+                    armPair: 1.9, paleEyes: true, caudal: 0.85 }),
+  broadsquid: art({ arms: 1.35, armCount: 8, armLen: 1.5, armWidth: 0.17, armReach: 1.2,
+                    paleEyes: true, caudal: 1.15 }),
+  wraith:     art({ smoke: true }),
 };
 
 /** Where the width function peaks, 0 at the nose and 1 at the tail root. */

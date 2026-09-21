@@ -8,6 +8,12 @@
  * what ships answers questions about itself instead of about the game.
  *
  * Nothing here is imported by the game.
+ *
+ * It deliberately stops at the silhouette. The deep-water morphology — photophores, eye
+ * adaptation, gape, veil, bulk, barbels — is explored on the `morph`, `stats` and `builds`
+ * groups instead, which drive the *shipping* bake rather than a second copy of it. Drawing
+ * those here as well would be exactly the drift this file's whole premise is against: a
+ * playground that has its own photophores answers questions about its own photophores.
  */
 import { Container, Graphics, MeshSimple, type Renderer, type Texture } from 'pixi.js';
 import { halfWidth, quintic, R, shoulderAt, spineAt, type Form } from '../form';

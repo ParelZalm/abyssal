@@ -15,17 +15,20 @@ main.ts (Game: loop, camera, input, run state)
 │       ├── game/fishbake.ts  paints a genome flat, caches it as a texture
 │       └── game/noise.ts     CPU value noise, matching the water shader's
 ├── game/water.ts     full-screen GLSL pass; also owns the depth→colour palette
-│   └── game/zones.ts     the five zones and their bands: look, gates, depth labels
+│   └── game/zones.ts     the five zones and their bands: look, gates, depth labels,
+│                         and the size at which each zone's guardian takes notice
 ├── game/view.ts      what the camera sees this frame; ocean, scenery and water read it
 ├── game/ocean.ts     suspended particulate
-├── game/scenery.ts   parallax soft props (bands behind + in front of creatures)
+├── game/species.ts   the roster: what lives in each zone, and the five guardians
+├── game/scenery.ts   parallax soft props (planes behind + in front of creatures)
 │   └── game/props.ts     disc / blob / mass / wisp textures, blur baked at boot
 ├── game/fx.ts        pooled hit particles and rings
 ├── game/traits.ts    the mutation pool and the rarity-weighted draft
 └── ui/               DOM UI — UI.ts facade, hud/*, screens/*, icons.ts
 ```
 
-`game/scenery.ts` draws soft organic props on parallax bands. See
+`game/scenery.ts` draws soft organic props on parallax planes — *planes*, because
+*band* now means a slice of the water column. See
 [decisions.md](decisions.md) for why the art is primitives rather than creature
 silhouettes.
 

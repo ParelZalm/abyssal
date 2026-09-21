@@ -54,14 +54,31 @@ and `main` converts it into biomass, size and particles.
 
 ## Population
 
-`spawnAround(cx, cy, viewR, target, allowApex)` tops the list up to `target` creatures,
-rolling species by `weight` and by whether the depth falls in their band. `cull` drops
+`spawnAround(cx, cy, viewR, target)` tops the list up to `target` creatures, rolling
+species by `weight` and by whether the depth falls in their range. A species belongs to
+exactly one zone (optionally to one band of it) and carries a `bleed` in world units,
+which is how far past its home it strays; `rangeOf` precomputes the result at boot. A
+vertical migrator is a species with a wide bleed, not a species of two zones. `cull` drops
 anything outside the radius. Two shaping rules live in `species.ts`/`world.ts`:
 
-- The **shallows tutorial**: above 1000 m plankton spawn in blooms of 6–11 and hunters
-  and ambushers are thinned to ~40%, both fading out by 1000 m.
-- **Apex** species (the Leviathan) only spawn once `allowApex` is set, which `main` ties
-  to having reached the deepest band.
+- The **shallows tutorial**: above 1000 m plankton spawn in blooms of 6–11 and hunters,
+  ambushers and guardians are thinned to ~40%, all fading out by 1000 m.
+- **Guardians** are in the spawn pool like anything else — one is alive in its zone from
+  the moment the player first arrives. `World` holds each to a single instance and keeps
+  it in `deadGuardians` once killed, so a guardian is gone for the run rather than on a
+  respawn timer. Killing the Trenches' guardian (`FINAL_GUARDIAN`) ends the run; the other
+  four just grant a very large meal.
+
+## Notice
+
+A guardian ignores anything smaller than `noticeSize(zone)`, which is interpolated between
+the gate that opens its zone and the gate that opens the next. It has seen you and does not
+care, which is the scene that sells a zone. `World.notices` gates the prey filter;
+`noticedBy` publishes the instant one turns toward the player and `hunted` stays true while
+any is chasing. `Game` turns those into a spike-and-sustain envelope on the water shader's
+`uDread`. Stealth multiplies the threshold up. See
+[adr/0002](adr/0002-guardian-notice-is-measured-against-the-zone.md) for why the threshold
+is not a share of the guardian's own body, which was tried first and is backwards.
 
 Population target itself falls with depth (`POP_SHALLOW` 105 → `POP_DEEP` 46 in
 `main.ts`) because deep creatures are far larger.

@@ -1,6 +1,8 @@
 import type { PropKind } from './props';
 import { clamp, lerp } from './util';
-import { DEPTH_MAX } from './world';
+
+/** Floor of the water column, in world units. Depth runs 0 here to DEPTH_MAX. */
+export const DEPTH_MAX = 9000;
 
 type Rgb = [number, number, number];
 
@@ -201,6 +203,35 @@ export const ZONES: Zone[] = [
     ],
   },
 ];
+
+/**
+ * The guardian whose death ends the run. Only the deepest one does: the other four are
+ * presences to survive and eventually eat, not gates and not win conditions.
+ */
+export const FINAL_GUARDIAN = ZONES[ZONES.length - 1].guardian;
+
+/**
+ * The body length at which a zone's guardian starts taking an interest.
+ *
+ * Measured against the zone's own size band — the gate that opens it and the gate that
+ * opens the next one — rather than against the guardian's body. A share of the guardian's
+ * length was the obvious rule and it does not work: gates climb far faster than guardian
+ * sizes do, so any single ratio leaves the shallow guardians indifferent forever and the
+ * deep ones hunting you from the moment you arrive, which is backwards. Tying it to the
+ * zone means every zone gets the same arc — you enter beneath its notice and grow into
+ * being worth eating — and it leaves guardian sizes free to be whatever the fiction and
+ * the health formula want.
+ */
+const NOTICE: Record<ZoneId, number> = Object.fromEntries(ZONES.map((z, i) => {
+  const entry = z.bands[0].gate;
+  // the deepest zone has no gate below it, so it uses its own depth as the span
+  const exit = ZONES[i + 1]?.bands[0].gate ?? entry * 1.6;
+  return [z.id, lerp(entry, exit, 0.45)];
+})) as Record<ZoneId, number>;
+
+export function noticeSize(zone: ZoneId): number {
+  return NOTICE[zone];
+}
 
 /** Every band, top to bottom. The column is a flat list of these. */
 export const BANDS: Band[] = ZONES.flatMap(z => z.bands);

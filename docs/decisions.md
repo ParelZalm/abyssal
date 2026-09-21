@@ -1,7 +1,14 @@
 # Decisions and dead ends
 
 Read this before rebuilding anything here. Most of it is failure, which is the useful
-part.
+part. Two decisions large enough to have their own files live in [adr/](adr/):
+
+- [0001](adr/0001-depth-labels-decoupled-from-world-depth.md) — the column is 9000 tuned
+  world units while the HUD reads real metres, 0 to 11,034. Literal boundaries make the
+  Sunlit Zone 100 units tall, which is smaller than a hatchling's sense radius.
+- [0002](adr/0002-guardian-notice-is-measured-against-the-zone.md) — a guardian's notice
+  threshold comes from its zone's size band, not from a share of its own length. The
+  obvious rule is backwards in the deep, where it matters most.
 
 ## Parallax background (`scenery.ts`, `props.ts`)
 

@@ -54,7 +54,9 @@ weight. Stealth lowers the ratio at which it happens. Notice is an event with an
 aftermath, not a level: it spikes and then sustains while the hunt is on.
 
 **Plan** — the silhouette an animal is drawn as, seen from above: the shape you
-recognise before any detail resolves. Several species share a plan.
+recognise before any detail resolves. Several species usually share a plan. A guardian
+does not: it is one animal rather than a family, and the thing the player is meant to
+recognise on sight, so it has a body nothing else wears.
 
 **Form** — the resting proportions of a plan, as a spine and one width curve. A
 genome bends its plan's form, so two animals on one plan stay recognisably the

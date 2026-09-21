@@ -14,7 +14,8 @@
  */
 import { Graphics, type Renderer, type Texture } from 'pixi.js';
 import { eyeOf, fadeOf, menace, photophoreOf, type Genome } from './genome';
-import { formFor, halfWidth, shoulderAt, spineAt, R, type Form, type Plan } from './form';
+import { formFor, halfWidth, PLAN_ART, shoulderAt, spineAt, R, type Form, type Plan,
+         type PlanArt } from './form';
 import { fbm, fbmSigned } from './noise';
 import { hsl, lerp, TAU } from './util';
 
@@ -131,8 +132,8 @@ function paint(g: Genome, plan: Plan): Baked {
   // faded by one AlphaFilter, because per-part alpha composites every overlap twice and the
   // joints then outline themselves. A single surface has no overlaps to composite, so the
   // render target that cost is simply gone — the body is drawn see-through and that is all.
-  const smoke = plan === 'wraith';
-  if (smoke) pal.alpha *= 0.6;
+  const A = PLAN_ART[plan];
+  if (A.smoke) pal.alpha *= 0.6;
 
   const art = new Graphics();
 
@@ -140,7 +141,7 @@ function paint(g: Genome, plan: Plan): Baked {
   let widest = 0;
   for (let i = 0; i <= 40; i++) widest = Math.max(widest, halfWidth(i / 40, f));
   const caudal = halfWidth(1, f) * (2.4 + f.fork * 1.8);
-  const arms = plan === 'squid' || plan === 'jelly' ? widest * 1.15 : 0;
+  const arms = widest * A.arms;
   const frill = g.frill > 0 ? widest * 0.3 : 0;
   const veiling = widest * g.veil * 1.5;
   const halfH = Math.max(widest * (1 + wob), caudal, arms, widest + frill,
@@ -150,20 +151,20 @@ function paint(g: Genome, plan: Plan): Baked {
   const front = spineAt(0, f) + Math.max(R * 0.12,
     g.lure > 0 ? R * (0.9 + g.lure * 0.5) : 0,
     g.barbels > 0 ? R * (0.55 + g.barbels * 0.9) : 0);
-  const back = spineAt(1, f) - f.len * f.fluke * R * 1.06 - (arms ? R * 0.6 : 0);
+  const back = spineAt(1, f) - f.len * f.fluke * R * 1.06 - A.armReach * R;
 
   // an invisible rect pins the texture to exactly this rect, so the UVs line up with the
   // body rather than with whatever the art happened to touch
   art.rect(back, -halfH, front - back, halfH * 2).fill({ color: 0, alpha: 0 });
 
   // --- behind the body ---------------------------------------------------
-  if (plan === 'jelly' || plan === 'squid') tentacles(art, f, pal, plan, g);
+  if (A.arms > 0) tentacles(art, f, pal, A, g);
   if (g.veil > 0) veil(art, f, pal, g, seed);
-  caudalFin(art, f, pal, g, plan);
+  caudalFin(art, f, pal, g, A);
   if (g.lure > 0) lure(art, f, pal, g);
 
   // --- the body itself ---------------------------------------------------
-  const n = plan === 'eel' ? 120 : 90;
+  const n = A.samples;
   flank(art, f, 0, 1, -1, n, true, wob, seed);
   flank(art, f, 1, 0, 1, n, false, wob, seed);
   art.closePath().fill({ color: pal.skin, alpha: pal.alpha });
@@ -171,14 +172,14 @@ function paint(g: Genome, plan: Plan): Baked {
   countershade(art, f, pal, seed);
   mottle(art, f, pal, g, seed);
   if (photophoreOf(g) > 0) photophores(art, f, pal, g, seed);
-  if (plan === 'microbe') cilia(art, f, pal);
+  if (A.cilia) cilia(art, f, pal);
 
   // --- on top ------------------------------------------------------------
-  if (smoke) viscera(art, f, pal);
+  if (A.smoke) viscera(art, f, pal);
   fins(art, f, pal, g);
-  spines(art, f, pal, g, men, plan);
+  if (A.spines) spines(art, f, pal, g, men);
   organs(art, f, pal, g);
-  head(art, f, pal, g, plan, men);
+  head(art, f, pal, g, A, men);
   if (g.barbels > 0) barbels(art, f, pal, g);
 
   const tex = renderer.generateTexture({ target: art, resolution: 6, antialias: true });
@@ -231,11 +232,11 @@ function mottle(gr: Graphics, f: Form, pal: Palette, g: Genome, seed: number) {
   }
 }
 
-function caudalFin(gr: Graphics, f: Form, pal: Palette, g: Genome, plan: Plan) {
+function caudalFin(gr: Graphics, f: Form, pal: Palette, g: Genome, A: PlanArt) {
   const x = spineAt(1, f);
   const w = halfWidth(1, f);
   const len = f.len * f.fluke * R;
-  const spread = w * (2.4 + f.fork * 1.8) * (plan === 'jelly' ? 0.6 : 1);
+  const spread = w * (2.4 + f.fork * 1.8) * A.caudal;
   const notch = len * (0.18 + f.fork * 0.42);
   gr.moveTo(x + w * 1.6, -w * 0.9)
     .quadraticCurveTo(x - len * 0.5, -spread * 0.72, x - len, -spread)
@@ -271,8 +272,7 @@ function fins(gr: Graphics, f: Form, pal: Palette, g: Genome) {
 }
 
 /** Dorsal spines along the flank. Count rides menace: evolving grows the weapon. */
-function spines(gr: Graphics, f: Form, pal: Palette, g: Genome, men: number, plan: Plan) {
-  if (plan === 'jelly' || plan === 'microbe') return;
+function spines(gr: Graphics, f: Form, pal: Palette, g: Genome, men: number) {
   const n = Math.min(7, Math.round(men * 4 + g.spikes * 1.4));
   for (let i = 0; i < n; i++) {
     const t = 0.38 + (i / Math.max(1, n)) * 0.34;
@@ -413,19 +413,23 @@ function lure(gr: Graphics, f: Form, pal: Palette, g: Genome) {
 }
 
 /** Trailing arms for the things that swim by contracting. */
-function tentacles(gr: Graphics, f: Form, pal: Palette, plan: Plan, g: Genome) {
-  const n = plan === 'jelly' ? 9 : 6;
+function tentacles(gr: Graphics, f: Form, pal: Palette, A: PlanArt, g: Genome) {
+  const n = A.armCount;
   const root = spineAt(0.92, f);
   const spread = halfWidth(0.92, f);
-  const len = R * (plan === 'jelly' ? 1.1 : 1.5) * (1 + g.segments * 0.1);
+  const len = R * A.armLen * (1 + g.segments * 0.1);
   for (let i = 0; i < n; i++) {
     const v = (i / (n - 1)) * 2 - 1;
     const y = v * spread * 1.1;
-    const w = R * (plan === 'jelly' ? 0.07 : 0.12);
+    const w = R * A.armWidth;
+    // the outermost pair reaches past the rest: eight arms and two feeding tentacles is
+    // the silhouette, and a uniform crown reads as an anemone instead
+    const reach = i === 0 || i === n - 1 ? A.armPair : 1;
     gr.moveTo(root, y - w)
-      .quadraticCurveTo(root - len * 0.6, y + v * len * 0.35, root - len, y + v * len * 0.55)
-      .lineTo(root - len, y + v * len * 0.55 + w)
-      .quadraticCurveTo(root - len * 0.55, y + v * len * 0.35 + w, root, y + w)
+      .quadraticCurveTo(root - len * reach * 0.6, y + v * len * 0.35,
+                        root - len * reach, y + v * len * reach * 0.55)
+      .lineTo(root - len * reach, y + v * len * reach * 0.55 + w)
+      .quadraticCurveTo(root - len * reach * 0.55, y + v * len * 0.35 + w, root, y + w)
       .closePath().fill({ color: pal.skin, alpha: 0.7 * pal.alpha });
   }
 }
@@ -446,7 +450,7 @@ function cilia(gr: Graphics, f: Form, pal: Palette) {
 }
 
 /** Eyes, mouth and gill cover — as fills, since nothing on this animal is a line. */
-function head(gr: Graphics, f: Form, pal: Palette, g: Genome, plan: Plan, men: number) {
+function head(gr: Graphics, f: Form, pal: Palette, g: Genome, A: PlanArt, men: number) {
   const peak = shoulderAt(f);
 
   // mouth: a dark sliver across the snout, opening with the jaw
@@ -483,7 +487,7 @@ function head(gr: Graphics, f: Form, pal: Palette, g: Genome, plan: Plan, men: n
   // cat's eyes flare in a torch beam. Past the point of no light at all there is nothing
   // to gather and the eye goes: a blind socket is a dimple, not a bead, and nothing in it
   // catches a highlight.
-  const pale = plan === 'angler' || plan === 'leviathan' || adapt > 0.45;
+  const pale = A.paleEyes || adapt > 0.45;
   const blind = adapt < -0.4;
   for (const dir of [-1, 1]) {
     const y = dir * halfWidth(te, f) * 0.64;
@@ -498,7 +502,7 @@ function head(gr: Graphics, f: Form, pal: Palette, g: Genome, plan: Plan, men: n
   }
 
   // gill cover: a crescent of the back colour at the edge of the head
-  if (plan !== 'microbe' && plan !== 'jelly') {
+  if (A.gills) {
     const tg = peak * 0.95;
     for (const dir of [-1, 1]) {
       gr.moveTo(spineAt(tg - 0.07, f), dir * halfWidth(tg - 0.07, f) * 0.98)

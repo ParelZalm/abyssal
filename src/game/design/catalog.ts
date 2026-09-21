@@ -11,7 +11,7 @@ import { PLAN_FORMS, type Plan } from '../form';
 import { FishView } from '../fishview';
 import { baseGenome, type Genome } from '../genome';
 import { PROP_SIZE, propTexture, type PropKind } from '../props';
-import { genomeFor, SPECIES } from '../species';
+import { genomeFor, rangeOf, SPECIES } from '../species';
 import { BANDS, depthLabel, zoneOf } from '../zones';
 import { rgb, Rng } from '../util';
 import { waterColor } from '../water';
@@ -161,7 +161,7 @@ function planGroup(): DesignGroup {
       id: plan,
       name: plan,
       note: `PLAN_FORMS.${plan}`,
-      source: 'src/game/fishview.ts',
+      source: 'src/game/form.ts',
       span: 120,
       depth: 3000,
       facts: { plan },
@@ -365,14 +365,54 @@ function speciesGroup(): DesignGroup {
       return {
         id: sp.id,
         name: sp.name,
-        note: `${sp.behavior} · ${sp.plan} · ${sp.depth[0]}–${sp.depth[1]}m`,
+        note: `${sp.zone}${sp.band ? ` · ${sp.band}` : ''} · ${sp.behavior} · ${sp.plan}`,
         source: 'src/game/species.ts',
         span: g.size * 3,
-        depth: (sp.depth[0] + sp.depth[1]) / 2,
+        depth: (rangeOf(sp)[0] + rangeOf(sp)[1]) / 2,
         facts: {
           plan: sp.plan, behavior: sp.behavior, size: Math.round(g.size),
           hue: Math.round(g.hue), bite: sp.bite, glow: sp.glow ?? 0,
           translucent: sp.translucent ?? 0,
+        },
+        make: () => boardFish(g, sp.plan),
+        animate: fishAnimate,
+      };
+    }),
+  };
+}
+
+// ------------------------------------------------------------------ guardians
+
+/**
+ * The five guardians side by side, at a common scale.
+ *
+ * They are the one part of the roster that cannot afford to look generic — a guardian is
+ * the animal the player is meant to recognise on sight, from a distance, while deciding
+ * whether to run. Two of them on the shared `squid` plan and two on `leviathan` read as
+ * recolours of each other, which is why they have bodies of their own. This group exists
+ * to check that they still do once they are next to each other rather than a zone apart.
+ */
+function guardianGroup(): DesignGroup {
+  const guards = SPECIES.filter(s => s.guardian);
+  return {
+    id: 'guardians',
+    name: 'Guardians',
+    note: 'One per zone, at a common scale — the check is whether they read as five animals.',
+    items: guards.map((sp, i) => {
+      const g = genomeFor(sp, new Rng(500 + i * 31));
+      const [top, bottom] = rangeOf(sp);
+      return {
+        id: sp.id,
+        name: sp.name,
+        note: `${sp.zone} · ${sp.plan} · ${Math.round(g.size)} cm`,
+        source: 'src/game/species.ts',
+        // a common span rather than one scaled to each body: relative bulk is half of what
+        // tells them apart, and per-cell framing would throw exactly that away
+        span: 420,
+        depth: (top + bottom) / 2,
+        facts: {
+          plan: sp.plan, zone: sp.zone, size: Math.round(g.size), bite: sp.bite,
+          sense: Math.round(g.sense), eyeAdapt: g.eyeAdapt,
         },
         make: () => boardFish(g, sp.plan),
         animate: fishAnimate,
@@ -508,5 +548,6 @@ function protoSceneryGroup(): DesignGroup {
 
 export function catalog(): DesignGroup[] {
   return [formGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(),
-          speciesGroup(), propGroup(), waterGroup(), protoSceneryGroup()];
+          speciesGroup(), guardianGroup(), propGroup(), waterGroup(),
+          protoSceneryGroup()];
 }
