@@ -40,8 +40,14 @@ tiers are indistinguishable. Same reason `shimmer` does not scale away with `uLi
 ## Creatures
 
 `src/game/form.ts` (shape), `src/game/fishbake.ts` (art), `src/game/fishview.ts` (the view).
-One `FishView extends Container` per creature, holding one `MeshSimple` and two additive
-Sprites (`aura`, `halo`).
+One `FishView extends Container` per creature, holding one `MeshSimple`. Its three additive
+Sprites (`aura`, `halo`, `core`) are **not** children of it: they live in `view.glow`, which
+`world.ts` parents into a single `world.glow` container under all the bodies. A blend-mode
+change between the meshes would break the sprite batch once per animal on screen, so the
+blooms are gathered instead and every one of them draws in a single batch off the shared
+glow texture. The cost is that the view has to move and dim two display objects rather than
+one: `place()` and `show()` on `FishView` are the only supported way to do it, and `main`
+calls `show(seen, alpha, tint)` where it used to set `visible`, `alpha` and `tint` directly.
 
 **The invariant: the art is painted once into a texture, and swimming moves vertices, not
 geometry.** `animate(dt, thrust, beat, bank)` writes `2 x cols` floats and nothing else. No
@@ -99,8 +105,10 @@ Watch the UVs: the columns run nose to tail (decreasing x) while the texture's u
 to the right. Reading the column index straight into u renders every creature mirrored, and
 it renders perfectly happily that way.
 
-Eight plans — microbe, darter, shark, eel, jelly, squid, angler, leviathan — each with a
-`MOTION` record (columns, waves along the body, sway amplitude, bell pulse).
+Nine plans — microbe, darter, shark, eel, jelly, squid, angler, leviathan, and `wraith`,
+which only the player wears — each with a `MOTION` record (columns, waves along the body,
+sway amplitude, bell pulse). `PLAN_FORMS` is the list; the design board reads its keys, so
+a plan cannot be added to the game without appearing there.
 
 ### Baking
 

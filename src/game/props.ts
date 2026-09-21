@@ -7,7 +7,7 @@
  * layer only places and tints them.
  */
 import { Texture } from 'pixi.js';
-import { TAU } from './util';
+import { hash01 as h, TAU } from './util';
 
 export type PropKind = 'disc' | 'blob' | 'mass' | 'wisp';
 
@@ -30,13 +30,6 @@ export function drifts(kind: PropKind): 'swimmer' | 'tumble' {
 const BLUR = [0.028, 0.05, 0.085];
 
 const cache = new Map<string, Texture>();
-
-/** Stable hash in 0..1 — same seed always draws the same shape. */
-function h(seed: number) {
-  let x = Math.imul(seed ^ 0x9e3779b9, 0x85ebca6b);
-  x = Math.imul(x ^ (x >>> 13), 0xc2b2ae35);
-  return ((x ^ (x >>> 16)) >>> 0) / 4294967296;
-}
 
 function paintDisc(ctx: CanvasRenderingContext2D, s: number) {
   const cx = s / 2, cy = s / 2;
@@ -166,23 +159,28 @@ function flatten(kind: PropKind): HTMLCanvasElement {
   return c;
 }
 
+/**
+ * Blur a painted shape into a texture. The canvas grows to hold the blur: it spreads well
+ * past the silhouette, and clipping it at the old bounds puts a straight edge back on a
+ * shape whose whole job is to be soft.
+ */
+export function blurred(src: HTMLCanvasElement, radius: number): Texture {
+  const pad = Math.ceil(radius * 2.5);
+  const c = document.createElement('canvas');
+  c.width = src.width + pad * 2;
+  c.height = src.height + pad * 2;
+  const ctx = c.getContext('2d')!;
+  ctx.filter = `blur(${radius}px)`;
+  ctx.drawImage(src, pad, pad);
+  return Texture.from(c);
+}
+
 /** `level` indexes `BLUR` — how far away the band this is going on reads as. */
 export function propTexture(kind: PropKind, level: number): Texture {
   const key = `${kind}|${level}`;
   let tex = cache.get(key);
   if (!tex) {
-    const src = flatten(kind);
-    const r = SRC * BLUR[level];
-    // the blur spreads well past the silhouette, so the canvas grows to hold it —
-    // clipping it at the old bounds puts a straight edge back on a soft shape
-    const pad = Math.ceil(r * 2.5);
-    const c = document.createElement('canvas');
-    c.width = SRC + pad * 2;
-    c.height = SRC + pad * 2;
-    const ctx = c.getContext('2d')!;
-    ctx.filter = `blur(${r}px)`;
-    ctx.drawImage(src, pad, pad);
-    tex = Texture.from(c);
+    tex = blurred(flatten(kind), SRC * BLUR[level]);
     cache.set(key, tex);
   }
   return tex;

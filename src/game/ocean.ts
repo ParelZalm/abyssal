@@ -2,6 +2,7 @@ import { Container, Sprite } from 'pixi.js';
 import { biomeAt } from './biomes';
 import { dotTexture } from './textures';
 import type { Rng } from './util';
+import type { View } from './view';
 import { lightAt } from './water';
 
 /**
@@ -29,8 +30,9 @@ export class Ocean {
     }
   }
 
-  update(dt: number, camX: number, camY: number, viewW: number, viewH: number, t: number) {
-    const halfW = viewW * 0.62, halfH = viewH * 0.62;
+  update(dt: number, view: View) {
+    const { x: camX, y: camY, t } = view;
+    const halfW = view.w * 0.62, halfH = view.h * 0.62;
     const light = lightAt(camY);
     const b = biomeAt(camY).mote;
     for (let i = 0; i < this.motes.length; i++) {

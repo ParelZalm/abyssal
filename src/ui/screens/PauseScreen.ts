@@ -1,4 +1,4 @@
-import { biteDamage, maxHp } from '../../game/genome';
+import { armourOf, biteDamage, maxHp } from '../../game/genome';
 import type { Component } from '../Component';
 import { div, h1, h2, h3, h4, kbd, keysLine, li, p, span, ul } from '../dom/element';
 import { createIcon } from '../icons';
@@ -59,7 +59,7 @@ export class PauseScreen implements Component {
       statRow('Speed', `${g.speed.toFixed(0)}`),
       statRow('Turning', `${g.turn.toFixed(1)} rad/s`),
       statRow('Bite', `${biteDamage(g).toFixed(1)}`),
-      statRow('Armour', `${g.armor.toFixed(0)}`),
+      statRow('Armour', `${armourOf(g).toFixed(0)}`),
       statRow('Sense', `${g.sense.toFixed(0)} m`),
       statRow('Regen', `${g.regen.toFixed(1)}/s`),
       statRow('Metabolism', `×${g.metabolism.toFixed(2)}`),

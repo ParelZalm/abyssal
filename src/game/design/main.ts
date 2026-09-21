@@ -9,6 +9,7 @@
  */
 import { Application, Container, Graphics, Text } from 'pixi.js';
 import '../../style.css';
+import { rgb } from '../util';
 import { waterColor } from '../water';
 import { catalog, type DesignGroup, type DesignItem } from './catalog';
 import { setBakeRenderer } from '../fishbake';
@@ -54,8 +55,7 @@ function bgDepth(item: DesignItem) {
   return native ? item.depth : depth;
 }
 function water(item: DesignItem) {
-  const [r, g, b] = waterColor(bgDepth(item));
-  return (Math.round(r * 255) << 16) | (Math.round(g * 255) << 8) | Math.round(b * 255);
+  return rgb(...waterColor(bgDepth(item)));
 }
 
 const LABEL = { fontFamily: 'ui-monospace, monospace', fontSize: 12, fill: 0xdbeaf5 };
@@ -95,7 +95,9 @@ function build() {
 
 function layout() {
   const W = app.screen.width;
-  const H = app.screen.height - 96;   // the control bar owns the bottom strip
+  // the control bar owns the bottom strip, and it wraps to a second line on a narrow
+  // window — measuring it keeps the last row's labels out from under it
+  const H = app.screen.height - Math.max(96, bar.offsetHeight + 10);
   const n = cells.length;
   const cols = n === 1 ? 1 : Math.ceil(Math.sqrt(n * (W / Math.max(H, 1))));
   const rows = Math.ceil(n / cols);
@@ -235,6 +237,7 @@ function renderBar() {
   bar.appendChild(button(framing === 'fit' ? 'scale: fit' : 'scale: true', framing === 'true',
     () => { framing = framing === 'fit' ? 'true' : 'fit'; layout(); sync(); }));
   bar.appendChild(button(playing ? 'pause' : 'play', playing, () => { playing = !playing; sync(); }));
+
 
   const state = document.createElement('span');
   state.className = 'state';

@@ -3,16 +3,20 @@
 ## Genome
 
 `src/game/genome.ts` is one flat interface, `Genome`, and four derived functions:
-`maxHp`, `biteDamage`, `senseRadius`, `menace`. Everything else in the game reads those
-rather than recomputing.
+`maxHp`, `biteDamage`, `armourOf`, `menace`. Everything else in the game reads those
+rather than recomputing — in particular nothing reads `g.armor` raw, because plate is
+armour too.
 
 Three groups of fields, and the split matters:
 
 - **Stats** — `size`, `speed`, `turn`, `bite`, `sense`, `armor`, `regen`, `metabolism`,
-  `stealth`, `gulp`, `lifesteal`. Read by the simulation.
+  `stealth`, `gulp`, `lifesteal`, `pen`, `ram`. Read by the simulation.
 - **Organs** — `venom`, `lure`, `claws`, `jet`, `coral`, `frill`. Each carries a
-  mechanic *and* a piece of morphology; adding one means touching both `world.ts` and
-  `fishview.ts`, which is the point of them.
+  mechanic *and* a piece of morphology, and each is read by name where it acts: `coral`
+  is plate, so `armourOf(g)` adds it rather than the mutation quietly topping up `armor`;
+  `frill` stings, so the recoil in `World.bite` reads it beside `spikes`. An organ that
+  only reaches the simulation through some other stat is a stat in a costume — adding one
+  means touching both `world.ts` and `fishbake.ts`.
 - **Morphology** — `hue`, `accentHue`, `finSize`, `tailSplit`, `spikes`, `jaw`,
   `eyeSize`, `glow`, `segments`, `translucent`. Purely visual, but every trait nudges at
   least one so a build looks like what it does.
@@ -23,12 +27,13 @@ the same thresholds as anything else.
 
 ## The draft
 
-`traits.ts` holds 33 `Trait` records — id, rarity, icon, description, and an `apply`
+`traits.ts` holds 43 `Trait` records — id, rarity, icon, description, and an `apply`
 that mutates a `Genome`. `draftTraits(rng, reach, taken, count)` picks without
 replacement from a rarity-weighted pool.
 
 - `RARITY_WEIGHT` sets the base odds; `RARITY_CLIMB` makes rare and apex more likely as
-  `reach` grows. Roughly 75/25/0 at the start, 48/41/11 by stage 8.
+  `reach` grows. Measured over the live pool (14 common, 18 rare, 11 apex): 70/30/0 at
+  stage 1, 44/45/12 by stage 8 — rare overtakes common, which is the intent.
 - **`reach` is not the stage.** `main.offerDraft` passes
   `max(stage, maxTier * 2 + 1)`, so diving upgrades the pool as much as feeding does.
 - `maxStacks` defaults to 2, so a run specialises without collapsing into one stat.

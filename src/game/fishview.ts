@@ -46,6 +46,13 @@ const MOTION: Record<Plan, Motion> = {
 };
 
 export class FishView extends Container {
+  /**
+   * The additive bloom, deliberately NOT a child of this container. Every creature's
+   * glow is parented into one additive layer of the world instead: a blend-mode change
+   * between the meshes breaks the sprite batch, so keeping the three sprites here would
+   * cost one state change per animal on screen. This view only keeps it in step.
+   */
+  readonly glow = new Container();
   /** A bruised red bloom that grows as the animal becomes something to run from. */
   private aura = new Sprite(glowTexture());
   private halo = new Sprite(glowTexture());
@@ -65,8 +72,30 @@ export class FishView extends Container {
       s.anchor.set(0.5);
       s.blendMode = 'add';
     }
-    this.addChild(this.aura, this.halo, this.core);
+    this.glow.addChild(this.aura, this.halo, this.core);
     this.rebuild(g);
+  }
+
+  /** Body and bloom are in different layers, so they are moved together from here. */
+  place(x: number, y: number, rotation: number) {
+    this.x = x; this.y = y; this.rotation = rotation;
+    this.glow.x = x; this.glow.y = y;
+  }
+
+  /**
+   * Culling, fog and the danger tint are decided per creature by `main`, and the bloom
+   * has to take all three: it is the same animal, lit from inside.
+   */
+  show(visible: boolean, alpha: number, tint: number) {
+    this.visible = this.glow.visible = visible;
+    this.alpha = this.glow.alpha = alpha;
+    this.tint = this.glow.tint = tint;
+  }
+
+  /** The bloom is not a child, so it does not go down with the rest of the view. */
+  destroy(options?: Parameters<Container['destroy']>[0]) {
+    if (!this.glow.destroyed) this.glow.destroy({ children: true });
+    super.destroy(options);
   }
 
   rebuild(g: Genome) {

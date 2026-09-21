@@ -11,7 +11,7 @@
  * always lands at `fore/(fore+aft)`. That normalisation is what makes the parameters honest:
  * the widest point moves on its own instead of being a third number to keep in sync.
  */
-import type { Genome } from './genome';
+import { armourOf, type Genome } from './genome';
 import { lerp } from './util';
 
 /** Reference half-length the body is drawn at; the view scales the whole thing to real size. */
@@ -106,7 +106,7 @@ export function formFor(g: Genome, plan: Plan): Form {
     ...base,
     // segments stretch the trunk; armour and jaw thicken it
     len: base.len * (1 + g.segments * 0.06),
-    width: base.width * (1 + Math.min(0.3, g.armor * 0.02) + Math.min(0.12, g.coral * 0.04)),
+    width: base.width * (1 + Math.min(0.3, armourOf(g) * 0.02) + Math.min(0.12, g.coral * 0.04)),
     cheek: base.cheek + Math.max(0, g.jaw - 0.3) * 0.16,
     fluke: base.fluke * (0.75 + g.finSize * 0.3),
     fork: Math.min(1, base.fork * (0.8 + g.tailSplit * 0.6)),

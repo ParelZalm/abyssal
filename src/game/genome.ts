@@ -11,6 +11,8 @@ export interface Genome {
   stealth: number;     // reduces the radius at which predators notice you
   gulp: number;        // multiplier on how far your mouth draws small prey in
   lifesteal: number;   // share of biomass eaten that comes back as health
+  pen: number;         // armour a bite ignores outright
+  ram: number;         // gills that need flow: cruising is cheap, hanging still is not
 
   // organs — these carry a mechanic AND a piece of morphology
   venom: number;       // poison left in a wound, damage per second
@@ -36,21 +38,27 @@ export interface Genome {
 export function baseGenome(): Genome {
   return {
     size: 14, speed: 150, turn: 4.2, bite: 6, sense: 340, armor: 0,
-    regen: 0.6, metabolism: 1, stealth: 0, gulp: 1, lifesteal: 0,
+    regen: 0.6, metabolism: 1, stealth: 0, gulp: 1, lifesteal: 0, pen: 0, ram: 0,
     venom: 0, lure: 0, claws: 0, jet: 0, coral: 0, frill: 0,
     hue: 30, accentHue: 200, finSize: 1, tailSplit: 0.35, spikes: 0,
     jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0,
   };
 }
 
+/**
+ * Flat damage reduction, plate included. `coral` is an organ, so it earns its armour here
+ * rather than by quietly adding to `armor` when the mutation is taken — an organ that
+ * does not appear in the rule it changes is a stat wearing a costume.
+ */
+export function armourOf(g: Genome) {
+  return g.armor + g.coral * 4;
+}
+
 export function maxHp(g: Genome) {
-  return Math.round(10 + g.size ** 1.35 * 0.5 + g.armor * 10);
+  return Math.round(10 + g.size ** 1.35 * 0.5 + armourOf(g) * 10);
 }
 export function biteDamage(g: Genome) {
   return g.bite * (1 + g.size / 90);
-}
-export function senseRadius(g: Genome) {
-  return g.sense;
 }
 
 /**

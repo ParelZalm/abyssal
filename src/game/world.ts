@@ -1,6 +1,6 @@
 import { Container } from 'pixi.js';
 import { FishView } from './fishview';
-import { biteDamage, maxHp, type Genome } from './genome';
+import { armourOf, biteDamage, maxHp, type Genome } from './genome';
 import { genomeFor, rollSpecies, SPECIES, type Species } from './species';
 import { angleDelta, clamp, dist2, Rng, TAU } from './util';
 
@@ -58,9 +58,7 @@ export class Creature {
     return this.genome.size * 0.62;
   }
   syncView() {
-    this.view.x = this.x;
-    this.view.y = this.y;
-    this.view.rotation = this.angle;
+    this.view.place(this.x, this.y, this.angle);
   }
 
   /** Turning authority right now: a body already moving fast cannot pivot as tightly. */
@@ -115,6 +113,8 @@ export class Creature {
 export class World {
   creatures: Creature[] = [];
   layer = new Container();
+  /** Every creature's additive bloom, in one container so the sprites batch as one. */
+  glow = new Container();
   bites: Bite[] = [];
   /** Biomass the player earned this frame. */
   playerGain = 0;
@@ -128,6 +128,7 @@ export class World {
 
   constructor(private rng: Rng, private player: Creature) {
     this.layer.addChild(player.view);
+    this.glow.addChild(player.view.glow);
   }
 
   spawnAround(cx: number, cy: number, viewR: number, target: number, allowApex: boolean) {
@@ -144,7 +145,11 @@ export class World {
       // schools arrive as schools, and plankton as a bloom you can graze through
       if (sp.behavior === 'school' || sp.behavior === 'plankton') {
         const bloom = sp.behavior === 'plankton';
-        const n = bloom ? this.rng.int(6, 11) : this.rng.int(4, 9);
+        // the shallows are the tutorial: a bloom is something a hatchling can graze
+        // through, and it thins on the same ramp `weightAt` fades the odds on, so both
+        // halves of that rule run out together at 1000 m instead of one outliving it
+        const shallow = bloom ? clamp(1 - y / 1000, 0, 1) : 1;
+        const n = Math.round((bloom ? this.rng.int(6, 11) : this.rng.int(4, 9)) * shallow);
         const spread = bloom ? 210 : 120;
         for (let i = 0; i < n; i++) {
           this.add(sp, x + this.rng.range(-spread, spread),
@@ -166,6 +171,7 @@ export class World {
     c.angle = this.rng.next() * TAU;
     this.creatures.push(c);
     this.layer.addChildAt(c.view, 0);
+    this.glow.addChild(c.view.glow);
     return c;
   }
 
@@ -378,10 +384,14 @@ export class World {
     att.vy += Math.sin(att.angle) * surge;
     // anything less than half your gape goes down whole, the way a real gulp works
     const whole = att.swallowSize > def.genome.size * 2;
-    const dmg = whole ? def.hp : Math.max(1, biteDamage(att.genome) - def.genome.armor);
+    // a beak chews through plate: penetration comes off the armour, not off the damage,
+    // so it is worth exactly as much as the armour actually in front of it
+    const armour = Math.max(0, armourOf(def.genome) - att.genome.pen);
+    const dmg = whole ? def.hp : Math.max(1, biteDamage(att.genome) - armour);
     def.hp -= dmg;
-    // dorsal spines punish whatever bites you
-    if (def.genome.spikes > 0 && !whole) att.hp -= def.genome.spikes * 3;
+    // dorsal spines and a stinging frill both punish whatever bites you
+    const recoil = def.genome.spikes * 3 + def.genome.frill * 2;
+    if (recoil > 0 && !whole) att.hp -= recoil;
     const fatal = def.hp <= 0;
     if (fatal) this.slay(def, att.isPlayer);
     this.bites.push({ x: def.x, y: def.y, amount: dmg, fatal,

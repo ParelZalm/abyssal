@@ -22,7 +22,7 @@ browser pane attaches to it.
 ## Design mode
 
 `/design.html` (`src/game/design/`) lays out every drawing the game makes — the fish form
-and its parameters, the eight body plans, all 18 species, the background props, and the
+and its parameters, every body plan, all 18 species, the background props, and the
 water and biome palettes — each over the real water colour at its own depth. It imports the
 shipping drawing code and is never imported by it, so it cannot drift from the game. Click
 a cell to focus it with its source file; the URL carries the whole state, so a link to one

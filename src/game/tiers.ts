@@ -32,18 +32,16 @@ export function tierAt(y: number): number {
   return 0;
 }
 
-/** Deepest point the player may reach at this size — the floor of their last open tier. */
-export function descentLimit(size: number): number {
-  for (let i = 1; i < TIERS.length; i++) {
-    if (size < TIERS[i].gate) return TIERS[i].top - 12;
-  }
-  return DEPTH_MAX;
-}
-
 /** The next sealed thermocline, or null once the whole column is open. */
 export function nextGate(size: number): { tier: Tier; index: number } | null {
   for (let i = 1; i < TIERS.length; i++) {
     if (size < TIERS[i].gate) return { tier: TIERS[i], index: i };
   }
   return null;
+}
+
+/** Deepest point the player may reach at this size — the floor of their last open tier. */
+export function descentLimit(size: number): number {
+  const gate = nextGate(size);
+  return gate ? gate.tier.top - 12 : DEPTH_MAX;
 }

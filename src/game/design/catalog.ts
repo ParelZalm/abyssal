@@ -8,14 +8,16 @@
  */
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { BIOMES } from '../biomes';
-import { FishView, type Plan } from '../fishview';
-import { baseGenome } from '../genome';
+import { PLAN_FORMS, type Plan } from '../form';
+import { FishView } from '../fishview';
+import { baseGenome, type Genome } from '../genome';
 import { PROP_SIZE, propTexture, type PropKind } from '../props';
 import { genomeFor, SPECIES } from '../species';
 import { TIERS } from '../tiers';
-import { Rng } from '../util';
+import { rgb, Rng } from '../util';
 import { waterColor } from '../water';
 import { FishForm, shoulderAt, SPINDLE, type Form, type FormSpec } from './fishform';
+import { protoKinds, protoScene, PROTO_W, ProtoScene } from './proto-scenery';
 
 export interface DesignItem {
   id: string;
@@ -122,6 +124,17 @@ function formGroup(): DesignGroup {
   };
 }
 
+/**
+ * A creature for a board cell. The game keeps every bloom in one additive layer so the
+ * sprites batch; a cell holds one animal, where batching is moot and the bloom belongs on
+ * the body — so it is parented back on here.
+ */
+function boardFish(g: Genome, plan: Plan): FishView {
+  const v = new FishView(g, plan);
+  v.addChildAt(v.glow, 0);
+  return v;
+}
+
 /** How a game creature swims on the board: the same call `world.ts` makes each frame. */
 function fishAnimate(view: Container, dt: number, beat: number) {
   const bank = Math.sin(beat * 0.23) * 0.6;
@@ -131,22 +144,24 @@ function fishAnimate(view: Container, dt: number, beat: number) {
 
 // ------------------------------------------------------------------ silhouettes
 
-const PLANS: Plan[] = ['microbe', 'darter', 'shark', 'eel', 'jelly', 'squid', 'angler',
-                       'leviathan'];
+// read off `PLAN_FORMS` rather than listed here: a plan added to the game but not to the
+// board is exactly the drift this page exists to prevent — `wraith`, the player's own
+// body, was missing for that reason
+const PLANS = Object.keys(PLAN_FORMS) as Plan[];
 
 /**
- * The eight body plans on one neutral genome. Species differ mostly in colour and stats;
- * this is the drawing itself, with those differences held constant.
+ * Every body plan on one neutral genome. Species differ mostly in colour and stats; this
+ * is the drawing itself, with those differences held constant.
  */
 function planGroup(): DesignGroup {
   return {
     id: 'plans',
     name: 'Body plans',
-    note: 'The eight silhouettes every creature is drawn as, on one neutral genome.',
+    note: `The ${PLANS.length} silhouettes every creature is drawn as, on one neutral genome.`,
     items: PLANS.map(plan => ({
       id: plan,
       name: plan,
-      note: `drawPlan: ${plan}`,
+      note: `PLAN_FORMS.${plan}`,
       source: 'src/game/fishview.ts',
       span: 120,
       depth: 3000,
@@ -154,7 +169,7 @@ function planGroup(): DesignGroup {
       make: () => {
         const g = baseGenome();
         g.size = 40;
-        return new FishView(g, plan);
+        return boardFish(g, plan);
       },
       animate: fishAnimate,
     })),
@@ -183,7 +198,7 @@ function speciesGroup(): DesignGroup {
           hue: Math.round(g.hue), bite: sp.bite, glow: sp.glow ?? 0,
           translucent: sp.translucent ?? 0,
         },
-        make: () => new FishView(g, sp.plan),
+        make: () => boardFish(g, sp.plan),
         animate: fishAnimate,
       };
     }),
@@ -215,7 +230,7 @@ function propGroup(): DesignGroup {
           const s = new Sprite(propTexture(kind, level));
           s.anchor.set(0.5);
           s.width = s.height = 90 * PROP_SIZE[kind];
-          return s as unknown as Container;
+          return s;
         },
       });
     }
@@ -247,10 +262,6 @@ function tierSwatch(top: number, bottom: number, accent: [number, number, number
   return c;
 }
 
-function rgb(r: number, g: number, b: number) {
-  return (Math.round(r * 255) << 16) | (Math.round(g * 255) << 8) | Math.round(b * 255);
-}
-
 function waterGroup(): DesignGroup {
   return {
     id: 'water',
@@ -276,6 +287,42 @@ function waterGroup(): DesignGroup {
   };
 }
 
+/**
+ * PROTOTYPE — biome-specific scenery as fields, one cell per tier. Throwaway:
+ * `proto-scenery.ts` is not imported by the game, and this group comes back out once the
+ * fields are folded into `scenery.ts`. See that file's header for what was tried.
+ */
+function protoSceneryGroup(): DesignGroup {
+  return {
+    id: 'proto',
+    name: '✦ scenery (proto)',
+    note: 'Fields — one motif many times, gathered into a structure, with water around it.',
+    items: TIERS.map((tier, i) => {
+      const depth = (tier.top + tier.bottom) / 2;
+      const props = protoKinds(i);
+      return {
+        id: `proto-${i}`,
+        name: tier.name,
+        note: props,
+        source: 'src/game/design/proto-scenery.ts',
+        // a patch is a screen of water, not an object on a stand, so it is framed to fill
+        // its cell rather than sit inside one. The 0.8 is as far as that can go before the
+        // cell crops the composition instead of the composition ending at the water.
+        span: PROTO_W * 0.8,
+        depth,
+        facts: {
+          props, band: `${tier.top}–${tier.bottom}m`,
+          // what the shipping band puts here today, to compare the proposal against
+          shipping: BIOMES[i].scenery.kinds.join(' '),
+        },
+        make: () => protoScene(i, depth),
+        animate: (view, dt, beat) => (view as ProtoScene).animate(dt, beat),
+      };
+    }),
+  };
+}
+
 export function catalog(): DesignGroup[] {
-  return [formGroup(), planGroup(), speciesGroup(), propGroup(), waterGroup()];
+  return [formGroup(), planGroup(), speciesGroup(), propGroup(), waterGroup(),
+          protoSceneryGroup()];
 }

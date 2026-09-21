@@ -1,6 +1,7 @@
 import { Container, Filter, GlProgram, Sprite, Texture, type UniformGroup } from 'pixi.js';
 import { biomeAt } from './biomes';
 import { clamp, lerp } from './util';
+import type { View } from './view';
 import { DEPTH_MAX } from './world';
 
 const vertex = `
@@ -267,15 +268,15 @@ export class Water {
     this.sprite.height = h;
   }
 
-  update(camX: number, camY: number, viewW: number, viewH: number, t: number,
-         glow: number, dread: number, gateY: number, gateOpen: boolean) {
+  update(view: View, glow: number, dread: number, gateY: number, gateOpen: boolean) {
+    const { x: camX, y: camY } = view;
     const u = this.u;
-    u.uView[0] = viewW; u.uView[1] = viewH;
+    u.uView[0] = view.w; u.uView[1] = view.h;
     u.uCam[0] = camX; u.uCam[1] = camY;
-    u.uTime = t;
+    u.uTime = view.t;
 
-    u.uNear.set(waterColor(camY - viewH * 0.5));
-    u.uFar.set(waterColor(camY + viewH * 0.5));
+    u.uNear.set(waterColor(camY - view.h * 0.5));
+    u.uFar.set(waterColor(camY + view.h * 0.5));
 
     u.uGateY = gateY;
     u.uGateOpen = gateOpen ? 1 : 0;

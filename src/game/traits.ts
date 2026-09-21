@@ -128,11 +128,11 @@ export const TRAITS: Trait[] = [
   // ---------------------------------------------------- reef organs (rare)
   T({ id: 'beak', name: 'Parrot Beak', rarity: 'common', icon: 'jaw',
     desc: '+30% bite, and it chews through 2 points of armour.',
-    apply: g => { g.bite *= 1.3; g.jaw += 0.2; } }),
+    apply: g => { g.bite *= 1.3; g.jaw += 0.2; g.pen += 2; } }),
 
   T({ id: 'coral', name: 'Coral Encrustation', rarity: 'common', icon: 'scale',
     desc: '+4 armour, −6% speed. A reef grows on your back.',
-    apply: g => { g.coral += 1; g.armor += 4; g.speed *= 0.94; } }),
+    apply: g => { g.coral += 1; g.speed *= 0.94; } }),
 
   T({ id: 'venom', name: 'Venom Barbs', rarity: 'rare', icon: 'spike',
     desc: 'Bites leave poison: 2.5 damage a second for four seconds.',
@@ -155,7 +155,7 @@ export const TRAITS: Trait[] = [
 
   T({ id: 'frill', name: 'Anemone Frill', rarity: 'rare', icon: 'spiral',
     desc: 'A stinging fringe: attackers take recoil, and you are 15% harder to notice.',
-    apply: g => { g.frill += 1; g.stealth += 0.15; g.spikes += 0.5; } }),
+    apply: g => { g.frill += 1; g.stealth += 0.15; } }),
 
   // ------------------------------------------------------------------ apex
   T({ id: 'ampullae', name: 'Ampullae of Lorenzini', rarity: 'apex', icon: 'wave', minStage: 3,
@@ -184,7 +184,7 @@ export const TRAITS: Trait[] = [
 
   T({ id: 'ram', name: 'Ram Ventilation', rarity: 'apex', icon: 'gill', minStage: 4,
     desc: '+20% speed, −30% metabolism — but you must keep moving.',
-    apply: g => { g.speed *= 1.2; g.metabolism *= 0.7; } }),
+    apply: g => { g.speed *= 1.2; g.metabolism *= 0.7; g.ram += 1; } }),
 
   T({ id: 'neurotoxin', name: 'Neurotoxin', rarity: 'apex', icon: 'drop', minStage: 3,
     desc: 'Venom that keeps working: 8 damage a second, and +20% bite.',

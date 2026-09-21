@@ -47,11 +47,11 @@ npm install && npm run dev
   threats. Both effects fade to nothing by 1000 m.
 - **Fullness** drains constantly, faster as you get bigger — metabolism is a real cost,
   so size-stacking traits have a downside.
-- **Biomass** fills the third bar. Each stage offers three of **33 mutations** from a
+- **Biomass** fills the third bar. Each stage offers three of **43 mutations** from a
   rarity-weighted pool, and rarity carries real weight in both senses. Mechanically the
   tiers are far apart — a common is +18% speed, an apex is +110% bite or +9 armour — and
-  the odds climb only for the good stuff, from 75/25/0 common·rare·apex at stage 1 to
-  48/41/11 by stage 8. Visually the card's edge light tells you before you read it: commons
+  the odds climb only for the good stuff, from 70/30/0 common·rare·apex at stage 1 to
+  44/45/12 by stage 8. Visually the card's edge light tells you before you read it: commons
   are unlit, rares carry a cold blue glow, apex cards breathe amber. Any one mutation can be
   taken at most twice, so a run specialises without collapsing into one stat.
 - **Organs.** A handful of reef mutations grow parts rather than numbers, and each carries a
@@ -159,11 +159,14 @@ undone. [`CLAUDE.md`](CLAUDE.md) is the short version, aimed at agents.
 | `src/game/traits.ts` | The mutation pool and the rarity-weighted draft. |
 | `src/game/species.ts` | Species table: 18 species — depth bands, sizes, behaviour, body plan, nutrition. |
 | `src/game/tiers.ts` | The five stacked tiers, their size gates and the descent limit. |
-| `src/game/fishview.ts` | Eight top-down body plans, drawn from the genome and animated by transform. |
+| `src/game/form.ts` | The spine and width curve every body plan is a setting of. |
+| `src/game/fishbake.ts` | The painting: one creature baked into one texture per genome. |
+| `src/game/fishview.ts` | The baked texture skinned onto a mesh, posed by moving vertices. |
 | `src/game/world.ts` | Simulation — steering, perception, schooling, contacts, biting. |
 | `src/game/biomes.ts` | Per-tier visual identity: cloud, light and what drifts in the water. |
 | `src/game/scenery.ts` | Parallax soft props behind and in front of the creatures. |
 | `src/game/props.ts` | Disc / blob / mass / wisp textures for the scenery bands. |
+| `src/game/view.ts` | What the camera sees this frame — the record water, ocean and scenery read. |
 | `src/game/water.ts` | The GLSL water: fog, thermoclines and the tier below, as one full-screen filter. |
 | `src/game/ocean.ts` | Suspended particulate drifting past the camera. |
 | `src/game/fx.ts` | Pooled particles — sprites for dots, Graphics only for rings. |
@@ -174,30 +177,34 @@ undone. [`CLAUDE.md`](CLAUDE.md) is the short version, aimed at agents.
 
 ## Look
 
-Everything is seen from directly above, and each species picks one of eight **body plans**
-— microbe, darter, shark, eel, jelly, squid, angler, leviathan. A plan decides both the
+Everything is seen from directly above, and each species picks one of nine **body plans**
+— microbe, darter, shark, eel, jelly, squid, angler, leviathan, and the wraith you play as.
+A plan decides both the
 silhouette and how the thing swims: a jelly contracts its bell and trails tentacles, an eel
 runs a five-link chain down its whole body, a shark holds a stiff torpedo and barely sways,
 an angler hangs a lit lure out in front of a wall of teeth. Within a plan the genome still
 does the work, so a mutation that changes your jaw, spines or glow changes how you actually
 look in the water.
 
-Every body is built from the same four rules, so a creature stays legible against water
-that is nearly its own colour:
+**Nothing on an animal is stroked.** A contour has a position of its own, so the moment two
+parts of a body cross it draws twice and the join shows. Every shape is a fill, and the
+silhouette is carried by value instead — which is what keeps a creature legible against
+water that is nearly its own colour:
 
-- **A heavy near-black outline with a thin lit rim inside it**, drawn as two strokes on
-  one path — the wide dark one first, the narrow bright one over it. The outline is what
-  separates an animal from the water; the rim is what stops the silhouette reading as a
-  hole punched in the frame.
-- **Segmented volume down the tail.** Each link of the chain outlines its two long edges
-  only — stroking the closed path draws the joint caps too, and those land as straight
-  lines across the body — plus a lit crescent along one flank, which is the only cue a
-  flat top-down shape has for being round.
+- **A noise-ragged edge.** The flank is nudged by the same value noise the water shader
+  runs on, so a parametric curve stops reading as machinery — and so an animal is not
+  textured differently from the water it is in.
+- **Countershading.** A dark back narrowing to the tail, in two passes each bounded by its
+  own noise curve. Seen from above this is what makes a shape read as a fish, and it is
+  what carries the silhouette now that no outline does.
+- **Mottling.** Speckle on a body-space grid, dark over the spine and pale toward the
+  belly, so one pass reads as scale on top and as counter-lighting at the edge.
 - **Grown parts are seated, not stuck on.** A claw arm, a venom barb and an illicium each
-  start from a socket: a dark seat with a lit ring. The arm carries a highlight down its
-  top and the working end — the claw tip, the barb's wet point, the bait — is the
-  brightest thing on it, so a build reads by its parts at a glance.
-- **Fins are membranes**: translucent fills with a lit edge, rather than flat shapes.
+  start from a socket, and the working end — the claw tip, the barb's wet point, the bait
+  — is the brightest thing on it, so a build reads by its parts at a glance.
+
+The body is painted once into a texture and then skinned onto a mesh: swimming moves
+vertices, never geometry, so a hundred animals cost a few vertex writes each.
 
 The water itself is a single full-screen GLSL pass: domain-warped FBM for the drifting
 organic masses, a depth-sampled palette, **god rays** cut from noise along a slanted axis so

@@ -5,6 +5,7 @@ import { setBakeRenderer } from './game/fishbake';
 import { Fx } from './game/fx';
 import { Ocean } from './game/ocean';
 import { Scenery } from './game/scenery';
+import type { View } from './game/view';
 import { lightAt, Water } from './game/water';
 import type { Species } from './game/species';
 import { descentLimit, nextGate, TIERS, tierAt } from './game/tiers';
@@ -106,7 +107,9 @@ class Game {
       .circle(0, 0, 94).stroke({ color: 0xdffdf2, width: 12, alpha: 0.07 });
     this.camera.addChild(
       this.scenery.back, this.ocean.world, this.focus,
-      this.world.layer, this.fx.layer, this.scenery.front,
+      // the blooms sit under the bodies in one additive layer of their own, which is
+      // what lets every creature's glow batch into a single draw
+      this.world.glow, this.world.layer, this.fx.layer, this.scenery.front,
     );
     this.app.stage.addChild(this.water.layer, this.camera);
     this.camX = this.player.x;
@@ -182,7 +185,7 @@ class Game {
       this.steerPlayer(dt);
       this.world.descentLimit = descentLimit(this.player.genome.size);
       this.world.update(dt);
-      this.digest(dt);
+      this.digest();
       this.metabolise(dt);
       this.checkTiers(dt);
     }
@@ -260,8 +263,7 @@ class Game {
   }
 
   /** Turn this frame's bites into growth, particles and consequences. */
-  private digest(dt: number) {
-    void dt;
+  private digest() {
     for (const b of this.world.bites) {
       const col = b.onPlayer ? 0xff5a4a : 0xff9a7a;
       this.fx.burst(b.x, b.y, col, b.fatal ? 22 : 8, b.fatal ? 220 : 120, b.fatal ? 3.6 : 2.4);
@@ -327,7 +329,10 @@ class Game {
 
   private metabolise(dt: number) {
     const g = this.player.genome;
-    const burn = g.metabolism * (1.2 + g.size * 0.014);
+    // ram ventilation buys its cheap metabolism by needing flow over the gills: hang
+    // still on it and you burn what you saved, which is the cost the card promises
+    const idle = g.ram > 0 && Math.hypot(this.player.vx, this.player.vy) < g.speed * 0.25;
+    const burn = g.metabolism * (1.2 + g.size * 0.014) * (idle ? 1.8 : 1);
     this.food = Math.max(0, this.food - burn * dt);
     if (this.food <= 0) this.player.hp -= 5 * dt;
     this.shake = Math.max(0, this.shake - dt * 22);
@@ -373,7 +378,7 @@ class Game {
   private finish(won: boolean) {
     this.phase = 'over';
     this.fx.burst(this.player.x, this.player.y, won ? 0xffe28a : 0xff6a58, 40, 260, 5);
-    this.player.view.visible = false;
+    this.player.view.show(false, 1, 0xffffff);
     const stats = [
       `Stage ${this.stage}`,
       `${TIERS[this.maxTier].name}`,
@@ -413,17 +418,22 @@ class Game {
     this.camera.y = this.H / 2 - this.camY * this.zoom + sy;
 
     this.water.resize(this.W, this.H);
-    const viewW = this.W / this.zoom, viewH = this.H / this.zoom;
-    this.ocean.update(dt, this.camX, this.camY, viewW, viewH, this.elapsed);
-    this.scenery.update(this.camX, this.camY, viewW, viewH, this.elapsed, this.zoom);
+    const view: View = {
+      x: this.camX, y: this.camY,
+      w: this.W / this.zoom, h: this.H / this.zoom,
+      zoom: this.zoom, t: this.elapsed,
+    };
+    this.ocean.update(dt, view);
+    this.scenery.update(view);
 
     // Visibility: the deeper you are, the more you rely on sense and their glow.
     const light = lightAt(p.y);
     const sense = p.genome.sense * (1.15 + light * 1.4);
-    const edgeX = viewW * 0.55, edgeY = viewH * 0.55;
+    const edgeX = view.w * 0.55, edgeY = view.h * 0.55;
     let danger = 0;
     for (const c of this.world.creatures) {
       const d = Math.sqrt(dist2(c.x, c.y, p.x, p.y));
+      let tint = 0xffffff;
       if (c.canEat(p)) {
         // gap between bodies, not between centres — a big animal is close long before
         // its centre is, and that is exactly when it should be frightening
@@ -432,22 +442,21 @@ class Game {
         const t = clamp(1 - gap / near, 0, 1) ** 1.5;
         danger = Math.max(danger, t * 0.9);
         // things that can swallow you go bloody as they close in
-        c.view.tint = t > 0.02
-          ? (0xff << 16) | (Math.round(255 - t * 110) << 8) | Math.round(255 - t * 120)
-          : 0xffffff;
-      } else if (c.view.tint !== 0xffffff) {
-        c.view.tint = 0xffffff;
+        if (t > 0.02) {
+          tint = (0xff << 16) | (Math.round(255 - t * 110) << 8) | Math.round(255 - t * 120);
+        }
       }
 
       // anything outside the frame skips its art entirely — it still swims and hunts
       const r = c.radius * 2;
       const seen = Math.abs(c.x - this.camX) < edgeX + r && Math.abs(c.y - this.camY) < edgeY + r;
-      c.view.visible = seen;
-      if (!seen) continue;
-
-      const own = c.genome.glow * 260 + c.genome.size * 3;
-      const vis = clamp(1 - (d - sense - own) / (sense * 0.55), 0, 1);
-      c.view.alpha = light > 0.75 ? 1 : clamp(light * 1.35 + vis, 0.02, 1);
+      let alpha = 1;
+      if (seen && light <= 0.75) {
+        const own = c.genome.glow * 260 + c.genome.size * 3;
+        const vis = clamp(1 - (d - sense - own) / (sense * 0.55), 0, 1);
+        alpha = clamp(light * 1.35 + vis, 0.02, 1);
+      }
+      c.view.show(seen, alpha, tint);
     }
 
     // Draw the tier boundary nearest the camera rather than the next one below it:
@@ -460,8 +469,8 @@ class Game {
       }
     }
     const gateOpen = p.genome.size >= gateTier.gate;
-    this.water.update(this.camX, this.camY, viewW, viewH, this.elapsed,
-      p.genome.glow, this.phase === 'play' ? danger : 0, gateTier.top, gateOpen);
+    this.water.update(view, p.genome.glow, this.phase === 'play' ? danger : 0,
+                      gateTier.top, gateOpen);
 
     // the requirement floats on the barrier itself while it is sealed and in frame
     const gateScreenY = (gateTier.top - this.camY) * this.zoom + this.H / 2;

@@ -16,6 +16,7 @@ main.ts (Game: loop, camera, input, run state)
 │       └── game/noise.ts     CPU value noise, matching the water shader's
 ├── game/water.ts     full-screen GLSL pass; also owns the depth→colour palette
 │   └── game/biomes.ts    per-tier look, blended by depth, feeding water + ocean
+├── game/view.ts      what the camera sees this frame; ocean, scenery and water read it
 ├── game/ocean.ts     suspended particulate
 ├── game/scenery.ts   parallax soft props (bands behind + in front of creatures)
 │   └── game/props.ts     disc / blob / mass / wisp textures, blur baked at boot
@@ -74,6 +75,7 @@ app.stage
     ├── scenery.back   far parallax props
     ├── ocean.world
     ├── focus      the ring drawn around the player
+    ├── world.glow   every creature's additive bloom, in one container so it batches
     ├── world.layer  every creature's FishView
     ├── fx.layer
     └── scenery.front  near parallax props (out of focus the other way)

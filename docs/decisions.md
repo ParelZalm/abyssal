@@ -26,6 +26,39 @@ Two findings that remain load-bearing:
 The old silhouette extractor lived in `silhouettes.ts` and is gone — the extraction
 trick (render a plan, keep alpha as white, blur) is no longer used.
 
+### Biome-specific scenery — prototype, not yet folded in (`design/proto-scenery.ts`)
+
+The bands place the same four primitives in every tier and let the biome only reweight
+them, so a tier is told apart by colour and density and not by what is in its water.
+Three answers were drawn on the design board, at `/design.html?g=proto`:
+
+- **Vocabulary** — the same scatter with per-biome props (kelp, fans, siphonophores,
+  bells, chimneys). Rejected: more nouns, no more meaning. It is still confetti spread
+  evenly across the frame, and only the Abyss cell read as a place.
+- **Anchors** — three or four enormous formations pinned to the frame edges, giving the
+  tier a floor, a ceiling or a wall. Strongest identity of the three and rejected anyway:
+  the shapes are painted at prop resolution and turn to mush enlarged, they leave no open
+  water to swim through, and a formation has no answer to the fourfold zoom change.
+- **Fields** — kept. One motif many times, gathered into one localised structure with
+  water around it. It survives the zoom change for free, which is what killed the two
+  earlier background passes.
+
+Two findings from the tuning pass:
+
+- **A field is a thing in the water, not a texture on it.** The first cut spread each
+  field wall to wall and it read as noise with a biome's colour on it. Every tier is now
+  one structure occupying part of the frame — a kelp stand at one side, a rubble mound
+  low and right, two drifts of snow with a gap between them, a swarm ring, the ember
+  column — and the rest is open water.
+- **The lit tiers need a darker silhouette than the bands use.** Reef water is already
+  dim, so a prop shaded at the band's 0.16 of the water colour sits *on* the water rather
+  than against it; the reef structure is at 0.05–0.07 and only then reads.
+
+Folding it into `scenery.ts` is not a port: a field is a cluster with a shared phase, and
+the band places one independent prop per hashed cell. It needs cell-level clustering (a
+cell seeds a whole field) and a phase derived from world position, or the stand's
+travelling wave and the swarm's sequence do not survive the move.
+
 ## Things that were tried and rejected inside the shader
 
 - Three octaves on the main cloud field: `smoothstep` turns it into hard-edged slabs.

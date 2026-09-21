@@ -34,7 +34,10 @@ Four changes fixed it, in order of what they bought:
 - **Batch.** Motes and particles are Sprites off the two shared canvas textures in
   `textures.ts`, so a whole fight is one draw call. Anything new that draws many small
   things should reuse those textures, and additive things should be grouped in their own
-  container rather than interleaved — a blend-mode change breaks the batch.
+  container rather than interleaved — a blend-mode change breaks the batch. Creature
+  blooms follow that rule the hard way: they are parented out of the `FishView` into
+  `world.glow` so that all of them batch, which is why `FishView` has `place()` and
+  `show()` instead of letting callers set `x`/`visible`/`alpha` on the view.
 - **Rebuild, don't redraw.** Creature art is painted once into a texture per distinct
   genome; swimming writes `2 x cols` vertex floats and nothing else. Measured in the
   running game: 94 creatures cost 0.074 ms a frame to pose, under a microsecond each. A

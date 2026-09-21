@@ -46,6 +46,20 @@ export class Rng {
   }
 }
 
+/** Pack three 0..1 channels into the 0xRRGGBB a Pixi tint wants. */
+export function rgb(r: number, g: number, b: number) {
+  return (Math.round(clamp(r, 0, 1) * 255) << 16)
+       | (Math.round(clamp(g, 0, 1) * 255) << 8)
+       | Math.round(clamp(b, 0, 1) * 255);
+}
+
+/** Stable hash of one integer into 0..1 — same seed always gives the same shape. */
+export function hash01(seed: number) {
+  let x = Math.imul(seed ^ 0x9e3779b9, 0x85ebca6b);
+  x = Math.imul(x ^ (x >>> 13), 0xc2b2ae35);
+  return ((x ^ (x >>> 16)) >>> 0) / 4294967296;
+}
+
 export function hsl(h: number, s: number, l: number): number {
   h = ((h % 360) + 360) % 360 / 360;
   const a = s * Math.min(l, 1 - l);

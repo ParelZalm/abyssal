@@ -6,7 +6,8 @@
 import { Container, Sprite } from 'pixi.js';
 import { tierBiome } from './biomes';
 import { drifts, PROP_SIZE, propTexture, type PropKind } from './props';
-import { clamp, lerp, TAU } from './util';
+import { clamp, lerp, rgb, TAU } from './util';
+import type { View } from './view';
 import { lightAt, waterColor } from './water';
 
 interface Band {
@@ -61,18 +62,16 @@ interface Placed {
  * the dark tiers there is nothing behind it, so the only way to be seen is to give off
  * the biome's own light.
  */
-function shadeFor(depth: number, b: Band) {
+export function shadeFor(depth: number, dark: number, lit: number) {
   const deep = 1 - lightAt(depth);
   const water = waterColor(depth);
   const accent = tierBiome(depth).accent;
-  let rgb = 0;
-  for (let i = 0; i < 3; i++) {
-    // ramped, not squared: the middle tiers are the awkward case — too dim for a dark
-    // silhouette to carry on its own, not dark enough to be pure emission
-    const v = lerp(water[i] * b.dark, accent[i] * b.lit, deep * (0.4 + 0.6 * deep));
-    rgb = (rgb << 8) | Math.round(clamp(v, 0, 1) * 255);
-  }
-  return rgb;
+  // ramped, not squared: the middle tiers are the awkward case — too dim for a dark
+  // silhouette to carry on its own, not dark enough to be pure emission
+  const mix = deep * (0.4 + 0.6 * deep);
+  return rgb(lerp(water[0] * dark, accent[0] * lit, mix),
+             lerp(water[1] * dark, accent[1] * lit, mix),
+             lerp(water[2] * dark, accent[2] * lit, mix));
 }
 
 class BandLayer {
@@ -82,7 +81,8 @@ class BandLayer {
 
   constructor(private band: Band) {}
 
-  update(camX: number, camY: number, viewW: number, viewH: number, t: number, zoom: number) {
+  update(view: View) {
+    const { x: camX, y: camY, t, zoom } = view;
     const b = this.band;
     // The band is a backdrop, not scenery you swim through, so it holds its apparent
     // size: the camera zooms out by a factor of four as you grow, and world-sized props
@@ -101,7 +101,7 @@ class BandLayer {
     this.root.x = camX * (1 - b.parallax);
     this.root.y = camY * (1 - b.parallax);
     const cx = camX * b.parallax / k, cy = camY * b.parallax / k;
-    const halfW = viewW * 0.5 / k + b.cell, halfH = viewH * 0.5 / k + b.cell;
+    const halfW = view.w * 0.5 / k + b.cell, halfH = view.h * 0.5 / k + b.cell;
 
     const x0 = Math.floor((cx - halfW) / b.cell), x1 = Math.floor((cx + halfW) / b.cell);
     const y0 = Math.floor((cy - halfH) / b.cell), y1 = Math.floor((cy + halfH) / b.cell);
@@ -158,7 +158,7 @@ class BandLayer {
     const homeX = (gx + 0.2 + hash2(gx, gy, 4) * 0.6) * b.cell;
     const homeY = (gy + 0.2 + hash2(gx, gy, 5) * 0.6) * b.cell;
     sprite.x = homeX; sprite.y = homeY;
-    sprite.tint = shadeFor(depth, b);
+    sprite.tint = shadeFor(depth, b.dark, b.lit);
     sprite.alpha = b.alpha;
     sprite.visible = true;
     this.root.addChild(sprite);
@@ -189,7 +189,7 @@ export class Scenery {
     this.front.addChild(this.layers[2].root);
   }
 
-  update(camX: number, camY: number, viewW: number, viewH: number, t: number, zoom: number) {
-    for (const l of this.layers) l.update(camX, camY, viewW, viewH, t, zoom);
+  update(view: View) {
+    for (const l of this.layers) l.update(view);
   }
 }
