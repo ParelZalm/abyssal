@@ -7,7 +7,7 @@
  * drawing code and never the other way round, so the board cannot drift from what the game
  * looks like without someone noticing here first.
  */
-import { Application, Container, Graphics, Text } from 'pixi.js';
+import { Application, Container, Graphics, Rectangle, Text } from 'pixi.js';
 import '../../style.css';
 import { rgb } from '../util';
 import { waterColor } from '../water';
@@ -41,6 +41,8 @@ interface Cell {
   root: Container;
   view: Container;
   bg: Graphics;
+  /** Masks the cell to its own rect. See `layout`. */
+  clip: Graphics;
 }
 let cells: Cell[] = [];
 let groups: DesignGroup[] = catalog();
@@ -70,10 +72,12 @@ function build() {
   for (const item of items) {
     const root = new Container();
     const bg = new Graphics();
+    const clip = new Graphics();
     const holder = new Container();
     const view = item.make();
     holder.addChild(view);
-    root.addChild(bg, holder);
+    root.addChild(bg, holder, clip);
+    root.mask = clip;
     root.eventMode = 'static';
     root.cursor = 'pointer';
     root.on('pointertap', () => {
@@ -89,7 +93,7 @@ function build() {
       );
     }
     board.addChild(root);
-    cells.push({ item, root, view: holder, bg });
+    cells.push({ item, root, view: holder, bg, clip });
   }
 }
 
@@ -112,6 +116,13 @@ function layout() {
     const cy = Math.floor(i / cols) * ch;
     cell.root.position.set(cx, cy);
     cell.bg.clear().rect(1, 1, cw - 2, ch - 2).fill({ color: water(cell.item) });
+    // Both of these exist because a creature is far bigger than the body you can see: the
+    // guardians carry a fog cloud and an additive bloom that reach well past their own art.
+    // Without the mask a guardian's cloud washes over its neighbours, and without an
+    // explicit hitArea Pixi hit-tests the union of its children's bounds, so the guardian
+    // swallows the clicks for half the board and nothing else can be selected.
+    cell.clip.clear().rect(0, 0, cw, ch).fill(0xffffff);
+    cell.root.hitArea = new Rectangle(0, 0, cw, ch);
 
     const fit = Math.min(cw, ch) * (n === 1 ? 0.6 : 0.5);
     cell.view.scale.set(framing === 'fit' ? fit / cell.item.span : fit / widest);
