@@ -6,16 +6,18 @@ import { Fx } from './game/fx';
 import { Ocean } from './game/ocean';
 import { Scenery } from './game/scenery';
 import type { View } from './game/view';
-import { lightAt, Water } from './game/water';
+import { lightAt, Water, waterColor } from './game/water';
 import type { Species } from './game/species';
 import { bandAt, BANDS, depthLabel, descentLimit, FINAL_GUARDIAN, nextGate,
          placeName } from './game/zones';
 import { draftTraits, type Trait } from './game/traits';
-import { clamp, dist2, hsl, lerp, Rng } from './game/util';
+import { clamp, dist2, hsl, lerp, rgb, Rng } from './game/util';
 import { Creature, DEPTH_MAX, speciesById, World } from './game/world';
 import { UI } from './ui/UI';
 
-const POP_SHALLOW = 105;
+// the Sunlit zone's own tagline is "warm, crowded"; a budget that reads as crowded when
+// it is spread out reads as empty once it is spent on groups, and it is spent on groups now
+const POP_SHALLOW = 140;
 const POP_DEEP = 46;
 const FOOD_MAX = 100;
 
@@ -134,7 +136,9 @@ class Game {
     this.maxBand = 0; this.hintCd = 0; this.gatesOpen = 0;
     this.wakeCd = 0; this.sprinting = false; this.boostHeld = 0; this.hitStop = 0;
     this.zoom = this.zoomFor(g.size);
-    this.world.spawnAround(this.player.x, this.player.y, this.viewR(), POP_SHALLOW);
+    // the first fill is the exception to spawning off-screen: there is no frame to
+    // protect yet, and an empty opening screen is worse than watching the water populate
+    this.world.spawnAround(this.player.x, this.player.y, this.viewR(), POP_SHALLOW, 0.15);
   }
 
   private bindInput() {
@@ -275,8 +279,32 @@ class Game {
     this.deepest = Math.max(this.deepest, p.y);
   }
 
+  /**
+   * The colour of blood at a depth.
+   *
+   * Red is the first thing the water takes: below the Twilight there is no red light left
+   * to give back, so a cloud down there is a black smear and not a crimson one. Painting
+   * it crimson everywhere would be the one bright saturated thing in the Abyss, and it
+   * would read as a UI effect rather than as something that happened in the water.
+   */
+  private bloodColour(y: number) {
+    const light = lightAt(y);
+    const w = waterColor(y);
+    // the deep end is the water's own colour taken down rather than pure black: a true
+    // black cloud is invisible against water this dark, and the point of the cue is that
+    // you can see where the kill was
+    return rgb(lerp(w[0] * 1.6, 0.62, light),
+               lerp(w[1] * 0.35, 0.05, light),
+               lerp(w[2] * 0.35, 0.06, light));
+  }
+
   /** Turn this frame's bites into growth, particles and consequences. */
   private digest() {
+    // a kill leaves a cloud where it happened, and for the next few seconds that spot is
+    // something the simulation steers predators toward — see `World.smell`
+    for (const s of this.world.spilled) {
+      this.fx.blood(s.x, s.y, this.bloodColour(s.y), s.size * 0.9);
+    }
     for (const b of this.world.bites) {
       const col = b.onPlayer ? 0xff5a4a : 0xff9a7a;
       this.fx.burst(b.x, b.y, col, b.fatal ? 22 : 8, b.fatal ? 220 : 120, b.fatal ? 3.6 : 2.4);
@@ -465,7 +493,7 @@ class Game {
     for (const c of this.world.creatures) {
       const d = Math.sqrt(dist2(c.x, c.y, p.x, p.y));
       let tint = 0xffffff;
-      if (c.canEat(p)) {
+      if (c.preysOn(p)) {
         // gap between bodies, not between centres — a big animal is close long before
         // its centre is, and that is exactly when it should be frightening
         const gap = d - c.radius - p.radius;
@@ -487,7 +515,7 @@ class Game {
         const vis = clamp(1 - (d - sense - own) / (sense * 0.55), 0, 1);
         alpha = clamp(light * 1.35 + vis, 0.02, 1);
       }
-      c.view.show(seen, alpha, tint);
+      c.view.show(seen, alpha * c.emergence, tint);
     }
 
     // Draw the band boundary nearest the camera rather than the next one below it:

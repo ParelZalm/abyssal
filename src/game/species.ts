@@ -1,6 +1,6 @@
 import type { Plan } from './fishview';
 import { baseGenome, type Genome } from './genome';
-import type { Rng } from './util';
+import { clamp, type Rng } from './util';
 import { BANDS, DEPTH_MAX, ZONES, type ZoneId } from './zones';
 
 export type Behavior = 'plankton' | 'school' | 'drift' | 'hunter' | 'ambush' | 'apex';
@@ -73,7 +73,9 @@ export const SPECIES: Species[] = [
 
   { id: 'krill', name: 'Krill Swarm', behavior: 'school', plan: 'microbe',
     zone: 'sunlit', band: 'open', bleed: 700,
-    size: [4, 7], hue: [20, 42], accent: 35, speed: 95, bite: 0,
+    // slow on purpose: a swarm that flees at two thirds of a hatchling's top speed is a
+    // chase, and the first thing in the game should be something you can simply eat
+    size: [4, 7], hue: [20, 42], accent: 35, speed: 46, bite: 0,
     nutrition: 1.3, weight: 32, translucent: 0.4 },
 
   { id: 'fry', name: 'Silver Fry', behavior: 'school', plan: 'darter',
@@ -370,18 +372,39 @@ export function genomeFor(sp: Species, rng: Rng): Genome {
 }
 
 /**
- * The top of the water column is the tutorial: food is thick there and the things that
- * hunt you are thinned out, so a 14 cm hatchling has somewhere to start.
+ * Whether this animal hunts at all.
+ *
+ * Three of the six behaviours do. The other three — plankton, schools and drifters — are
+ * food that happens to have a mouth, and letting them eat gutted the shallows: an anchovy
+ * shoal is bigger than a krill swarm, so it ate its way through every swarm it crossed and
+ * the first minute of a run had nothing left in it to catch.
+ */
+export function hunts(s: Species) {
+  return s.behavior === 'hunter' || s.behavior === 'ambush' || s.behavior === 'apex';
+}
+
+/**
+ * The column is one long difficulty curve, and this is the whole of it.
+ *
+ * The top is the tutorial: swarms are thick enough that a 14 cm hatchling can eat its way
+ * to its first stage without meeting anything, and the things that hunt are thinned to
+ * under a fifth of their weight. The deep is the same rule run backwards — predators are
+ * nearly twice as likely there, which is what makes a kill in the Abyss draw a crowd
+ * (`World.smell`) while a kill in the shallows mostly draws nothing.
+ *
+ * The apex is thinned with the rest: the Sunlit guardian is alive from the first minute
+ * and is meant to be met, but it should not be the first thing a hatchling meets.
  */
 function weightAt(s: Species, depth: number) {
-  if (depth > 1000) return s.weight;
-  const shallow = 1 - depth / 1000;
-  // apex included: the Sunlit guardian is alive from the first minute, but it should not
-  // be the first thing a 14 cm hatchling meets
-  if (s.behavior === 'hunter' || s.behavior === 'ambush' || s.behavior === 'apex') {
-    return s.weight * (1 - shallow * 0.62);
-  }
-  if (s.behavior === 'plankton') return s.weight * (1 + shallow * 0.55);
+  // one straight ramp over the whole column rather than a tutorial shelf that ends at
+  // 1000 m and a separate deep ramp that starts at 2400. Two curves with flat water
+  // between them is a difficulty step you can feel crossing, and the run is supposed to
+  // get harder the whole way down rather than twice
+  const t = clamp(depth / DEPTH_MAX, 0, 1);
+  if (hunts(s)) return s.weight * (0.15 + 1.95 * t);
+  // the things a hatchling can actually catch, thinning as the hunters thicken
+  if (s.behavior === 'school') return s.weight * (2 - 1.1 * t);
+  if (s.behavior === 'plankton') return s.weight * (1.8 - 0.9 * t);
   return s.weight;
 }
 

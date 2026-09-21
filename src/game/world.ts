@@ -1,8 +1,8 @@
 import { Container } from 'pixi.js';
 import { FishView } from './fishview';
 import { armourOf, biteDamage, maxHp, type Genome } from './genome';
-import { genomeFor, rangeOf, rollSpecies, SPECIES, type Species } from './species';
-import { angleDelta, clamp, dist2, Rng, TAU } from './util';
+import { genomeFor, hunts, rangeOf, rollSpecies, SPECIES, type Species } from './species';
+import { angleDelta, clamp, dist2, lerp, Rng, TAU } from './util';
 
 export const WORLD_HALF_W = 7000;
 /** Forward drag coefficient: terminal speed works out to genome.speed × throttle. */
@@ -12,10 +12,50 @@ const DRAG_LAT = 9;
 import { DEPTH_MAX, noticeSize } from './zones';
 export { DEPTH_MAX };
 
+/**
+ * The lid and the silt. Nothing is placed in either — and crucially, a draw that lands
+ * there is thrown away rather than pulled back in. See `World.spot`.
+ */
+const SPAWN_TOP = 90;
+const SPAWN_FLOOR = 140;
+/**
+ * Where a new body goes, as a fraction of the view radius: past the corner of the screen,
+ * and comfortably inside the cull radius of 2.1 so it is not dropped again on the next
+ * frame the camera breathes.
+ */
+const RING: [number, number] = [1.08, 1.75];
+/** An apex is a thing that arrives. Placed at the frame's edge it merely exists there. */
+const RING_APEX: [number, number] = [1.5, 1.95];
+/** Seconds a body takes to resolve out of the water. */
+const FADE_IN = 0.9;
+/** How often a schooling species turns up as a few strays rather than as a shoal. */
+const STRAY_CHANCE = 0.5;
+
 export interface Bite {
   x: number; y: number; amount: number; fatal: boolean; onPlayer: boolean;
   byPlayer: boolean;
+  /** The victim's body length — what the particle burst and the blood cloud scale off. */
+  size: number;
 }
+
+/**
+ * Blood in the water: a place a kill happened, and for a few seconds a place predators
+ * steer toward. It is the only thing in the simulation that is neither a body nor a wall,
+ * and it exists so that killing has a consequence beyond the meal — see `World.smell`.
+ */
+export interface Blood {
+  x: number; y: number;
+  /** Body length of what died here; how far the scent carries and how long it lasts. */
+  size: number;
+  /** Seconds left. */
+  t: number;
+}
+
+/** How long a cloud draws anything, per centimetre of what died. Capped by `BLOOD_MAX`. */
+const BLOOD_LIFE = 0.16;
+const BLOOD_MAX = 14;
+/** Scent reach, per centimetre of the body. A 5 cm krill is barely worth crossing water for. */
+const BLOOD_REACH = 11;
 
 export class Creature {
   x = 0; y = 0; vx = 0; vy = 0; angle = 0;
@@ -35,6 +75,16 @@ export class Creature {
   lunge = 0;
   /** Guardians only: whether this one has currently registered the player as worth eating. */
   aware = false;
+  /**
+   * How far into existence this body is, 0 to 1.
+   *
+   * Nothing in this ocean pops. A spawn is placed past the corner of the screen and
+   * finishes its fade unseen; the ones that cannot be — the first fill of a run, and the
+   * thin water directly above you in the shallows, where there is no off-screen to hide in
+   * — resolve out of the murk instead. The player is born whole, which is why this starts
+   * full and only `World.add` clears it.
+   */
+  fade = 1;
   /** Venom left in the wound: damage per second, and who is owed the kill. */
   poison = 0;
   poisonT = 0;
@@ -57,11 +107,31 @@ export class Creature {
   canEat(other: Creature) {
     return this.swallowSize > other.genome.size * 1.02;
   }
+
+  /**
+   * Whether this animal would actually eat that one: it has to hunt, it has to be big
+   * enough, and it does not eat its own kind.
+   *
+   * `canEat` is only the size half, and both of the others were missing at the call sites.
+   * A species is a size *range*, so the 7 cm end of a krill swarm could swallow the 4 cm
+   * end — half of every school fled its own shoal and the rest was eaten from inside. And
+   * `pair` let anything with a mouth strike, so a shoal of anchovy ate its way through
+   * every krill swarm it crossed and the shallows had no food left in them by the time the
+   * player arrived. Both rules live here rather than being remembered at four call sites.
+   */
+  preysOn(other: Creature) {
+    return hunts(this.species) && this.species.id !== other.species.id && this.canEat(other);
+  }
   get radius() {
     return this.genome.size * 0.62;
   }
   syncView() {
     this.view.place(this.x, this.y, this.angle);
+  }
+
+  /** The fade as an alpha, eased at both ends so an arrival has no edges. */
+  get emergence() {
+    return this.fade * this.fade * (3 - 2 * this.fade);
   }
 
   /** Turning authority right now: a body already moving fast cannot pivot as tightly. */
@@ -121,6 +191,10 @@ export class World {
   /** Darkening clouds, under the bodies. Normal blend, so it cannot share `glow`. */
   fog = new Container();
   bites: Bite[] = [];
+  /** Kills still scenting the water. Drained by age in `update`, read by `smell`. */
+  blood: Blood[] = [];
+  /** Clouds opened this frame, for `Game.digest` to draw. An event, not the list above. */
+  spilled: Blood[] = [];
   /** Biomass the player earned this frame. */
   playerGain = 0;
   /** Health, as a fraction of max, the player absorbed this frame. */
@@ -147,32 +221,159 @@ export class World {
     this.fog.addChild(player.view.fog);
   }
 
-  spawnAround(cx: number, cy: number, viewR: number, target: number) {
+  /**
+   * Top the water up to `target` bodies around a point.
+   *
+   * `inner` is how close to the camera an arrival may be placed, as a fraction of the view
+   * radius. The default puts it past the corner of the screen, so what the player sees is
+   * something swimming in rather than something appearing. The first fill of a run passes
+   * a small value instead: there is no established frame to protect there, and an empty
+   * screen is worse than a fade.
+   */
+  spawnAround(cx: number, cy: number, viewR: number, target: number, inner = RING[0]) {
     let guard = 0;
-    while (this.creatures.length < target && guard++ < 40) {
-      const a = this.rng.next() * TAU;
-      const r = viewR * this.rng.range(0.75, 1.6);
-      const x = clamp(cx + Math.cos(a) * r, -WORLD_HALF_W, WORLD_HALF_W);
-      const y = clamp(cy + Math.sin(a) * r, 40, DEPTH_MAX);
-      const sp = rollSpecies(this.rng, y);
+    while (this.creatures.length < target && guard++ < 50) {
+      const at = this.spot(cx, cy, viewR, inner, RING[1]);
+      if (!at) continue;
+      const sp = rollSpecies(this.rng, at.y);
       if (!sp) continue;
       // one guardian at a time, and never again once it is dead
       if (sp.guardian && (this.deadGuardians.has(sp.id) || this.count(sp.id) >= 1)) continue;
-      this.add(sp, x, y);
-      // schools arrive as schools, and plankton as a bloom you can graze through
-      if (sp.behavior === 'school' || sp.behavior === 'plankton') {
-        const bloom = sp.behavior === 'plankton';
-        // the shallows are the tutorial: a bloom is something a hatchling can graze
-        // through, and it thins on the same ramp `weightAt` fades the odds on, so both
-        // halves of that rule run out together at 1000 m instead of one outliving it
-        const shallow = bloom ? clamp(1 - y / 1000, 0, 1) : 1;
-        const n = Math.round((bloom ? this.rng.int(6, 11) : this.rng.int(4, 9)) * shallow);
-        const spread = bloom ? 210 : 120;
-        for (let i = 0; i < n; i++) {
-          this.add(sp, x + this.rng.range(-spread, spread),
-                   y + this.rng.range(-spread * 0.75, spread * 0.75));
-        }
+
+      const far = sp.behavior === 'apex'
+        ? this.spot(cx, cy, viewR, Math.max(inner, RING_APEX[0]), RING_APEX[1])
+        : null;
+      const { x } = far ?? at;
+      let { y } = far ?? at;
+      // an ambusher is found where it lies in wait, which is the bottom of its own water
+      if (sp.behavior === 'ambush') {
+        y = lerp(y, Math.min(rangeOf(sp)[1], DEPTH_MAX - SPAWN_FLOOR), this.rng.range(0.2, 0.5));
       }
+
+      if (sp.behavior === 'school') {
+        // A shoal and then nothing until the next shoal reads as a row of set pieces with
+        // dead water between them. Strays are what make the ocean continuous, and they are
+        // also true: a schooling species is not a species that is always in a school.
+        if (this.rng.chance(STRAY_CHANCE)) this.strays(sp, x, y);
+        else this.shoal(sp, x, y, target);
+      } else if (sp.behavior === 'plankton') this.patch(sp, x, y, target);
+      else this.add(sp, x, y);
+    }
+  }
+
+  /**
+   * A point in the ring around the camera that is actually in the water.
+   *
+   * Rejection, never a clamp. Clamping y is what used to stack the shallows: every draw
+   * that fell above the surface landed on the same depth, so a third of every fill near
+   * the top became krill and bloom piled onto one line at 40 m — and `weightAt` boosts
+   * plankton hardest exactly there, so the line was thick. A rejected draw is simply a
+   * spawn that does not happen this frame; the ring is re-rolled on the next.
+   */
+  private spot(cx: number, cy: number, viewR: number, near: number, far: number) {
+    for (let t = 0; t < 10; t++) {
+      const a = this.rng.next() * TAU;
+      const r = viewR * this.rng.range(near, far);
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+      if (y < SPAWN_TOP || y > DEPTH_MAX - SPAWN_FLOOR) continue;
+      if (Math.abs(x) > WORLD_HALF_W - 150) continue;
+      return { x, y };
+    }
+    return null;
+  }
+
+  /**
+   * Fold a group member's offset back into the water rather than letting `add` clamp it.
+   *
+   * The clamp is the same bug one level down: the anchor is rejection-sampled, but a sheet
+   * reaches 95 either side of it, so an anchor just under the lid still piled part of its
+   * bloom onto exactly y = 40 — the surface line this spawner exists to remove. Mirroring
+   * the offset keeps every body and every bit of the density, and gives a sheet lying
+   * against the surface the one-sided shape it should have anyway.
+   */
+  private fold(y: number, dy: number) {
+    const down = y + dy;
+    if (down >= SPAWN_TOP && down <= DEPTH_MAX - SPAWN_FLOOR) return down;
+    const up = y - dy;
+    return up >= SPAWN_TOP && up <= DEPTH_MAX - SPAWN_FLOOR ? up : y;
+  }
+
+  /**
+   * How many bodies travel together. The smaller the animal the larger the group, which
+   * is both true and what keeps a swarm of 5 mm krill worth swimming into. Capped by the
+   * room left under the population target, so one school cannot eat a whole screen.
+   */
+  private groupSize(sp: Species, target: number) {
+    const mid = (sp.size[0] + sp.size[1]) / 2;
+    // smaller than the water can afford, deliberately. The population target is a budget,
+    // and spending it on a few big shoals buys a frame with one shoal in it and nothing
+    // else; spending it on many small ones buys an ocean that is populated everywhere you
+    // look. The flocking will merge two that drift together, so the big shoal still happens
+    const base = clamp(Math.round(110 / mid), 3, 14);
+    const room = Math.max(3, target - this.creatures.length);
+    // a wide roll, not a tight one: every shoal being the same size is as artificial as
+    // every fish being in one
+    return Math.max(2, Math.min(this.rng.int(Math.round(base * 0.3), base), room));
+  }
+
+  /**
+   * A school arrives as a school: one heading, one lens of bodies stretched along it,
+   * everyone already at cruising speed. The flocking in `think` would gather a scattered
+   * handful eventually, but the arrival is what sells it — a box of independent strangers
+   * reads as a spawn, and this is the thing the player watches resolve out of the dark.
+   */
+  private shoal(sp: Species, x: number, y: number, target: number) {
+    const n = this.groupSize(sp, target);
+    // schools cruise the horizontal; a shoal climbing at 40 degrees reads as one in flight
+    const heading = (this.rng.chance(0.5) ? 0 : Math.PI) + this.rng.range(-0.35, 0.35);
+    const span = 70 + sp.size[1] * 5;
+    const cos = Math.cos(heading), sin = Math.sin(heading);
+    for (let i = 0; i < n; i++) {
+      // mild centre bias: a school is a body with a few outliers, not a uniform disc
+      const r = this.rng.next() ** 0.7;
+      const a = this.rng.next() * TAU;
+      const ax = Math.cos(a) * r * span, ay = Math.sin(a) * r * span * 0.36;
+      const c = this.add(sp, x + ax * cos - ay * sin, this.fold(y, ax * sin + ay * cos));
+      c.angle = heading + this.rng.range(-0.22, 0.22);
+      const v = c.genome.speed * 0.55;
+      c.vx = Math.cos(c.angle) * v;
+      c.vy = Math.sin(c.angle) * v;
+    }
+  }
+
+  /**
+   * A handful of the same species, loose and going their own way — the water between the
+   * shoals. Spread far wider than a shoal and with no shared heading, so it never reads as
+   * a school that failed to form; `flock` will gather them if they happen to drift into
+   * each other, which is the right way round.
+   */
+  private strays(sp: Species, x: number, y: number) {
+    const n = this.rng.int(1, 3);
+    for (let i = 0; i < n; i++) {
+      const c = this.add(sp, x + this.rng.range(-420, 420), this.fold(y, this.rng.range(-170, 170)));
+      c.vx = Math.cos(c.angle) * c.genome.speed * 0.4;
+      c.vy = Math.sin(c.angle) * c.genome.speed * 0.4;
+    }
+  }
+
+  /**
+   * Plankton is not a swarm, it is a layer: a sheet of it hangs at a depth, far wider than
+   * it is tall, and crossing one downward should take a moment while crossing one sideways
+   * takes much longer. The shallows are the tutorial, so a sheet there is thick enough for
+   * a hatchling to graze along — it thins on the same ramp `weightAt` fades the odds on, so
+   * both halves of that rule run out together at 1000 m instead of one outliving the other.
+   */
+  private patch(sp: Species, x: number, y: number, target: number) {
+    const shallow = clamp(1 - y / 1000, 0, 1);
+    const n = Math.max(2, Math.round(this.groupSize(sp, target) * (0.35 + shallow * 0.9)));
+    for (let i = 0; i < n; i++) {
+      // square root for an even sheet: plankton has no centre to crowd toward
+      const r = Math.sqrt(this.rng.next());
+      const a = this.rng.next() * TAU;
+      // tight enough to read as a sheet. Spread over 340 the individual motes are 3–5 cm
+      // specks metres apart, which is a third of the population spent on nothing visible
+      this.add(sp, x + Math.cos(a) * r * 230, this.fold(y, Math.sin(a) * r * 70));
     }
   }
 
@@ -184,12 +385,28 @@ export class World {
 
   add(sp: Species, x: number, y: number) {
     const c = new Creature(sp, genomeFor(sp, this.rng));
-    c.x = x; c.y = y;
+    c.x = clamp(x, -WORLD_HALF_W, WORLD_HALF_W);
+    // a backstop that nothing should reach: anchors are rejected out of bounds and group
+    // members are folded back in. If bodies ever appear stacked on one depth again, it is
+    // because something started clamping y instead of re-rolling or folding it
+    c.y = clamp(y, 40, DEPTH_MAX - 40);
     c.angle = this.rng.next() * TAU;
+    c.fade = 0;
     this.creatures.push(c);
     this.layer.addChildAt(c.view, 0);
     this.glow.addChild(c.view.glow);
     this.fog.addChild(c.view.fog);
+    // Place it and hide it before anything can draw it.
+    //
+    // A fresh `FishView` is a Container: visible, opaque, and at its own origin, which is
+    // world (0, 0). `Game.render` tops the population up *after* it has decided what every
+    // creature looks like this frame, so without these two lines every single spawn is
+    // drawn once, at full alpha, in the corner of the world — and then snaps to where it
+    // really is on the next frame, or vanishes when `show` finally reaches it. The player
+    // hatches at (0, 260), so that corner sits just above the starting point: a spot where
+    // creatures flickered into being and teleported away all run.
+    c.syncView();
+    c.view.show(false, 0, 0xffffff);
     return c;
   }
 
@@ -212,6 +429,10 @@ export class World {
   update(dt: number) {
     this.lastDt = dt;
     this.bites.length = 0;
+    this.spilled.length = 0;
+    for (let i = this.blood.length - 1; i >= 0; i--) {
+      if ((this.blood[i].t -= dt) <= 0) this.blood.splice(i, 1);
+    }
     this.playerGain = 0;
     this.playerHeal = 0;
     this.blocked = false;
@@ -239,7 +460,7 @@ export class World {
     c.lunge = Math.max(0, c.lunge - dt);
 
     // a lit lure overrides whatever the prey was doing — that is the whole point of it
-    if (p.genome.lure > 0 && p.canEat(c) && c.panic <= 0) {
+    if (p.genome.lure > 0 && p.preysOn(c) && c.panic <= 0) {
       const range = 240 + p.genome.lure * 340;
       const d2 = dist2(c.x, c.y, p.x, p.y);
       if (d2 < range * range && d2 > 900) {
@@ -258,7 +479,7 @@ export class World {
         throttle = 0.4 + Math.sin(c.wander * 2) * 0.25;
         break;
       default: {
-        const threat = this.nearest(c, sense, o => o !== c && o.canEat(c));
+        const threat = this.nearest(c, sense, o => o !== c && o.preysOn(c));
         if (threat) {
           const noticed = 1 - (threat.isPlayer ? clamp(threat.genome.stealth, 0, 0.8) : 0);
           if (this.rngLike(c) < noticed) {
@@ -269,9 +490,9 @@ export class World {
           }
         }
         const prey = this.nearest(c, sense * (c.species.behavior === 'apex' ? 3 : 1),
-          o => o !== c && c.canEat(o) && o.species.id !== c.species.id && this.notices(c, o));
-        const wantsToHunt = c.species.behavior === 'hunter' || c.species.behavior === 'apex' ||
-          (c.species.behavior === 'ambush' && c.lunge <= 0);
+          o => o !== c && c.preysOn(o) && this.notices(c, o));
+        const wantsToHunt = hunts(c.species) &&
+          (c.species.behavior !== 'ambush' || c.lunge <= 0);
         if (prey && wantsToHunt) {
           // a guardian turning toward you is the moment the zone stops being scenery, so it
           // is published once on the edge rather than every frame it holds
@@ -291,13 +512,34 @@ export class World {
           }
           break;
         }
+        // blood pulls whatever hunts toward the spot, which is what turns one kill into
+        // a crowd. A guardian is the exception it has to be: it is not summoned by a meal
+        // this small, it only leans a quarter of the way toward one it can already smell
+        if (wantsToHunt) {
+          const guard = c.species.guardian;
+          const trail = this.smell(c, sense, guard ? 0.45 : 1);
+          if (trail) {
+            const toward = Math.atan2(trail.y - c.y, trail.x - c.x);
+            if (guard) {
+              // a guardian is never summoned by a meal this small. The lean is applied to
+              // its wander rather than to its current heading, and it does not speed up:
+              // blending off the heading converges on the spot within seconds however
+              // small the weight, because every frame closes a quarter of what is left
+              const idle = c.angle + Math.sin(c.wander * 0.7) * 0.9;
+              desired = idle + angleDelta(idle, toward) * 0.3;
+              throttle = 0.55;
+            } else {
+              desired = toward;
+              throttle = 1.1;
+            }
+            break;
+          }
+        }
         if (c.species.behavior === 'school') {
-          const mate = this.nearest(c, 260, o => o !== c && o.species.id === c.species.id);
-          if (mate) {
-            const d = Math.sqrt(dist2(c.x, c.y, mate.x, mate.y));
-            const toward = Math.atan2(mate.y - c.y, mate.x - c.x);
-            desired = d < c.genome.size * 2.6 ? toward + Math.PI : toward;
-            throttle = 0.7;
+          const shoal = this.flock(c, 300);
+          if (shoal) {
+            desired = shoal.heading;
+            throttle = shoal.throttle;
             break;
           }
         }
@@ -318,6 +560,77 @@ export class World {
     void p;
   }
 
+  /**
+   * The heading that keeps a school a school: boids, minus the cost of a neighbour list.
+   *
+   * Steering at the single nearest neighbour is precisely what a school is not — two fish
+   * turn into each other, the group settles into pairs, and a shoal placed as one lens of
+   * bodies comes apart within seconds of arriving. Cohesion has to pull toward the centre
+   * of the neighbours and alignment toward their average heading, with separation only
+   * from the one that is genuinely too close.
+   *
+   * The scan is over every creature, like `nearest` beside it: the world holds ~100 bodies
+   * and no spatial index, and one more linear sweep is cheaper than maintaining a grid.
+   */
+  private flock(c: Creature, radius: number): { heading: number; throttle: number } | null {
+    let n = 0, sx = 0, sy = 0, hx = 0, hy = 0;
+    let near: Creature | null = null, nd = Infinity;
+    const r2 = radius * radius;
+    for (const o of this.creatures) {
+      if (o === c || !o.alive || o.species.id !== c.species.id) continue;
+      const d = dist2(c.x, c.y, o.x, o.y);
+      if (d > r2) continue;
+      n++; sx += o.x; sy += o.y; hx += Math.cos(o.angle); hy += Math.sin(o.angle);
+      if (d < nd) { nd = d; near = o; }
+    }
+    if (!n || !near) return null;
+    // personal space off the body, so krill pack into a cloud and snailfish keep a gap
+    const room = c.genome.size * 3.2;
+    if (nd < room * room) {
+      return { heading: Math.atan2(c.y - near.y, c.x - near.x), throttle: 0.45 };
+    }
+    const heading = Math.atan2(hy, hx);
+    const toCentre = Math.atan2(sy / n - c.y, sx / n - c.x);
+    // how far out of the middle this one has drifted, 0 at the core and 1 at the rim
+    const out = clamp(Math.hypot(sx / n - c.x, sy / n - c.y) / (radius * 0.4), 0, 1);
+    return {
+      // at the core a fish only has to match its neighbours' heading; at the rim it has to
+      // turn for the middle. A flat blend of the two never closes the school back up
+      heading: heading + angleDelta(heading, toCentre) * (0.25 + out * 0.65),
+      // and it has to be allowed to loiter there. Everyone cruising at one throttle is
+      // what set the old equilibrium: nothing could hold station, so the shoal orbited
+      // itself out to four times the width it arrived at
+      throttle: 0.3 + out * 0.6,
+    };
+  }
+
+  /**
+   * The strongest blood a creature can currently smell, or null.
+   *
+   * Reach comes off what died rather than off the nose: a krill leaves nothing worth
+   * crossing water for and a guardian leaves a cloud half the zone can taste. Sense still
+   * counts, but as a multiplier on that, so a bloodhound build is a real one. The pick is
+   * by strength and not by distance — a big kill further away should beat a small one
+   * underfoot, or the whole thing is just "swim to the nearest corpse".
+   *
+   * `keen` is how much of that reach this animal actually gets. A guardian's is cut to
+   * under half, which is the difference between one that comes when something dies in its
+   * water and one that comes when something dies under its nose.
+   */
+  private smell(c: Creature, sense: number, keen = 1): Blood | null {
+    let best: Blood | null = null;
+    let bs = 0;
+    for (const b of this.blood) {
+      const reach = b.size * BLOOD_REACH * (0.6 + sense / 900) * keen;
+      const d2 = dist2(c.x, c.y, b.x, b.y);
+      if (d2 > reach * reach) continue;
+      // fades with distance and with age, so a cloud stops calling before it stops drawing
+      const strength = b.size * (1 - Math.sqrt(d2) / reach) * Math.min(1, b.t / 3);
+      if (strength > bs) { bs = strength; best = b; }
+    }
+    return best;
+  }
+
   /** Cheap deterministic-ish jitter per creature, used for perception rolls. */
   private rngLike(c: Creature) {
     return ((c.wander * 9301 + c.x) % 1 + 1) % 1;
@@ -330,13 +643,14 @@ export class World {
     if (c.isPlayer && ny > floor) this.blocked = true;
     c.y = clamp(ny, 30, floor);
     c.biteCd = Math.max(0, c.biteCd - dt);
+    if (c.fade < 1) c.fade = Math.min(1, c.fade + dt / FADE_IN);
     if (c.poisonT > 0) {
       c.poisonT -= dt;
       c.hp -= c.poison * dt;
       if (c.hp <= 0 && c.alive) {
         this.slay(c, c.poisonByPlayer);
         this.bites.push({ x: c.x, y: c.y, amount: c.poison, fatal: true,
-          onPlayer: c.isPlayer, byPlayer: c.poisonByPlayer });
+          onPlayer: c.isPlayer, byPlayer: c.poisonByPlayer, size: c.genome.size });
       }
     } else {
       if (c.hp < c.hpMax) c.hp = Math.min(c.hpMax, c.hp + c.genome.regen * dt);
@@ -398,8 +712,8 @@ export class World {
 
   private pair(a: Creature, b: Creature) {
     if (!a.alive || !b.alive) return;
-    if (a.canEat(b)) this.strike(a, b);
-    if (b.alive && b.canEat(a)) this.strike(b, a);
+    if (a.preysOn(b)) this.strike(a, b);
+    if (b.alive && b.preysOn(a)) this.strike(b, a);
   }
 
   /**
@@ -442,7 +756,7 @@ export class World {
     const fatal = def.hp <= 0;
     if (fatal) this.slay(def, att.isPlayer);
     this.bites.push({ x: def.x, y: def.y, amount: dmg, fatal,
-      onPlayer: def.isPlayer, byPlayer: att.isPlayer });
+      onPlayer: def.isPlayer, byPlayer: att.isPlayer, size: def.genome.size });
 
     // venom keeps working after the mouth has let go
     if (att.genome.venom > 0 && !fatal) {
@@ -462,6 +776,10 @@ export class World {
   private slay(def: Creature, byPlayer: boolean) {
     if (!def.alive) return;
     def.alive = false;
+    const spill: Blood = { x: def.x, y: def.y, size: def.genome.size,
+      t: Math.min(BLOOD_MAX, def.genome.size * BLOOD_LIFE) };
+    this.blood.push(spill);
+    this.spilled.push(spill);
     if (!byPlayer) return;
     this.playerGain += def.genome.size * def.species.nutrition;
     this.playerHeal += def.species.heal ?? 0;
