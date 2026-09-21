@@ -120,6 +120,20 @@ export interface PlanArt {
   paleEyes: boolean;
   /** Multiplier on the caudal spread. */
   caudal: number;
+  /**
+   * What is on the back of the animal. Every plan used to get the same forked fish tail,
+   * which is most of why a whale and a squid read as the same creature in two colours —
+   * the tail is the second thing you see after the outline, and it was saying "fish".
+   */
+  tail: 'caudal' | 'fluke' | 'mantle';
+  /**
+   * A squared-off snout, as a fraction of the head's half-width. The width curve can only
+   * taper to a point, and a sperm whale's head is a box — the single most recognisable
+   * profile in the ocean, and not something a beta function will ever produce.
+   */
+  blunt: number;
+  /** A dorsal ridge along the midline. From above a shark's fin is a sliver, but it reads. */
+  dorsalFin: boolean;
   /** Outline samples. Long thin bodies need more before the curve reads as smooth. */
   samples: number;
   /** Drawn see-through with its viscera showing. The player only. */
@@ -128,29 +142,30 @@ export interface PlanArt {
 
 const art = (o: Partial<PlanArt> = {}): PlanArt => ({
   arms: 0, armCount: 0, armLen: 0, armWidth: 0, armPair: 1, armReach: 0, spines: true,
-  gills: true,
-  cilia: false, paleEyes: false, caudal: 1, samples: 90, smoke: false, ...o,
+  gills: true, cilia: false, paleEyes: false, caudal: 1, samples: 90, smoke: false,
+  tail: 'caudal', blunt: 0, dorsalFin: false, ...o,
 });
 
 export const PLAN_ART: Record<Plan, PlanArt> = {
   microbe:    art({ spines: false, gills: false, cilia: true }),
   darter:     art(),
-  shark:      art(),
+  shark:      art({ dorsalFin: true }),
   eel:        art({ samples: 120 }),
   jelly:      art({ arms: 1.15, armCount: 9, armLen: 1.1, armWidth: 0.07, armReach: 0.6,
                     spines: false, gills: false, caudal: 0.6 }),
   squid:      art({ arms: 1.15, armCount: 6, armLen: 1.5, armWidth: 0.12, armReach: 0.6 }),
   angler:     art({ paleEyes: true }),
   leviathan:  art({ paleEyes: true, samples: 110 }),
-  greatshark: art({ samples: 100 }),
-  // no dorsal fin on a sperm whale, so no blades either — the back is a smooth hump
-  whale:      art({ spines: false, samples: 110 }),
+  greatshark: art({ samples: 100, dorsalFin: true }),
+  // no dorsal fin on a sperm whale, so no blades either — the back is a smooth hump, and
+  // the drive comes off one broad horizontal fluke rather than a fish's vertical fork
+  whale:      art({ spines: false, samples: 110, tail: 'fluke', blunt: 0.86 }),
   // two feeding tentacles far beyond the other eight, which is the giant squid's whole
   // silhouette and the reason it needs a plan rather than a bigger `squid`
   longsquid:  art({ arms: 1.5, armCount: 10, armLen: 2.6, armWidth: 0.085, armReach: 2.2,
-                    armPair: 1.9, paleEyes: true, caudal: 0.85 }),
+                    armPair: 1.9, paleEyes: true, caudal: 0.6, tail: 'mantle' }),
   broadsquid: art({ arms: 1.35, armCount: 8, armLen: 1.5, armWidth: 0.17, armReach: 1.2,
-                    paleEyes: true, caudal: 1.15 }),
+                    paleEyes: true, caudal: 1.5, tail: 'mantle' }),
   wraith:     art({ smoke: true }),
 };
 

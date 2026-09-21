@@ -66,7 +66,9 @@ with the genome, so a mutation that changes how an animal feeds changes its prof
 
 A plan is three records and nothing else: its `Form` in `PLAN_FORMS`, its swim signature
 in `MOTION` (`fishview.ts`), and its art in `PLAN_ART` — arms, spines, gills, cilia, pale
-eyes, caudal scale, outline samples, smoke. All three are `Record<Plan, …>`, so adding a
+eyes, caudal scale, outline samples, smoke, and the three that carry a guardian's
+silhouette: `tail` (`caudal` fork, whale `fluke`, or squid `mantle`), `blunt` for a
+squared-off snout the width curve cannot produce, and `dorsalFin`. All three are `Record<Plan, …>`, so adding a
 plan is a data edit the compiler walks you through. `PLAN_ART` replaced eleven scattered
 `plan === …` conditionals in `fishbake.ts`; there are none left, and adding a plan no
 longer means auditing the bake for branches it might belong in.

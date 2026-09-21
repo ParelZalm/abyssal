@@ -140,7 +140,13 @@ function paint(g: Genome, plan: Plan): Baked {
   // --- bounds ------------------------------------------------------------
   let widest = 0;
   for (let i = 0; i <= 40; i++) widest = Math.max(widest, halfWidth(i / 40, f));
-  const caudal = halfWidth(1, f) * (2.4 + f.fork * 1.8);
+  // the strip has to hold whatever is on the back of the animal, and the three kinds
+  // reach different distances — a fluke is wider than the fork it replaces, and mantle
+  // fins are measured at the mantle rather than at the tail root
+  const caudal =
+    A.tail === 'fluke' ? halfWidth(1, f) * (3.4 + f.fork * 1.2) * A.caudal
+    : A.tail === 'mantle' ? halfWidth(0.8, f) * (1.6 + A.caudal * 0.9)
+    : halfWidth(1, f) * (2.4 + f.fork * 1.8);
   const arms = widest * A.arms;
   const frill = g.frill > 0 ? widest * 0.3 : 0;
   const veiling = widest * g.veil * 1.5;
@@ -160,7 +166,10 @@ function paint(g: Genome, plan: Plan): Baked {
   // --- behind the body ---------------------------------------------------
   if (A.arms > 0) tentacles(art, f, pal, A, g);
   if (g.veil > 0) veil(art, f, pal, g, seed);
-  caudalFin(art, f, pal, g, A);
+  if (A.blunt > 0) bluntSnout(art, f, pal, A);
+  if (A.tail === 'fluke') fluke(art, f, pal, A);
+  else if (A.tail === 'mantle') mantleFins(art, f, pal, A);
+  else caudalFin(art, f, pal, g, A);
   if (g.lure > 0) lure(art, f, pal, g);
 
   // --- the body itself ---------------------------------------------------
@@ -176,6 +185,7 @@ function paint(g: Genome, plan: Plan): Baked {
 
   // --- on top ------------------------------------------------------------
   if (A.smoke) viscera(art, f, pal);
+  if (A.dorsalFin) dorsalRidge(art, f, pal);
   fins(art, f, pal, g);
   if (A.spines) spines(art, f, pal, g, men);
   organs(art, f, pal, g);
@@ -253,6 +263,82 @@ function caudalFin(gr: Graphics, f: Form, pal: Palette, g: Genome, A: PlanArt) {
       .closePath().fill({ color: pal.belly, alpha: 0.16 * pal.alpha });
   }
   void g;
+}
+
+/**
+ * One broad horizontal fluke. A whale drives with a paddle that spreads across the current
+ * rather than a fin that sweeps through it, so from above it is wide, swept back, and
+ * notched once at the centre — no fork, no rays, nothing that reads as a fish.
+ */
+function fluke(gr: Graphics, f: Form, pal: Palette, A: PlanArt) {
+  const x = spineAt(1, f);
+  const w = halfWidth(1, f);
+  const len = f.len * f.fluke * R;
+  const spread = w * (3.4 + f.fork * 1.2) * A.caudal;
+  const notch = len * 0.3;
+  for (const dir of [-1, 1] as const) {
+    gr.moveTo(x + w * 1.2, dir * w * 0.7)
+      // leading edge sweeps out and back to the tip
+      .quadraticCurveTo(x - len * 0.15, dir * spread * 0.86, x - len * 0.92, dir * spread)
+      // the tip is a point, not a corner
+      .quadraticCurveTo(x - len * 0.86, dir * spread * 0.74, x - len * 0.62, dir * spread * 0.6)
+      // trailing edge falls concave back to the central notch
+      .quadraticCurveTo(x - len * 0.3, dir * spread * 0.2, x - len * 0.3 + notch, 0)
+      .lineTo(x + w * 1.2, 0)
+      .closePath()
+      .fill({ color: pal.skin, alpha: 0.9 * pal.alpha });
+  }
+}
+
+/**
+ * Terminal fins on the mantle: one rhombus wrapped around the back of the body rather than
+ * anything trailing behind it. This is the whole difference between a squid from above and
+ * a fish — the fin is *part of* the mantle, and where a tail would be there is nothing.
+ */
+function mantleFins(gr: Graphics, f: Form, pal: Palette, A: PlanArt) {
+  const back = spineAt(1, f);
+  const tf = 0.8;
+  const cx = spineAt(tf, f);
+  const spread = halfWidth(tf, f) * (1.6 + A.caudal * 0.9);
+  const front = spineAt(0.5, f);
+  for (const dir of [-1, 1] as const) {
+    gr.moveTo(front, 0)
+      .quadraticCurveTo(cx + (front - cx) * 0.35, dir * spread * 0.72, cx, dir * spread)
+      .quadraticCurveTo(back + (cx - back) * 0.4, dir * spread * 0.6,
+                        back - f.len * f.fluke * R * 0.5, 0)
+      .closePath()
+      .fill({ color: pal.skin, alpha: 0.8 * pal.alpha });
+  }
+}
+
+/**
+ * A squared-off snout laid over the front of the taper. `halfWidth` runs to a point at the
+ * nose because a beta curve has no other ending, and a blunt-headed animal is exactly what
+ * that cannot express.
+ */
+function bluntSnout(gr: Graphics, f: Form, pal: Palette, A: PlanArt) {
+  const t = 0.26;
+  const w = halfWidth(t, f) * A.blunt;
+  const x = spineAt(t, f);
+  // stays inside the R * 0.12 the bounds reserve ahead of the nose
+  const nose = spineAt(0, f) + R * 0.05;
+  gr.moveTo(x, -w)
+    .lineTo(nose, -w * 0.88)
+    .quadraticCurveTo(nose + R * 0.04, 0, nose, w * 0.88)
+    .lineTo(x, w)
+    .closePath()
+    .fill({ color: pal.skin, alpha: pal.alpha });
+}
+
+/** The dorsal fin, edge-on: a sliver along the midline, but it is what says shark. */
+function dorsalRidge(gr: Graphics, f: Form, pal: Palette) {
+  const t0 = 0.3, t1 = 0.56;
+  const w = halfWidth((t0 + t1) / 2, f) * 0.17;
+  gr.moveTo(spineAt(t0, f), 0)
+    .quadraticCurveTo(spineAt(t0 + 0.08, f), -w, spineAt(t1, f), 0)
+    .quadraticCurveTo(spineAt(t0 + 0.08, f), w, spineAt(t0, f), 0)
+    .closePath()
+    .fill({ color: pal.back, alpha: 0.7 * pal.alpha });
 }
 
 /** Pectorals and pelvics, baked in: they bend with the body that carries them. */
