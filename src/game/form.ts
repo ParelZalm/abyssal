@@ -12,7 +12,7 @@
  * the widest point moves on its own instead of being a third number to keep in sync.
  */
 import { armourOf, type Genome } from './genome';
-import { lerp } from './util';
+import { clamp, lerp } from './util';
 
 /** Reference half-length the body is drawn at; the view scales the whole thing to real size. */
 export const R = 10;
@@ -102,15 +102,36 @@ export function spineAt(t: number, f: Form) {
  */
 export function formFor(g: Genome, plan: Plan): Form {
   const base = PLAN_FORMS[plan];
+  // 150 is the hatchling's cruise and 1 its metabolism, so both of these are deviations
+  // from the animal you start as rather than absolute quantities — a base genome comes out
+  // of here with exactly the plan's own proportions.
+  const drive = clamp(g.speed / 150, 0.6, 2.2);
+  const burn = clamp(g.metabolism - 1, 0, 2);
   return {
     ...base,
     // segments stretch the trunk; armour and jaw thicken it
     len: base.len * (1 + g.segments * 0.06),
-    width: base.width * (1 + Math.min(0.3, armourOf(g) * 0.02) + Math.min(0.12, g.coral * 0.04)),
-    cheek: base.cheek + Math.max(0, g.jaw - 0.3) * 0.16,
-    fluke: base.fluke * (0.75 + g.finSize * 0.3),
-    fork: Math.min(1, base.fork * (0.8 + g.tailSplit * 0.6)),
-    peduncle: base.peduncle * (1 - Math.min(0.3, g.finSize * 0.1)),
+    // and speed thins it: a fast fish is a slender fish, because drag goes with frontal
+    // area. Every `drive` term below is 1 at the hatchling's cruise, so a base genome
+    // comes out of here with exactly its plan's own proportions.
+    width: base.width * (1 + Math.min(0.3, armourOf(g) * 0.02) + Math.min(0.12, g.coral * 0.04)
+      + Math.min(0.4, g.bulk * 0.4) + Math.min(0.16, burn * 0.09)) * (1.08 - drive * 0.08),
+    // a longer run-out to the tail, so the taper starts earlier and the whole body reads
+    // as swept rather than just the fin
+    aft: base.aft * (0.92 + drive * 0.08),
+    // a gape is a head that opens wider than the body behind it can justify, and gills
+    // have to pass more water the harder you burn — the gill cover is the only part of
+    // either a fish seen from above can show
+    cheek: base.cheek + Math.max(0, g.jaw - 0.3) * 0.16 + g.gape * 0.24
+      + Math.min(0.2, burn * 0.13),
+    fluke: base.fluke * (0.75 + g.finSize * 0.3) * (0.7 + drive * 0.3),
+    // and a deeper fork with it: the scythe tail is what an animal that actually cruises
+    // has, and a paddle is what something that lurks has. This is the channel that makes
+    // speed legible at a glance — fin length alone was too subtle to read.
+    fork: Math.min(1, base.fork * (0.8 + g.tailSplit * 0.6) * (0.75 + drive * 0.25)),
+    // thrust is a long fluke on a narrow wrist, so speed takes the peduncle in as it
+    // lets the fluke out; a slow animal has neither
+    peduncle: base.peduncle * (1 - Math.min(0.3, g.finSize * 0.1)) * (1.3 - drive * 0.3),
   };
 }
 

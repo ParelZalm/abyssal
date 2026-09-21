@@ -4,7 +4,7 @@ import { ScreenManager } from './screens/ScreenManager';
 import { DeathScreen } from './screens/DeathScreen';
 import { MutationScreen } from './screens/MutationScreen';
 import { PauseScreen } from './screens/PauseScreen';
-import { TierScreen } from './screens/TierScreen';
+import { BandScreen } from './screens/BandScreen';
 import { TitleScreen } from './screens/TitleScreen';
 import { WinScreen } from './screens/WinScreen';
 import type { HudState, PauseInfo } from './types';
@@ -66,8 +66,8 @@ export class UI {
     }));
   }
 
-  showTier(index: number, onContinue: () => void) {
-    this.screens.show(new TierScreen(index, () => {
+  showBand(index: number, onContinue: () => void) {
+    this.screens.show(new BandScreen(index, () => {
       this.screens.hide();
       onContinue();
     }));

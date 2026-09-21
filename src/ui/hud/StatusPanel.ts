@@ -1,4 +1,4 @@
-import { TIERS } from '../../game/tiers';
+import { BANDS, depthLabel, placeName } from '../../game/zones';
 import { div, span } from '../dom/element';
 import type { HudState } from '../types';
 import { StatusBar } from './StatusBar';
@@ -47,13 +47,11 @@ export class StatusPanel {
     this.xp.update(s.xp / s.xpNeed);
     this.stage.textContent = String(s.stage);
     this.size.textContent = `${s.size.toFixed(0)} cm`;
-    this.depth.textContent = `${Math.round(s.depth)} m`;
+    this.depth.textContent = `${depthLabel(s.depth).toLocaleString()} m`;
 
-    let zone = TIERS[0].name;
-    for (const t of TIERS) if (s.depth >= t.top) zone = t.name;
-    this.zone.textContent = zone;
+    this.zone.textContent = placeName(s.depth);
 
-    const next = TIERS.find((t, i) => i > 0 && s.size < t.gate);
+    const next = BANDS.find((b, i) => i > 0 && s.size < b.gate);
     if (next) {
       const bold = document.createElement('b');
       bold.textContent = `${next.gate} cm`;

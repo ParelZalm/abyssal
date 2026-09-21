@@ -1,4 +1,4 @@
-import { TIERS } from '../../game/tiers';
+import { BANDS } from '../../game/zones';
 import { DEPTH_MAX } from '../../game/world';
 import { div } from '../dom/element';
 
@@ -9,8 +9,8 @@ export class DepthBar {
 
   constructor() {
     this.element.append(this.marker);
-    for (let i = 0; i < TIERS.length; i++) {
-      const t = TIERS[i];
+    for (let i = 0; i < BANDS.length; i++) {
+      const t = BANDS[i];
       const label = document.createElement('u');
       label.textContent = t.name;
       label.style.top = `${(t.top / DEPTH_MAX) * 100}%`;
@@ -27,7 +27,7 @@ export class DepthBar {
 
   update(depth: number, size: number) {
     for (const seal of this.seals) {
-      const t = TIERS[Number(seal.dataset.gate)];
+      const t = BANDS[Number(seal.dataset.gate)];
       seal.classList.toggle('open', size >= t.gate);
     }
     this.marker.style.top = `${(depth / DEPTH_MAX) * 100}%`;

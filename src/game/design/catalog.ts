@@ -7,13 +7,12 @@
  * that is the whole point of the page, so keep it accurate when things move.
  */
 import { Container, Graphics, Sprite } from 'pixi.js';
-import { BIOMES } from '../biomes';
 import { PLAN_FORMS, type Plan } from '../form';
 import { FishView } from '../fishview';
 import { baseGenome, type Genome } from '../genome';
 import { PROP_SIZE, propTexture, type PropKind } from '../props';
 import { genomeFor, SPECIES } from '../species';
-import { TIERS } from '../tiers';
+import { BANDS, depthLabel, zoneOf } from '../zones';
 import { rgb, Rng } from '../util';
 import { waterColor } from '../water';
 import { FishForm, shoulderAt, SPINDLE, type Form, type FormSpec } from './fishform';
@@ -176,6 +175,183 @@ function planGroup(): DesignGroup {
   };
 }
 
+// ------------------------------------------------------------------ morphology
+
+/**
+ * The deep-water morphology parameters, each swept across its useful range on one
+ * neutral genome. These six exist because hue cannot tell a trench animal from a reef
+ * one — everything below the twilight is drawn against black water — so the difference
+ * has to be in the body. A parameter that does not read at a glance here will not read
+ * in the game either, where it is smaller, moving, and half-lit.
+ *
+ * Each row sits over the water of the depth its adaptation belongs to, because a
+ * photophore judged over sunlit blue is being judged against the wrong background.
+ */
+const MORPH: {
+  key: 'photophores' | 'eyeAdapt' | 'gape' | 'veil' | 'bulk' | 'barbels';
+  note: string;
+  plan: Plan;
+  depth: number;
+  values: number[];
+}[] = [
+  { key: 'photophores', plan: 'darter', depth: 5000, values: [0, 0.35, 0.8, 1.4],
+    note: 'Ventral light rows — counter-illumination, so they point down.' },
+  { key: 'eyeAdapt', plan: 'darter', depth: 5000, values: [-1, -0.5, 0, 0.6, 1.2],
+    note: 'Negative is blind and vestigial; positive is a pale light-gathering eye.' },
+  { key: 'gape', plan: 'angler', depth: 6800, values: [0, 0.4, 0.9, 1.4],
+    note: 'The hinge walks down the body: past ~0.9 it is mostly mouth.' },
+  { key: 'veil', plan: 'darter', depth: 3400, values: [0, 0.3, 0.7, 1.2],
+    note: 'Trailing membrane, closed back along the flank so it swims with the body.' },
+  { key: 'bulk', plan: 'darter', depth: 8000, values: [0, 0.3, 0.6, 1],
+    note: 'Width without plate — a body built for pressure, not for armour.' },
+  { key: 'barbels', plan: 'darter', depth: 8000, values: [0, 0.4, 0.9, 1.4],
+    note: 'Chin feelers. The one of the six least likely to read at gameplay zoom.' },
+];
+
+function morphGroup(): DesignGroup {
+  return {
+    id: 'morph',
+    name: 'Morphology',
+    note: 'Each deep-water genome parameter swept across its range, over its own water.',
+    items: MORPH.flatMap(m => m.values.map(v => ({
+      id: `${m.key}-${v}`,
+      name: `${m.key} ${v}`,
+      note: m.note,
+      source: 'src/game/fishbake.ts',
+      span: 120,
+      depth: m.depth,
+      facts: { param: m.key, value: v, plan: m.plan, depth: m.depth },
+      make: () => {
+        const g = baseGenome();
+        g.size = 40;
+        g[m.key] = v;
+        return boardFish(g, m.plan);
+      },
+      animate: fishAnimate,
+    }))),
+  };
+}
+
+// ------------------------------------------------------------------ stats that draw
+
+/**
+ * The simulation stats that have a visible consequence, swept the same way.
+ *
+ * `CLAUDE.md` is explicit that a stat with no visible consequence is not how this game
+ * communicates, and for a long time ten of them had none. These four earn their place
+ * because each is also a depth adaptation: a trench animal genuinely is a high-sense,
+ * low-speed, heavy-burning, near-invisible thing, so drawing the stat and drawing the
+ * zone are the same job.
+ *
+ * They reach the picture through derived accessors (`eyeOf`, `fadeOf`, `photophoreOf`)
+ * and through `formFor`, never by the paint reading a raw stat — the same rule `armourOf`
+ * follows. `gulp`, `lifesteal`, `pen`, `ram` and `regen` are still unwired on purpose:
+ * they are combat maths with no natural morphology, and inventing one for them would be
+ * decoration that lies about the build.
+ */
+const STATS: {
+  key: 'sense' | 'stealth' | 'speed' | 'metabolism';
+  note: string;
+  plan: Plan;
+  depth: number;
+  values: number[];
+}[] = [
+  { key: 'sense', plan: 'darter', depth: 5000, values: [340, 700, 1400, 2800],
+    note: 'Detection radius → eye size, via eyeOf(). Logarithmic; 340 is the hatchling.' },
+  { key: 'stealth', plan: 'darter', depth: 5000, values: [0, 0.4, 0.8, 1.2],
+    note: 'Two ways at once: fadeOf() thins the body, photophoreOf() lights the belly.' },
+  { key: 'speed', plan: 'darter', depth: 3400, values: [90, 150, 230, 330],
+    note: 'Fluke out, peduncle in, via formFor(). 150 is the hatchling cruise.' },
+  { key: 'metabolism', plan: 'darter', depth: 3400, values: [1, 1.6, 2.4, 3],
+    note: 'Gill cover and trunk width, via formFor(). 1 is the hatchling.' },
+];
+
+function statGroup(): DesignGroup {
+  return {
+    id: 'stats',
+    name: 'Stats that draw',
+    note: 'Simulation stats with a visible consequence, each swept across its range.',
+    items: STATS.flatMap(m => m.values.map(v => ({
+      id: `${m.key}-${v}`,
+      name: `${m.key} ${v}`,
+      note: m.note,
+      source: 'src/game/genome.ts',
+      span: 120,
+      depth: m.depth,
+      facts: { stat: m.key, value: v, plan: m.plan, depth: m.depth },
+      make: () => {
+        const g = baseGenome();
+        g.size = 40;
+        g[m.key] = v;
+        return boardFish(g, m.plan);
+      },
+      animate: fishAnimate,
+    }))),
+  };
+}
+
+// ------------------------------------------------------------------ builds
+
+/**
+ * Five whole animals, with every parameter moving together the way a species actually
+ * sets them — rather than one field swept while the rest sit at the hatchling's values.
+ *
+ * The sweeps above answer "what does this parameter do"; this row answers the question
+ * that matters more, which is whether the parameters *combine* into something legible.
+ * A build whose stats each read individually and which still comes out looking like every
+ * other build is the failure this rework exists to fix, and it is invisible on a sweep.
+ *
+ * These are deliberately not species — they are the shapes the roster in step 4 has to be
+ * able to hit. If one of them does not read here, no amount of hue will save it there.
+ */
+const BUILDS: { id: string; name: string; note: string; plan: Plan; depth: number;
+                edit: (g: Genome) => void }[] = [
+  { id: 'hatchling', name: 'Hatchling', plan: 'darter', depth: 500,
+    note: 'The animal you start as. Every other cell is a deviation from this one.',
+    edit: () => {} },
+  { id: 'sprinter', name: 'Sprinter', plan: 'darter', depth: 700,
+    note: 'Sunlit. Fast and slender: scythe tail, narrow wrist, nothing else spent.',
+    edit: g => { g.speed = 320; g.sense = 620; g.finSize = 1.3; g.tailSplit = 0.8;
+                 g.hue = 196; g.accentHue = 40; } },
+  { id: 'lurker', name: 'Lurker', plan: 'angler', depth: 5200,
+    note: 'Midnight ambush. Slow, all head: gape, lure, and eyes that gather what little there is.',
+    edit: g => { g.speed = 105; g.jaw = 1.1; g.gape = 0.8; g.lure = 2; g.eyeAdapt = 0.9;
+                 g.photophores = 0.35; g.hue = 268; g.accentHue = 52; } },
+  { id: 'drifter', name: 'Drifter', plan: 'jelly', depth: 3400,
+    note: 'Twilight. Hides by not being resolvable — thin body, lit belly, no speed at all.',
+    edit: g => { g.speed = 80; g.stealth = 1.2; g.translucent = 0.45; g.veil = 0.7;
+                 g.metabolism = 0.7; g.hue = 292; g.accentHue = 186; } },
+  { id: 'trench', name: 'Trench-adapted', plan: 'darter', depth: 8200,
+    note: 'No light to gather, so the eyes are gone and the feelers do the work instead.',
+    edit: g => { g.sense = 2000; g.eyeAdapt = -0.85; g.barbels = 1.2; g.bulk = 0.7;
+                 g.speed = 115; g.metabolism = 2.2; g.photophores = 0.25;
+                 g.hue = 18; g.accentHue = 14; } },
+];
+
+function buildGroup(): DesignGroup {
+  return {
+    id: 'builds',
+    name: 'Builds',
+    note: 'Whole animals, with every parameter set together the way a species would set it.',
+    items: BUILDS.map(b => ({
+      id: b.id,
+      name: b.name,
+      note: b.note,
+      source: 'src/game/design/catalog.ts',
+      span: 130,
+      depth: b.depth,
+      facts: { plan: b.plan, depth: b.depth },
+      make: () => {
+        const g = baseGenome();
+        g.size = 40;
+        b.edit(g);
+        return boardFish(g, b.plan);
+      },
+      animate: fishAnimate,
+    })),
+  };
+}
+
 // ------------------------------------------------------------------ creatures
 
 /** Every species as the game actually rolls it — same seed each time, so shapes hold still. */
@@ -265,30 +441,36 @@ function tierSwatch(top: number, bottom: number, accent: [number, number, number
 function waterGroup(): DesignGroup {
   return {
     id: 'water',
-    name: 'Water & biomes',
-    note: 'The colour of each tier across its own depth band, with the biome accent below it.',
-    items: TIERS.map((tier, i) => {
-      const biome = BIOMES[i];
+    name: 'Water & zones',
+    note: 'The colour of each band across its own depth, with the band accent below it.',
+    items: BANDS.map((band, i) => {
+      const w = band.water;
+      const zone = zoneOf(band);
       return {
-        id: `tier-${i}`,
-        name: tier.name,
-        note: tier.tagline,
-        source: 'src/game/biomes.ts',
+        id: `band-${i}`,
+        name: band.name === zone.name ? band.name : `${zone.name} · ${band.name}`,
+        note: zone.tagline,
+        source: 'src/game/zones.ts',
         span: 200,
-        depth: (tier.top + tier.bottom) / 2,
+        depth: (band.top + band.bottom) / 2,
         facts: {
-          band: `${tier.top}–${tier.bottom}m`, gate: `${tier.gate} cm`,
-          turbid: biome.turbid, rays: biome.rays, shimmer: biome.shimmer,
-          ambient: biome.ambient, scenery: biome.scenery.kinds.join(' '),
+          // world depth is what everything is tuned in; the metres are what the player
+          // is told. Both, because the board is where a mismatch between them shows up.
+          world: `${band.top}–${band.bottom}`,
+          label: `${depthLabel(band.top).toLocaleString()}–`
+            + `${depthLabel(band.bottom).toLocaleString()} m`,
+          gate: `${band.gate} cm`,
+          turbid: w.turbid, rays: w.rays, shimmer: w.shimmer,
+          ambient: w.ambient, scenery: w.scenery.kinds.join(' '),
         },
-        make: () => tierSwatch(tier.top, tier.bottom, biome.accent),
+        make: () => tierSwatch(band.top, band.bottom, w.accent),
       };
     }),
   };
 }
 
 /**
- * PROTOTYPE — biome-specific scenery as fields, one cell per tier. Throwaway:
+ * PROTOTYPE — zone-specific scenery as fields, one cell per band. Throwaway:
  * `proto-scenery.ts` is not imported by the game, and this group comes back out once the
  * fields are folded into `scenery.ts`. See that file's header for what was tried.
  */
@@ -297,12 +479,14 @@ function protoSceneryGroup(): DesignGroup {
     id: 'proto',
     name: '✦ scenery (proto)',
     note: 'Fields — one motif many times, gathered into a structure, with water around it.',
-    items: TIERS.map((tier, i) => {
-      const depth = (tier.top + tier.bottom) / 2;
-      const props = protoKinds(i);
+    items: BANDS.map((band, i) => {
+      const depth = (band.top + band.bottom) / 2;
+      // the prototype predates the sixth band and only has five profiles; it is on its
+      // way out, so the deepest two share one rather than being drawn a new field
+      const props = protoKinds(Math.min(i, 4));
       return {
         id: `proto-${i}`,
-        name: tier.name,
+        name: band.name,
         note: props,
         source: 'src/game/design/proto-scenery.ts',
         // a patch is a screen of water, not an object on a stand, so it is framed to fill
@@ -311,11 +495,11 @@ function protoSceneryGroup(): DesignGroup {
         span: PROTO_W * 0.8,
         depth,
         facts: {
-          props, band: `${tier.top}–${tier.bottom}m`,
-          // what the shipping band puts here today, to compare the proposal against
-          shipping: BIOMES[i].scenery.kinds.join(' '),
+          props, world: `${band.top}–${band.bottom}`,
+          // what the shipping plane puts here today, to compare the proposal against
+          shipping: band.water.scenery.kinds.join(' '),
         },
-        make: () => protoScene(i, depth),
+        make: () => protoScene(Math.min(i, 4), depth),
         animate: (view, dt, beat) => (view as ProtoScene).animate(dt, beat),
       };
     }),
@@ -323,6 +507,6 @@ function protoSceneryGroup(): DesignGroup {
 }
 
 export function catalog(): DesignGroup[] {
-  return [formGroup(), planGroup(), speciesGroup(), propGroup(), waterGroup(),
-          protoSceneryGroup()];
+  return [formGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(),
+          speciesGroup(), propGroup(), waterGroup(), protoSceneryGroup()];
 }

@@ -101,7 +101,7 @@ export class PauseScreen implements Component {
     sheet.append(bodySec, invSec);
 
     this.element.append(
-      h2(`Stage ${info.stage} · ${info.tier} · ${Math.round(info.depth)} m · ${info.eaten} eaten · ${mins}m ${secs}s`),
+      h2(`Stage ${info.stage} · ${info.zone} · ${Math.round(info.depth)} m · ${info.eaten} eaten · ${mins}m ${secs}s`),
       h1('Paused'),
       sheet,
       keysLine(['Press ', kbd('P'), ' to resume']),

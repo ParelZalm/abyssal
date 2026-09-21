@@ -1,5 +1,5 @@
 import { Container, Filter, GlProgram, Sprite, Texture, type UniformGroup } from 'pixi.js';
-import { biomeAt } from './biomes';
+import { waterAt } from './zones';
 import { clamp, lerp } from './util';
 import type { View } from './view';
 import { DEPTH_MAX } from './world';
@@ -287,7 +287,7 @@ export class Water {
 
     // the biome is already cross-faded across the thermocline by depth; easing on top
     // of that keeps a fast dive from stepping the cloud field
-    const b = biomeAt(camY);
+    const b = waterAt(camY);
     u.uTurbid = lerp(u.uTurbid, b.turbid, 0.05);
     u.uCloudScale = lerp(u.uCloudScale, b.cloudScale, 0.05);
     u.uCloudEdge = lerp(u.uCloudEdge, b.cloudEdge, 0.05);

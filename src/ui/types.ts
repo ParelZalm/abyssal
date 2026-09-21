@@ -10,7 +10,7 @@ export interface PauseInfo {
   genome: Genome;
   traits: TraitEntry[];
   stage: number;
-  tier: string;
+  zone: string;
   depth: number;
   eaten: number;
   elapsed: number;

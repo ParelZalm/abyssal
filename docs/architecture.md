@@ -15,13 +15,12 @@ main.ts (Game: loop, camera, input, run state)
 │       ├── game/fishbake.ts  paints a genome flat, caches it as a texture
 │       └── game/noise.ts     CPU value noise, matching the water shader's
 ├── game/water.ts     full-screen GLSL pass; also owns the depth→colour palette
-│   └── game/biomes.ts    per-tier look, blended by depth, feeding water + ocean
+│   └── game/zones.ts     the five zones and their bands: look, gates, depth labels
 ├── game/view.ts      what the camera sees this frame; ocean, scenery and water read it
 ├── game/ocean.ts     suspended particulate
 ├── game/scenery.ts   parallax soft props (bands behind + in front of creatures)
 │   └── game/props.ts     disc / blob / mass / wisp textures, blur baked at boot
 ├── game/fx.ts        pooled hit particles and rings
-├── game/tiers.ts     the five depth tiers, their size gates, the descent limit
 ├── game/traits.ts    the mutation pool and the rarity-weighted draft
 └── ui/               DOM UI — UI.ts facade, hud/*, screens/*, icons.ts
 ```
@@ -47,7 +46,7 @@ read world state.
 1. **Hit-stop.** A landed bite sets `hitStop`; while it runs, `dt` is scaled to 0.3.
 2. **`fx.update`** always runs, so particles keep moving while paused or drafting.
 3. **If `phase === 'play'`:** steer the player → set `world.descentLimit` from the
-   player's size → `world.update(dt)` → `digest()` → `metabolise()` → `checkTiers()`.
+   player's size → `world.update(dt)` → `digest()` → `metabolise()` → `checkBands()`.
 4. **`render(dt)`** always runs: camera easing, per-creature visibility and tint,
    water uniforms, the gate label, spawn/cull, HUD update.
 
@@ -82,7 +81,7 @@ app.stage
 ```
 
 Because the water is a filter over a static sprite rather than a child of the camera,
-anything it draws — thermoclines, the tier below, god rays — has to be computed from
+anything it draws — thermoclines, the band below, god rays — has to be computed from
 `uCam`/`uView` in the shader. That is why the seal's screen position is recomputed in
 `main.render` for the HUD label rather than read off a display object.
 

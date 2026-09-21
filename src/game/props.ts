@@ -24,7 +24,7 @@ export function drifts(kind: PropKind): 'swimmer' | 'tumble' {
   return kind === 'wisp' ? 'swimmer' : 'tumble';
 }
 
-/** Blur radius per band, as a fraction of the prop's long side.
+/** Blur radius per plane, as a fraction of the prop's long side.
  * Kept modest on purpose — the last pass blurred creature silhouettes into mush;
  * these shapes only need enough softening to sit behind the action. */
 const BLUR = [0.028, 0.05, 0.085];
@@ -34,7 +34,7 @@ const cache = new Map<string, Texture>();
 function paintDisc(ctx: CanvasRenderingContext2D, s: number) {
   const cx = s / 2, cy = s / 2;
   // slightly flattened — reads as a cell rather than a perfect mote. A brighter
-  // core keeps the disc recognisable after the band blur; a pure soft falloff
+  // core keeps the disc recognisable after the plane blur; a pure soft falloff
   // just becomes another water cloud.
   ctx.save();
   ctx.translate(cx, cy);
@@ -175,7 +175,7 @@ export function blurred(src: HTMLCanvasElement, radius: number): Texture {
   return Texture.from(c);
 }
 
-/** `level` indexes `BLUR` — how far away the band this is going on reads as. */
+/** `level` indexes `BLUR` — how far away the plane this is going on reads as. */
 export function propTexture(kind: PropKind, level: number): Texture {
   const key = `${kind}|${level}`;
   let tex = cache.get(key);

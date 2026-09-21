@@ -4,12 +4,12 @@
 
 `src/game/water.ts` is one full-screen `Filter` over a white `Sprite`, with a
 hand-written GLSL fragment program. It draws, in order: the depth gradient, two
-domain-warped FBM fields for the drifting masses, the tier below the next thermocline,
+domain-warped FBM fields for the drifting masses, the band below the next thermocline,
 the seal itself, god rays, the player's own bioluminescence, the dread desaturation, a
 vignette, and an ordered dither to kill banding.
 
 Everything is shaded from **world coordinates** reconstructed from `uCam` and `uView`,
-which is what lets the next tier down be visible before you can reach it.
+which is what lets the next band down be visible before you can reach it.
 
 `waterColor(y)` is the depth→colour palette and is exported: `scenery` and anything else
 that needs "what colour is the water there" must use it rather than guessing.
@@ -20,20 +20,21 @@ needs four octaves (three turns `smoothstep` into hard-edged slabs), and the dee
 field's reuse of that noise has to be a *continuous* remap — `fract()` is a sawtooth and
 draws its wrap as a seam across the screen.
 
-## Biomes
+## Zones and bands
 
-`src/game/biomes.ts` gives each tier a visual identity and blends it by depth:
+`src/game/zones.ts` gives each band a visual identity (`WaterLook`) and blends it by
+depth:
 
-- `biomeAt(y)` cross-fades adjacent tiers over `BLEND` (620 world units) either side of
+- `waterAt(y)` cross-fades adjacent bands over `BLEND` (620 world units) either side of
   a thermocline, smoothstepped. Use this for anything continuous.
-- `tierBiome(y)` returns the unblended profile for the tier. Use this for anything
+- `bandWater(y)` returns the unblended profile for the band. Use this for anything
   discrete — a half-and-half landmark is not a thing.
 
 The profile drives the shader (`turbid`, `cloudScale`, `cloudEdge`, `rays`, `shimmer`,
 `accent`, `ambient`, uploaded as uniforms and eased per frame in `Water.update`) and the
 particulate in `ocean.ts` (`mote`: tint, fall, current, sway, size, alpha, twinkle).
 
-Below the twilight the column tint is nearly black, so `ambient` mixes the biome's
+Below the twilight the column tint is nearly black, so `ambient` mixes the band's
 *accent* into the water rather than the column colour — without that the two deepest
 tiers are indistinguishable. Same reason `shimmer` does not scale away with `uLight`.
 

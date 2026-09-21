@@ -1,40 +1,40 @@
 /**
- * Parallax background — soft organic props drifting on bands behind and in front of
+ * Parallax background — soft organic props drifting on planes behind and in front of
  * the action. The placement machinery is the survivor of two art passes; the props
  * themselves are the third try. See `docs/decisions.md`.
  */
 import { Container, Sprite } from 'pixi.js';
-import { tierBiome } from './biomes';
+import { bandWater } from './zones';
 import { drifts, PROP_SIZE, propTexture, type PropKind } from './props';
 import { clamp, lerp, rgb, TAU } from './util';
 import type { View } from './view';
 import { lightAt, waterColor } from './water';
 
-interface Band {
+interface Plane {
   /** Camera follow factor: below 1 sits behind you, above 1 passes in front. */
   parallax: number;
   /** World size of one placement cell — bigger is sparser. */
   cell: number;
-  /** Multiplier on the biome's prop scale. */
+  /** Multiplier on the plane's prop scale. */
   scale: number;
   /** Multiplier on the water colour where there is light to make a silhouette with. */
   dark: number;
-  /** Multiplier on the biome accent where there is not — deep props have to emit. */
+  /** Multiplier on the plane accent where there is not — deep props have to emit. */
   lit: number;
   alpha: number;
   sway: number;
-  /** Index into the prop blur table — how far away this band reads as. */
+  /** Index into the prop blur table — how far away this plane reads as. */
   blur: number;
 }
 
-const BANDS: Band[] = [
+const PLANES: Plane[] = [
   // dark is lower than the old silhouette pass — soft props need more contrast against
   // the water shader's own clouds or they vanish into the same haze
   { parallax: 0.3, cell: 440, scale: 1, dark: 0.14, lit: 0.95, alpha: 0.9, sway: 0.05, blur: 2 },
   { parallax: 0.58, cell: 390, scale: 0.68, dark: 0.12, lit: 0.8, alpha: 0.85, sway: 0.08, blur: 1 },
   // the foreground stays a silhouette at every depth: in black water it simply
   // disappears, which is what a shape between you and nothing should do. It is blurred
-  // as hard as the far band — it is out of focus in the other direction.
+  // as hard as the far plane — it is out of focus in the other direction.
   { parallax: 1.35, cell: 950, scale: 1.25, dark: 0.08, lit: 0.18, alpha: 0.7, sway: 0.12, blur: 2 },
 ];
 
@@ -47,12 +47,12 @@ function hash2(x: number, y: number, seed: number) {
 
 interface Placed {
   sprite: Sprite;
-  /** Where the shape sits before it wanders, in band-local coordinates. */
+  /** Where the shape sits before it wanders, in plane-local coordinates. */
   homeX: number; homeY: number;
   base: number; phase: number;
   /** Turn rate for tumbling props; 0 for anything with a forward axis. */
   spin: number;
-  /** How far this one drifts from home, in band-local units. */
+  /** How far this one drifts from home, in plane-local units. */
   wander: number;
 }
 
@@ -60,12 +60,12 @@ interface Placed {
  * Contrast, not colour, is what makes a landmark read — and which way the contrast runs
  * flips with depth. In lit water a prop is a shape darker than the water behind it; in
  * the dark tiers there is nothing behind it, so the only way to be seen is to give off
- * the biome's own light.
+ * the band's own light.
  */
 export function shadeFor(depth: number, dark: number, lit: number) {
   const deep = 1 - lightAt(depth);
   const water = waterColor(depth);
-  const accent = tierBiome(depth).accent;
+  const accent = bandWater(depth).accent;
   // ramped, not squared: the middle tiers are the awkward case — too dim for a dark
   // silhouette to carry on its own, not dark enough to be pure emission
   const mix = deep * (0.4 + 0.6 * deep);
@@ -74,25 +74,25 @@ export function shadeFor(depth: number, dark: number, lit: number) {
              lerp(water[2] * dark, accent[2] * lit, mix));
 }
 
-class BandLayer {
+class PlaneLayer {
   root = new Container();
   private live = new Map<string, Placed>();
   private free: Sprite[] = [];
 
-  constructor(private band: Band) {}
+  constructor(private plane: Plane) {}
 
   update(view: View) {
     const { x: camX, y: camY, t, zoom } = view;
-    const b = this.band;
-    // The band is a backdrop, not scenery you swim through, so it holds its apparent
+    const b = this.plane;
+    // The plane is a backdrop, not scenery you swim through, so it holds its apparent
     // size: the camera zooms out by a factor of four as you grow, and world-sized props
-    // would go from filling the screen to being lost in it. Scaling the band by 1/zoom
-    // makes the visible slice of band-space — and so the size and spacing of everything
+    // would go from filling the screen to being lost in it. Scaling the plane by 1/zoom
+    // makes the visible slice of plane-space — and so the size and spacing of everything
     // on it — the same at every stage of a run.
     const k = clamp(1 / zoom, 0.6, 3.2);
     this.root.scale.set(k);
     // Below the twilight the water is black and a normal blend has nothing to darken
-    // against, so the band switches to additive and its shapes read as the faint light
+    // against, so the plane switches to additive and its shapes read as the faint light
     // they would be. The switch happens where the two modes already look the same — a
     // dark tint over near-black — so it does not pop as you swim through it.
     this.root.blendMode = lightAt(camY) < 0.22 ? 'add' : 'normal';
@@ -110,13 +110,13 @@ class BandLayer {
     for (let gy = y0; gy <= y1; gy++) {
       for (let gx = x0; gx <= x1; gx++) {
         const key = `${gx},${gy}`;
-        // the depth this cell *appears* at: a band at 0.3 shows you what is around you
+        // the depth this cell *appears* at: a plane at 0.3 shows you what is around you
         // now, not what is at its own coordinate
         const depth = ((gy + 0.5) * b.cell * k) / b.parallax;
-        const biome = tierBiome(depth);
-        if (hash2(gx, gy, 1) > biome.scenery.density) continue;
+        const look = bandWater(depth);
+        if (hash2(gx, gy, 1) > look.scenery.density) continue;
         keep.add(key);
-        if (!this.live.has(key)) this.place(key, gx, gy, depth, biome.scenery);
+        if (!this.live.has(key)) this.place(key, gx, gy, depth, look.scenery);
       }
     }
 
@@ -133,7 +133,7 @@ class BandLayer {
 
   private place(key: string, gx: number, gy: number, depth: number,
                 s: { kinds: PropKind[]; scale: [number, number] }) {
-    const b = this.band;
+    const b = this.plane;
     const kind = s.kinds[Math.floor(hash2(gx, gy, 2) * s.kinds.length)];
     const tex = propTexture(kind, b.blur);
     const sprite = this.free.pop() ?? new Sprite();
@@ -177,14 +177,14 @@ class BandLayer {
 }
 
 export class Scenery {
-  /** Behind the creatures: the two slow bands that give the water its depth. */
+  /** Behind the creatures: the two slow planes that give the water its depth. */
   back = new Container();
-  /** In front of them: one fast band that sweeps past the camera. */
+  /** In front of them: one fast plane that sweeps past the camera. */
   front = new Container();
-  private layers: BandLayer[];
+  private layers: PlaneLayer[];
 
   constructor() {
-    this.layers = BANDS.map(b => new BandLayer(b));
+    this.layers = PLANES.map(p => new PlaneLayer(p));
     this.back.addChild(this.layers[0].root, this.layers[1].root);
     this.front.addChild(this.layers[2].root);
   }

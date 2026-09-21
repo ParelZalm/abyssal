@@ -10,7 +10,7 @@ export class TitleScreen implements Component {
       h2('A fish evolution roguelite'),
       h1('Abyssal'),
       p('You begin as something small enough to be swallowed whole. Eat what is smaller, outswim what is not, and mutate every time you grow.'),
-      p('The ocean is stacked into five sealed tiers. Each thermocline only opens for a fish of the right size — grow enough and you break through into a new ecosystem, a harder one, with better mutations waiting. Something enormous holds the bottom.'),
+      p('The ocean is stacked into five zones, sealed off from one another by thermoclines. Each one only opens for a fish of the right size — grow enough and you break through into a new ecosystem, a harder one, with better mutations waiting. Something enormous holds the bottom.'),
       keysLine([
         kbd('W'), ' drive \u00a0·\u00a0 ', kbd('S'), ' brake & reverse \u00a0·\u00a0 ',
         kbd('A'), kbd('D'), ' turn \u00a0·\u00a0 or steer with the ', kbd('mouse'),

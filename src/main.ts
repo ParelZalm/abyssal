@@ -8,7 +8,7 @@ import { Scenery } from './game/scenery';
 import type { View } from './game/view';
 import { lightAt, Water } from './game/water';
 import type { Species } from './game/species';
-import { descentLimit, nextGate, TIERS, tierAt } from './game/tiers';
+import { bandAt, BANDS, depthLabel, descentLimit, nextGate, placeName } from './game/zones';
 import { draftTraits, type Trait } from './game/traits';
 import { clamp, dist2, hsl, lerp, Rng } from './game/util';
 import { Creature, DEPTH_MAX, World } from './game/world';
@@ -54,7 +54,7 @@ class Game {
   private deepest = 0;
   private elapsed = 0;
   private shake = 0;
-  private maxTier = 0;
+  private maxBand = 0;
   private hintCd = 0;
   private gatesOpen = 0;
   private wakeCd = 0;
@@ -118,7 +118,7 @@ class Game {
     this.stage = 1; this.xp = 0; this.food = FOOD_MAX;
     this.taken.clear(); this.takenNames = [];
     this.eaten = 0; this.deepest = 0; this.elapsed = 0; this.shake = 0;
-    this.maxTier = 0; this.hintCd = 0; this.gatesOpen = 0;
+    this.maxBand = 0; this.hintCd = 0; this.gatesOpen = 0;
     this.wakeCd = 0; this.sprinting = false; this.boostHeld = 0; this.hitStop = 0;
     this.zoom = this.zoomFor(g.size);
     this.world.spawnAround(this.player.x, this.player.y, this.viewR(), POP_SHALLOW, false);
@@ -151,7 +151,7 @@ class Game {
         genome: this.player.genome,
         traits: this.takenNames,
         stage: this.stage,
-        tier: TIERS[tierAt(this.player.y)].name,
+        zone: placeName(this.player.y),
         depth: this.player.y,
         eaten: this.eaten,
         elapsed: this.elapsed,
@@ -187,7 +187,7 @@ class Game {
       this.world.update(dt);
       this.digest();
       this.metabolise(dt);
-      this.checkTiers(dt);
+      this.checkBands(dt);
     }
     this.render(dt);
   }
@@ -301,29 +301,29 @@ class Game {
   }
 
   /** Thermocline feedback: nudge when you are too small, ceremony when you break through. */
-  private checkTiers(dt: number) {
+  private checkBands(dt: number) {
     const p = this.player;
     this.hintCd = Math.max(0, this.hintCd - dt);
 
-    const open = TIERS.filter(t => p.genome.size >= t.gate).length;
+    const open = BANDS.filter(b => p.genome.size >= b.gate).length;
     if (open > this.gatesOpen) {
       this.gatesOpen = open;
-      if (open > 1) this.ui.toast(`The thermocline parts — ${TIERS[open - 1].name} is open`);
+      if (open > 1) this.ui.toast(`The thermocline parts — ${BANDS[open - 1].name} is open`);
     }
 
     if (this.world.blocked && this.hintCd <= 0) {
       this.hintCd = 2.6;
       const gate = nextGate(p.genome.size);
-      if (gate) this.ui.toast(`Too small — ${gate.tier.gate} cm to enter ${gate.tier.name}`);
+      if (gate) this.ui.toast(`Too small — ${gate.band.gate} cm to enter ${gate.band.name}`);
       this.fx.burst(p.x, p.y + p.radius, 0xcfe4ff, 8, 60, 2.2);
     }
 
-    const tier = tierAt(p.y);
-    if (tier > this.maxTier && this.phase === 'play') {
-      this.maxTier = tier;
+    const band = bandAt(p.y);
+    if (band > this.maxBand && this.phase === 'play') {
+      this.maxBand = band;
       this.phase = 'draft';
       this.fx.ring(p.x, p.y, 0xcfe4ff, p.radius * 4);
-      this.ui.showTier(tier, () => this.offerDraft(`${TIERS[tier].name} — thermocline reward`));
+      this.ui.showBand(band, () => this.offerDraft(`${BANDS[band].name} — thermocline reward`));
     }
   }
 
@@ -353,7 +353,7 @@ class Game {
 
   /** Depth unlocks the rarer half of the pool just as much as biomass does. */
   private offerDraft(heading = `Evolution — stage ${this.stage}`) {
-    const reach = Math.max(this.stage, this.maxTier * 2 + 1);
+    const reach = Math.max(this.stage, this.maxBand * 2 + 1);
     const offer = draftTraits(this.rng, reach, this.taken, 3);
     this.phase = 'draft';
     this.ui.showMutation(heading, offer, t => this.applyTrait(t));
@@ -381,10 +381,10 @@ class Game {
     this.player.view.show(false, 1, 0xffffff);
     const stats = [
       `Stage ${this.stage}`,
-      `${TIERS[this.maxTier].name}`,
+      `${BANDS[this.maxBand].name}`,
       `${this.player.genome.size.toFixed(0)} cm long`,
       `${this.eaten} creatures eaten`,
-      `${Math.round(this.deepest)} m deep`,
+      `${depthLabel(this.deepest).toLocaleString()} m deep`,
       `${Math.floor(this.elapsed / 60)}m ${Math.floor(this.elapsed % 60)}s survived`,
     ];
     const restart = () => { this.reset(); this.phase = 'play'; };
@@ -459,23 +459,23 @@ class Game {
       c.view.show(seen, alpha, tint);
     }
 
-    // Draw the tier boundary nearest the camera rather than the next one below it:
-    // a "next one below" rule jumps a whole tier the instant you cross a seal, which
+    // Draw the band boundary nearest the camera rather than the next one below it:
+    // a "next one below" rule jumps a whole band the instant you cross a seal, which
     // pops the barrier and the shadowed layer across the screen.
-    let gateTier = TIERS[1];
-    for (let i = 2; i < TIERS.length; i++) {
-      if (Math.abs(TIERS[i].top - this.camY) < Math.abs(gateTier.top - this.camY)) {
-        gateTier = TIERS[i];
+    let gateBand = BANDS[1];
+    for (let i = 2; i < BANDS.length; i++) {
+      if (Math.abs(BANDS[i].top - this.camY) < Math.abs(gateBand.top - this.camY)) {
+        gateBand = BANDS[i];
       }
     }
-    const gateOpen = p.genome.size >= gateTier.gate;
+    const gateOpen = p.genome.size >= gateBand.gate;
     this.water.update(view, p.genome.glow, this.phase === 'play' ? danger : 0,
-                      gateTier.top, gateOpen);
+                      gateBand.top, gateOpen);
 
     // the requirement floats on the barrier itself while it is sealed and in frame
-    const gateScreenY = (gateTier.top - this.camY) * this.zoom + this.H / 2;
+    const gateScreenY = (gateBand.top - this.camY) * this.zoom + this.H / 2;
     this.ui.gateLabel(
-      !gateOpen && this.phase !== 'over' ? `${gateTier.gate} cm to enter ${gateTier.name}` : null,
+      !gateOpen && this.phase !== 'over' ? `${gateBand.gate} cm to enter ${gateBand.name}` : null,
       // sit just above the shear line: the seal itself is the brightest thing on screen
       gateScreenY - 34, this.H);
 
@@ -483,7 +483,7 @@ class Game {
       // deep creatures are far larger, so the abyss stays sparse
       const pop = Math.round(lerp(POP_SHALLOW, POP_DEEP, clamp(p.y / DEPTH_MAX, 0, 1)));
       this.world.cull(p.x, p.y, this.viewR());
-      this.world.spawnAround(p.x, p.y, this.viewR(), pop, this.maxTier >= TIERS.length - 1);
+      this.world.spawnAround(p.x, p.y, this.viewR(), pop, this.maxBand >= BANDS.length - 1);
     }
 
     this.ui.update({

@@ -33,6 +33,21 @@ export interface Genome {
   glow: number;
   segments: number;
   translucent: number;
+
+  // deep-water morphology — the vocabulary that tells one zone's animals from another's.
+  // Hue alone cannot do it: everything below the twilight is drawn against black water.
+  /** Light organs: how many, and how brightly they run. The deep ocean's one universal. */
+  photophores: number;
+  /** Signed. Positive is a huge light-gathering eye, negative a vestigial, blind one. */
+  eyeAdapt: number;
+  /** Jaw distension — the gulper silhouette. Distinct from `jaw`, which is bite width. */
+  gape: number;
+  /** Trailing fin membrane: mass with no muscle in it. */
+  veil: number;
+  /** Inflation, independent of plate. A body built for pressure rather than for armour. */
+  bulk: number;
+  /** Feeler filaments off the chin — how you find food in water with nothing to see by. */
+  barbels: number;
 }
 
 export function baseGenome(): Genome {
@@ -42,6 +57,7 @@ export function baseGenome(): Genome {
     venom: 0, lure: 0, claws: 0, jet: 0, coral: 0, frill: 0,
     hue: 30, accentHue: 200, finSize: 1, tailSplit: 0.35, spikes: 0,
     jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0,
+    photophores: 0, eyeAdapt: 0, gape: 0, veil: 0, bulk: 0, barbels: 0,
   };
 }
 
@@ -59,6 +75,35 @@ export function maxHp(g: Genome) {
 }
 export function biteDamage(g: Genome) {
   return g.bite * (1 + g.size / 90);
+}
+
+/**
+ * How large the eye is drawn. `sense` is a detection radius and the eye is the organ that
+ * does the detecting, so range has to show on it — a 340-unit hatchling and a 2000-unit
+ * hunter cannot wear the same bead. Logarithmic because sense climbs multiplicatively over
+ * a run, and a linear term puts an eye the size of the head on a late build.
+ */
+export function eyeOf(g: Genome) {
+  const range = Math.log2(Math.max(1, g.sense / 340)) * 0.3;
+  return g.eyeSize * (1 + range) * (1 + g.eyeAdapt * 0.9);
+}
+
+/**
+ * How see-through the body is. Stealth is not a paint job — it is being hard to resolve
+ * against the water at all — which is the same thing translucency does, so the two stack.
+ */
+export function fadeOf(g: Genome) {
+  return Math.min(0.9, g.translucent + g.stealth * 0.45);
+}
+
+/**
+ * How brightly the light organs run. Below the twilight, counter-illumination is what
+ * stealth physically *is*: you do not hide by going dark against a lit surface, you hide by
+ * matching it. So stealth lights the belly rather than dimming it, which is the opposite of
+ * what it does up top and the reason it earns its own accessor.
+ */
+export function photophoreOf(g: Genome) {
+  return g.photophores + g.stealth * 0.4;
 }
 
 /**

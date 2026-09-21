@@ -1,5 +1,5 @@
 import { Container, Sprite } from 'pixi.js';
-import { biomeAt } from './biomes';
+import { waterAt } from './zones';
 import { dotTexture } from './textures';
 import type { Rng } from './util';
 import type { View } from './view';
@@ -34,7 +34,7 @@ export class Ocean {
     const { x: camX, y: camY, t } = view;
     const halfW = view.w * 0.62, halfH = view.h * 0.62;
     const light = lightAt(camY);
-    const b = biomeAt(camY).mote;
+    const b = waterAt(camY).mote;
     for (let i = 0; i < this.motes.length; i++) {
       const d = this.data[i];
       const s = this.motes[i];

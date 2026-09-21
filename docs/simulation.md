@@ -61,7 +61,7 @@ anything outside the radius. Two shaping rules live in `species.ts`/`world.ts`:
 - The **shallows tutorial**: above 1000 m plankton spawn in blooms of 6–11 and hunters
   and ambushers are thinned to ~40%, both fading out by 1000 m.
 - **Apex** species (the Leviathan) only spawn once `allowApex` is set, which `main` ties
-  to having reached the Abyss tier.
+  to having reached the deepest band.
 
 Population target itself falls with depth (`POP_SHALLOW` 105 → `POP_DEEP` 46 in
 `main.ts`) because deep creatures are far larger.
@@ -69,5 +69,5 @@ Population target itself falls with depth (`POP_SHALLOW` 105 → `POP_DEEP` 46 i
 ## Bounds
 
 `WORLD_HALF_W` clamps x. `world.descentLimit`, set every frame by `main` from
-`tiers.descentLimit(size)`, clamps the player's y and sets `world.blocked` on the frame
+`zones.descentLimit(size)`, clamps the player's y and sets `world.blocked` on the frame
 they press against it — that flag is what raises the "too small" toast.

@@ -18,8 +18,32 @@ Three groups of fields, and the split matters:
   only reaches the simulation through some other stat is a stat in a costume — adding one
   means touching both `world.ts` and `fishbake.ts`.
 - **Morphology** — `hue`, `accentHue`, `finSize`, `tailSplit`, `spikes`, `jaw`,
-  `eyeSize`, `glow`, `segments`, `translucent`. Purely visual, but every trait nudges at
-  least one so a build looks like what it does.
+  `eyeSize`, `glow`, `segments`, `translucent`, plus the deep-water set: `photophores`,
+  `eyeAdapt`, `gape`, `veil`, `bulk`, `barbels`. Purely visual, but every trait nudges at
+  least one so a build looks like what it does. The deep-water six exist because hue
+  cannot tell a trench animal from a reef one — everything below the twilight is drawn
+  against black water, so the difference has to be in the body.
+
+### Stats that draw, and the ones that do not
+
+Four stats reach the picture, each through a derived accessor rather than by the paint
+reading a raw field — the rule `armourOf` already followed:
+
+- `sense` → eye size, via `eyeOf(g)`. Logarithmic, because sense climbs
+  multiplicatively and a linear term puts an eye the size of the head on a late build.
+- `stealth` → two ways at once. `fadeOf(g)` thins the body; `photophoreOf(g)` lights the
+  belly, because below the twilight hiding means matching the glow above you rather than
+  going dark against it.
+- `speed` → fluke out, peduncle in, via `formFor`.
+- `metabolism` → gill cover and trunk width, via `formFor`.
+
+They are chosen because each is also a depth adaptation, so drawing the stat and drawing
+the zone are the same job. `gulp`, `lifesteal`, `pen`, `ram` and `regen` are **unwired on
+purpose**: they are combat maths with no natural morphology, and inventing one for them
+would be decoration that lies about the build. This is a known gap, not an oversight.
+
+Both sets are on the design board — `/design.html?g=morph` and `?g=stats` — each
+parameter swept across its range over the water of the depth it belongs to.
 
 `menace(g)` is derived from jaw, spines, bite and bulk, and drives the art directly —
 darker mass, hotter edge, blades along the flanks, the bruised aura. The player crosses
@@ -35,34 +59,41 @@ replacement from a rarity-weighted pool.
   `reach` grows. Measured over the live pool (14 common, 18 rare, 11 apex): 70/30/0 at
   stage 1, 44/45/12 by stage 8 — rare overtakes common, which is the intent.
 - **`reach` is not the stage.** `main.offerDraft` passes
-  `max(stage, maxTier * 2 + 1)`, so diving upgrades the pool as much as feeding does.
+  `max(stage, maxBand * 2 + 1)`, so diving upgrades the pool as much as feeding does.
 - `maxStacks` defaults to 2, so a run specialises without collapsing into one stat.
 - `minStage` gates the organs out of the opening draft.
 
 A draft is offered on level-up (`xp >= xpNeed`, which is `45 * 1.5^(stage-1)`) and once
-per new tier reached. Both set `phase = 'draft'`; `applyTrait` rebuilds the view,
+per new band reached. Both set `phase = 'draft'`; `applyTrait` rebuilds the view,
 refills health and returns to `play`.
 
-## Tiers
+## Zones, bands and gates
 
-`tiers.ts` is five `Tier` records with a `top`, `bottom` and a `gate` in centimetres.
+`zones.ts` is five `Zone` records — the places the player names, each owning a guardian
+— over six `Band` records, which are the contiguous slices of water the column is
+actually made of. Only the Sunlit Zone is subdivided, into Open Water and the Reef
+Shelf. A band carries the `top`, `bottom`, `gate` in centimetres, `WaterLook`, and the
+`metres` label at its top.
 
-- `tierAt(y)` — which tier a depth is in.
-- `descentLimit(size)` — the floor of the deepest tier the player has unlocked, minus
+- `bandAt(y)` / `zoneAt(y)` — which band or zone a depth is in.
+- `depthLabel(y)` — world depth as metres of real ocean, piecewise-linear through one
+  control point per band boundary. Presentation only; nothing in the simulation reads
+  it. See `docs/adr/0001-depth-labels-decoupled-from-world-depth.md`.
+- `descentLimit(size)` — the floor of the deepest band the player has unlocked, minus
   12. `main` feeds it to `world` every frame.
 - `nextGate(size)` — the next sealed thermocline, for the HUD hint and the seal label.
 
 Gates are checked against **body size only**. Nothing else unlocks depth, and depth
 unlocks nothing except the water below it and a free mutation.
 
-`checkTiers` watches two things: the count of open gates (for the "thermocline parts"
-toast) and `tierAt(player.y)` exceeding `maxTier`, which plays the tier card and grants
+`checkBands` watches two things: the count of open gates (for the "thermocline parts"
+toast) and `bandAt(player.y)` exceeding `maxBand`, which plays the band card and grants
 the free draft.
 
 ## Run state
 
 Held on `Game`: `stage`, `xp`, `food`, `taken` (id → stacks), `takenNames` (for the HUD
-and pause sheet), `eaten`, `deepest`, `elapsed`, `maxTier`, `gatesOpen`. `reset()`
+and pause sheet), `eaten`, `deepest`, `elapsed`, `maxBand`, `gatesOpen`. `reset()`
 rebuilds all of it plus the world and the player; there is no save, and a run is seeded
 from `Math.random()` into a `Rng` so a seed would reproduce it if one were ever exposed.
 

@@ -8,8 +8,8 @@ invariants hold them together, and which mistakes have already been made and und
 | --- | --- |
 | [architecture.md](architecture.md) | Module graph, the frame, layer order, coordinate systems. |
 | [simulation.md](simulation.md) | Swim physics, perception and behaviour, contacts, spawning. |
-| [progression.md](progression.md) | Genome, the mutation draft, tiers and gates, run state. |
-| [rendering.md](rendering.md) | The water shader, biomes, how a creature is drawn, the DOM HUD. |
+| [progression.md](progression.md) | Genome, the mutation draft, zones and gates, run state. |
+| [rendering.md](rendering.md) | The water shader, zone water, how a creature is drawn, the DOM HUD. |
 | [performance.md](performance.md) | The frame budget, where it goes, and the rules that keep it. |
 | [decisions.md](decisions.md) | Things tried, kept or parked — read before redoing any of them. |
 

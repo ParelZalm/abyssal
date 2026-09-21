@@ -13,7 +13,7 @@
  * two animals that differ by less than a hue step are the same picture.
  */
 import { Graphics, type Renderer, type Texture } from 'pixi.js';
-import { menace, type Genome } from './genome';
+import { eyeOf, fadeOf, menace, photophoreOf, type Genome } from './genome';
 import { formFor, halfWidth, shoulderAt, spineAt, R, type Form, type Plan } from './form';
 import { fbm, fbmSigned } from './noise';
 import { hsl, lerp, TAU } from './util';
@@ -40,9 +40,17 @@ const CACHE_MAX = 160;
 const q = (v: number, step: number) => Math.round(v / step) * step;
 
 function key(g: Genome, plan: Plan) {
+  // every field the paint reads has to appear here, or two genomes that look different
+  // share one texture. `tailSplit` and `eyeSize` were missing and did exactly that.
   return [plan, q(g.hue, 12), q(g.accentHue, 18), q(menace(g), 0.12), q(g.glow, 0.25),
-          q(g.translucent, 0.2), q(g.finSize, 0.25), q(g.jaw, 0.25), q(g.spikes, 1),
-          q(g.segments, 1), q(g.armor, 3), g.lure > 0 ? 1 : 0, Math.min(3, g.claws),
+          q(fadeOf(g), 0.2), q(g.finSize, 0.25), q(g.jaw, 0.25), q(g.spikes, 1),
+          q(g.segments, 1), q(g.armor, 3), q(g.tailSplit, 0.2), q(eyeOf(g), 0.3),
+          // speed and metabolism reach the texture through `formFor`, so they belong here
+          // even though nothing in the paint reads them directly
+          q(g.speed, 25), q(g.metabolism, 0.4),
+          q(photophoreOf(g), 0.2), q(g.eyeAdapt, 0.3), q(g.gape, 0.25), q(g.veil, 0.25),
+          q(g.bulk, 0.2), q(g.barbels, 0.3),
+          g.lure > 0 ? 1 : 0, Math.min(3, g.claws),
           Math.min(3, g.coral), Math.min(3, g.frill), g.jet > 0 ? 1 : 0,
           g.venom > 0 ? 1 : 0].join('|');
 }
@@ -84,7 +92,7 @@ function palette(g: Genome, men: number): Palette {
                 0.6 + men * 0.3, 0.55),
     dark: hsl(g.hue, 0.5, 0.08),
     bone: hsl(72, 0.22, 0.62),
-    alpha: 1 - Math.min(0.55, g.translucent * 0.6),
+    alpha: 1 - Math.min(0.55, fadeOf(g) * 0.6),
   };
 }
 
@@ -134,9 +142,14 @@ function paint(g: Genome, plan: Plan): Baked {
   const caudal = halfWidth(1, f) * (2.4 + f.fork * 1.8);
   const arms = plan === 'squid' || plan === 'jelly' ? widest * 1.15 : 0;
   const frill = g.frill > 0 ? widest * 0.3 : 0;
-  const halfH = Math.max(widest * (1 + wob), caudal, arms, widest + frill) * 1.08 + R * 0.1;
-  // a lure hangs out in front of the face, so the strip has to be longer than the body
-  const front = spineAt(0, f) + (g.lure > 0 ? R * (0.9 + g.lure * 0.5) : R * 0.12);
+  const veiling = widest * g.veil * 1.5;
+  const halfH = Math.max(widest * (1 + wob), caudal, arms, widest + frill,
+                         widest + veiling) * 1.08 + R * 0.1;
+  // a lure and a barbel both hang out in front of the face, so the strip has to be longer
+  // than the body. Whichever reaches further sets the bound.
+  const front = spineAt(0, f) + Math.max(R * 0.12,
+    g.lure > 0 ? R * (0.9 + g.lure * 0.5) : 0,
+    g.barbels > 0 ? R * (0.55 + g.barbels * 0.9) : 0);
   const back = spineAt(1, f) - f.len * f.fluke * R * 1.06 - (arms ? R * 0.6 : 0);
 
   // an invisible rect pins the texture to exactly this rect, so the UVs line up with the
@@ -145,6 +158,7 @@ function paint(g: Genome, plan: Plan): Baked {
 
   // --- behind the body ---------------------------------------------------
   if (plan === 'jelly' || plan === 'squid') tentacles(art, f, pal, plan, g);
+  if (g.veil > 0) veil(art, f, pal, g, seed);
   caudalFin(art, f, pal, g, plan);
   if (g.lure > 0) lure(art, f, pal, g);
 
@@ -156,6 +170,7 @@ function paint(g: Genome, plan: Plan): Baked {
 
   countershade(art, f, pal, seed);
   mottle(art, f, pal, g, seed);
+  if (photophoreOf(g) > 0) photophores(art, f, pal, g, seed);
   if (plan === 'microbe') cilia(art, f, pal);
 
   // --- on top ------------------------------------------------------------
@@ -164,6 +179,7 @@ function paint(g: Genome, plan: Plan): Baked {
   spines(art, f, pal, g, men, plan);
   organs(art, f, pal, g);
   head(art, f, pal, g, plan, men);
+  if (g.barbels > 0) barbels(art, f, pal, g);
 
   const tex = renderer.generateTexture({ target: art, resolution: 6, antialias: true });
   art.destroy();
@@ -210,7 +226,7 @@ function mottle(gr: Graphics, f: Form, pal: Palette, g: Genome, seed: number) {
       const dark = Math.abs(y) < w * 0.55;
       gr.ellipse(spineAt(t, f), y, r * 1.5, r)
         .fill({ color: dark ? pal.back : pal.belly,
-                alpha: (dark ? 0.22 : 0.16) * pal.alpha * (1 - g.translucent * 0.4) });
+                alpha: (dark ? 0.22 : 0.16) * pal.alpha * (1 - fadeOf(g) * 0.4) });
     }
   }
 }
@@ -435,9 +451,13 @@ function head(gr: Graphics, f: Form, pal: Palette, g: Genome, plan: Plan, men: n
 
   // mouth: a dark sliver across the snout, opening with the jaw
   const tm = 0.05;
-  const mw = halfWidth(tm, f) * (0.6 + Math.min(1.2, g.jaw) * 0.5);
+  const gape = Math.min(1.5, g.gape);
+  const mw = halfWidth(tm, f) * (0.6 + Math.min(1.2, g.jaw) * 0.5 + gape * 0.9);
+  // a gape opens backwards as well as wider: the hinge walks down the body, which is what
+  // makes a gulper read as mostly mouth rather than as a fish with a big grin
+  const hinge = tm * 2.4 * (1 + gape * 1.6);
   gr.moveTo(spineAt(tm * 0.2, f), -mw * 0.7)
-    .quadraticCurveTo(spineAt(tm * 2.4, f), 0, spineAt(tm * 0.2, f), mw * 0.7)
+    .quadraticCurveTo(spineAt(hinge, f), 0, spineAt(tm * 0.2, f), mw * 0.7)
     .quadraticCurveTo(spineAt(tm * 0.1, f), 0, spineAt(tm * 0.2, f), -mw * 0.7)
     .closePath().fill({ color: pal.dark, alpha: 0.85 * pal.alpha });
 
@@ -457,10 +477,20 @@ function head(gr: Graphics, f: Form, pal: Palette, g: Genome, plan: Plan, men: n
 
   // eyes: a dark bead each side with a wet highlight
   const te = peak * 0.42;
-  const r = Math.max(R * 0.06, halfWidth(te, f) * 0.2 * g.eyeSize);
-  const pale = plan === 'angler' || plan === 'leviathan';
+  const adapt = g.eyeAdapt;
+  const r = Math.max(R * 0.03, halfWidth(te, f) * 0.2 * eyeOf(g));
+  // a light-gathering eye is pale because of the tapetum behind it — the same reason a
+  // cat's eyes flare in a torch beam. Past the point of no light at all there is nothing
+  // to gather and the eye goes: a blind socket is a dimple, not a bead, and nothing in it
+  // catches a highlight.
+  const pale = plan === 'angler' || plan === 'leviathan' || adapt > 0.45;
+  const blind = adapt < -0.4;
   for (const dir of [-1, 1]) {
     const y = dir * halfWidth(te, f) * 0.64;
+    if (blind) {
+      gr.circle(spineAt(te, f), y, r).fill({ color: pal.back, alpha: 0.55 * pal.alpha });
+      continue;
+    }
     gr.circle(spineAt(te, f), y, r)
       .fill({ color: pale ? hsl(lerp(46, 14, men), 0.9, 0.55) : 0x0b0d14, alpha: 0.95 });
     gr.circle(spineAt(te, f) + r * 0.3, y - r * 0.3, r * 0.3)
@@ -478,5 +508,86 @@ function head(gr: Graphics, f: Form, pal: Palette, g: Genome, plan: Plan, men: n
                           spineAt(tg - 0.07, f), dir * halfWidth(tg - 0.07, f) * 0.98)
         .closePath().fill({ color: pal.back, alpha: 0.4 * pal.alpha });
     }
+  }
+}
+
+/**
+ * Photophores — the deep ocean's one universal adaptation, and the thing that makes an
+ * animal read as deep before anything else about it does. Two ventral rows, because
+ * counter-illumination only works pointing down: the animal lights its own belly to
+ * erase the silhouette it would otherwise show to something hunting from below.
+ *
+ * Drawn after the mottle so the lights sit on the skin rather than under it, and as a
+ * soft disc under a hard core — a single flat dot reads as a hole, not a lamp.
+ */
+function photophores(gr: Graphics, f: Form, pal: Palette, g: Genome, seed: number) {
+  const lit = Math.min(1.5, photophoreOf(g));
+  const n = Math.round(10 + lit * 22);
+  const scale = 0.7 + lit * 0.5;
+  for (let i = 0; i < n; i++) {
+    const t = 0.16 + (i / n) * 0.74;
+    const w = halfWidth(t, f);
+    const x = spineAt(t, f);
+    for (const dir of [-1, 1] as const) {
+      // the row wanders, because a ruled line of dots reads as machinery
+      const y = dir * w * (0.78 + fbmSigned(t * 21, dir * 5.1, seed + 53) * 0.09);
+      const r = R * 0.035 * scale;
+      gr.circle(x, y, r * 2.4).fill({ color: pal.accent, alpha: 0.16 });
+      gr.circle(x, y, r).fill({ color: pal.accent, alpha: 0.85 });
+      gr.circle(x, y, r * 0.45).fill({ color: 0xffffff, alpha: 0.7 });
+    }
+  }
+}
+
+/**
+ * A trailing membrane off the rear flanks. Closed back along the body itself rather than
+ * hung off it, so it reads as a skirt of the animal and not as a fin stuck to one — and
+ * so it deforms with the swimming wave instead of sliding across it.
+ */
+function veil(gr: Graphics, f: Form, pal: Palette, g: Genome, seed: number) {
+  const n = 26;
+  const reach = Math.min(1.5, g.veil);
+  for (const dir of [-1, 1] as const) {
+    const pts: { x: number; y: number }[] = [];
+    for (let i = 0; i <= n; i++) {
+      const t = lerp(0.42, 0.98, i / n);
+      const w = halfWidth(t, f);
+      // a sine envelope, so the membrane leaves and rejoins the flank rather than
+      // ending on a corner at either end
+      const swell = Math.sin((i / n) * Math.PI);
+      const edge = 1 + fbmSigned(t * 9, dir * 2.3, seed + 71) * 0.28;
+      pts.push({ x: spineAt(t, f), y: dir * (w + w * reach * 1.5 * swell * edge) });
+    }
+    gr.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length - 1; i++) {
+      gr.quadraticCurveTo(pts[i].x, pts[i].y, (pts[i].x + pts[i + 1].x) / 2,
+                          (pts[i].y + pts[i + 1].y) / 2);
+    }
+    gr.lineTo(pts[n].x, pts[n].y);
+    for (let i = n; i >= 0; i--) {
+      const t = lerp(0.42, 0.98, i / n);
+      gr.lineTo(spineAt(t, f), dir * halfWidth(t, f));
+    }
+    gr.closePath().fill({ color: pal.skin, alpha: 0.34 * pal.alpha });
+  }
+}
+
+/** Feelers off the chin — how an animal finds food in water with nothing to see by. */
+function barbels(gr: Graphics, f: Form, pal: Palette, g: Genome) {
+  const count = Math.round(1 + Math.min(1.5, g.barbels) * 3);
+  const x0 = spineAt(0.08, f);
+  const reach = R * (0.4 + Math.min(1.5, g.barbels) * 0.9);
+  const w = R * 0.022;
+  for (let i = 0; i < count; i++) {
+    const v = count === 1 ? 0 : (i / (count - 1)) * 2 - 1;
+    const y0 = halfWidth(0.08, f) * v * 0.5;
+    const tipX = x0 + reach;
+    const tipY = y0 + v * reach * 0.5 + reach * 0.16;
+    const midY = y0 + (tipY - y0) * 0.3;
+    gr.moveTo(x0, y0 - w)
+      .quadraticCurveTo(x0 + reach * 0.6, midY, tipX, tipY)
+      .lineTo(tipX, tipY + w)
+      .quadraticCurveTo(x0 + reach * 0.55, midY + w, x0, y0 + w)
+      .closePath().fill({ color: pal.dark, alpha: 0.8 * pal.alpha });
   }
 }
