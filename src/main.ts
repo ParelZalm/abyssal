@@ -121,7 +121,7 @@ class Game {
       this.scenery.back, this.ocean.world, this.focus,
       // the blooms sit under the bodies in one additive layer of their own, which is
       // what lets every creature's glow batch into a single draw
-      this.world.glow, this.world.layer, this.fx.layer, this.scenery.front,
+      this.world.fog, this.world.glow, this.world.layer, this.fx.layer, this.scenery.front,
     );
     this.app.stage.addChild(this.water.layer, this.camera);
     this.camX = this.player.x;

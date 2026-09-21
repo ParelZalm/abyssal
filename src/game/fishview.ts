@@ -14,7 +14,7 @@
  */
 import { Container, MeshSimple, Sprite } from 'pixi.js';
 import { bakeFish, type Baked } from './fishbake';
-import { quintic, R, type Plan } from './form';
+import { PLAN_ART, quintic, R, type Plan } from './form';
 import { menace, type Genome } from './genome';
 import { glowTexture } from './textures';
 import { hsl, lerp } from './util';
@@ -58,6 +58,13 @@ export class FishView extends Container {
    * cost one state change per animal on screen. This view only keeps it in step.
    */
   readonly glow = new Container();
+  /**
+   * A cloud of darker water the animal drags with it. It cannot live in `glow`: that layer
+   * is additive so it can batch, and additive can only ever brighten. Darkening needs a
+   * normal-blended sprite, which means a layer of its own — `world.fog`, under the bodies.
+   */
+  readonly fog = new Container();
+  private murk = new Sprite(glowTexture());
   /** A bruised red bloom that grows as the animal becomes something to run from. */
   private aura = new Sprite(glowTexture());
   private halo = new Sprite(glowTexture());
@@ -78,6 +85,8 @@ export class FishView extends Container {
       s.blendMode = 'add';
     }
     this.glow.addChild(this.aura, this.halo, this.core);
+    this.murk.anchor.set(0.5);
+    this.fog.addChild(this.murk);
     this.rebuild(g);
   }
 
@@ -85,6 +94,7 @@ export class FishView extends Container {
   place(x: number, y: number, rotation: number) {
     this.x = x; this.y = y; this.rotation = rotation;
     this.glow.x = x; this.glow.y = y;
+    this.fog.x = x; this.fog.y = y;
   }
 
   /**
@@ -95,11 +105,16 @@ export class FishView extends Container {
     this.visible = this.glow.visible = visible;
     this.alpha = this.glow.alpha = alpha;
     this.tint = this.glow.tint = tint;
+    // the fog takes culling and distance, but not the danger tint: it is absence of light,
+    // so tinting it would only make it glow in whatever colour the tint happens to be
+    this.fog.visible = visible;
+    this.fog.alpha = alpha;
   }
 
   /** The bloom is not a child, so it does not go down with the rest of the view. */
   destroy(options?: Parameters<Container['destroy']>[0]) {
     if (!this.glow.destroyed) this.glow.destroy({ children: true });
+    if (!this.fog.destroyed) this.fog.destroy({ children: true });
     super.destroy(options);
   }
 
@@ -162,6 +177,17 @@ export class FishView extends Container {
       this.aura.width = this.aura.height = ar * 2;
       this.aura.tint = hsl(lerp(24, 2, men), 0.85, 0.4);
       this.aura.alpha = (men - 0.25) * 0.3;
+    }
+
+    // scaled off the body rather than fixed in world units like the bloom above, so a
+    // 300 cm leviathan is not wearing the same cloud as a 119 cm shark
+    const fogK = PLAN_ART[this.plan].fog;
+    this.murk.visible = fogK > 0;
+    if (fogK > 0) {
+      const fr = g.size * (1.5 + fogK * 0.7);
+      this.murk.width = this.murk.height = fr;
+      this.murk.tint = 0x03070c;
+      this.murk.alpha = Math.min(0.62, 0.3 + fogK * 0.16);
     }
 
     this.pose(0, 0, 0.5);

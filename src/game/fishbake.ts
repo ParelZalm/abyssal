@@ -83,12 +83,13 @@ interface Palette {
   alpha: number;
 }
 
-function palette(g: Genome, men: number): Palette {
+function palette(g: Genome, men: number, A: PlanArt): Palette {
+  const t = A.tone;
   return {
     // the more dangerous it is, the darker the mass and the hotter its accent
-    skin: hsl(g.hue, 0.3 + men * 0.08, 0.36 - men * 0.1),
-    back: hsl(g.hue + 10, 0.42, 0.14 - men * 0.04),
-    belly: hsl(g.hue - 16, 0.2, 0.64 - men * 0.1),
+    skin: hsl(g.hue, 0.3 + men * 0.08, (0.36 - men * 0.1) * t),
+    back: hsl(g.hue + 10, 0.42, (0.14 - men * 0.04) * t),
+    belly: hsl(g.hue - 16, 0.2, (0.64 - men * 0.1) * t),
     accent: hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, men * 0.75),
                 0.6 + men * 0.3, 0.55),
     dark: hsl(g.hue, 0.5, 0.08),
@@ -106,7 +107,12 @@ function flank(gr: Graphics, f: Form, t0: number, t1: number, dir: -1 | 1, n: nu
                move: boolean, wob: number, seed: number) {
   const pts: { x: number; y: number }[] = [];
   for (let i = 0; i <= n; i++) {
-    const t = lerp(t0, t1, i / n);
+    // cosine clustering, not even spacing: the ends of a body are where all the curvature
+    // is — a snout cap is a couple of percent of the length, and evenly spaced samples
+    // render it as a two-segment chamfer — while the middle is nearly straight and needs
+    // almost none. Same sample count, the detail just goes where the shape is.
+    const s = 0.5 - Math.cos(Math.PI * (i / n)) * 0.5;
+    const t = lerp(t0, t1, s);
     const k = 1 + fbmSigned(t * 7, dir * 3.7, seed) * wob * (1 - Math.abs(t * 2 - 1) * 0.35);
     pts.push({ x: spineAt(t, f), y: halfWidth(t, f) * k * dir });
   }
@@ -124,7 +130,8 @@ function paint(g: Genome, plan: Plan): Baked {
   if (!renderer) throw new Error('setBakeRenderer() must be called before any creature is built');
   const f = formFor(g, plan);
   const men = menace(g);
-  const pal = palette(g, men);
+  const A = PLAN_ART[plan];
+  const pal = palette(g, men, A);
   const seed = Math.round(g.hue * 7 + g.accentHue * 3 + g.spikes * 11) % 9973;
   const wob = 0.035;
 
@@ -132,7 +139,6 @@ function paint(g: Genome, plan: Plan): Baked {
   // faded by one AlphaFilter, because per-part alpha composites every overlap twice and the
   // joints then outline themselves. A single surface has no overlaps to composite, so the
   // render target that cost is simply gone — the body is drawn see-through and that is all.
-  const A = PLAN_ART[plan];
   if (A.smoke) pal.alpha *= 0.6;
 
   const art = new Graphics();
@@ -146,11 +152,19 @@ function paint(g: Genome, plan: Plan): Baked {
   const caudal =
     A.tail === 'fluke' ? halfWidth(1, f) * (3.4 + f.fork * 1.2) * A.caudal
     : A.tail === 'mantle' ? halfWidth(0.8, f) * (1.6 + A.caudal * 0.9)
-    : halfWidth(1, f) * (2.4 + f.fork * 1.8);
+    : halfWidth(1, f) * (2.4 + f.fork * 1.8) * A.caudal;
   const arms = widest * A.arms;
+  // a fin reaching further than the body does has to be inside the strip, or it bakes
+  // clipped square with nothing to say so
+  let finReach = 0;
+  for (const fin of A.fins) {
+    const ft = Math.min(0.9, fin.at);
+    const fw = halfWidth(ft, f);
+    finReach = Math.max(finReach, fw * 0.72 + fw * fin.len * (0.7 + g.finSize * 0.35));
+  }
   const frill = g.frill > 0 ? widest * 0.3 : 0;
   const veiling = widest * g.veil * 1.5;
-  const halfH = Math.max(widest * (1 + wob), caudal, arms, widest + frill,
+  const halfH = Math.max(widest * (1 + wob), caudal, arms, finReach, widest + frill,
                          widest + veiling) * 1.08 + R * 0.1;
   // a lure and a barbel both hang out in front of the face, so the strip has to be longer
   // than the body. Whichever reaches further sets the bound.
@@ -178,15 +192,15 @@ function paint(g: Genome, plan: Plan): Baked {
   flank(art, f, 1, 0, 1, n, false, wob, seed);
   art.closePath().fill({ color: pal.skin, alpha: pal.alpha });
 
-  countershade(art, f, pal, seed);
-  mottle(art, f, pal, g, seed);
+  countershade(art, f, pal, A, seed);
+  if (A.mottle > 0) mottle(art, f, pal, g, A, seed);
   if (photophoreOf(g) > 0) photophores(art, f, pal, g, seed);
   if (A.cilia) cilia(art, f, pal);
 
   // --- on top ------------------------------------------------------------
   if (A.smoke) viscera(art, f, pal);
-  if (A.dorsalFin) dorsalRidge(art, f, pal);
-  fins(art, f, pal, g);
+  if (A.dorsalFin > 0) dorsalRidge(art, f, pal, A);
+  fins(art, f, pal, g, A);
   if (A.spines) spines(art, f, pal, g, men);
   organs(art, f, pal, g);
   head(art, f, pal, g, A, men);
@@ -198,7 +212,7 @@ function paint(g: Genome, plan: Plan): Baked {
 }
 
 /** The dark back that makes a shape read as an animal from above, in two ragged passes. */
-function countershade(gr: Graphics, f: Form, pal: Palette, seed: number) {
+function countershade(gr: Graphics, f: Form, pal: Palette, A: PlanArt, seed: number) {
   for (const [k, alpha, salt] of [[0.78, 0.3, 13], [0.44, 0.55, 29]] as const) {
     const n = 70;
     const pts: { x: number; y: number }[] = [];
@@ -218,12 +232,12 @@ function countershade(gr: Graphics, f: Form, pal: Palette, seed: number) {
     run(-1, pts);
     gr.lineTo(pts[n].x, pts[n].y);
     run(1, [...pts].reverse());
-    gr.closePath().fill({ color: pal.back, alpha: alpha * pal.alpha });
+    gr.closePath().fill({ color: pal.back, alpha: alpha * A.shade * pal.alpha });
   }
 }
 
 /** Speckle: dark over the spine, pale toward the belly, from one noise field. */
-function mottle(gr: Graphics, f: Form, pal: Palette, g: Genome, seed: number) {
+function mottle(gr: Graphics, f: Form, pal: Palette, g: Genome, A: PlanArt, seed: number) {
   const step = f.len > 3 ? 0.016 : 0.022;
   for (let t = 0; t < 1; t += step) {
     const w = halfWidth(t, f);
@@ -237,7 +251,8 @@ function mottle(gr: Graphics, f: Form, pal: Palette, g: Genome, seed: number) {
       const dark = Math.abs(y) < w * 0.55;
       gr.ellipse(spineAt(t, f), y, r * 1.5, r)
         .fill({ color: dark ? pal.back : pal.belly,
-                alpha: (dark ? 0.22 : 0.16) * pal.alpha * (1 - fadeOf(g) * 0.4) });
+                alpha: (dark ? 0.22 : 0.16) * A.mottle * pal.alpha
+                       * (1 - fadeOf(g) * 0.4) });
     }
   }
 }
@@ -255,7 +270,7 @@ function caudalFin(gr: Graphics, f: Form, pal: Palette, g: Genome, A: PlanArt) {
     .quadraticCurveTo(x - len * 0.5, spread * 0.72, x + w * 1.6, w * 0.9)
     .closePath()
     .fill({ color: pal.skin, alpha: 0.86 * pal.alpha });
-  for (let i = -3; i <= 3; i++) {
+  for (let i = -3; A.finRays && i <= 3; i++) {
     const v = i / 3;
     const ty = spread * v * 0.82;
     const tx = x - len * (1 - Math.abs(v) * 0.24) + notch * (1 - Math.abs(v)) * 0.8;
@@ -330,29 +345,57 @@ function bluntSnout(gr: Graphics, f: Form, pal: Palette, A: PlanArt) {
     .fill({ color: pal.skin, alpha: pal.alpha });
 }
 
-/** The dorsal fin, edge-on: a sliver along the midline, but it is what says shark. */
-function dorsalRidge(gr: Graphics, f: Form, pal: Palette) {
-  const t0 = 0.3, t1 = 0.56;
-  const w = halfWidth((t0 + t1) / 2, f) * 0.17;
-  gr.moveTo(spineAt(t0, f), 0)
-    .quadraticCurveTo(spineAt(t0 + 0.08, f), -w, spineAt(t1, f), 0)
-    .quadraticCurveTo(spineAt(t0 + 0.08, f), w, spineAt(t0, f), 0)
-    .closePath()
-    .fill({ color: pal.back, alpha: 0.7 * pal.alpha });
+/**
+ * The dorsal fin, edge-on: a sliver along the midline, but it is what says shark. The
+ * control point sits near the front of the run, so the blade is fattest at its leading edge
+ * and tapers to a point behind — a fin raked back, not a lens.
+ */
+function dorsalRidge(gr: Graphics, f: Form, pal: Palette, A: PlanArt) {
+  const blade = (t0: number, t1: number, k: number) => {
+    const w = halfWidth((t0 + t1) / 2, f) * 0.17 * k;
+    gr.moveTo(spineAt(t0, f), 0)
+      .quadraticCurveTo(spineAt(t0 + (t1 - t0) * 0.3, f), -w, spineAt(t1, f), 0)
+      .quadraticCurveTo(spineAt(t0 + (t1 - t0) * 0.3, f), w, spineAt(t0, f), 0)
+      .closePath()
+      // pal.dark, not pal.back: the countershade has already painted the spine in pal.back,
+      // so a blade in that colour is a blade nobody can see
+      .fill({ color: pal.dark, alpha: 0.75 * pal.alpha });
+  };
+  blade(0.3, 0.56, A.dorsalFin);
+  // the second dorsal, small and far back. On its own it is nearly nothing; against the
+  // first it is what gives the back a front and a rear instead of one lump in the middle
+  if (A.dorsalFin > 1) blade(0.74, 0.84, A.dorsalFin * 0.42);
 }
 
-/** Pectorals and pelvics, baked in: they bend with the body that carries them. */
-function fins(gr: Graphics, f: Form, pal: Palette, g: Genome) {
-  const pairs: [number, number][] = [[shoulderAt(f) * 1.15, 0.85], [0.56, 0.6]];
-  for (const [t, scale] of pairs) {
-    const len = halfWidth(t, f) * scale * (0.7 + g.finSize * 0.35);
+/**
+ * The lateral fins, baked in so they bend with the body that carries them. Which pairs an
+ * animal has, and what shape they are, is the plan's own business — see `PlanArt.fins`.
+ *
+ * `rake` and `chord` are what separate a shark's pectoral from a bass's: a shark's reaches
+ * far out for how little it reaches back, on a narrow root, so it reads as a wing held in
+ * a slipstream. Rake near 1 on a wide chord is a drooping leaf.
+ */
+function fins(gr: Graphics, f: Form, pal: Palette, g: Genome, A: PlanArt) {
+  for (const fin of A.fins) {
+    const t = Math.min(0.9, fin.at);
+    const w = halfWidth(t, f);
+    const len = w * fin.len * (0.7 + g.finSize * 0.35);
+    const x = spineAt(t, f);
+    const back = len * fin.rake;
+    const c = len * fin.chord;
     for (const dir of [-1, 1] as const) {
-      const x = spineAt(t, f), y = halfWidth(t, f) * dir * 0.7;
-      gr.moveTo(x, y)
-        .quadraticCurveTo(x - len * 0.1, y + dir * len * 0.5, x - len * 0.78,
-                          y + dir * len * 0.82)
-        .quadraticCurveTo(x - len * 0.6, y + dir * len * 0.16, x, y)
-        .closePath().fill({ color: pal.back, alpha: 0.6 * pal.alpha });
+      const y = w * dir * 0.72;
+      const fx = x + c * 0.3, bx = x - c * 0.7;
+      const tipX = x - back, tipY = y + dir * len;
+      // a pointed fin closes on the tip; a blunt one ends on a short edge
+      const blunt = len * 0.16 * (1 - fin.taper);
+      gr.moveTo(fx, y)
+        // leading edge, near-straight out to the tip
+        .quadraticCurveTo(fx - back * 0.3, y + dir * len * 0.6, tipX, tipY)
+        .lineTo(tipX + blunt, tipY - dir * blunt * 0.3)
+        // trailing edge, concave so the fin narrows along its span
+        .quadraticCurveTo(bx - back * 0.55, y + dir * len * 0.3, bx, y)
+        .closePath().fill({ color: pal.skin, alpha: 0.95 * pal.alpha });
     }
   }
 }
@@ -542,14 +585,14 @@ function head(gr: Graphics, f: Form, pal: Palette, g: Genome, A: PlanArt, men: n
   // mouth: a dark sliver across the snout, opening with the jaw
   const tm = 0.05;
   const gape = Math.min(1.5, g.gape);
-  const mw = halfWidth(tm, f) * (0.6 + Math.min(1.2, g.jaw) * 0.5 + gape * 0.9);
+  const mw = halfWidth(tm, f) * (0.6 + Math.min(1.2, g.jaw) * 0.5 + gape * 0.9) * A.mouth;
   // a gape opens backwards as well as wider: the hinge walks down the body, which is what
   // makes a gulper read as mostly mouth rather than as a fish with a big grin
   const hinge = tm * 2.4 * (1 + gape * 1.6);
   gr.moveTo(spineAt(tm * 0.2, f), -mw * 0.7)
     .quadraticCurveTo(spineAt(hinge, f), 0, spineAt(tm * 0.2, f), mw * 0.7)
     .quadraticCurveTo(spineAt(tm * 0.1, f), 0, spineAt(tm * 0.2, f), -mw * 0.7)
-    .closePath().fill({ color: pal.dark, alpha: 0.85 * pal.alpha });
+    .closePath().fill({ color: pal.dark, alpha: 0.85 * Math.min(1, A.mouth + 0.2) * pal.alpha });
 
   // teeth, once the jaw is worth showing
   if (g.jaw > 0.55) {
@@ -566,9 +609,9 @@ function head(gr: Graphics, f: Form, pal: Palette, g: Genome, A: PlanArt, men: n
   }
 
   // eyes: a dark bead each side with a wet highlight
-  const te = peak * 0.42;
+  const te = A.eyeAt;
   const adapt = g.eyeAdapt;
-  const r = Math.max(R * 0.03, halfWidth(te, f) * 0.2 * eyeOf(g));
+  const r = Math.max(R * 0.03, halfWidth(te, f) * 0.2 * eyeOf(g) * A.eye);
   // a light-gathering eye is pale because of the tapetum behind it — the same reason a
   // cat's eyes flare in a torch beam. Past the point of no light at all there is nothing
   // to gather and the eye goes: a blind socket is a dimple, not a bead, and nothing in it
@@ -576,15 +619,30 @@ function head(gr: Graphics, f: Form, pal: Palette, g: Genome, A: PlanArt, men: n
   const pale = A.paleEyes || adapt > 0.45;
   const blind = adapt < -0.4;
   for (const dir of [-1, 1]) {
-    const y = dir * halfWidth(te, f) * 0.64;
+    const y = dir * halfWidth(te, f) * 0.82;
     if (blind) {
       gr.circle(spineAt(te, f), y, r).fill({ color: pal.back, alpha: 0.55 * pal.alpha });
       continue;
     }
+    // a guardian looks back at you. The bloom is painted under the bead rather than over
+    // it, so the eye still reads as a solid thing with light behind it and not as a lamp.
+    if (A.eyeGlow > 0) {
+      gr.circle(spineAt(te, f), y, r * 2.8)
+        .fill({ color: hsl(0, 0.9, 0.28), alpha: 0.14 * A.eyeGlow * pal.alpha });
+      gr.circle(spineAt(te, f), y, r * 1.75)
+        .fill({ color: hsl(2, 0.95, 0.3), alpha: 0.26 * A.eyeGlow * pal.alpha });
+    }
     gr.circle(spineAt(te, f), y, r)
-      .fill({ color: pale ? hsl(lerp(46, 14, men), 0.9, 0.55) : 0x0b0d14, alpha: 0.95 });
-    gr.circle(spineAt(te, f) + r * 0.3, y - r * 0.3, r * 0.3)
-      .fill({ color: 0xeaf4f6, alpha: 0.75 });
+      .fill({ color: A.eyeGlow > 0 ? hsl(0, 0.95, 0.17)
+              : pale ? hsl(lerp(46, 14, men), 0.9, 0.55) : 0x0b0d14, alpha: 0.95 });
+    if (A.eyeGlow > 0) {
+      gr.circle(spineAt(te, f), y, r * 0.5)
+        .fill({ color: hsl(4, 0.95, 0.4), alpha: 0.8 * A.eyeGlow });
+    }
+    if (A.eyeGlow === 0) {
+      gr.circle(spineAt(te, f) + r * 0.3, y - r * 0.3, r * 0.26)
+        .fill({ color: 0xeaf4f6, alpha: 0.45 });
+    }
   }
 
   // gill cover: a crescent of the back colour at the edge of the head

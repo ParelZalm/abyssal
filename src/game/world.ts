@@ -118,6 +118,8 @@ export class World {
   layer = new Container();
   /** Every creature's additive bloom, in one container so the sprites batch as one. */
   glow = new Container();
+  /** Darkening clouds, under the bodies. Normal blend, so it cannot share `glow`. */
+  fog = new Container();
   bites: Bite[] = [];
   /** Biomass the player earned this frame. */
   playerGain = 0;
@@ -142,6 +144,7 @@ export class World {
   constructor(private rng: Rng, private player: Creature) {
     this.layer.addChild(player.view);
     this.glow.addChild(player.view.glow);
+    this.fog.addChild(player.view.fog);
   }
 
   spawnAround(cx: number, cy: number, viewR: number, target: number) {
@@ -186,6 +189,7 @@ export class World {
     this.creatures.push(c);
     this.layer.addChildAt(c.view, 0);
     this.glow.addChild(c.view.glow);
+    this.fog.addChild(c.view.fog);
     return c;
   }
 

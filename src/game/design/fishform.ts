@@ -25,7 +25,7 @@ export { halfWidth, shoulderAt, spineAt } from '../form';
 
 /** The baseline this board explores around — the game's darter, give or take. */
 export const SPINDLE: Form = {
-  len: 2.2, width: 0.6, fore: 0.85, aft: 1.3, peduncle: 0.15, cheek: 0.1,
+  len: 2.2, width: 0.6, fore: 0.85, aft: 1.3, peduncle: 0.15, shoulder: 0, nose: 0, trunk: 0, cheek: 0.1,
   fluke: 0.34, fork: 0.55,
 };
 

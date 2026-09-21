@@ -112,10 +112,15 @@ export const SPECIES: Species[] = [
     size: [62, 96], hue: [198, 214], accent: 202, speed: 230, bite: 34,
     nutrition: 2.6, weight: 6, jaw: 0.8, armor: 3, finSize: 1.2, sense: 620 },
 
+  // no spikes: the plan draws no blades, so the stat would be a number with nothing on the
+  // animal to show for it. Menace is already maxed by jaw, bite and bulk without it.
+  // Slate rather than the reef shark's blue, and a much lower jaw than the bite implies:
+  // `formFor` turns jaw into cheek, and cheek is a wider head. A great white bites like
+  // this and is still a cone all the way back to the gills.
   { id: 'greatwhite', name: 'Great White', behavior: 'apex', plan: 'greatshark',
     zone: 'sunlit', guardian: true, bleed: 200,
-    size: [115, 155], hue: [200, 214], accent: 196, speed: 260, bite: 52,
-    nutrition: 4, weight: 1.4, jaw: 1.1, armor: 5, spikes: 1, finSize: 1.3,
+    size: [115, 155], hue: [208, 220], accent: 200, speed: 260, bite: 52,
+    nutrition: 4, weight: 1.4, jaw: 0.5, armor: 5, finSize: 1.3,
     sense: 900, metabolism: 1.6 },
 
   // ---------------------------------------------------------------- Twilight Zone

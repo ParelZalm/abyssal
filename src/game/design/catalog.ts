@@ -59,19 +59,19 @@ function formGroup(): DesignGroup {
     { id: 'spindle', name: '2 — Spindle (base)', form: SPINDLE,
       note: 'the proposed base form: eyes, mouth, gill line, pectorals, pelvics, caudal' },
     { id: 'deep', name: 'Deep', hue: 42,
-      form: { len: 1.7, width: 0.82, fore: 0.8, aft: 0.95, peduncle: 0.2, cheek: 0.12,
+      form: { len: 1.7, width: 0.82, fore: 0.8, aft: 0.95, peduncle: 0.2, shoulder: 0, nose: 0, trunk: 0, cheek: 0.12,
               fluke: 0.26, fork: 0.35 },
       note: 'reef fish — wide and short, widest well forward, a paddle for a tail' },
     { id: 'bullet', name: 'Bullet', hue: 208,
-      form: { len: 2.4, width: 0.6, fore: 0.85, aft: 1.5, peduncle: 0.1, cheek: 0.14,
+      form: { len: 2.4, width: 0.6, fore: 0.85, aft: 1.5, peduncle: 0.1, shoulder: 0, nose: 0, trunk: 0, cheek: 0.14,
               fluke: 0.3, fork: 0.95 },
       note: 'tuna — mass thrown forward, peduncle pinched to nothing, scythe caudal' },
     { id: 'lance', name: 'Lance', hue: 186,
-      form: { len: 3.1, width: 0.42, fore: 0.5, aft: 1.05, peduncle: 0.14, cheek: 0.06,
+      form: { len: 3.1, width: 0.42, fore: 0.5, aft: 1.05, peduncle: 0.14, shoulder: 0, nose: 0, trunk: 0, cheek: 0.06,
               fluke: 0.24, fork: 0.6 },
       note: 'barracuda — long, barely tapered, a body that is mostly approach' },
     { id: 'ribbon', name: 'Ribbon', hue: 268,
-      form: { len: 3.8, width: 0.34, fore: 0.45, aft: 0.75, peduncle: 0.34, cheek: 0.05,
+      form: { len: 3.8, width: 0.34, fore: 0.45, aft: 0.75, peduncle: 0.34, shoulder: 0, nose: 0, trunk: 0, cheek: 0.05,
               fluke: 0.14, fork: 0.1 },
       note: 'eel — the peduncle floor raised until the body never really ends' },
   ];
@@ -79,19 +79,19 @@ function formGroup(): DesignGroup {
   /** One life, as four settings of the same parameters. */
   const life: { id: string; name: string; note: string; size: string; form: Form }[] = [
     { id: 'larva', name: 'Life 1 — Larva', size: '8 mm',
-      form: { len: 1.6, width: 0.46, fore: 1.3, aft: 2.1, peduncle: 0.07, cheek: 0.3,
+      form: { len: 1.6, width: 0.46, fore: 1.3, aft: 2.1, peduncle: 0.07, shoulder: 0, nose: 0, trunk: 0, cheek: 0.3,
               fluke: 0.2, fork: 0.05 },
       note: 'all head and a thread of tail — the body has not been built yet' },
     { id: 'fry', name: 'Life 2 — Fry', size: '6 cm',
-      form: { len: 1.85, width: 0.54, fore: 1.05, aft: 1.7, peduncle: 0.1, cheek: 0.2,
+      form: { len: 1.85, width: 0.54, fore: 1.05, aft: 1.7, peduncle: 0.1, shoulder: 0, nose: 0, trunk: 0, cheek: 0.2,
               fluke: 0.26, fork: 0.28 },
       note: 'the trunk fills in behind the head and the caudal starts to fork' },
     { id: 'juvenile', name: 'Life 3 — Juvenile', size: '30 cm',
-      form: { len: 2.05, width: 0.58, fore: 0.92, aft: 1.4, peduncle: 0.13, cheek: 0.14,
+      form: { len: 2.05, width: 0.58, fore: 0.92, aft: 1.4, peduncle: 0.13, shoulder: 0, nose: 0, trunk: 0, cheek: 0.14,
               fluke: 0.3, fork: 0.46 },
       note: 'the widest point slides back as the body outgrows the head' },
     { id: 'adult', name: 'Life 4 — Adult', size: '1.2 m',
-      form: { len: 2.35, width: 0.62, fore: 0.82, aft: 1.28, peduncle: 0.15, cheek: 0.1,
+      form: { len: 2.35, width: 0.62, fore: 0.82, aft: 1.28, peduncle: 0.15, shoulder: 0, nose: 0, trunk: 0, cheek: 0.1,
               fluke: 0.34, fork: 0.72 },
       note: 'long body, hard fork, shoulder a third of the way back' },
   ];
@@ -130,7 +130,11 @@ function formGroup(): DesignGroup {
  */
 function boardFish(g: Genome, plan: Plan): FishView {
   const v = new FishView(g, plan);
+  // both extra layers are parented in, in the same order `main` stacks them: the board
+  // showing a creature without its fog or its bloom is exactly the drift this page exists
+  // to prevent
   v.addChildAt(v.glow, 0);
+  v.addChildAt(v.fog, 0);
   return v;
 }
 
