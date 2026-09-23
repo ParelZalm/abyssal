@@ -13,8 +13,10 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #01060d; col
 #ui { position: fixed; inset: 0; pointer-events: none; }
 
 .hud { position: absolute; left: 18px; top: 16px; width: 270px; display: grid; gap: 8px;
-  background: var(--panel); border: 1px solid var(--edge); border-radius: 12px; padding: 12px 14px;
-  backdrop-filter: blur(6px); }
+  background: var(--panel); border: 1px solid var(--edge); border-radius: 12px; padding: 12px 14px; }
+/* No backdrop-filter on in-play chrome: the canvas under it changes every frame, so each
+   blurred box is a full re-blur per frame — one per mutation chip, which is why frame rate
+   fell as a run went on (worst in Firefox). The panels are opaque enough without it. */
 .bar { height: 13px; border-radius: 7px; background: rgba(255,255,255,.08);
   border: 1px solid var(--edge); overflow: hidden; position: relative; }
 .bar > i { display: block; height: 100%; width: 0%; transition: width .12s linear; }
@@ -33,7 +35,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #01060d; col
   display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 .chip { position: relative; width: 34px; height: 34px; display: grid; place-items: center;
   border-radius: 10px; background: var(--panel); border: 1px solid var(--edge);
-  color: var(--dim); backdrop-filter: blur(6px); cursor: help; }
+  color: var(--dim); cursor: help; }
 .chip > i { position: absolute; right: -3px; bottom: -3px; font-style: normal; font-size: 10px;
   font-weight: 700; line-height: 1; padding: 2px 4px; border-radius: 6px;
   background: #0b1a2a; border: 1px solid var(--edge); color: var(--ink); }
@@ -161,7 +163,7 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
   font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent);
   opacity: 0; transition: opacity .3s; white-space: nowrap;
   background: var(--panel); border: 1px solid var(--edge); border-radius: 999px;
-  padding: 9px 20px; backdrop-filter: blur(6px); }
+  padding: 9px 20px; }
 .toast.on { opacity: 1; }
 .danger { position: absolute; inset: 0; box-shadow: inset 0 0 160px rgba(255,60,50,.55);
   opacity: 0; transition: opacity .2s; }

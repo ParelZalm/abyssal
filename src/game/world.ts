@@ -57,6 +57,8 @@ const BLOOD_MAX = 14;
 /** Scent reach, per centimetre of the body. A 5 cm krill is barely worth crossing water for. */
 const BLOOD_REACH = 11;
 
+export type Mood = 'cruise' | 'rest' | 'dart';
+
 export class Creature {
   x = 0; y = 0; vx = 0; vy = 0; angle = 0;
   hp: number; hpMax: number;
@@ -73,6 +75,21 @@ export class Creature {
   bank = 0;
   /** Ambushers hold still until this drops to zero. */
   lunge = 0;
+  /**
+   * What an unbothered animal is doing between threats and meals. A fish that only ever
+   * cruises at one throttle reads as a sprite on a rail; resting, drifting and the odd
+   * startled dart are most of what makes water look inhabited.
+   */
+  mood: Mood = 'cruise';
+  moodT = Math.random() * 4;
+  /** Seconds a hunter ignores prey after a kill — a fed predator lazes rather than sweeping the screen clean. */
+  sated = 0;
+  /** Seconds on the current chase; past its stamina the hunter gives up and has to recover in `tired`. */
+  chase = 0;
+  tired = 0;
+  /** Fleeing zigzag: seconds until the next cut, and which way the last one went. */
+  jinkT = 0;
+  jinkSide = 1;
   /** Guardians only: whether this one has currently registered the player as worth eating. */
   aware = false;
   /**
@@ -152,7 +169,7 @@ export class Creature {
     const top = Math.max(1, g.speed);
     const turn = clamp(turnInput, -1, 1) * this.agility() * dt;
     this.angle += turn;
-    this.bank += (clamp(dt > 0 ? turn / dt / g.turn : 0, -1, 1) - this.bank) *
+    this.bank += (clamp(dt > 0 ? turn / dt / Math.max(0.01, g.turn) : 0, -1, 1) - this.bank) *
       Math.min(1, dt * 7);
 
     const speed = Math.hypot(this.vx, this.vy);
@@ -458,6 +475,9 @@ export class World {
     c.wander += dt * 0.9;
     c.panic = Math.max(0, c.panic - dt);
     c.lunge = Math.max(0, c.lunge - dt);
+    c.sated = Math.max(0, c.sated - dt);
+    c.tired = Math.max(0, c.tired - dt);
+    c.moodT -= dt;
 
     // a lit lure overrides whatever the prey was doing — that is the whole point of it
     if (p.genome.lure > 0 && p.preysOn(c) && c.panic <= 0) {
@@ -483,15 +503,24 @@ export class World {
         if (threat) {
           const noticed = 1 - (threat.isPlayer ? clamp(threat.genome.stealth, 0, 0.8) : 0);
           if (this.rngLike(c) < noticed) {
-            desired = Math.atan2(c.y - threat.y, c.x - threat.x);
+            // straight-line flight is what a pursuer with a lead angle eats; prey that cuts
+            // side to side costs it the turn every time. Small bodies jink hardest
+            if ((c.jinkT -= dt) <= 0) {
+              c.jinkSide = -c.jinkSide;
+              c.jinkT = 0.3 + Math.random() * 0.45;
+            }
+            const cut = clamp(0.75 - g.size / 120, 0.15, 0.7);
+            desired = Math.atan2(c.y - threat.y, c.x - threat.x) + c.jinkSide * cut;
             throttle = 1.25;
+            if (c.panic <= 0 && c.species.behavior === 'school') this.alarm(c);
             c.panic = 1.2;
+            c.mood = 'cruise';
             break;
           }
         }
         const prey = this.nearest(c, sense * (c.species.behavior === 'apex' ? 3 : 1),
           o => o !== c && c.preysOn(o) && this.notices(c, o));
-        const wantsToHunt = hunts(c.species) &&
+        const wantsToHunt = hunts(c.species) && c.sated <= 0 && c.tired <= 0 &&
           (c.species.behavior !== 'ambush' || c.lunge <= 0);
         if (prey && wantsToHunt) {
           // a guardian turning toward you is the moment the zone stops being scenery, so it
@@ -502,16 +531,30 @@ export class World {
           } else if (c.species.guardian) {
             c.aware = false;
           }
-          desired = Math.atan2(prey.y - c.y, prey.x - c.x);
+          const d = Math.sqrt(dist2(c.x, c.y, prey.x, prey.y));
+          // aim where the prey is going, not where it is: tail-chasing is why every hunt used
+          // to be a loop. The lead is capped at a second so a fast target is not over-led
+          const speed = Math.max(40, Math.hypot(c.vx, c.vy));
+          const lead = Math.min(1, d / speed);
+          desired = Math.atan2(prey.y + prey.vy * lead - c.y, prey.x + prey.vx * lead - c.x);
           if (c.species.behavior === 'ambush') {
             const close = dist2(c.x, c.y, prey.x, prey.y) < (sense * 0.4) ** 2;
             throttle = close ? 1.7 : 0.1;
             if (close) c.lunge = 1.6;
           } else {
-            throttle = 1.05;
+            // stalk, then strike: creep while far so the approach reads as intent, and only
+            // open up inside striking range. Guardians keep the old steady pressure
+            const striking = d < sense * 0.5 || c.species.guardian;
+            throttle = striking ? 1.12 : 0.72;
+            c.chase += dt;
+            // a hunt has a budget; past it the hunter breaks off, which is what lets a
+            // player escape by outlasting rather than only by outswimming
+            const stamina = c.species.behavior === 'apex' || c.species.guardian ? 12 : 6;
+            if (c.chase > stamina) { c.chase = 0; c.tired = 3 + Math.random() * 2; }
           }
           break;
         }
+        c.chase = Math.max(0, c.chase - dt * 2);
         // blood pulls whatever hunts toward the spot, which is what turns one kill into
         // a crowd. A guardian is the exception it has to be: it is not summoned by a meal
         // this small, it only leans a quarter of the way toward one it can already smell
@@ -535,6 +578,12 @@ export class World {
             break;
           }
         }
+        // alarmed by a neighbour but with no threat of its own in sight: carry the bolt on
+        if (c.panic > 0.3) {
+          desired = c.angle;
+          throttle = 1.15;
+          break;
+        }
         if (c.species.behavior === 'school') {
           const shoal = this.flock(c, 300);
           if (shoal) {
@@ -543,15 +592,18 @@ export class World {
             break;
           }
         }
-        desired = c.angle + Math.sin(c.wander * 0.7) * 0.9;
-        throttle = 0.5;
+        ({ desired, throttle } = this.idle(c));
       }
     }
 
     // creatures hold to their own depth band, which is what makes a tier feel like a place
+    // eased in over a margin rather than snapped at a line: a hard flip at the band edge
+    // turned every body near a seal into a yo-yo bouncing along it
     const [bandTop, bandBottom] = rangeOf(c.species);
-    if (c.y < bandTop + 90) desired = Math.PI / 2;
-    else if (c.y > bandBottom - 90) desired = -Math.PI / 2;
+    const up = clamp((bandTop + 220 - c.y) / 160, 0, 1);
+    const down = clamp((c.y - (bandBottom - 220)) / 160, 0, 1);
+    if (up > 0) desired += angleDelta(desired, Math.PI / 2) * up;
+    else if (down > 0) desired += angleDelta(desired, -Math.PI / 2) * down;
     if (c.y < 120) desired = Math.PI / 2;
     else if (c.y > DEPTH_MAX - 120) desired = -Math.PI / 2;
     if (Math.abs(c.x) > WORLD_HALF_W - 200) desired = c.x > 0 ? Math.PI : 0;
@@ -572,6 +624,46 @@ export class World {
    * The scan is over every creature, like `nearest` beside it: the world holds ~100 bodies
    * and no spatial index, and one more linear sweep is cheaper than maintaining a grid.
    */
+  /**
+   * The unbothered animal. Moods are rolled on a timer: cruise is the old wander, rest
+   * hangs nearly still with a slow sway, and a dart is a short startled burst on a new
+   * heading. A fed hunter rests far more — the lull after a kill is visible, and it is
+   * also the window in which smaller things can slip past it.
+   */
+  private idle(c: Creature): { desired: number; throttle: number } {
+    if (c.moodT <= 0) {
+      const small = c.genome.size < 30;
+      const roll = Math.random();
+      const restOdds = c.sated > 0 ? 0.6 : c.species.behavior === 'ambush' ? 0.55 : 0.28;
+      if (roll < restOdds) { c.mood = 'rest'; c.moodT = 2 + Math.random() * 4; }
+      else if (small && roll < restOdds + 0.15) {
+        c.mood = 'dart'; c.moodT = 0.25 + Math.random() * 0.3;
+        c.angle += (Math.random() - 0.5) * 2.4;
+      } else { c.mood = 'cruise'; c.moodT = 3 + Math.random() * 5; }
+    }
+    switch (c.mood) {
+      case 'rest':
+        // a slow drift with the nose hunting side to side, which is what a hovering fish does
+        return { desired: c.angle + Math.sin(c.wander * 0.5) * 0.5, throttle: 0.14 };
+      case 'dart':
+        return { desired: c.angle, throttle: 1.15 };
+      default:
+        return { desired: c.angle + Math.sin(c.wander * 0.7) * 0.9, throttle: 0.5 };
+    }
+  }
+
+  /** One fish bolting sets off its neighbours, so a school flees as a school — a flash through the shoal. */
+  private alarm(c: Creature) {
+    const r2 = (180 + c.genome.size * 6) ** 2;
+    for (const o of this.creatures) {
+      if (o === c || o.species.id !== c.species.id || o.panic > 0) continue;
+      if (dist2(c.x, c.y, o.x, o.y) > r2) continue;
+      // inherit the heading so the shoal turns together rather than scattering at random
+      o.panic = 0.9;
+      o.angle += angleDelta(o.angle, c.angle) * 0.6;
+    }
+  }
+
   private flock(c: Creature, radius: number): { heading: number; throttle: number } | null {
     let n = 0, sx = 0, sy = 0, hx = 0, hy = 0;
     let near: Creature | null = null, nd = Infinity;
@@ -754,7 +846,14 @@ export class World {
     const recoil = def.genome.spikes * 3 + def.genome.frill * 2;
     if (recoil > 0 && !whole) att.hp -= recoil;
     const fatal = def.hp <= 0;
-    if (fatal) this.slay(def, att.isPlayer);
+    if (fatal) {
+      this.slay(def, att.isPlayer);
+      // a meal worth the name buys a longer lull; a krill barely registers
+      if (!att.isPlayer) {
+        att.sated = clamp(4 + (def.genome.size / att.genome.size) * 20, 4, 14);
+        att.chase = 0;
+      }
+    }
     this.bites.push({ x: def.x, y: def.y, amount: dmg, fatal,
       onPlayer: def.isPlayer, byPlayer: att.isPlayer, size: def.genome.size });
 

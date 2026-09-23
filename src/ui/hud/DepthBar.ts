@@ -25,12 +25,20 @@ export class DepthBar {
     }
   }
 
+  private lastTop = '';
+  private lastOpen = -1;
+
   update(depth: number, size: number) {
-    for (const seal of this.seals) {
-      const t = BANDS[Number(seal.dataset.gate)];
-      seal.classList.toggle('open', size >= t.gate);
+    const open = BANDS.filter(b => size >= b.gate).length;
+    if (open !== this.lastOpen) {
+      this.lastOpen = open;
+      for (const seal of this.seals) {
+        const t = BANDS[Number(seal.dataset.gate)];
+        seal.classList.toggle('open', size >= t.gate);
+      }
     }
-    this.marker.style.top = `${(depth / DEPTH_MAX) * 100}%`;
+    const top = `${((depth / DEPTH_MAX) * 100).toFixed(1)}%`;
+    if (top !== this.lastTop) { this.lastTop = top; this.marker.style.top = top; }
   }
 
   setVisible(on: boolean) {

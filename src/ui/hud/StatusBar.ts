@@ -20,8 +20,22 @@ export class StatusBar {
     this.element.append(caption);
   }
 
+  private lastPct = -1;
+  private lastText = '';
+
+  // Called every frame; only a changed value reaches the DOM, or each bar is a style
+  // write and a layout invalidation per frame for nothing
   update(ratio: number, hpText?: string) {
-    this.fill.style.width = `${ratio * 100}%`;
-    if (this.text && hpText !== undefined) this.text.textContent = hpText;
+    const pct = Math.round(clamp01(ratio) * 1000) / 10;
+    if (pct !== this.lastPct) {
+      this.lastPct = pct;
+      this.fill.style.width = `${pct}%`;
+    }
+    if (this.text && hpText !== undefined && hpText !== this.lastText) {
+      this.lastText = hpText;
+      this.text.textContent = hpText;
+    }
   }
 }
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));

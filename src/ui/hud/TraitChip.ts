@@ -8,7 +8,14 @@ export class TraitChip {
   private iconName: IconName | null = null;
   private stackEl: HTMLElement | null = null;
 
+  private lastKey = '';
+
   update(trait: TraitEntry) {
+    // every chip is refreshed every frame, and a mutation-heavy run has a dozen or more:
+    // skip the ones that have not changed rather than restyling them all each frame
+    const key = `${trait.name}|${trait.rarity}|${trait.stacks}`;
+    if (key === this.lastKey) return;
+    this.lastKey = key;
     this.element.className = `chip ${trait.rarity}`;
     this.element.title = `${trait.name} — ${trait.desc}`;
 

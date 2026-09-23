@@ -120,19 +120,70 @@ class Game {
     this.app.ticker.add(t => {
       try {
         this.frame(Math.min(t.deltaMS / 1000, 1 / 20));
+        this.sanitise();
       } catch (err) {
         if (!reported) {
           reported = true;
-          console.error('[abyssal] frame threw', err, {
-            phase: this.phase, stage: this.stage, combo: this.combo,
-            x: this.player.x, y: this.player.y, zoom: this.zoom, size: this.player.genome.size,
-          });
+          console.error('[abyssal] frame threw', err, this.snapshot());
+          this.ui.toast(`Frame error: ${String(err).slice(0, 80)} — see console`);
         }
       }
     });
-    this.app.canvas.addEventListener('webglcontextlost', () =>
-      console.error('[abyssal] WebGL context lost', { stage: this.stage, combo: this.combo }));
+    // without preventDefault the browser never offers the context back, and the canvas
+    // stays the flat page colour for the rest of the run while the DOM HUD carries on
+    this.app.canvas.addEventListener('webglcontextlost', e => {
+      e.preventDefault();
+      console.error('[abyssal] WebGL context lost', this.snapshot());
+      this.ui.toast('Graphics context lost — reload the page if the ocean does not return');
+    });
     this.ui.showTitle(() => { this.phase = 'play'; });
+  }
+
+  private snapshot() {
+    const p = this.player;
+    return { phase: this.phase, stage: this.stage, combo: this.combo, zoom: this.zoom,
+      x: p.x, y: p.y, vx: p.vx, vy: p.vy, angle: p.angle, size: p.genome.size,
+      camX: this.camX, camY: this.camY, creatures: this.world.creatures.length };
+  }
+
+  /**
+   * One NaN anywhere in the player or the camera spreads to everything drawn relative to
+   * them — every sprite lands at NaN and the water shader gets NaN uniforms — which is a
+   * blank blue frame with a working HUD over it. Put the last good state back and say so
+   * once, so the next report comes with the numbers that went bad.
+   */
+  private lastGood = { x: 0, y: 260, camX: 0, camY: 260, zoom: 1.3 };
+  private nanReported = false;
+  private sanitise() {
+    const p = this.player;
+    const ok = [p.x, p.y, p.vx, p.vy, p.angle, p.beat, p.bank, p.genome.size,
+      this.camX, this.camY, this.zoom]
+      .every(Number.isFinite);
+    // a creature gone NaN would drag the player's contact maths along with it next frame
+    const badBodies = this.world.creatures.filter(c => !Number.isFinite(c.x + c.y + c.angle));
+    if (ok && !badBodies.length) {
+      this.lastGood = { x: p.x, y: p.y, camX: this.camX, camY: this.camY, zoom: this.zoom };
+      return;
+    }
+    if (!this.nanReported) {
+      this.nanReported = true;
+      console.error('[abyssal] non-finite state', this.snapshot(),
+        badBodies.map(c => ({ id: c.species.id, x: c.x, y: c.y, vx: c.vx, vy: c.vy, angle: c.angle })));
+      this.ui.toast('Recovered from a broken frame — details in the console');
+    }
+    for (const c of badBodies) c.alive = false;
+    if (!ok) {
+      const g = this.lastGood;
+      p.x = g.x; p.y = g.y; p.vx = 0; p.vy = 0;
+      // the swim phase and bank integrate off velocity, so they go NaN with it and never
+      // come back on their own — and the mesh is posed from them
+      if (!Number.isFinite(p.angle)) p.angle = 0;
+      if (!Number.isFinite(p.beat)) p.beat = 0;
+      if (!Number.isFinite(p.bank)) p.bank = 0;
+      if (!Number.isFinite(p.thrust)) p.thrust = 0;
+      if (!Number.isFinite(p.genome.size)) p.genome.size = 18;
+      this.camX = g.camX; this.camY = g.camY; this.zoom = g.zoom;
+    }
   }
 
   private reset() {
@@ -517,7 +568,7 @@ class Game {
   private render(dt: number) {
     const p = this.player;
     // the view opens up a little as you pick up speed
-    const rush = clamp(Math.hypot(p.vx, p.vy) / (p.genome.speed * 1.8), 0, 1);
+    const rush = clamp(Math.hypot(p.vx, p.vy) / (Math.max(1, p.genome.speed) * 1.8), 0, 1);
     const want = this.zoomFor(p.genome.size) * (1 - rush * 0.09);
     this.zoom += (want - this.zoom) * Math.min(1, dt * 2.5);
     // shake only decays in play, so a menu opened mid-hit would hold it frozen and jittering

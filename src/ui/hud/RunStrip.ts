@@ -10,6 +10,13 @@ export class RunStrip {
   private readonly combo = div('combo');
   private readonly comboFill = document.createElement('i');
   private lastScore = 0;
+  // every field is cached: the strip is updated each frame and a DOM write is not free
+  private lastT = -1;
+  private lastBest = -1;
+  private lastBeaten = false;
+  private lastOn = false;
+  private lastLabel = '';
+  private lastW = '';
 
   constructor() {
     this.time.className = 'run-time';
@@ -30,18 +37,30 @@ export class RunStrip {
       this.lastScore = s.score;
     }
     const t = Math.floor(s.elapsed);
-    this.time.textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
-    this.best.textContent = s.best ? `best ${s.best.toLocaleString()}` : '';
-    this.best.classList.toggle('beaten', s.best > 0 && s.score > s.best);
+    if (t !== this.lastT) {
+      this.lastT = t;
+      this.time.textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+    }
+    if (s.best !== this.lastBest) {
+      this.lastBest = s.best;
+      this.best.textContent = s.best ? `best ${s.best.toLocaleString()}` : '';
+    }
+    const beaten = s.best > 0 && s.score > s.best;
+    if (beaten !== this.lastBeaten) { this.lastBeaten = beaten; this.best.classList.toggle('beaten', beaten); }
 
     const on = s.combo > 1;
-    this.combo.classList.toggle('on', on);
+    if (on !== this.lastOn) { this.lastOn = on; this.combo.classList.toggle('on', on); }
     if (on) {
       const mult = s.comboMult.toFixed(2).replace(/\.?0+$/, '');
       const bio = s.comboBiomass > 1 ? ` · +${Math.round((s.comboBiomass - 1) * 100)}% biomass` : '';
-      (this.combo.firstChild as HTMLElement).textContent = `×${mult} chain ${s.combo}${bio}`;
-      this.combo.classList.toggle('hot', s.combo > 10);
-      this.comboFill.style.width = `${s.comboLeft * 100}%`;
+      const label = `×${mult} chain ${s.combo}${bio}`;
+      if (label !== this.lastLabel) {
+        this.lastLabel = label;
+        (this.combo.firstChild as HTMLElement).textContent = label;
+        this.combo.classList.toggle('hot', s.combo > 10);
+      }
+      const w = `${Math.round(s.comboLeft * 100)}%`;
+      if (w !== this.lastW) { this.lastW = w; this.comboFill.style.width = w; }
     }
   }
 

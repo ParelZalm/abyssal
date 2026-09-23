@@ -20,7 +20,8 @@ export class TraitBar {
     }
     for (let i = 0; i < traits.length; i++) this.chips[i].update(traits[i]);
     const n = traits.reduce((a, t) => a + t.stacks, 0);
-    this.label.textContent = n ? `Mutations ${n}` : '';
+    const text = n ? `Mutations ${n}` : '';
+    if (this.label.textContent !== text) this.label.textContent = text;
   }
 
   setVisible(on: boolean) {

@@ -41,25 +41,33 @@ export class StatusPanel {
     );
   }
 
+  private last: Record<string, string> = {};
+  /** Text writes are cached per field: the panel is updated every frame but changes rarely. */
+  private set(key: string, el: HTMLElement, text: string) {
+    if (this.last[key] === text) return;
+    this.last[key] = text;
+    el.textContent = text;
+  }
+
   update(s: HudState) {
     this.hp.update(s.hp / s.hpMax, `${Math.ceil(s.hp)} / ${s.hpMax}`);
     this.food.update(s.food / s.foodMax);
     this.xp.update(s.xp / s.xpNeed);
-    this.stage.textContent = String(s.stage);
-    this.size.textContent = `${s.size.toFixed(0)} cm`;
-    this.depth.textContent = `${depthLabel(s.depth).toLocaleString()} m`;
+    this.set('stage', this.stage, String(s.stage));
+    this.set('size', this.size, `${s.size.toFixed(0)} cm`);
+    this.set('depth', this.depth, `${depthLabel(s.depth).toLocaleString()} m`);
+    this.set('zone', this.zone, placeName(s.depth));
 
-    this.zone.textContent = placeName(s.depth);
-
+    // the gate line used to be rebuilt from fresh elements every frame
     const next = BANDS.find((b, i) => i > 0 && s.size < b.gate);
+    const gateKey = next ? `${next.gate}|${next.name}` : 'open';
+    if (this.last.gate === gateKey) return;
+    this.last.gate = gateKey;
+    const bold = document.createElement('b');
     if (next) {
-      const bold = document.createElement('b');
       bold.textContent = `${next.gate} cm`;
-      this.gate.replaceChildren(
-        'Thermocline sealed — grow to ', bold, ` for ${next.name}`,
-      );
+      this.gate.replaceChildren('Thermocline sealed — grow to ', bold, ` for ${next.name}`);
     } else {
-      const bold = document.createElement('b');
       bold.textContent = 'Every thermocline is open.';
       this.gate.replaceChildren(bold);
     }

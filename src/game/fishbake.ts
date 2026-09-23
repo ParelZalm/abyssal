@@ -32,6 +32,8 @@ export interface Baked {
   back: number;
   /** Half-height of the strip. Constant along its length, so the texture keeps proportion. */
   halfH: number;
+  /** Live views drawing this texture. Only an unused entry may be evicted — see `bakeFish`. */
+  users: number;
 }
 
 const cache = new Map<string, Baked>();
@@ -56,20 +58,42 @@ function key(g: Genome, plan: Plan) {
           g.venom > 0 ? 1 : 0].join('|');
 }
 
+/**
+ * The texture for a genome, counted as in use until `releaseFish` hands it back.
+ *
+ * Eviction used to destroy the oldest entry outright, whether or not a creature was still
+ * drawing it. Around two minutes into a run the cache filled, the next bake freed a live
+ * texture, and Pixi's renderer threw on it every frame from outside the game loop: a blank
+ * blue canvas with the DOM HUD carrying on over it. Now only unused entries are evicted,
+ * and if every entry is on screen the cache simply runs over its size until some free up.
+ */
 export function bakeFish(g: Genome, plan: Plan): Baked {
   const k = key(g, plan);
-  const hit = cache.get(k);
-  if (hit) return hit;
-  const made = paint(g, plan);
-  if (cache.size >= CACHE_MAX) {
-    const oldest = cache.keys().next().value;
-    if (oldest !== undefined) {
-      cache.get(oldest)?.texture.destroy(true);
-      cache.delete(oldest);
-    }
+  let hit = cache.get(k);
+  if (hit) {
+    // re-inserting keeps the map in least-recently-used order for the eviction scan
+    cache.delete(k);
+  } else {
+    hit = paint(g, plan);
+    evict();
   }
-  cache.set(k, made);
-  return made;
+  cache.set(k, hit);
+  hit.users++;
+  return hit;
+}
+
+export function releaseFish(b: Baked) {
+  b.users = Math.max(0, b.users - 1);
+}
+
+function evict() {
+  if (cache.size < CACHE_MAX) return;
+  for (const [k, b] of cache) {
+    if (b.users > 0) continue;
+    b.texture.destroy(true);
+    cache.delete(k);
+    if (cache.size < CACHE_MAX) return;
+  }
 }
 
 /** Drop everything; only used when the renderer goes away. */
@@ -208,7 +232,7 @@ function paint(g: Genome, plan: Plan): Baked {
 
   const tex = renderer.generateTexture({ target: art, resolution: 6, antialias: true });
   art.destroy();
-  return { texture: tex, front, back, halfH };
+  return { texture: tex, front, back, halfH, users: 0 };
 }
 
 /** The dark back that makes a shape read as an animal from above, in two ragged passes. */

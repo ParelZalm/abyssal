@@ -13,7 +13,7 @@
  * mesh and a shared texture, so a school is cheap in memory as well as in draw calls.
  */
 import { Container, MeshSimple, Sprite } from 'pixi.js';
-import { bakeFish, type Baked } from './fishbake';
+import { bakeFish, releaseFish, type Baked } from './fishbake';
 import { PLAN_ART, quintic, R, type Plan } from './form';
 import { menace, type Genome } from './genome';
 import { glowTexture } from './textures';
@@ -113,6 +113,7 @@ export class FishView extends Container {
 
   /** The bloom is not a child, so it does not go down with the rest of the view. */
   destroy(options?: Parameters<Container['destroy']>[0]) {
+    if (this.baked) { releaseFish(this.baked); this.baked = null; }
     if (!this.glow.destroyed) this.glow.destroy({ children: true });
     if (!this.fog.destroyed) this.fog.destroy({ children: true });
     super.destroy(options);
@@ -124,7 +125,11 @@ export class FishView extends Container {
     const men = menace(g);
 
     this.mesh?.destroy();
+    // take the new texture before letting go of the old one, so a rebuild onto the same
+    // genome never leaves the entry at zero users for an eviction to catch
+    const old = this.baked;
     this.baked = bakeFish(g, this.plan);
+    if (old) releaseFish(old);
     const { front, back } = this.baked;
 
     const cols = m.cols;
@@ -210,11 +215,19 @@ export class FishView extends Container {
     const n = this.colX.length;
     const amp = h * m.amp * (0.45 + thrust * 0.75);
     const spineY: number[] = [];
+    // A turn bends the whole body into a C rather than rotating a rigid strip about its
+    // middle: head and tail both fall to the inside of the turn, so the nose leads into it
+    // and the tail sweeps round behind. It is a parabola about the body's midpoint — smooth
+    // everywhere, so it adds no crease at the head the swim wave was built to avoid — and a
+    // bell gets none, because a jelly does not steer by flexing.
+    const x0 = this.colX[0], x1 = this.colX[n - 1];
+    const mid = (x0 + x1) / 2, half = Math.abs(x0 - x1) / 2 || 1;
+    const bend = m.pulse ? 0 : bank * h * 1.25;
     for (let j = 0; j < n; j++) {
       const s = j / (n - 1);
       const env = quintic(s);
-      spineY.push(Math.sin(s * m.waves * Math.PI * 2 - beat) * amp * env
-                  + bank * env * h * 0.3);
+      const u = (this.colX[j] - mid) / half;
+      spineY.push(Math.sin(s * m.waves * Math.PI * 2 - beat) * amp * env + bend * u * u);
     }
     // a bell does not undulate, it contracts: the strip narrows and lengthens on the beat
     const pulse = m.pulse ? 1 + Math.sin(beat) * m.pulse : 1;
