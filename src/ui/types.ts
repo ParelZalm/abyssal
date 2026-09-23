@@ -22,5 +22,7 @@ export interface HudState {
   xp: number; xpNeed: number;
   stage: number; size: number; depth: number;
   traits: TraitEntry[];
+  score: number; best: number; elapsed: number;
+  combo: number; comboMult: number; comboBiomass: number; comboLeft: number;
   danger: number;
 }

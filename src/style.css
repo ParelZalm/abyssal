@@ -165,3 +165,26 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 .toast.on { opacity: 1; }
 .danger { position: absolute; inset: 0; box-shadow: inset 0 0 160px rgba(255,60,50,.55);
   opacity: 0; transition: opacity .2s; }
+
+/* run strip: score, clock, chain — kept to the top edge and translucent so it never sits on prey */
+.run { position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; gap: 14px;
+  min-width: 260px; font-size: 11px; letter-spacing: .08em; color: var(--dim);
+  text-shadow: 0 1px 3px rgba(0,0,0,.8); font-variant-numeric: tabular-nums; }
+.run > b { font-size: 22px; font-weight: 300; color: var(--ink); letter-spacing: .06em;
+  text-align: center; }
+.run > b.bump { animation: score-bump .35s ease-out; }
+.run-time { text-align: right; }
+.run-best.beaten { color: #ffc270; }
+.combo { grid-column: 1 / -1; justify-self: center; width: 220px; display: grid; gap: 4px;
+  text-align: center; font-size: 14px; font-weight: 600; text-transform: uppercase; color: #ffc270;
+  opacity: 0; transition: opacity .2s; }
+.combo.on { opacity: 1; }
+.combo > i { height: 4px; border-radius: 2px; background: #ffc270; justify-self: center;
+  box-shadow: 0 0 6px rgba(255,194,112,.7); }
+@keyframes score-bump { 0% { transform: scale(1.25); color: #fff0d4; } 100% { transform: scale(1); } }
+.traits-label { width: 100%; text-align: right; font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--dim); text-shadow: 0 1px 3px rgba(0,0,0,.8); }
+.traits-label:empty { display: none; }
+.combo.hot { color: #ff9f5a; }
+.combo.hot > i { background: #ff9f5a; box-shadow: 0 0 10px rgba(255,140,70,.9); }

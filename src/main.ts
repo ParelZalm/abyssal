@@ -20,6 +20,17 @@ import { UI } from './ui/UI';
 const POP_SHALLOW = 140;
 const POP_DEEP = 46;
 const FOOD_MAX = 100;
+const COMBO_WINDOW = 3.5;
+const comboMult = (n: number) => Math.min(3, 1 + Math.max(0, n - 1) * 0.25);
+/** Past a 10-kill chain every further kill adds +10% biomass, uncapped: the reward for a long run. */
+const chainBiomass = (n: number) => 1 + Math.max(0, n - 10) * 0.1;
+const BEST_KEY = 'abyssal.best';
+function loadBest() {
+  try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; }
+}
+function saveBest(v: number) {
+  try { localStorage.setItem(BEST_KEY, String(v)); } catch { /* private mode: the run still counts */ }
+}
 
 const PLAYER_SPECIES: Species = {
   id: 'player', name: 'You', behavior: 'hunter', plan: 'wraith', zone: 'sunlit',
@@ -56,6 +67,11 @@ class Game {
   private eaten = 0;
   private deepest = 0;
   private elapsed = 0;
+  private score = 0;
+  /** Kills landed inside the combo window, and the seconds left in it. */
+  private combo = 0;
+  private comboT = 0;
+  private best = loadBest();
   private shake = 0;
   /**
    * Terror, as an attack and a sustain rather than a level.
@@ -75,6 +91,8 @@ class Game {
   private sprinting = false;
   /** Seconds the boost has been held, which is what winds it up. */
   private boostHeld = 0;
+  /** Seconds until another boost kick; stops tapping from being a free speed hack. */
+  private boostCd = 0;
   private hitStop = 0;
   private zoom = 1;
   private camX = 0;
@@ -95,7 +113,25 @@ class Game {
 
     this.reset();
     this.bindInput();
-    this.app.ticker.add(t => this.frame(Math.min(t.deltaMS / 1000, 1 / 20)));
+    // one throw inside the ticker kills the loop for good while DOM input keeps working,
+    // which reads as a blank frozen ocean with a live pause key; log it with the run state
+    // instead so the frame after can carry on
+    let reported = false;
+    this.app.ticker.add(t => {
+      try {
+        this.frame(Math.min(t.deltaMS / 1000, 1 / 20));
+      } catch (err) {
+        if (!reported) {
+          reported = true;
+          console.error('[abyssal] frame threw', err, {
+            phase: this.phase, stage: this.stage, combo: this.combo,
+            x: this.player.x, y: this.player.y, zoom: this.zoom, size: this.player.genome.size,
+          });
+        }
+      }
+    });
+    this.app.canvas.addEventListener('webglcontextlost', () =>
+      console.error('[abyssal] WebGL context lost', { stage: this.stage, combo: this.combo }));
     this.ui.showTitle(() => { this.phase = 'play'; });
   }
 
@@ -132,9 +168,10 @@ class Game {
     this.stage = 1; this.xp = 0; this.food = FOOD_MAX;
     this.taken.clear(); this.takenNames = [];
     this.eaten = 0; this.deepest = 0; this.elapsed = 0; this.shake = 0;
+    this.score = 0; this.combo = 0; this.comboT = 0;
     this.dreadSpike = 0; this.dreadHold = 0;
     this.maxBand = 0; this.hintCd = 0; this.gatesOpen = 0;
-    this.wakeCd = 0; this.sprinting = false; this.boostHeld = 0; this.hitStop = 0;
+    this.wakeCd = 0; this.sprinting = false; this.boostHeld = 0; this.boostCd = 0; this.hitStop = 0;
     this.zoom = this.zoomFor(g.size);
     // the first fill is the exception to spawning off-screen: there is no frame to
     // protect yet, and an empty opening screen is worse than watching the water populate
@@ -242,23 +279,30 @@ class Game {
     const wants = k.has('shift') || k.has(' ') || this.mouse.down;
     const sprinting = wants && this.food > 1 && throttle > 0.1;
     const jet = 1 + g.jet * 0.4;
-    if (sprinting && !this.sprinting) {
-      p.vx += Math.cos(p.angle) * g.speed * 0.85 * jet;
-      p.vy += Math.sin(p.angle) * g.speed * 0.85 * jet;
+    this.boostCd = Math.max(0, this.boostCd - dt);
+    if (sprinting && !this.sprinting && this.boostCd <= 0) {
+      // the kick is the boost: a hard shove up front, paid for in one bite of fullness, so a
+      // lunge at prey is cheap and a long chase is not
+      this.boostCd = 0.45;
+      this.food = Math.max(0, this.food - 1.5);
+      p.vx += Math.cos(p.angle) * g.speed * 1.6 * jet;
+      p.vy += Math.sin(p.angle) * g.speed * 1.6 * jet;
       p.beat = Math.PI * 0.5;
       this.fx.burst(p.mouthX, p.mouthY, 0xd8fff2, 7, 110, p.radius * 0.22);
       this.shake = Math.min(6, this.shake + 3);
     }
     this.sprinting = sprinting;
-    // holding winds the boost up over the first second rather than snapping to full
+    // front-loaded: the surge peaks on the press and settles to a cruising sprint over
+    // ~0.6 s, which is what makes it read as a boost rather than a second gear
     this.boostHeld = sprinting ? Math.min(1.2, this.boostHeld + dt) : 0;
-    const wind = sprinting ? (1.45 + 0.55 * clamp(this.boostHeld, 0, 1)) * (1 + g.jet * 0.12) : 1;
+    const surge = 1 - clamp(this.boostHeld / 0.6, 0, 1);
+    const wind = sprinting ? (1.55 + 0.75 * surge * surge) * (1 + g.jet * 0.12) : 1;
 
     const drive = throttle * wind;
     if (this.useMouse) p.drive(dt, desired, drive);
     else p.propel(dt, turnInput, drive);
     if (sprinting) {
-      const cost = 6.5 * wind * Math.max(0.4, 1 - g.jet * 0.2);
+      const cost = 3.2 * wind * Math.max(0.4, 1 - g.jet * 0.2);
       this.food = Math.max(0, this.food - cost * dt * Math.abs(throttle));
     }
 
@@ -276,6 +320,8 @@ class Game {
 
     p.hpMax = maxHp(g);
     p.hp = Math.min(p.hp, p.hpMax);
+    // new water is worth points once, so diving pays but hovering at a depth does not
+    if (p.y > this.deepest) this.score += (p.y - this.deepest) * 0.5;
     this.deepest = Math.max(this.deepest, p.y);
   }
 
@@ -318,8 +364,15 @@ class Game {
     const gain = this.world.playerGain;
     if (gain > 0) {
       this.eaten++;
-      this.xp += gain;
-      this.food = Math.min(FOOD_MAX, this.food + gain * 0.85);
+      // chained kills multiply: rewards a hunt that flows, capped so a school is not a jackpot
+      this.combo = this.comboT > 0 ? this.combo + 1 : 1;
+      this.comboT = COMBO_WINDOW;
+      this.score += Math.round(gain * 10 * comboMult(this.combo));
+      this.xp += gain * chainBiomass(this.combo);
+      // prey pay by their own size but upkeep grows with yours, so without a floor small fish
+      // stop being worth chasing mid-run and hunger spirals; every kill buys a few seconds
+      const upkeep = this.player.genome.metabolism * (1 + this.player.genome.size * 0.008);
+      this.food = Math.min(FOOD_MAX, this.food + Math.max(gain * 0.95, upkeep * 5) + 3);
       this.player.genome.size += gain * 0.0035;
       this.fx.ring(this.player.x, this.player.y, hsl(this.player.genome.accentHue, 0.8, 0.7),
         this.player.radius * 1.6);
@@ -385,10 +438,15 @@ class Game {
     // ram ventilation buys its cheap metabolism by needing flow over the gills: hang
     // still on it and you burn what you saved, which is the cost the card promises
     const idle = g.ram > 0 && Math.hypot(this.player.vx, this.player.vy) < g.speed * 0.25;
-    const burn = g.metabolism * (1.2 + g.size * 0.014) * (idle ? 1.8 : 1);
+    // near-empty the body throttles down: running low slows the fall instead of speeding
+    // the death, which leaves room to hunt your way back out
+    const starving = this.food < FOOD_MAX * 0.25 ? 0.55 : 1;
+    const burn = g.metabolism * (1 + g.size * 0.008) * (idle ? 1.8 : 1) * starving;
     this.food = Math.max(0, this.food - burn * dt);
-    if (this.food <= 0) this.player.hp -= 5 * dt;
+    if (this.food <= 0) this.player.hp -= 3 * dt;
     this.shake = Math.max(0, this.shake - dt * 22);
+    this.comboT = Math.max(0, this.comboT - dt);
+    if (this.comboT <= 0) this.combo = 0;
     // the spike is the turn of the head and is gone in half a second; the hold is the hunt,
     // and it only lets go once nothing is chasing you any more
     this.dreadSpike = Math.max(0, this.dreadSpike - dt * 2.2);
@@ -438,7 +496,12 @@ class Game {
     this.phase = 'over';
     this.fx.burst(this.player.x, this.player.y, won ? 0xffe28a : 0xff6a58, 40, 260, 5);
     this.player.view.show(false, 1, 0xffffff);
+    if (won) this.score += 5000;
+    const final = Math.round(this.score);
+    const record = final > this.best;
+    if (record) { this.best = final; saveBest(final); }
     const stats = [
+      record ? `${final.toLocaleString()} points — new best` : `${final.toLocaleString()} points (best ${this.best.toLocaleString()})`,
       `Stage ${this.stage}`,
       `${BANDS[this.maxBand].name}`,
       `${this.player.genome.size.toFixed(0)} cm long`,
@@ -457,8 +520,10 @@ class Game {
     const rush = clamp(Math.hypot(p.vx, p.vy) / (p.genome.speed * 1.8), 0, 1);
     const want = this.zoomFor(p.genome.size) * (1 - rush * 0.09);
     this.zoom += (want - this.zoom) * Math.min(1, dt * 2.5);
-    const sx = this.shake ? (Math.random() - 0.5) * this.shake : 0;
-    const sy = this.shake ? (Math.random() - 0.5) * this.shake : 0;
+    // shake only decays in play, so a menu opened mid-hit would hold it frozen and jittering
+    const shake = this.phase === 'play' ? this.shake : 0;
+    const sx = shake ? (Math.random() - 0.5) * shake : 0;
+    const sy = shake ? (Math.random() - 0.5) * shake : 0;
 
     // follow with a little lead in the direction of travel, so the camera breathes
     const lead = 0.18;
@@ -515,6 +580,11 @@ class Game {
         const vis = clamp(1 - (d - sense - own) / (sense * 0.55), 0, 1);
         alpha = clamp(light * 1.35 + vis, 0.02, 1);
       }
+      // an off-screen view is not placed (see `World.integrate`), so it still sits wherever
+      // it left the frame; reveal it without moving it and it draws there for a frame and
+      // then snaps across the screen — worst along a seal, where band-holding bodies bob
+      // across the frame edge all the time
+      if (seen && !c.view.visible) c.syncView();
       c.view.show(seen, alpha * c.emergence, tint);
     }
 
@@ -551,7 +621,10 @@ class Game {
       food: this.food, foodMax: FOOD_MAX,
       xp: this.xp, xpNeed: this.xpNeed,
       stage: this.stage, size: p.genome.size, depth: p.y,
-      traits: this.takenNames, danger: this.phase === 'over' ? 0 : dread,
+      traits: this.takenNames,
+      score: Math.round(this.score), best: this.best, elapsed: this.elapsed,
+      combo: this.combo, comboMult: comboMult(this.combo), comboBiomass: chainBiomass(this.combo), comboLeft: this.comboT / COMBO_WINDOW,
+      danger: this.phase === 'over' ? 0 : dread,
     });
   }
 }

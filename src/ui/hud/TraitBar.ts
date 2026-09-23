@@ -5,6 +5,9 @@ import { TraitChip } from './TraitChip';
 export class TraitBar {
   readonly element = div('traits');
   private chips: TraitChip[] = [];
+  private readonly label = div('traits-label');
+
+  constructor() { this.element.append(this.label); }
 
   update(traits: TraitEntry[]) {
     while (this.chips.length > traits.length) {
@@ -16,6 +19,8 @@ export class TraitBar {
       this.element.append(chip.element);
     }
     for (let i = 0; i < traits.length; i++) this.chips[i].update(traits[i]);
+    const n = traits.reduce((a, t) => a + t.stacks, 0);
+    this.label.textContent = n ? `Mutations ${n}` : '';
   }
 
   setVisible(on: boolean) {

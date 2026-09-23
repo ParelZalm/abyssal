@@ -3,6 +3,7 @@ import { DangerIndicator } from './DangerIndicator';
 import { DepthBar } from './DepthBar';
 import { GateLabel } from './GateLabel';
 import { StatusPanel } from './StatusPanel';
+import { RunStrip } from './RunStrip';
 import { Toast } from './Toast';
 import { TraitBar } from './TraitBar';
 
@@ -14,6 +15,7 @@ export class Hud {
   private readonly traits = new TraitBar();
   private readonly depth = new DepthBar();
   private readonly gate = new GateLabel();
+  private readonly run = new RunStrip();
   private readonly toast = new Toast();
   private readonly danger = new DangerIndicator();
 
@@ -23,6 +25,7 @@ export class Hud {
     this.element.append(
       this.status.element,
       this.traits.element,
+      this.run.element,
       this.depth.element,
       this.gate.element,
       this.toast.element,
@@ -34,6 +37,7 @@ export class Hud {
   setChrome(on: boolean) {
     this.status.setVisible(on);
     this.traits.setVisible(on);
+    this.run.setVisible(on);
     this.depth.setVisible(on);
     if (!on) this.gate.hide();
   }
@@ -41,6 +45,7 @@ export class Hud {
   update(s: HudState) {
     this.status.update(s);
     this.traits.update(s.traits);
+    this.run.update(s);
     this.depth.update(s.depth, s.size);
     this.danger.update(s.danger);
   }
