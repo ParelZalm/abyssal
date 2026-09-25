@@ -11,7 +11,7 @@ import { lightAt, Water, waterColor } from './game/water';
 import { riserFor, type Species } from './game/species';
 import { bandAt, BANDS, depthLabel, descentLimit, FINAL_GUARDIAN, nextGate,
          placeName } from './game/zones';
-import { boostModsOf, burnOf, swallowHealOf, SYNERGIES } from './game/organs';
+import { boostModsOf, burnOf, POISE_MAX, swallowHealOf, SYNERGIES } from './game/organs';
 import { draftTraits, type Trait } from './game/traits';
 import { clamp, dist2, hsl, lerp, rgb, Rng } from './game/util';
 import { Creature, DEPTH_MAX, speciesById, World } from './game/world';
@@ -116,6 +116,8 @@ class Game {
   /** Seconds until another boost kick; stops tapping from being a free speed hack. */
   private boostCd = 0;
   private hitStop = 0;
+  /** Whether a lurking body was wound to full last frame, so the cue fires on the edge. */
+  private poised = false;
   private zoom = 1;
   private camX = 0;
   private camY = 0;
@@ -250,7 +252,7 @@ class Game {
     this.dreadSpike = 0; this.dreadHold = 0;
     this.maxBand = 0; this.hintCd = 0; this.gatesOpen = 0;
     this.overstay = BANDS.map(() => 0); this.risen.clear();
-    this.wakeCd = 0; this.sprinting = false; this.boostHeld = 0; this.boostCd = 0; this.hitStop = 0;
+    this.wakeCd = 0; this.sprinting = false; this.poised = false; this.boostHeld = 0; this.boostCd = 0; this.hitStop = 0;
     this.zoom = this.zoomFor(g.size);
     // the first fill is the exception to spawning off-screen: there is no frame to
     // protect yet, and an empty opening screen is worse than watching the water populate
@@ -372,6 +374,11 @@ class Game {
       this.shake = Math.min(6, this.shake + 3);
     }
     this.sprinting = sprinting;
+    // a lurking body has nothing on the HUD to say it is wound; one ring as the poise tops
+    // out is the tell that the next bite is the big one
+    const poised = p.poise >= POISE_MAX;
+    if (poised && !this.poised) this.fx.ring(p.x, p.y, 0xe8f0ff, p.radius * 2.2);
+    this.poised = poised;
     // front-loaded: the surge peaks on the press and settles to a cruising sprint over
     // ~0.6 s, which is what makes it read as a boost rather than a second gear
     this.boostHeld = sprinting ? Math.min(1.2, this.boostHeld + dt) : 0;

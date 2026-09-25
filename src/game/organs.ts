@@ -24,6 +24,28 @@ export interface WoundCtx {
   whole: boolean;
 }
 
+/**
+ * How a body moves through the water, as multipliers and constants on `Creature.propel`.
+ * Everything at its default is the fish the physics was tuned for. Pure in the genome, so
+ * the creature caches it beside its organs rather than folding it every step.
+ */
+export interface SwimMods {
+  /** Share of turning authority kept at full speed. A keeled fish keeps 0.55. */
+  hold: number;
+  /** Forward drag, always. */
+  drag: number;
+  /** Forward drag again while not driving — how short the glide is. */
+  coast: number;
+  /** Continuous stroke thrust. */
+  stroke: number;
+  /** Seconds between mantle pulses; 0 for a body that does not pulse. */
+  pulseEvery: number;
+  /** A pulse's kick, as a multiple of cruise speed. */
+  pulseKick: number;
+  /** Downward drift while not driving, world units per second squared. */
+  sink: number;
+}
+
 /** The boost as three multipliers on the player's own numbers, all 1 with no organ. */
 export interface BoostMods {
   /** The opening impulse. */
@@ -60,7 +82,10 @@ export interface Organ {
   /** How far the mouth draws in prey, given whether it would go down whole. */
   gulp?: (g: Genome, base: number, whole: boolean) => number;
   /** Damage a bite that tears, rather than swallows, deals before armour. */
-  damage?: (g: Genome, base: number) => number;
+  damage?: (c: Creature, base: number) => number;
+  /** How hard this body is to notice, 0..1 — the genome's stealth before any organ. */
+  stealth?: (c: Creature, base: number) => number;
+  swim?: (g: Genome, m: SwimMods) => void;
   /** Seconds between bites. */
   biteRate?: (g: Genome, base: number) => number;
   /** Damage this body takes from a defender's recoil — spines, frill, the urchin's plate. */
@@ -80,6 +105,9 @@ function envenom(def: Creature, att: Creature, dps: number) {
   def.poisonT = 4;
   def.poisonByPlayer = att.isPlayer;
 }
+
+/** Seconds of stillness a lurking body can bank. At 2, a bite hits 2.6 times as hard. */
+export const POISE_MAX = 2;
 
 /**
  * Recoil off a defender's organ, through the attacker's own `recoil` modifiers. Returns
@@ -151,7 +179,7 @@ export const ORGANS: Organ[] = [
     // weapon, so a bite into anything that has to be torn barely marks it — a filter
     // feeder that meets a fish its own size has to leave, not fight
     gulp: (g, base, whole) => whole ? base * (1.8 + g.filter * 0.7) : base,
-    damage: (_g, base) => base * 0.4 }),
+    damage: (_c, base) => base * 0.4 }),
 
   O({ id: 'crush', when: g => g.crush > 0,
     // a pharynx that cracks shell: plate does not slow it and a spined body does not hurt
@@ -160,6 +188,37 @@ export const ORGANS: Organ[] = [
     armour: () => 0,
     recoil: () => 0,
     biteRate: (_g, base) => base * 1.8 }),
+
+  // ---------------------------------------------------------------- locomotion
+  // Parameter shapes on the one swim model, not new physics: each trades one of the
+  // things `propel` does for free — the glide, the steady stroke, the need to move at all.
+
+  O({ id: 'eel', when: g => g.eel > 0,
+    // the whole body is the fin, so turning does not fall away with speed the way a keeled
+    // fish's does — an eel can cut inside anything it is chasing. Nothing carries it either:
+    // stop swimming and the water stops you, which is the glide off every boost gone
+    swim: (_g, m) => { m.hold = 1; m.coast *= 3.5; } }),
+
+  O({ id: 'mantle', when: g => g.mantle > 0,
+    // a squid's stroke is a squeeze: most of the thrust arrives at once, then the body
+    // coasts on a mantle that is all streamline. Tuned so a held throttle averages what a
+    // plain fish cruises at (122 against 119 at the hatchling's 150) while swinging from
+    // about half that to half again: the speed is not more, it comes in beats, and a
+    // chase is timed to them
+    swim: (_g, m) => { m.stroke *= 0.3; m.drag *= 0.75; m.pulseEvery = 0.85; m.pulseKick = 1; } }),
+
+  O({ id: 'lurk', when: g => g.lurk > 0,
+    // stillness is the weapon. Poise builds while the body is not driving — intent, not
+    // speed, because the sink moves it and a sinking ambusher is still waiting — and it
+    // spends on the first bite that lands. Moving drains it slowly, so a lunge from full
+    // poise arrives with most of it
+    swim: (_g, m) => { m.sink = 60; },
+    onTick: (c, dt) => {
+      c.poise = c.thrust < 0.15 ? Math.min(POISE_MAX, c.poise + dt) : Math.max(0, c.poise - dt * 0.6);
+    },
+    stealth: (c, base) => base + 0.35 * Math.min(1, c.poise / (POISE_MAX * 0.75)),
+    damage: (c, base) => base * (1 + 0.8 * c.poise),
+    onWound: att => { att.poise = 0; } }),
 
   // ---------------------------------------------------------------- synergies
   O({ id: 'toxiclure', name: 'Toxic Lure', when: g => g.lure > 0 && g.venom > 0,
@@ -283,8 +342,20 @@ export function gulpOf(c: Creature, base: number, whole: boolean) {
 
 export function damageOf(c: Creature, base: number) {
   let d = base;
-  for (const o of c.organs) if (o.damage) d = o.damage(c.genome, d);
+  for (const o of c.organs) if (o.damage) d = o.damage(c, d);
   return d;
+}
+
+export function stealthOf(c: Creature) {
+  let s = c.genome.stealth;
+  for (const o of c.organs) if (o.stealth) s = o.stealth(c, s);
+  return s;
+}
+
+export function swimOf(g: Genome, organs: Organ[]): SwimMods {
+  const m = { hold: 0.55, drag: 1, coast: 1, stroke: 1, pulseEvery: 0, pulseKick: 0, sink: 0 };
+  for (const o of organs) o.swim?.(g, m);
+  return m;
 }
 
 export function biteRateOf(c: Creature, base: number) {

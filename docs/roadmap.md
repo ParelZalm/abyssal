@@ -82,9 +82,10 @@ change *what you do*, each an entry in `organs.ts` plus paint:
   the simulation, so "eats jellies safely" had nothing to protect against; the crusher's
   safety is from spines and frill. The two can be taken together; if a mouth should be one
   or the other, the draft needs an exclusion rule it does not have.
-- **Locomotion.** Eel body: turns on the spot, no glide. Jet body: pulses on a cooldown.
-  Ambush body: nearly still, huge bite, sinks when idle. The swim physics already
-  separates thrust, drag and turn, so these are parameter shapes more than new code.
+- ~~**Locomotion.**~~ Done: Anguilliform Body (`eel`), Mantle Pump (`mantle`) and Lie in
+  Wait (`lurk`), through a `swim` hook on `Creature.propel` and a `stealth` hook. No
+  species carries them yet; the Ribbon Eel and the Anglerfish are the obvious first
+  NPCs to give them to, once the player versions have been played.
 - **Sense modes.** Electroreception that sees through darkness at short range, against
   big eyes that see far but go blind below the twilight.
 - **Costs on apex cards.** Bigger jaw lowers turn, plate raises metabolism. Right now the
@@ -125,5 +126,5 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 1. ~~Two or three more synergies~~ — done; Ballistic once the boost is published.
 2. ~~The shallows clock~~ — done.
 3. ~~The codex~~ — done.
-4. Diet (done) and locomotion organs, which make run two differ from run one.
+4. ~~Diet and locomotion organs~~ — done.
 5. Transformations, then the draft reading synergies once there are enough to read.

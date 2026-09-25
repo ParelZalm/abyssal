@@ -405,12 +405,17 @@ export function formFor(g: Genome, plan: Plan): Form {
   return {
     ...base,
     // segments stretch the trunk; armour and jaw thicken it
-    len: base.len * (1 + g.segments * 0.06),
+    len: base.len * (1 + g.segments * 0.06 + Math.min(1, g.eel) * 0.3),
     // and speed thins it: a fast fish is a slender fish, because drag goes with frontal
     // area. Every `drive` term below is 1 at the hatchling's cruise, so a base genome
     // comes out of here with exactly its plan's own proportions.
     width: base.width * (1 + Math.min(0.3, armourOf(g) * 0.02) + Math.min(0.12, g.coral * 0.04)
-      + Math.min(0.4, g.bulk * 0.4) + Math.min(0.16, burn * 0.09)) * (1.08 - drive * 0.08),
+      + Math.min(0.4, g.bulk * 0.4) + Math.min(0.16, burn * 0.09)) * (1.08 - drive * 0.08)
+      // an eel is a ribbon, a mantle a bell, a lurker a flattened bottom-dweller
+      * (1 - Math.min(1, g.eel) * 0.22) * (1 + Math.min(1, g.mantle) * 0.1)
+      * (1 + Math.min(1, g.lurk) * 0.22),
+    // both the bell and the lurker's broad head are blunt: the swell comes early
+    fore: base.fore * (1 - Math.min(1, g.mantle) * 0.2) * (1 - Math.min(1, g.lurk) * 0.3),
     // a longer run-out to the tail, so the taper starts earlier and the whole body reads
     // as swept rather than just the fin
     aft: base.aft * (0.92 + drive * 0.08),
@@ -423,14 +428,17 @@ export function formFor(g: Genome, plan: Plan): Form {
     // by a quarter as much.
     cheek: base.cheek + (Math.max(0, g.jaw - 0.3) * 0.16 + g.gape * 0.24
       + Math.min(0.2, burn * 0.13)) * (base.trunk > 0 ? 0.25 : 1),
-    fluke: base.fluke * (0.75 + g.finSize * 0.3) * (0.7 + drive * 0.3),
+    // an eel drives with the whole body and has almost no tail of its own
+    fluke: base.fluke * (0.75 + g.finSize * 0.3) * (0.7 + drive * 0.3)
+      * (1 - Math.min(1, g.eel) * 0.45) * (1 - Math.min(1, g.lurk) * 0.2),
     // and a deeper fork with it: the scythe tail is what an animal that actually cruises
     // has, and a paddle is what something that lurks has. This is the channel that makes
     // speed legible at a glance — fin length alone was too subtle to read.
     fork: Math.min(1, base.fork * (0.8 + g.tailSplit * 0.6) * (0.75 + drive * 0.25)),
     // thrust is a long fluke on a narrow wrist, so speed takes the peduncle in as it
     // lets the fluke out; a slow animal has neither
-    peduncle: base.peduncle * (1 - Math.min(0.3, g.finSize * 0.1)) * (1.3 - drive * 0.3),
+    peduncle: base.peduncle * (1 - Math.min(0.3, g.finSize * 0.1)) * (1.3 - drive * 0.3)
+      * (1 + Math.min(1, g.eel) * 0.8),
   };
 }
 

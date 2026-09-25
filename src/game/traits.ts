@@ -136,6 +136,24 @@ export const TRAITS: Trait[] = [
     maxStacks: 1,
     apply: g => { g.crush += 1; g.bite *= 1.15; } }),
 
+  // ------------------------------------------------------------ locomotion
+  // How the body moves rather than how fast: each gives up something the swim model
+  // otherwise does for free, so the card is a way to play and not a number.
+  T({ id: 'anguilliform', name: 'Anguilliform Body', rarity: 'rare', icon: 'coil', minStage: 2,
+    desc: 'Swim like an eel: full turning at any speed, but you stop the moment you stop swimming.',
+    maxStacks: 1,
+    apply: g => { g.eel += 1; g.turn *= 1.2; g.segments += 2; } }),
+
+  T({ id: 'mantle', name: 'Mantle Pump', rarity: 'rare', icon: 'bell', minStage: 2,
+    desc: 'Swim in pulses: a hard kick every 0.85 s and a long glide between, with little steady thrust.',
+    maxStacks: 1,
+    apply: g => { g.mantle += 1; } }),
+
+  T({ id: 'lurk', name: 'Lie in Wait', rarity: 'rare', icon: 'crouch', minStage: 2,
+    desc: 'Hold still to fade and wind up: the next bite hits up to 2.6× as hard. You sink when idle and swim 20% slower.',
+    maxStacks: 1,
+    apply: g => { g.lurk += 1; g.speed *= 0.8; g.metabolism *= 0.85; } }),
+
   // ---------------------------------------------------- reef organs (rare)
   T({ id: 'beak', name: 'Parrot Beak', rarity: 'common', icon: 'jaw',
     desc: '+30% bite, and it chews through 2 points of armour.',

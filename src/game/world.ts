@@ -2,8 +2,8 @@ import { Container } from 'pixi.js';
 import { FishView } from './fishview';
 import { PLAN_ART } from './form';
 import { armourOf, biteDamage, maxHp, type Genome } from './genome';
-import { armourAgainst, biteRateOf, damageOf, gulpOf, lureRangeOf, organsOf, tick as tickOrgans,
-         wound, type Organ } from './organs';
+import { armourAgainst, biteRateOf, damageOf, gulpOf, lureRangeOf, organsOf, stealthOf, swimOf,
+         tick as tickOrgans, wound, type Organ, type SwimMods } from './organs';
 import { genomeFor, hunts, rangeOf, rollSpecies, SPECIES, type Species } from './species';
 import { BANDS, bandAt } from './zones';
 import { angleDelta, clamp, dist2, lerp, Rng, TAU } from './util';
@@ -126,17 +126,25 @@ export class Creature {
   quarry: Creature | null = null;
   /** The organs this body carries — see `organs.ts`. Refreshed whenever the genome is. */
   organs: Organ[];
+  /** How this body moves, folded from its organs. Cached with them. */
+  swim: SwimMods;
+  /** Seconds until the mantle can pulse again. */
+  pulseT = 0;
+  /** Seconds of stillness banked by a lurking body, spent on its next bite. */
+  poise = 0;
 
   constructor(public species: Species, public genome: Genome) {
     this.hpMax = maxHp(genome);
     this.hp = this.hpMax;
     this.organs = organsOf(genome);
+    this.swim = swimOf(genome, this.organs);
     this.view = new FishView(genome, species.plan);
   }
 
   /** Call after a genome change, beside `view.rebuild`: a new organ has to act as well as show. */
   refreshOrgans() {
     this.organs = organsOf(this.genome);
+    this.swim = swimOf(this.genome, this.organs);
   }
 
   /** Where the mouth actually is — bites and gulps are measured from here. */
@@ -181,7 +189,8 @@ export class Creature {
   private agility() {
     const g = this.genome;
     const speed = Math.hypot(this.vx, this.vy);
-    return g.turn * (0.55 + 0.45 / (1 + speed / (Math.max(1, g.speed) * 0.8)));
+    const hold = this.swim.hold;
+    return g.turn * (hold + (1 - hold) / (1 + speed / (Math.max(1, g.speed) * 0.8)));
   }
 
   /**
@@ -198,19 +207,37 @@ export class Creature {
     this.bank += (clamp(dt > 0 ? turn / dt / Math.max(0.01, g.turn) : 0, -1, 1) - this.bank) *
       Math.min(1, dt * 7);
 
+    const m = this.swim;
     const speed = Math.hypot(this.vx, this.vy);
-    this.beat += dt * (3.4 + Math.abs(throttle) * 5.5 + (speed / top) * 3.5);
-    // a stroke pushes; backing up is a steady scull, not a beat
-    const stroke = throttle > 0 ? 0.62 + 0.62 * Math.max(0, Math.sin(this.beat)) : 1;
-    const accel = top * DRAG_FWD * throttle * stroke;
-    this.vx += Math.cos(this.angle) * accel * dt;
-    this.vy += Math.sin(this.angle) * accel * dt;
-
     const fx = Math.cos(this.angle), fy = Math.sin(this.angle);
+    if (m.pulseEvery > 0) {
+      // one beat per pulse, and the kick lands on its crest, so the bell contracts as it
+      // fires rather than at whatever phase the swim rate had wandered to
+      this.beat += dt * TAU / m.pulseEvery;
+      this.pulseT -= dt;
+      if (throttle > 0.3 && this.pulseT <= 0) {
+        this.pulseT = m.pulseEvery;
+        const kick = top * m.pulseKick * Math.min(1, throttle);
+        this.vx += fx * kick;
+        this.vy += fy * kick;
+        this.beat = Math.PI * 0.5;
+      }
+    } else {
+      this.beat += dt * (3.4 + Math.abs(throttle) * 5.5 + (speed / top) * 3.5);
+    }
+    // a stroke pushes; backing up is a steady scull, not a beat
+    const stroke = (throttle > 0 ? 0.62 + 0.62 * Math.max(0, Math.sin(this.beat)) : 1) * m.stroke;
+    const accel = top * DRAG_FWD * throttle * stroke;
+    this.vx += fx * accel * dt;
+    this.vy += fy * accel * dt;
+    const idle = Math.abs(throttle) < 0.1;
+    if (idle && m.sink > 0) this.vy += m.sink * dt;
+
     let fwd = this.vx * fx + this.vy * fy;
     let lat = -this.vx * fy + this.vy * fx;
     // flaring to stop bites much harder than coasting does
-    const braking = throttle < 0 && fwd > 0 ? DRAG_FWD * 2.4 : DRAG_FWD;
+    const braking = (throttle < 0 && fwd > 0 ? DRAG_FWD * 2.4 : DRAG_FWD * m.drag) *
+      (idle ? m.coast : 1);
     fwd *= Math.exp(-braking * dt);
     lat *= Math.exp(-DRAG_LAT * dt);
     this.vx = fx * fwd - fy * lat;
@@ -585,7 +612,7 @@ export class World {
       default: {
         const threat = this.nearest(c, sense, o => o !== c && o.preysOn(c));
         if (threat) {
-          const noticed = 1 - (threat.isPlayer ? clamp(threat.genome.stealth, 0, 0.8) : 0);
+          const noticed = 1 - (threat.isPlayer ? clamp(stealthOf(threat), 0, 0.8) : 0);
           if (this.rngLike(c) < noticed) {
             // straight-line flight is what a pursuer with a lead angle eats; prey that cuts
             // side to side costs it the turn every time. Small bodies jink hardest
@@ -860,7 +887,7 @@ export class World {
    */
   private notices(hunter: Creature, o: Creature): boolean {
     if (!hunter.species.guardian) return true;
-    const shy = o.isPlayer ? clamp(o.genome.stealth, 0, 1) : 0;
+    const shy = o.isPlayer ? clamp(stealthOf(o), 0, 1) : 0;
     return o.genome.size >= noticeSize(hunter.species.zone) * (1 + shy * 0.5);
   }
 

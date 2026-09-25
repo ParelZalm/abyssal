@@ -24,6 +24,10 @@ export interface Genome {
   // diet — organs that change what you can eat, not how hard you hit it
   filter: number;      // gill rakers: sieve small prey from afar, but a feeble bite on large
   crush: number;       // crushing pharynx: armour and recoil mean nothing, but it snaps slowly
+  // locomotion — organs that change how the body moves, not how fast
+  eel: number;         // anguilliform body: full turning at any speed, no glide
+  mantle: number;      // mantle pump: swims in hard pulses with a glide between
+  lurk: number;        // lie in wait: stillness hides you and winds up the next bite
 
   // morphology — purely visual, but every trait nudges it so the fish reads as evolved
   hue: number;
@@ -58,6 +62,7 @@ export function baseGenome(): Genome {
     size: 14, speed: 150, turn: 4.2, bite: 6, sense: 340, armor: 0,
     regen: 0.6, metabolism: 1, stealth: 0, gulp: 1, lifesteal: 0, pen: 0, ram: 0,
     venom: 0, lure: 0, claws: 0, jet: 0, coral: 0, frill: 0, filter: 0, crush: 0,
+    eel: 0, mantle: 0, lurk: 0,
     hue: 30, accentHue: 200, finSize: 1, tailSplit: 0.35, spikes: 0,
     jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0,
     photophores: 0, eyeAdapt: 0, gape: 0, veil: 0, bulk: 0, barbels: 0,

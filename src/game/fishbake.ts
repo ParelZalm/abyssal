@@ -86,6 +86,7 @@ function key(g: Genome, plan: Plan) {
           g.lure > 0 ? 1 : 0, Math.min(3, g.claws),
           Math.min(3, g.coral), Math.min(3, g.frill), g.jet > 0 ? 1 : 0,
           g.venom > 0 ? 1 : 0, Math.min(2, g.filter), g.crush > 0 ? 1 : 0,
+          g.eel > 0 ? 1 : 0, g.mantle > 0 ? 1 : 0, g.lurk > 0 ? 1 : 0,
           // a synergy's threshold can fall inside one bucket of the fields above — Urchin's
           // armour test sits mid-step — so the paint's own predicate goes in whole
           synergiesOf(g).join('+')].join('|');
@@ -221,13 +222,14 @@ function paint(g: Genome, plan: Plan): Baked {
   }
   const frill = g.frill > 0 ? widest * 0.3 : 0;
   const veiling = widest * g.veil * 1.5;
+  const ribbon = g.eel > 0 ? widest * 0.45 : 0;
   // the longest rim thorn: 0.8 of the half-width out, then up to 0.63 of it again
   const urchin = hasSynergy(g, 'urchin') ? widest * 0.65 * urchinReach(g) : 0;
   // the bulb's halo is measured off the bulb, not guessed: the toxic and ghost halos both
   // reach past it, and art outside the pinning rect widens the texture under the mesh
   const L = g.lure > 0 ? lureAt(g, f) : null;
   const halfH = Math.max(widest * (1 + wob), caudal, arms, finReach, widest + frill,
-                         widest + veiling, widest + urchin,
+                         widest + veiling, widest + urchin, widest + ribbon,
                          L ? -L.y + L.r * L.halo : 0) * 1.08 + R * 0.1;
   // a lure and a barbel both hang out in front of the face, so the strip has to be longer
   // than the body. Whichever reaches further sets the bound.
@@ -243,6 +245,7 @@ function paint(g: Genome, plan: Plan): Baked {
   // --- behind the body ---------------------------------------------------
   if (A.arms > 0 && !rigged) tentacles(art, f, pal, A, g);
   if (g.veil > 0) veil(art, f, pal, g, seed);
+  if (g.eel > 0) ribbonFin(art, f, pal, seed);
   if (A.blunt > 0) bluntSnout(art, f, pal, A);
   if (A.tail === 'fluke') fluke(art, f, pal, A);
   else if (A.tail === 'mantle') mantleFins(art, f, pal, A);
@@ -259,6 +262,8 @@ function paint(g: Genome, plan: Plan): Baked {
   if (A.mottle > 0) mottle(art, f, pal, g, A, seed);
   if (photophoreOf(g) > 0) photophores(art, f, pal, g, seed);
   if (A.cilia) cilia(art, f, pal);
+  if (g.lurk > 0) camouflage(art, f, pal, seed);
+  if (g.mantle > 0) mantle(art, f, pal);
 
   // --- on top ------------------------------------------------------------
   if (A.smoke) viscera(art, f, pal);
@@ -969,6 +974,92 @@ function pharynx(gr: Graphics, f: Form, pal: Palette, tm: number, mw: number) {
       gr.ellipse(px, py, mw * 0.28, mw * 0.19).fill({ color: pal.bone, alpha: 0.95 * pal.alpha });
       gr.ellipse(px + mw * 0.07, py - mw * 0.05, mw * 0.11, mw * 0.07)
         .fill({ color: 0xffffff, alpha: 0.35 });
+    }
+  }
+}
+
+/**
+ * Anguilliform Body: one fin from the middle of the back to the tail and round beneath, the
+ * way an eel's dorsal and anal fins run together. It is closed back along the flank like
+ * the veil, so it bends with the wave, and it keeps its width to the very end — the tail is
+ * where an eel's fin is widest, not where it stops.
+ */
+function ribbonFin(gr: Graphics, f: Form, pal: Palette, seed: number) {
+  const n = 30;
+  const t0 = 0.38;
+  for (const dir of [-1, 1] as const) {
+    gr.moveTo(spineAt(t0, f), dir * halfWidth(t0, f));
+    for (let i = 0; i <= n; i++) {
+      const t = lerp(t0, 1, i / n);
+      const w = halfWidth(t, f);
+      // rises out of the back and holds, with a small ripple so it reads as membrane
+      const rise = Math.min(1, (i / n) * 3.5);
+      const edge = 1 + fbmSigned(t * 14, dir * 1.7, seed + 83) * 0.18;
+      gr.lineTo(spineAt(t, f), dir * (w + R * 0.26 * f.width * rise * edge));
+    }
+    gr.lineTo(spineAt(1, f) - R * 0.1, 0);
+    for (let i = n; i >= 0; i--) {
+      const t = lerp(t0, 1, i / n);
+      gr.lineTo(spineAt(t, f), dir * halfWidth(t, f) * 0.9);
+    }
+    gr.closePath().fill({ color: pal.skin, alpha: 0.62 * pal.alpha });
+  }
+}
+
+/**
+ * Mantle Pump: rings of muscle around the front of the body, and the funnel that fires. The
+ * rings are what a squeeze is made of, so a body that swims by contracting shows the bands
+ * it contracts with; the funnel sits on the midline behind the head, facing forward, because
+ * a mantle jet fires backwards by pointing its siphon the other way.
+ */
+function mantle(gr: Graphics, f: Form, pal: Palette) {
+  for (let i = 0; i < 5; i++) {
+    const t = 0.16 + i * 0.085;
+    const w = halfWidth(t, f);
+    gr.ellipse(spineAt(t, f), 0, R * 0.035 * f.width * 1.6, w * 0.94)
+      .fill({ color: pal.back, alpha: 0.32 * pal.alpha });
+  }
+  // behind the head rather than at it: at the snout the funnel's mouth reads as the fish's
+  const tf = 0.34;
+  const w = halfWidth(tf, f);
+  const x = spineAt(tf, f);
+  gr.moveTo(x - w * 0.5, -w * 0.16)
+    .quadraticCurveTo(x + w * 0.3, -w * 0.3, x + w * 0.55, -w * 0.24)
+    .lineTo(x + w * 0.55, w * 0.24)
+    .quadraticCurveTo(x + w * 0.3, w * 0.3, x - w * 0.5, w * 0.16)
+    .closePath().fill({ color: pal.dark, alpha: 0.8 * pal.alpha });
+  gr.ellipse(x + w * 0.5, 0, w * 0.08, w * 0.17).fill({ color: pal.accent, alpha: 0.4 });
+}
+
+/**
+ * Lie in Wait: a bottom-dweller's disruptive coat and the fringe that breaks its outline.
+ * Blotches rather than the mottle's speckle — camouflage works by breaking up the shape, so
+ * the patches have to be large enough to cross the silhouette's own edges — and tassels of
+ * skin along the head, the wobbegong's beard, so the front of the animal has no clean line.
+ */
+function camouflage(gr: Graphics, f: Form, pal: Palette, seed: number) {
+  for (let t = 0.08; t < 0.96; t += 0.04) {
+    const w = halfWidth(t, f);
+    for (let j = 0; j < 4; j++) {
+      const v = ((j + 0.5) / 4) * 2 - 1;
+      const d = fbm(t * 9, v * 4, seed + 151);
+      if (d < 0.52) continue;
+      const r = w * (0.2 + (d - 0.52) * 0.9);
+      const dark = fbm(t * 5, v * 3, seed + 157) > 0.5;
+      gr.circle(spineAt(t, f), v * w * 0.7, r)
+        .fill({ color: dark ? pal.back : pal.belly, alpha: (dark ? 0.4 : 0.22) * pal.alpha });
+    }
+  }
+  const n = 7;
+  for (let i = 0; i < n; i++) {
+    const t = 0.04 + (i / (n - 1)) * 0.26;
+    const w = halfWidth(t, f);
+    const x = spineAt(t, f);
+    const len = w * (0.22 + fbm(t * 23, 1, seed + 163) * 0.2);
+    for (const dir of [-1, 1] as const) {
+      gr.moveTo(x + len * 0.35, dir * w * 0.92)
+        .quadraticCurveTo(x, dir * (w + len * 1.1), x - len * 0.35, dir * w * 0.92)
+        .closePath().fill({ color: pal.skin, alpha: pal.alpha });
     }
   }
 }

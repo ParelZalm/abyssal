@@ -32,6 +32,22 @@ interface Motion {
   pulse: number;
 }
 
+/**
+ * The plan's motion, bent by the locomotion organs — the swim is part of what the body
+ * says. An eel carries more of the wave and needs the columns to hold it; a lurker barely
+ * sways; a mantle contracts on its pulse, and the bell's squeeze is already in the pose.
+ */
+function motionFor(g: Genome, plan: Plan): Motion {
+  const m = MOTION[plan];
+  const eel = Math.min(1, g.eel);
+  return {
+    cols: m.cols + Math.round(eel * 14),
+    waves: m.waves + eel * 0.8,
+    amp: (m.amp + eel * 0.2) * (1 - Math.min(1, g.lurk) * 0.35),
+    pulse: Math.max(m.pulse, Math.min(1, g.mantle) * 0.2),
+  };
+}
+
 const MOTION: Record<Plan, Motion> = {
   microbe:   { cols: 14, waves: 0.5, amp: 0.16, pulse: 0.14 },
   darter:    { cols: 22, waves: 0.85, amp: 0.5, pulse: 0 },
@@ -132,7 +148,7 @@ export class FishView extends Container {
 
   rebuild(g: Genome) {
     this.g = g;
-    const m = this.motion = MOTION[this.plan];
+    const m = this.motion = motionFor(g, this.plan);
     const men = menace(g);
 
     this.mesh?.destroy();

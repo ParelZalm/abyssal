@@ -11,7 +11,8 @@ Three groups of fields, and the split matters:
 
 - **Stats** — `size`, `speed`, `turn`, `bite`, `sense`, `armor`, `regen`, `metabolism`,
   `stealth`, `gulp`, `lifesteal`, `pen`, `ram`. Read by the simulation.
-- **Organs** — `venom`, `lure`, `claws`, `jet`, `coral`, `frill`, `filter`, `crush`, plus `pen`, `ram`,
+- **Organs** — `venom`, `lure`, `claws`, `jet`, `coral`, `frill`, `filter`, `crush`, `eel`,
+  `mantle`, `lurk`, plus `pen`, `ram`,
   `lifesteal` and `spikes`, which act like organs even though they sit in the other
   groups. Each carries a mechanic *and* a piece of morphology. The mechanic lives in
   `organs.ts`: one `Organ` record per field, keyed off the genome (NPC species carry
@@ -30,6 +31,19 @@ Three groups of fields, and the split matters:
   added for them — `gulp`, `damage`, `biteRate`, `recoil` — and recoil goes through
   `sting()` in `organs.ts`, so spines, frill and Urchin all ask the attacker's organs how
   much of it lands.
+  The three **locomotion** organs are parameter shapes on the one swim model, through a
+  `swim` hook that folds into `SwimMods` — cached on the creature beside its organs and
+  read by `Creature.propel` and `agility`. `eel` (Anguilliform Body) keeps full turning at
+  any speed (`hold` 1 against 0.55) and has no glide (`coast` × 3.5 when not driving).
+  `mantle` (Mantle Pump) cuts the steady stroke to 0.3 and fires a kick of one cruise
+  speed every 0.85 s, with the beat locked to the pulse so the bell contracts as it fires;
+  tuned so a held throttle averages the plain cruise (122 against 119) while swinging from
+  74 to 218. `lurk` (Lie in Wait) banks *poise* while not driving, up to 2 s, which adds up
+  to 0.35 stealth (through the `stealth` hook, which `World.think` and `notices` now read
+  instead of the raw field) and multiplies the next bite by `1 + 0.8 × poise`; the bite
+  spends it, and it sinks at 60 u/s² while idle. `Game` rings the body once when poise
+  tops out, since nothing else says the strike is wound. All three bend the silhouette in
+  `formFor` and the swim wave in `motionFor` (`fishview.ts`) as well as the paint.
   A synergy is an `Organ` whose `when` tests two fields and that carries a `name`; its
   effect hooks return true on a frame they did something, `World.fired` publishes its id
   once per run on `world.synergies`, and `Game.digest` turns it into the toast, so the
@@ -80,13 +94,13 @@ the same thresholds as anything else.
 
 ## The draft
 
-`traits.ts` holds 45 `Trait` records — id, rarity, icon, description, and an `apply`
+`traits.ts` holds 48 `Trait` records — id, rarity, icon, description, and an `apply`
 that mutates a `Genome`. `draftTraits(rng, reach, taken, count)` picks without
 replacement from a rarity-weighted pool.
 
 - `RARITY_WEIGHT` sets the base odds; `RARITY_CLIMB` makes rare and apex more likely as
-  `reach` grows. Measured over the live pool (14 common, 20 rare, 11 apex): 70/30/0 at
-  stage 1, 42/47/11 by stage 8 — rare overtakes common, which is the intent.
+  `reach` grows. Measured over the live pool (14 common, 23 rare, 11 apex): 70/30/0 at
+  stage 1, 39/50/10 by stage 8 — rare overtakes common, which is the intent.
 - **`reach` is not the stage.** `main.offerDraft` passes
   `max(stage, maxBand * 2 + 1)`, so diving upgrades the pool as much as feeding does.
 - `maxStacks` defaults to 2, so a run specialises without collapsing into one stat.

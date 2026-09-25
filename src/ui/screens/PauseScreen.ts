@@ -51,6 +51,9 @@ export class PauseScreen implements Component {
       ['Frill', g.frill, 'stinging fringe'],
       ['Rakers', g.filter, 'sieve small prey, 40% bite on large'],
       ['Pharynx', g.crush, 'ignores armour and recoil, slow bite'],
+      ['Eel body', g.eel, 'turns at any speed, no glide'],
+      ['Mantle', g.mantle, 'a kick every 0.85 s'],
+      ['Lurk', g.lurk, 'stillness hides you and winds the bite'],
     ];
     const grown = organs.filter(([, v]) => v > 0);
 
