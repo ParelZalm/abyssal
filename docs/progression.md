@@ -25,7 +25,11 @@ Three groups of fields, and the split matters:
   effect hooks return true on a frame they did something, `World.fired` publishes that
   once per run on `world.synergies`, and `Game.digest` turns it into the toast, so the
   combination is discovered in play rather than read off a card. `Toxic Lure` (lure +
-  venom: prey that reaches the light is poisoned before the bite) is the first.
+  venom: prey that reaches the light is poisoned before the bite) is the first. The paint
+  asks `hasSynergy(g, id)` from the same file, so a combination shows on the body through
+  the predicate that makes it act — the Toxic Lure bulb goes the sacs' green and grows
+  barbs — and the bake cache key already carries both organ bits. Every synergy gets a
+  cell on the design board's Builds row.
 - **Morphology** — `hue`, `accentHue`, `finSize`, `tailSplit`, `spikes`, `jaw`,
   `eyeSize`, `glow`, `segments`, `translucent`, plus the deep-water set: `photophores`,
   `eyeAdapt`, `gape`, `veil`, `bulk`, `barbels`. Purely visual, but every trait nudges at

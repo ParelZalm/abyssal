@@ -17,6 +17,7 @@ import { eyeOf, fadeOf, menace, photophoreOf, type Genome } from './genome';
 import { formFor, halfWidth, PLAN_ART, shoulderAt, spineAt, R, type Form, type Plan,
          type PlanArt } from './form';
 import { fbm, fbmSigned } from './noise';
+import { hasSynergy } from './organs';
 import { hsl, lerp, TAU } from './util';
 
 let renderer: Renderer | null = null;
@@ -589,8 +590,17 @@ function viscera(gr: Graphics, f: Form, pal: Palette) {
     .fill({ color: pal.back, alpha: 1 });
 }
 
-/** The illicium: a stalk out in front with a lit bulb on the end. */
+/**
+ * The illicium: a stalk out in front with a lit bulb on the end.
+ *
+ * With venom on the same body it is a Toxic Lure, and the bulb has to say so from across
+ * the screen: the light goes the venom sacs' green rather than the accent, a ring of
+ * barbs sits around it, and a thin sheen runs down the stalk to the sacs so the two organs
+ * read as one system rather than two decorations that happen to share a fish.
+ */
 function lure(gr: Graphics, f: Form, pal: Palette, g: Genome) {
+  const toxicLure = hasSynergy(g, 'toxiclure');
+  const toxic = hsl(78, 0.8, 0.5);
   const x0 = spineAt(0.06, f);
   const x1 = spineAt(0, f) + R * (0.8 + g.lure * 0.45);
   const y1 = -R * 0.3;
@@ -598,7 +608,26 @@ function lure(gr: Graphics, f: Form, pal: Palette, g: Genome) {
     .quadraticCurveTo(x1 * 0.8, y1 * 1.5, x1, y1)
     .quadraticCurveTo(x1 * 0.78, y1 * 1.2, x0, R * 0.06)
     .closePath().fill({ color: pal.dark, alpha: 0.85 * pal.alpha });
-  gr.circle(x1, y1, R * (0.14 + g.lure * 0.05)).fill({ color: pal.accent, alpha: 0.95 });
+  const r = R * (0.14 + g.lure * 0.05);
+  if (toxicLure) {
+    // the vein: venom on its way up the stalk, a filled sliver inside the stalk's own shape
+    gr.moveTo(x0, -R * 0.02)
+      .quadraticCurveTo(x1 * 0.8, y1 * 1.42, x1, y1)
+      .quadraticCurveTo(x1 * 0.79, y1 * 1.28, x0, R * 0.02)
+      .closePath().fill({ color: toxic, alpha: 0.7 });
+    // a halo the width of the touch that poisons — the bulb is a hazard, not a bead
+    gr.circle(x1, y1, r * 2.2).fill({ color: toxic, alpha: 0.18 });
+    // barbs: six thorns off the bulb, the venom barbs' own shape carried onto the light
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * TAU + 0.4;
+      const bx = x1 + Math.cos(a) * r * 0.9, by = y1 + Math.sin(a) * r * 0.9;
+      const tx = x1 + Math.cos(a) * r * 1.9, ty = y1 + Math.sin(a) * r * 1.9;
+      const px = -Math.sin(a) * r * 0.28, py = Math.cos(a) * r * 0.28;
+      gr.moveTo(bx + px, by + py).lineTo(tx, ty).lineTo(bx - px, by - py).closePath()
+        .fill({ color: toxic, alpha: 0.9 });
+    }
+  }
+  gr.circle(x1, y1, r).fill({ color: toxicLure ? toxic : pal.accent, alpha: 0.95 });
   gr.circle(x1, y1, R * (0.08 + g.lure * 0.03)).fill({ color: 0xffffff, alpha: 0.75 });
 }
 

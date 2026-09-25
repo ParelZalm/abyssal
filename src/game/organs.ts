@@ -139,6 +139,16 @@ export const ORGANS: Organ[] = [
     } }),
 ];
 
+/**
+ * Whether a named synergy is live on this genome. The paint asks this, so the body shows a
+ * combination through the same predicate that makes it act — a lure drawn toxic on a fish
+ * whose lure is not, or the reverse, is the drift this file exists to prevent.
+ */
+export function hasSynergy(g: Genome, id: string) {
+  const o = ORGANS.find(x => x.id === id);
+  return !!o?.name && o.when(g);
+}
+
 /** The organs this genome carries. Cached on the creature — see `Creature.refreshOrgans`. */
 export function organsOf(g: Genome): Organ[] {
   return ORGANS.filter(o => o.when(g));

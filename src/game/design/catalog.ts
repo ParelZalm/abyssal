@@ -330,6 +330,9 @@ const BUILDS: { id: string; name: string; note: string; plan: Plan; depth: numbe
     edit: g => { g.sense = 2000; g.eyeAdapt = -0.85; g.barbels = 1.2; g.bulk = 0.7;
                  g.speed = 115; g.metabolism = 2.2; g.photophores = 0.25;
                  g.hue = 18; g.accentHue = 14; } },
+  { id: 'toxiclure', name: 'Toxic Lure', plan: 'angler', depth: 2400,
+    note: 'Synergy: lure + venom. The bulb goes the sacs\' green and grows barbs; the stalk carries a vein.',
+    edit: g => { g.lure = 1; g.venom = 1; g.jaw = 0.8; g.hue = 30; g.accentHue = 200; } },
 ];
 
 function buildGroup(): DesignGroup {
