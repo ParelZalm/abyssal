@@ -64,6 +64,17 @@ then `strike` decides what happens:
 - `venom` leaves `poison` on the victim with `poisonByPlayer` recorded, so a kill that
   lands after the mouth has let go is still the player's.
 - Every bite pushes a `Bite` record onto `world.bites`; `main.digest` drains it.
+- Plans with `PLAN_ART.grasp > 0` (the squids) never bite on contact. `World.grasp`
+  latches the feeding tentacles on prey up to `size × grasp` past the mouth, in a forward
+  cone, then reels it to the crown and bites there — never whole, and only after 0.9 s
+  held, so a guardian's grab is a struggle and not an instant death. The catch escapes
+  by building `strain`: its `thrust × speed` against the holder's speed scaled by a root
+  of the size ratio, plus any outward burst the grip damping has not eaten yet (a boost
+  kick). Cruising never breaks free; sprinting does slowly; boosting is the answer.
+  Effort is read from `thrust`, not velocity, because the grip damps velocity. A holder
+  does not throttle and does not lunge on its bites — either one feeds back through the
+  reel and the pair drifts apart with no strain at all. `world.playerHeld` is published
+  for the HUD.
 
 The player's own eating is not special-cased here — `playerGain` accumulates nutrition
 and `main` converts it into biomass, size and particles.

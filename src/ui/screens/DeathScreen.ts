@@ -1,6 +1,5 @@
 import type { Component } from '../Component';
-import { Button } from '../dom/Button';
-import { div, h1, h2, p } from '../dom/element';
+import { button, div, h1, h2, p } from '../dom/element';
 
 export class DeathScreen implements Component {
   readonly element = div('overlay');
@@ -10,7 +9,7 @@ export class DeathScreen implements Component {
       h2(cause),
       h1('Eaten'),
       p(stats.join(' \u00a0·\u00a0 ')),
-      new Button('Spawn again', onRestart).element,
+      button('Spawn again', onRestart),
     );
   }
 

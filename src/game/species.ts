@@ -1,7 +1,7 @@
 import type { Plan } from './fishview';
 import { baseGenome, type Genome } from './genome';
 import { clamp, type Rng } from './util';
-import { BANDS, DEPTH_MAX, ZONES, type ZoneId } from './zones';
+import { DEPTH_MAX, ZONES, type ZoneId } from './zones';
 
 export type Behavior = 'plankton' | 'school' | 'drift' | 'hunter' | 'ambush' | 'apex';
 
@@ -322,21 +322,6 @@ for (const zone of ZONES) {
  */
 export function rangeOf(sp: Species): [number, number] {
   return RANGE.get(sp.id) ?? [0, DEPTH_MAX];
-}
-
-/** The species belonging to one zone. Derived, never maintained alongside them. */
-export function rosterOf(zone: ZoneId): Species[] {
-  return SPECIES.filter(s => s.zone === zone);
-}
-
-/** The guardian of the zone a depth is in. */
-export function guardianAt(y: number): Species {
-  for (let i = BANDS.length - 1; i >= 0; i--) {
-    if (y < BANDS[i].top) continue;
-    const zone = ZONES.find(z => z.bands.includes(BANDS[i]))!;
-    return SPECIES.find(s => s.id === zone.guardian)!;
-  }
-  return SPECIES.find(s => s.id === ZONES[0].guardian)!;
 }
 
 export function genomeFor(sp: Species, rng: Rng): Genome {

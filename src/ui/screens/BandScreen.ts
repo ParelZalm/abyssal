@@ -1,7 +1,6 @@
 import { BANDS, depthLabel, zoneOf } from '../../game/zones';
 import type { Component } from '../Component';
-import { Button } from '../dom/Button';
-import { div, h1, h2, p } from '../dom/element';
+import { button, div, h1, h2, p } from '../dom/element';
 
 export class BandScreen implements Component {
   readonly element = div('overlay');
@@ -22,7 +21,7 @@ export class BandScreen implements Component {
       ...(band.name === zone.name ? [] : [p(zone.name)]),
       p(zone.tagline),
       range,
-      new Button('Descend', onContinue).element,
+      button('Descend', onContinue),
     );
   }
 

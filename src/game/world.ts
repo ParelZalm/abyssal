@@ -1,5 +1,6 @@
 import { Container } from 'pixi.js';
 import { FishView } from './fishview';
+import { PLAN_ART } from './form';
 import { armourOf, biteDamage, maxHp, type Genome } from './genome';
 import { genomeFor, hunts, rangeOf, rollSpecies, SPECIES, type Species } from './species';
 import { angleDelta, clamp, dist2, lerp, Rng, TAU } from './util';
@@ -106,6 +107,15 @@ export class Creature {
   poison = 0;
   poisonT = 0;
   poisonByPlayer = false;
+  /** What this animal's tentacles are holding, and what is holding this one. */
+  holding: Creature | null = null;
+  heldBy: Creature | null = null;
+  /** How close the held animal is to tearing free, 0 to 1. */
+  strain = 0;
+  /** Seconds the current catch has been held. */
+  holdT = 0;
+  /** Seconds before tentacles that lost their catch can strike again. */
+  graspCd = 0;
 
   constructor(public species: Species, public genome: Genome) {
     this.hpMax = maxHp(genome);
@@ -216,6 +226,8 @@ export class World {
   playerGain = 0;
   /** Health, as a fraction of max, the player absorbed this frame. */
   playerHeal = 0;
+  /** Whether the player is in something's tentacles this frame, for the HUD to act on. */
+  playerHeld = false;
   /** Deepest y the player may reach; the next sealed thermocline holds them here. */
   descentLimit = DEPTH_MAX;
   /** True on any frame the player pressed against a sealed thermocline. */
@@ -437,6 +449,9 @@ export class World {
 
   private remove(i: number) {
     const c = this.creatures[i];
+    // a culled body has to take its grip with it, or the survivor holds a ghost
+    if (c.holding) this.letGo(c, 0);
+    if (c.heldBy) this.letGo(c.heldBy, 0);
     c.view.destroy({ children: true });
     this.creatures.splice(i, 1);
   }
@@ -454,6 +469,7 @@ export class World {
     this.playerHeal = 0;
     this.blocked = false;
     this.hunted = false;
+    this.playerHeld = false;
     const p = this.player;
 
     for (const c of this.creatures) this.think(c, dt, p);
@@ -478,6 +494,17 @@ export class World {
     c.sated = Math.max(0, c.sated - dt);
     c.tired = Math.max(0, c.tired - dt);
     c.moodT -= dt;
+    c.graspCd = Math.max(0, c.graspCd - dt);
+
+    // a squid with something in its arms stops hunting and hangs onto it, nose to the catch
+    const held = c.holding;
+    if (held && (!held.alive || !c.preysOn(held))) this.letGo(c, 1);
+    else if (held) {
+      // no throttle: a holder that swims after its catch drags it along, the catch's own
+      // pull is added on top, and the pair runs away together until the arms come apart
+      c.drive(dt, Math.atan2(held.y - c.y, held.x - c.x), 0);
+      return;
+    }
 
     // a lit lure overrides whatever the prey was doing — that is the whole point of it
     if (p.genome.lure > 0 && p.preysOn(c) && c.panic <= 0) {
@@ -813,6 +840,7 @@ export class World {
    * cone is drawn in — chasing a speck around with a pixel-perfect hitbox is not fun.
    */
   private strike(att: Creature, def: Creature) {
+    if (PLAN_ART[att.species.plan].grasp > 0 && !att.isPlayer) { this.grasp(att, def); return; }
     const reach = att.radius * 1.1 + def.radius + att.genome.size * 0.45;
     const d2 = dist2(att.mouthX, att.mouthY, def.x, def.y);
     if (d2 <= reach * reach) { this.bite(att, def); return; }
@@ -832,11 +860,17 @@ export class World {
     att.biteCd = 0.4;
     // the bite itself throws the body forward — that lunge is most of the impact
     att.view.chomp();
-    const surge = Math.max(1, att.genome.speed) * 0.45;
-    att.vx += Math.cos(att.angle) * surge;
-    att.vy += Math.sin(att.angle) * surge;
+    // ...except in tentacles, where the catch is already at the beak: a lunge there
+    // overshoots it, and the reel then pulls it the wrong way through the crown
+    if (!att.holding) {
+      const surge = Math.max(1, att.genome.speed) * 0.45;
+      att.vx += Math.cos(att.angle) * surge;
+      att.vy += Math.sin(att.angle) * surge;
+    }
     // anything less than half your gape goes down whole, the way a real gulp works
-    const whole = att.swallowSize > def.genome.size * 2;
+    // — but not from tentacles: a beak tears, and a whole swallow at the crown would make
+    // every guardian's grab a death with nothing to struggle against
+    const whole = !att.holding && att.swallowSize > def.genome.size * 2;
     // a beak chews through plate: penetration comes off the armour, not off the damage,
     // so it is worth exactly as much as the armour actually in front of it
     const armour = Math.max(0, armourOf(def.genome) - att.genome.pen);
@@ -871,10 +905,87 @@ export class World {
     }
   }
 
+  /**
+   * Tentacle feeding. A squid does not bite what it meets: the feeding pair lashes out
+   * well past the mouth, fastens, and reels the catch into the crown, where the beak works
+   * on it bite by bite. Whatever is held is not simply stuck — it keeps swimming, and a
+   * pull harder than the arms can hold builds strain until it tears loose.
+   *
+   * Effort is read off `thrust`, not velocity: the grip damps the victim's velocity every
+   * frame, so velocity only ever reports how well the grip is working. A cruising or even
+   * fleeing animal (throttle ≤ 1.25) rarely out-pulls a squid its own size; the player's
+   * boost winds throttle to 2.3 and the kick adds a burst on top, which is what makes
+   * boosting the answer to being grabbed. It costs fullness, so it is a real decision.
+   */
+  private grasp(att: Creature, def: Creature) {
+    const reach = att.radius * 1.1 + def.radius + att.genome.size * PLAN_ART[att.species.plan].grasp;
+    const mx = att.mouthX, my = att.mouthY;
+    const d2 = dist2(mx, my, def.x, def.y);
+    if (att.holding !== def) {
+      if (att.holding || def.heldBy || att.graspCd > 0 || att.sated > 0) return;
+      if (!(d2 <= reach * reach)) return;
+      // a strike goes forward: the arms are at the head, and cannot reach behind the mantle
+      const ahead = Math.abs(angleDelta(att.angle, Math.atan2(def.y - att.y, def.x - att.x)));
+      if (ahead > 1.1) return;
+      att.holding = def; def.heldBy = att; att.strain = 0; att.holdT = 0;
+      att.view.grab(def);
+      return;
+    }
+    const dt = this.lastDt;
+    const d = Math.sqrt(d2) || 1;
+    if (d > reach * 1.35) { this.letGo(att, 1.5); return; }
+    if (def.isPlayer) this.playerHeld = true;
+
+    // how hard the catch pulls against how hard the arms hold. A heavier squid holds a
+    // lighter animal harder, but only by a root — size alone should not make a grip absolute
+    const pull = def.thrust * Math.max(1, def.genome.speed);
+    const hold = Math.max(1, att.genome.speed) * 0.95 *
+      clamp((att.genome.size / def.genome.size) ** 0.3, 0.8, 1.7);
+    // the boost kick shows as outward speed the damping has not caught up with yet. It is
+    // integrated rather than counted: the damping takes several frames to eat a kick, and
+    // a per-frame bonus paid out on each of them tore free on the first press
+    const ox = (def.x - mx) / d, oy = (def.y - my) / d;
+    const burst = ((def.vx - att.vx) * ox + (def.vy - att.vy) * oy) / Math.max(1, def.genome.speed);
+    if (burst > 0.4) att.strain += (burst - 0.4) * dt * 1.2;
+    if (pull > hold) att.strain += ((pull - hold) / hold) * dt * 1.4;
+    else att.strain = Math.max(0, att.strain - dt * 0.5);
+    if (att.strain >= 1) {
+      // torn free: throw the escapee clear so the next frame does not re-grab it
+      def.vx += ox * def.genome.speed * 0.6;
+      def.vy += oy * def.genome.speed * 0.6;
+      this.letGo(att, 2.5);
+      return;
+    }
+
+    // reel: close the gap on the mouth, and bleed off the victim's motion relative to it
+    const reel = att.genome.size * 3.5 * (1 - att.strain * 0.6);
+    const damp = 1 - Math.exp(-6 * dt);
+    def.vx += ((att.vx + (-ox) * reel) - def.vx) * damp;
+    def.vy += ((att.vy + (-oy) * reel) - def.vy) * damp;
+
+    // the beak waits a beat: a guardian swallows most things whole, and a grab that kills
+    // on the frame it lands leaves nothing to struggle against
+    att.holdT += dt;
+    const bite = att.radius * 1.1 + def.radius;
+    if (att.holdT > 0.9 && d2 <= bite * bite) this.bite(att, def);
+    if (!def.alive) this.letGo(att, 0);
+  }
+
+  private letGo(att: Creature, cd: number) {
+    const def = att.holding;
+    if (def && def.heldBy === att) def.heldBy = null;
+    att.holding = null;
+    att.strain = 0;
+    att.graspCd = Math.max(att.graspCd, cd);
+    att.view.grab(null);
+  }
+
   /** Book a death once, wherever the last point of damage came from. */
   private slay(def: Creature, byPlayer: boolean) {
     if (!def.alive) return;
     def.alive = false;
+    if (def.holding) this.letGo(def, 0);
+    if (def.heldBy) this.letGo(def.heldBy, 0);
     const spill: Blood = { x: def.x, y: def.y, size: def.genome.size,
       t: Math.min(BLOOD_MAX, def.genome.size * BLOOD_LIFE) };
     this.blood.push(spill);

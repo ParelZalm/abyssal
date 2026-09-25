@@ -73,6 +73,13 @@ plan is a data edit the compiler walks you through. `PLAN_ART` replaced eleven s
 `plan === …` conditionals in `fishbake.ts`; there are none left, and adding a plan no
 longer means auditing the bake for branches it might belong in.
 
+Plans with `grasp` rig their arms instead of painting them: `fishbake` bakes one arm
+texture (`Baked.arm`) and leaves the arms out of the body, and `FishView` skins it onto a
+strip per arm, rooted at the head under the body. Each arm is walked out as a chain whose
+heading drifts on a travelling wave, so it curls; the outermost pair are the feeding
+tentacles, blended from that coil toward a straight line onto `grab(target)` when the
+simulation latches on.
+
 Guardians are the exception to plans being shared: each has a body nothing else wears,
 because a guardian is the animal the player is meant to recognise on sight.
 

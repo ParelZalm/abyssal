@@ -247,10 +247,6 @@ export function bandAt(y: number): number {
   return 0;
 }
 
-export function zoneAt(y: number): Zone {
-  return BAND_ZONE[bandAt(y)];
-}
-
 export function zoneOf(band: Band): Zone {
   return BAND_ZONE[BANDS.indexOf(band)];
 }

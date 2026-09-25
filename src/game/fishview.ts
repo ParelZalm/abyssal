@@ -13,7 +13,7 @@
  * mesh and a shared texture, so a school is cheap in memory as well as in draw calls.
  */
 import { Container, MeshSimple, Sprite } from 'pixi.js';
-import { bakeFish, releaseFish, type Baked } from './fishbake';
+import { bakeFish, releaseFish, type Baked, type Rig } from './fishbake';
 import { PLAN_ART, quintic, R, type Plan } from './form';
 import { menace, type Genome } from './genome';
 import { glowTexture } from './textures';
@@ -50,6 +50,9 @@ const MOTION: Record<Plan, Motion> = {
   wraith:    { cols: 34, waves: 1.15, amp: 0.55, pulse: 0 },
 };
 
+/** Columns per rigged arm. An arm is thin, so it needs length resolution and nothing else. */
+const ARM_COLS = 12;
+
 export class FishView extends Container {
   /**
    * The additive bloom, deliberately NOT a child of this container. Every creature's
@@ -77,6 +80,14 @@ export class FishView extends Container {
   private motion = MOTION.darter;
   /** Counts down from 1 through a bite, driving the squash-and-snap. */
   private chompT = 0;
+  /** Rigged arms, one strip each, under the body. Empty for anything without `grasp`. */
+  private arms: { mesh: MeshSimple; verts: Float32Array; feeding: boolean }[] = [];
+  /** The arms' own clock: `beat` jumps on a boost, and a jump reads as a twitch in an arm. */
+  private armT = Math.random() * 10;
+  /** How far the feeding pair is out toward `grip`, 0 coiled to 1 fastened. */
+  private strike = 0;
+  /** What the feeding pair is holding, read for its live world position; null when nothing. */
+  private grip: { x: number; y: number } | null = null;
 
   constructor(private g: Genome, private plan: Plan = 'darter') {
     super();
@@ -125,6 +136,8 @@ export class FishView extends Container {
     const men = menace(g);
 
     this.mesh?.destroy();
+    for (const a of this.arms) a.mesh.destroy();
+    this.arms = [];
     // take the new texture before letting go of the old one, so a rebuild onto the same
     // genome never leaves the entry at zero users for an eviction to catch
     const old = this.baked;
@@ -151,6 +164,30 @@ export class FishView extends Container {
       }
     }
     this.verts = verts;
+    // arms first, so they sit under the body: the crown is tucked beneath the head
+    const rig = this.baked.arm;
+    if (rig) {
+      const A = PLAN_ART[this.plan];
+      const auv = new Float32Array(ARM_COLS * 4);
+      const aidx = new Uint32Array((ARM_COLS - 1) * 6);
+      for (let j = 0; j < ARM_COLS; j++) {
+        const u = j / (ARM_COLS - 1);
+        auv.set([u, 0, u, 1], j * 4);
+        if (j < ARM_COLS - 1) {
+          const a = j * 2;
+          aidx.set([a, a + 2, a + 1, a + 1, a + 2, a + 3], j * 6);
+        }
+      }
+      for (let i = 0; i < A.armCount; i++) {
+        const averts = new Float32Array(ARM_COLS * 4);
+        const mesh = new MeshSimple({ texture: rig.texture, vertices: averts, uvs: auv,
+                                      indices: aidx });
+        this.addChild(mesh);
+        // the outermost pair are the feeding tentacles, as they were in the painted crown
+        this.arms.push({ mesh, verts: averts,
+                         feeding: i === 0 || i === A.armCount - 1 });
+      }
+    }
     this.mesh = new MeshSimple({ texture: this.baked.texture, vertices: verts, uvs,
                                  indices: idx });
     this.addChild(this.mesh);
@@ -195,7 +232,7 @@ export class FishView extends Container {
       this.murk.alpha = Math.min(0.62, 0.3 + fogK * 0.16);
     }
 
-    this.pose(0, 0, 0.5);
+    this.pose(0, 0, 0.5, 0);
     this.scale.set(g.size / R);
   }
 
@@ -203,12 +240,17 @@ export class FishView extends Container {
     this.chompT = 1;
   }
 
+  /** Fasten the feeding tentacles on something in the world, followed live; null lets go. */
+  grab(target: { x: number; y: number } | null) {
+    this.grip = target;
+  }
+
   /**
    * Lay the strip along the spine for this instant. The sway rides a quintic envelope, whose
    * first and second derivatives vanish at the head — the wave has to arrive at the skull
    * with no slope and no curvature, or there is a crease there that reads as a joint.
    */
-  private pose(beat: number, bank: number, thrust: number) {
+  private pose(beat: number, bank: number, thrust: number, dt: number) {
     if (!this.mesh || !this.baked) return;
     const m = this.motion;
     const h = this.baked.halfH;
@@ -247,6 +289,78 @@ export class FishView extends Container {
       this.verts[j * 4 + 3] = y - ny * hw;
     }
     this.mesh.vertices = this.verts;
+    if (this.baked.arm) this.poseArms(this.baked.arm, spineY[0], pulse, thrust, dt);
+  }
+
+  /**
+   * Each arm is walked out from its root as a chain whose heading drifts by a travelling
+   * wave, so it curls rather than swings — a rigid arm rotating about its root is a
+   * windscreen wiper. The feeding pair is blended from that coil toward a straight line
+   * onto `grip`, so a strike is the same arm uncurling rather than a second arm appearing.
+   */
+  private poseArms(rig: Rig, headY: number, pulse: number, thrust: number, dt: number) {
+    const n = this.arms.length;
+    const A = PLAN_ART[this.plan];
+    this.armT += dt * (1.4 + thrust * 1.6);
+    const want = this.grip ? 1 : 0;
+    // out fast, back slow: the lash is the event, the recoil is just the arm coming home
+    this.strike += (want - this.strike) * Math.min(1, dt * (want ? 16 : 4));
+    const e = this.strike;
+    let tx = 0, ty = 0;
+    if (this.grip) {
+      // into the view's own frame: the mesh lives in R units, rotated with the body
+      const dx = this.grip.x - this.x, dy = this.grip.y - this.y;
+      const c = Math.cos(-this.rotation), s = Math.sin(-this.rotation);
+      tx = (dx * c - dy * s) / this.scale.x;
+      ty = (dx * s + dy * c) / this.scale.y;
+    }
+    const pts: number[] = new Array(ARM_COLS * 2);
+    for (let i = 0; i < n; i++) {
+      const arm = this.arms[i];
+      const v = (i / (n - 1)) * 2 - 1;
+      const rx = rig.rootX * pulse, ry = headY + v * rig.spread;
+      // swimming bundles the crown into a point; holding something flares it open
+      let heading = v * 0.5 * (1 - Math.min(1, thrust) * 0.4) * (1 + e * 0.7);
+      const len = rig.len * (arm.feeding ? 0.5 : 0.78 / A.armPair) * (1 + e * 0.12);
+      const step = len / (ARM_COLS - 1);
+      let x = rx, y = ry;
+      for (let j = 0; j < ARM_COLS; j++) {
+        const s = j / (ARM_COLS - 1);
+        pts[j * 2] = x; pts[j * 2 + 1] = y;
+        // tips curl in toward the midline, and more so around a catch — the arms wrap it
+        heading += Math.sin(this.armT + i * 1.9 - s * 4.5) * 0.2 * (0.3 + s)
+                 - v * (0.05 + e * 0.1);
+        x += Math.cos(heading) * step;
+        y += Math.sin(heading) * step;
+      }
+      if (arm.feeding && e > 0.001) {
+        const dx = tx - rx, dy = ty - ry;
+        const d = Math.hypot(dx, dy) || 1;
+        // an arm has a length: past it, it points at the prey rather than reaching it
+        const k = Math.min(1, rig.len / d);
+        const wig = Math.sin(this.armT * 3 + i) * d * 0.05;
+        for (let j = 0; j < ARM_COLS; j++) {
+          const s = j / (ARM_COLS - 1);
+          const bow = Math.sin(s * Math.PI) * wig;
+          const qx = rx + dx * s * k - (dy / d) * bow;
+          const qy = ry + dy * s * k + (dx / d) * bow;
+          pts[j * 2] = lerp(pts[j * 2], qx, e);
+          pts[j * 2 + 1] = lerp(pts[j * 2 + 1], qy, e);
+        }
+      }
+      const h = rig.halfH;
+      for (let j = 0; j < ARM_COLS; j++) {
+        const ja = Math.max(0, j - 1), jb = Math.min(ARM_COLS - 1, j + 1);
+        const dx = pts[jb * 2] - pts[ja * 2], dy = pts[jb * 2 + 1] - pts[ja * 2 + 1];
+        const l = Math.hypot(dx, dy) || 1;
+        const nx = -dy / l, ny = dx / l;
+        arm.verts[j * 4] = pts[j * 2] + nx * h;
+        arm.verts[j * 4 + 1] = pts[j * 2 + 1] + ny * h;
+        arm.verts[j * 4 + 2] = pts[j * 2] - nx * h;
+        arm.verts[j * 4 + 3] = pts[j * 2 + 1] - ny * h;
+      }
+      arm.mesh.vertices = arm.verts;
+    }
   }
 
   animate(dt: number, thrust: number, beat: number, bank: number) {
@@ -262,7 +376,7 @@ export class FishView extends Container {
     }
     this.scale.x = unit * sx;
     this.scale.y = unit * sy;
-    this.pose(beat, bank, thrust);
+    this.pose(beat, bank, thrust, dt);
   }
 
   get genome() { return this.g; }

@@ -1,6 +1,5 @@
 import type { Component } from '../Component';
-import { Button } from '../dom/Button';
-import { div, h1, h2, kbd, keysLine, p } from '../dom/element';
+import { button, div, h1, h2, kbd, keysLine, p } from '../dom/element';
 
 export class TitleScreen implements Component {
   readonly element = div('overlay');
@@ -19,7 +18,7 @@ export class TitleScreen implements Component {
         'Hold ', kbd('Space'), ' / ', kbd('Shift'), ' / ', kbd('click'),
         ' to boost \u00a0·\u00a0 ', kbd('P'), ' pause',
       ]),
-      new Button('Hatch', onStart).element,
+      button('Hatch', onStart),
     );
   }
 

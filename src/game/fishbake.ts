@@ -34,6 +34,19 @@ export interface Baked {
   halfH: number;
   /** Live views drawing this texture. Only an unused entry may be evicted — see `bakeFish`. */
   users: number;
+  /** One rigged arm, root at u=0 and tip at u=1, for plans with `grasp`. Null otherwise. */
+  arm: Rig | null;
+}
+
+/** A rigged arm's texture and where the arms leave the body, in R units. */
+export interface Rig {
+  texture: Texture;
+  /** Painted length and strip half-height of one arm. */
+  len: number;
+  halfH: number;
+  /** Where the crown sits on the spine, and how wide it spreads across it. */
+  rootX: number;
+  spread: number;
 }
 
 const cache = new Map<string, Baked>();
@@ -42,10 +55,26 @@ const CACHE_MAX = 160;
 
 const q = (v: number, step: number) => Math.round(v / step) * step;
 
+/**
+ * Texels per R unit. The art is painted in R units and the view scales it by `size / R`,
+ * so a fixed resolution is a fixed number of texels per *animal*: 6 was plenty for a 14 cm
+ * hatchling and left a 280 cm guardian at about one texel per five screen pixels, which
+ * reads as pixel art. What the screen needs is `size / R × zoom × devicePixelRatio`; this
+ * covers that at a close zoom on a 2× display, in doubling steps so a growing player
+ * re-bakes a handful of times rather than every centimetre, and capped so the biggest
+ * strip stays well inside a 4096 texture.
+ */
+function resolutionFor(g: Genome) {
+  const want = (g.size / R) * 2.4;
+  let res = 6;
+  while (res < want && res < 48) res *= 2;
+  return res;
+}
+
 function key(g: Genome, plan: Plan) {
   // every field the paint reads has to appear here, or two genomes that look different
   // share one texture. `tailSplit` and `eyeSize` were missing and did exactly that.
-  return [plan, q(g.hue, 12), q(g.accentHue, 18), q(menace(g), 0.12), q(g.glow, 0.25),
+  return [plan, resolutionFor(g), q(g.hue, 12), q(g.accentHue, 18), q(menace(g), 0.12), q(g.glow, 0.25),
           q(fadeOf(g), 0.2), q(g.finSize, 0.25), q(g.jaw, 0.25), q(g.spikes, 1),
           q(g.segments, 1), q(g.armor, 3), q(g.tailSplit, 0.2), q(eyeOf(g), 0.3),
           // speed and metabolism reach the texture through `formFor`, so they belong here
@@ -91,15 +120,10 @@ function evict() {
   for (const [k, b] of cache) {
     if (b.users > 0) continue;
     b.texture.destroy(true);
+    b.arm?.texture.destroy(true);
     cache.delete(k);
     if (cache.size < CACHE_MAX) return;
   }
-}
-
-/** Drop everything; only used when the renderer goes away. */
-export function clearBakeCache() {
-  for (const b of cache.values()) b.texture.destroy(true);
-  cache.clear();
 }
 
 interface Palette {
@@ -177,7 +201,9 @@ function paint(g: Genome, plan: Plan): Baked {
     A.tail === 'fluke' ? halfWidth(1, f) * (3.4 + f.fork * 1.2) * A.caudal
     : A.tail === 'mantle' ? halfWidth(0.8, f) * (1.6 + A.caudal * 0.9)
     : halfWidth(1, f) * (2.4 + f.fork * 1.8) * A.caudal;
-  const arms = widest * A.arms;
+  // rigged arms are strips of their own and take no room in the body's texture
+  const rigged = A.grasp > 0;
+  const arms = rigged ? 0 : widest * A.arms;
   // a fin reaching further than the body does has to be inside the strip, or it bakes
   // clipped square with nothing to say so
   let finReach = 0;
@@ -195,14 +221,14 @@ function paint(g: Genome, plan: Plan): Baked {
   const front = spineAt(0, f) + Math.max(R * 0.12,
     g.lure > 0 ? R * (0.9 + g.lure * 0.5) : 0,
     g.barbels > 0 ? R * (0.55 + g.barbels * 0.9) : 0);
-  const back = spineAt(1, f) - f.len * f.fluke * R * 1.06 - A.armReach * R;
+  const back = spineAt(1, f) - f.len * f.fluke * R * 1.06 - (rigged ? 0 : A.armReach * R);
 
   // an invisible rect pins the texture to exactly this rect, so the UVs line up with the
   // body rather than with whatever the art happened to touch
   art.rect(back, -halfH, front - back, halfH * 2).fill({ color: 0, alpha: 0 });
 
   // --- behind the body ---------------------------------------------------
-  if (A.arms > 0) tentacles(art, f, pal, A, g);
+  if (A.arms > 0 && !rigged) tentacles(art, f, pal, A, g);
   if (g.veil > 0) veil(art, f, pal, g, seed);
   if (A.blunt > 0) bluntSnout(art, f, pal, A);
   if (A.tail === 'fluke') fluke(art, f, pal, A);
@@ -230,15 +256,18 @@ function paint(g: Genome, plan: Plan): Baked {
   head(art, f, pal, g, A, men);
   if (g.barbels > 0) barbels(art, f, pal, g);
 
-  const tex = renderer.generateTexture({ target: art, resolution: 6, antialias: true });
+  const tex = renderer.generateTexture({ target: art, resolution: resolutionFor(g),
+                                        antialias: true });
   art.destroy();
-  return { texture: tex, front, back, halfH, users: 0 };
+  return { texture: tex, front, back, halfH, users: 0,
+           arm: rigged ? armRig(f, pal, A, g, seed) : null };
 }
 
 /** The dark back that makes a shape read as an animal from above, in two ragged passes. */
 function countershade(gr: Graphics, f: Form, pal: Palette, A: PlanArt, seed: number) {
   for (const [k, alpha, salt] of [[0.78, 0.3, 13], [0.44, 0.55, 29]] as const) {
-    const n = 70;
+    // as many samples as the outline: at 70 the edge faceted visibly on a guardian
+    const n = Math.max(70, Math.round(A.samples * 1.4));
     const pts: { x: number; y: number }[] = [];
     for (let i = 0; i <= n; i++) {
       const t = i / n;
@@ -262,21 +291,29 @@ function countershade(gr: Graphics, f: Form, pal: Palette, A: PlanArt, seed: num
 
 /** Speckle: dark over the spine, pale toward the belly, from one noise field. */
 function mottle(gr: Graphics, f: Form, pal: Palette, g: Genome, A: PlanArt, seed: number) {
-  const step = f.len > 3 ? 0.016 : 0.022;
+  // Each speck is jittered off its lattice point and sized and shaded by its own noise.
+  // On an even grid of equal ovals, the speckle *was* the grid: invisible on a krill, but a
+  // guardian is shown several times larger than the hatchling it shares R units with, and
+  // at that size the rows and columns read as pixels.
+  const step = f.len > 3 ? 0.009 : 0.012;
+  const fade = 1 - fadeOf(g) * 0.4;
   for (let t = 0; t < 1; t += step) {
     const w = halfWidth(t, f);
-    const rows = Math.max(3, Math.round(w / (R * 0.12)));
+    const rows = Math.max(3, Math.round(w / (R * 0.07)));
     for (let j = 0; j < rows; j++) {
       const v = (j + 0.5) / rows;
-      const y = (v * 2 - 1) * w * 0.94;
       const d = fbm(t * 16, v * 9, seed + 101);
-      if (d < 0.58) continue;
-      const r = R * 0.035 * (0.6 + d);
+      if (d < 0.56) continue;
+      const jx = (fbm(t * 91, v * 57, seed + 7, 1) - 0.5) * step * 1.8;
+      const jy = (fbm(t * 83, v * 61, seed + 19, 1) - 0.5) / rows * 1.8;
+      const tt = Math.min(1, Math.max(0, t + jx));
+      const y = ((v + jy) * 2 - 1) * halfWidth(tt, f) * 0.92;
+      const size = fbm(t * 47, v * 39, seed + 53, 1);
+      const r = R * 0.022 * (0.45 + d * 0.6 + size * 0.9);
       const dark = Math.abs(y) < w * 0.55;
-      gr.ellipse(spineAt(t, f), y, r * 1.5, r)
+      gr.circle(spineAt(tt, f), y, r)
         .fill({ color: dark ? pal.back : pal.belly,
-                alpha: (dark ? 0.22 : 0.16) * A.mottle * pal.alpha
-                       * (1 - fadeOf(g) * 0.4) });
+                alpha: (dark ? 0.2 : 0.14) * (0.6 + size * 0.7) * A.mottle * pal.alpha * fade });
     }
   }
 }
@@ -585,6 +622,58 @@ function tentacles(gr: Graphics, f: Form, pal: Palette, A: PlanArt, g: Genome) {
       .quadraticCurveTo(root - len * reach * 0.55, y + v * len * 0.35 + w, root, y + w)
       .closePath().fill({ color: pal.skin, alpha: 0.7 * pal.alpha });
   }
+}
+
+/**
+ * One prehensile arm, painted straight along +x and skinned onto a strip per arm by the
+ * view. Every arm on the animal shares it: the feeding pair differs only in how far the
+ * view stretches it, and a tentacle really is an arm that extends.
+ *
+ * The crown sits at the head, not trailing off the mantle: from above a squid is fins,
+ * mantle, eyes and then arms, and arms that reach forward are the only arms that can
+ * plausibly take hold of something the animal is swimming toward.
+ */
+function armRig(f: Form, pal: Palette, A: PlanArt, g: Genome, seed: number): Rig {
+  const len = R * A.armLen * (1 + g.segments * 0.1) * A.armPair;
+  const w = R * A.armWidth * 1.3;
+  const halfH = w * 1.15;
+  const gr = new Graphics();
+  gr.rect(0, -halfH, len, halfH * 2).fill({ color: 0, alpha: 0 });
+  const n = 24;
+  // taper to a fraction rather than a point, then swell into a club over the last fifth:
+  // the club is what says tentacle rather than eel
+  const width = (s: number) => w * (1 - s * 0.72 + Math.sin(Math.max(0, s - 0.8) / 0.2 * Math.PI) * 0.45);
+  const top: { x: number; y: number }[] = [];
+  for (let i = 0; i <= n; i++) {
+    const s = i / n;
+    const k = 1 + fbmSigned(s * 9, 1.3, seed) * 0.08;
+    top.push({ x: s * len, y: width(s) * k });
+  }
+  gr.moveTo(0, -top[0].y);
+  for (const p of top) gr.lineTo(p.x, -p.y);
+  gr.quadraticCurveTo(len + w * 0.5, 0, top[n].x, top[n].y);
+  for (let i = n; i >= 0; i--) gr.lineTo(top[i].x, top[i].y);
+  gr.closePath().fill({ color: pal.skin, alpha: 0.9 * pal.alpha });
+  // a darker aboral stripe, so the arm has a top the way the body does
+  // — one polygon, since overlapping translucent dabs band wherever they double up
+  gr.moveTo(0, -width(0) * 0.4);
+  for (let i = 1; i <= n; i++) gr.lineTo(i / n * len, -width(i / n) * 0.4);
+  for (let i = n; i >= 0; i--) gr.lineTo(i / n * len, width(i / n) * 0.4);
+  gr.closePath().fill({ color: pal.back, alpha: 0.3 * pal.alpha });
+  // suckers are on the underside, so from above only the club shows any: it turns them
+  // outward to hold, and a row of pale dots at the tip is what makes the strike legible
+  for (let i = 0; i < 8; i++) {
+    const s = 0.8 + (i + 0.5) / 8 * 0.18;
+    for (const dir of [-1, 1]) {
+      gr.circle(s * len, dir * width(s) * 0.5, width(s) * 0.24)
+        .fill({ color: pal.belly, alpha: 0.45 * pal.alpha });
+    }
+  }
+  const texture = renderer!.generateTexture({ target: gr, resolution: resolutionFor(g),
+                                            antialias: true });
+  gr.destroy();
+  const rootT = 0.07;
+  return { texture, len, halfH, rootX: spineAt(rootT, f), spread: halfWidth(rootT, f) * 0.8 };
 }
 
 /** A ring of cilia — the only thing that makes a single cell read as alive. */

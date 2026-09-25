@@ -184,6 +184,15 @@ export interface PlanArt {
   armPair: number;
   /** How much room behind the body the arms need, in R units. */
   armReach: number;
+  /**
+   * Prehensile arms: how far past the mouth the feeding tentacles strike, as a multiple of
+   * body size. 0 leaves the arms painted into the texture, trailing — a jelly's do nothing.
+   * Above 0 they are rigged as strips of their own at the head (`fishview.ts`), and the
+   * animal feeds by grabbing rather than by biting (`World.grasp`). The two go together:
+   * a tentacle that seizes prey but cannot be seen to move reads as the prey being pulled
+   * in by nothing.
+   */
+  grasp: number;
   /** Dorsal blades along the flank. */
   spines: boolean;
   /** The gill-cover crescent. */
@@ -267,7 +276,7 @@ export interface PlanArt {
 }
 
 const art = (o: Partial<PlanArt> = {}): PlanArt => ({
-  arms: 0, armCount: 0, armLen: 0, armWidth: 0, armPair: 1, armReach: 0, spines: true,
+  arms: 0, armCount: 0, armLen: 0, armWidth: 0, armPair: 1, armReach: 0, grasp: 0, spines: true,
   gills: true, cilia: false, paleEyes: false, caudal: 1, samples: 90, smoke: false,
   tail: 'caudal', blunt: 0, dorsalFin: 0, fins: FISH_FINS, eye: 1, eyeAt: 0.16, mottle: 1, tone: 1, shade: 1, finRays: true, mouth: 1, eyeGlow: 0, fog: 0, ...o,
 });
@@ -286,7 +295,8 @@ export const PLAN_ART: Record<Plan, PlanArt> = {
   // a bell and its trailing arms. Nothing on a jellyfish is a fin.
   jelly:      art({ arms: 1.15, armCount: 9, armLen: 1.1, armWidth: 0.07, armReach: 0.6,
                     spines: false, gills: false, caudal: 0.6, fins: [] }),
-  squid:      art({ arms: 1.15, armCount: 6, armLen: 1.5, armWidth: 0.12, armReach: 0.6 }),
+  squid:      art({ arms: 1.15, armCount: 8, armLen: 1.5, armWidth: 0.12, armReach: 0.6, armPair: 1.6,
+                    grasp: 0.9 }),
   angler:     art({ paleEyes: true }),
   leviathan:  art({ eyeGlow: 1, fog: 1.25, paleEyes: true, samples: 110, caudal: 1.8, eye: 0.45,
                     fins: [{ at: 0.4, len: 1.4, rake: 0.8, chord: 0.5, taper: 0.8 },
@@ -312,9 +322,10 @@ export const PLAN_ART: Record<Plan, PlanArt> = {
   // silhouette and the reason it needs a plan rather than a bigger `squid`. No lateral
   // fins at all — a squid's fin is the mantle, which `mantleFins` already draws.
   longsquid:  art({ eyeGlow: 1, fog: 1, arms: 1.5, armCount: 10, armLen: 2.6, armWidth: 0.085, armReach: 2.2,
-                    armPair: 1.9, paleEyes: true, caudal: 0.6, tail: 'mantle', fins: [] }),
+                    armPair: 1.9, grasp: 1.3, paleEyes: true, caudal: 0.6, tail: 'mantle', fins: [] }),
   // the same animal built short and heavy instead: stubbier mantle, far broader fins
   broadsquid: art({ eyeGlow: 1, fog: 1, arms: 1.35, armCount: 8, armLen: 1.5, armWidth: 0.17, armReach: 1.2,
+                    armPair: 1.7, grasp: 1.05,
                     paleEyes: true, caudal: 1.5, tail: 'mantle', fins: [] }),
   wraith:     art({ smoke: true }),
 };

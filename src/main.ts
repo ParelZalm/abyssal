@@ -475,6 +475,11 @@ class Game {
       this.fx.burst(p.x, p.y + p.radius, 0xcfe4ff, 8, 60, 2.2);
     }
 
+    if (this.world.playerHeld && this.hintCd <= 0) {
+      this.hintCd = 4;
+      this.ui.toast('Caught — boost to tear free');
+    }
+
     const band = bandAt(p.y);
     if (band > this.maxBand && this.phase === 'play') {
       this.maxBand = band;

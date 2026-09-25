@@ -1,6 +1,5 @@
 import type { Component } from '../Component';
-import { Button } from '../dom/Button';
-import { div, h1, h2, p } from '../dom/element';
+import { button, div, h1, h2, p } from '../dom/element';
 
 export class WinScreen implements Component {
   readonly element = div('overlay');
@@ -11,7 +10,7 @@ export class WinScreen implements Component {
       h1('Apex'),
       p('Nothing in this ocean is larger than you now. The water goes very quiet.'),
       p(stats.join(' \u00a0·\u00a0 ')),
-      new Button('Begin a new lineage', onRestart).element,
+      button('Begin a new lineage', onRestart),
     );
   }
 

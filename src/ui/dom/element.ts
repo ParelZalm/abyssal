@@ -1,76 +1,32 @@
 /** Tiny createElement helpers — not a templating language. */
 
-export function div(className?: string): HTMLDivElement {
-  const el = document.createElement('div');
-  if (className) el.className = className;
-  return el;
+function el<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) {
+  const e = document.createElement(tag);
+  if (text) e.textContent = text;
+  if (className) e.className = className;
+  return e;
 }
 
-export function h1(text: string): HTMLHeadingElement {
-  const el = document.createElement('h1');
-  el.textContent = text;
-  return el;
-}
+export const div = (className?: string) => el('div', undefined, className);
+export const h1 = (text: string) => el('h1', text);
+export const h2 = (text: string) => el('h2', text);
+export const h3 = (text: string) => el('h3', text);
+export const h4 = (text: string) => el('h4', text);
+export const p = (text: string) => el('p', text);
+export const span = (text = '') => el('span', text);
+export const ul = (className?: string) => el('ul', undefined, className);
+export const li = (className?: string) => el('li', undefined, className);
+export const kbd = (text: string) => el('kbd', text);
 
-export function h2(text: string): HTMLHeadingElement {
-  const el = document.createElement('h2');
-  el.textContent = text;
-  return el;
-}
-
-export function h3(text: string): HTMLHeadingElement {
-  const el = document.createElement('h3');
-  el.textContent = text;
-  return el;
-}
-
-export function h4(text: string): HTMLHeadingElement {
-  const el = document.createElement('h4');
-  el.textContent = text;
-  return el;
-}
-
-export function p(text: string): HTMLParagraphElement {
-  const el = document.createElement('p');
-  el.textContent = text;
-  return el;
-}
-
-export function span(text = ''): HTMLSpanElement {
-  const el = document.createElement('span');
-  el.textContent = text;
-  return el;
-}
-
-export function button(text: string, className = 'btn'): HTMLButtonElement {
-  const el = document.createElement('button');
-  el.className = className;
-  el.textContent = text;
-  return el;
-}
-
-export function ul(className?: string): HTMLUListElement {
-  const el = document.createElement('ul');
-  if (className) el.className = className;
-  return el;
-}
-
-export function li(className?: string): HTMLLIElement {
-  const el = document.createElement('li');
-  if (className) el.className = className;
-  return el;
+export function button(text: string, onClick: () => void): HTMLButtonElement {
+  const b = el('button', text, 'btn');
+  b.addEventListener('click', onClick);
+  return b;
 }
 
 /** Build a paragraph that may include <kbd> children from a simple tag pattern. */
 export function keysLine(parts: (string | HTMLElement)[]): HTMLParagraphElement {
-  const el = p('');
-  el.className = 'keys';
-  el.replaceChildren(...parts);
-  return el;
-}
-
-export function kbd(text: string): HTMLElement {
-  const el = document.createElement('kbd');
-  el.textContent = text;
-  return el;
+  const e = el('p', undefined, 'keys');
+  e.replaceChildren(...parts);
+  return e;
 }
