@@ -7,7 +7,7 @@ import { Ocean } from './game/ocean';
 import { Scenery } from './game/scenery';
 import type { View } from './game/view';
 import { lightAt, Water, waterColor } from './game/water';
-import type { Species } from './game/species';
+import { riserFor, type Species } from './game/species';
 import { bandAt, BANDS, depthLabel, descentLimit, FINAL_GUARDIAN, nextGate,
          placeName } from './game/zones';
 import { boostModsOf, burnOf, swallowHealOf } from './game/organs';
@@ -19,6 +19,13 @@ import { UI } from './ui/UI';
 // the Sunlit zone's own tagline is "warm, crowded"; a budget that reads as crowded when
 // it is spread out reads as empty once it is spent on groups, and it is spent on groups now
 const POP_SHALLOW = 140;
+/**
+ * Seconds a band stays whole after its gate below opens, then seconds to spend it fully.
+ * The grace covers finishing the hunt you were on when the thermocline parted; the ramp is
+ * long enough that the thinning is felt before the arrival, which comes at its midpoint.
+ */
+const SPEND_GRACE = 40;
+const SPEND_RAMP = 100;
 const POP_DEEP = 46;
 const FOOD_MAX = 100;
 const COMBO_WINDOW = 3.5;
@@ -90,6 +97,13 @@ class Game {
   private maxBand = 0;
   private hintCd = 0;
   private gatesOpen = 0;
+  /**
+   * Seconds spent in each band while the gate below it was already open — the shallows
+   * clock, by `BANDS` index. See `spendWater`.
+   */
+  private overstay: number[] = [];
+  /** Bands that have already sent their hunter this run. */
+  private risen = new Set<number>();
   private wakeCd = 0;
   private sprinting = false;
   /** Seconds the boost has been held, which is what winds it up. */
@@ -225,6 +239,7 @@ class Game {
     this.score = 0; this.combo = 0; this.comboT = 0;
     this.dreadSpike = 0; this.dreadHold = 0;
     this.maxBand = 0; this.hintCd = 0; this.gatesOpen = 0;
+    this.overstay = BANDS.map(() => 0); this.risen.clear();
     this.wakeCd = 0; this.sprinting = false; this.boostHeld = 0; this.boostCd = 0; this.hitStop = 0;
     this.zoom = this.zoomFor(g.size);
     // the first fill is the exception to spawning off-screen: there is no frame to
@@ -296,6 +311,7 @@ class Game {
       this.digest();
       this.metabolise(dt);
       this.checkBands(dt);
+      this.spendWater(dt);
     }
     this.render(dt);
   }
@@ -463,6 +479,39 @@ class Game {
     }
     if (this.xp >= this.xpNeed) this.levelUp();
     if (this.player.hp <= 0) this.finish(false);
+  }
+
+  /**
+   * The shallows clock. Gates are size-only, so without this the best play is to stay in
+   * the easiest water you can: graze the tutorial band long after it has anything to teach.
+   *
+   * The clock only runs in a band whose gate below is already open. A player who is still
+   * too small to leave has nowhere to go, and thinning their food would be a spiral rather
+   * than a nudge. Past a grace period the water spends: less to graze, more that hunts,
+   * fewer bodies in all (`weightAt`, and the population target in `render`). Halfway
+   * spent, the band sends something up for you — the tell that says go down, rather than a
+   * number getting worse. Spent water stays spent: come back up and it is as you left it.
+   */
+  private spendWater(dt: number) {
+    const p = this.player;
+    const b = bandAt(p.y);
+    const below = BANDS[b + 1];
+    if (!below || p.genome.size < below.gate) return;
+    const was = this.world.spent[b];
+    this.overstay[b] += dt;
+    const spent = clamp((this.overstay[b] - SPEND_GRACE) / SPEND_RAMP, 0, 1);
+    this.world.spent[b] = spent;
+    if (was === 0 && spent > 0) {
+      this.ui.toast(`You have outgrown ${BANDS[b].name} — it will not feed you for long`);
+    }
+    if (spent >= 0.5 && !this.risen.has(b)) {
+      this.risen.add(b);
+      const sp = riserFor(p.y, p.genome.size);
+      if (sp && this.world.summon(sp, p, this.viewR())) {
+        this.dreadSpike = 1;
+        this.ui.toast(`A ${sp.name} has come for you`);
+      }
+    }
   }
 
   /** Thermocline feedback: nudge when you are too small, ceremony when you break through. */
@@ -674,7 +723,8 @@ class Game {
 
     if (this.phase === 'play' || this.phase === 'draft') {
       // deep creatures are far larger, so the abyss stays sparse
-      const pop = Math.round(lerp(POP_SHALLOW, POP_DEEP, clamp(p.y / DEPTH_MAX, 0, 1)));
+      const pop = Math.round(lerp(POP_SHALLOW, POP_DEEP, clamp(p.y / DEPTH_MAX, 0, 1)) *
+        (1 - 0.3 * this.world.spent[bandAt(p.y)]));
       this.world.cull(p.x, p.y, this.viewR());
       this.world.spawnAround(p.x, p.y, this.viewR(), pop);
     }

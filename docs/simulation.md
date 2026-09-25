@@ -179,7 +179,9 @@ any is chasing. `Game` turns those into a spike-and-sustain envelope on the wate
 is not a share of the guardian's own body, which was tried first and is backwards.
 
 Population target itself falls with depth (`POP_SHALLOW` 140 → `POP_DEEP` 46 in
-`main.ts`) because deep creatures are far larger. The shallow figure went up when groups
+`main.ts`) because deep creatures are far larger, and by up to 30% more in a band the
+player has overstayed — see `spendWater` in `progression.md`. `rollSpecies` takes that
+band's `world.spent` too, read at the spawn point rather than at the player. The shallow figure went up when groups
 went in: the same budget spread evenly reads as crowded, and spent on a handful of big
 shoals it buys a frame with one shoal in it and dead water everywhere else. Measured at
 420 m: 138 bodies, 95 of them in frame, 115 fps. At 6300 m: 75 bodies, 40 in frame.

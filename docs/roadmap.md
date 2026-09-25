@@ -64,9 +64,10 @@ Only worth doing once there are five or more synergies.
 
 Gates are size-only, so the optimal play is to grind the shallows until the gate opens.
 
-- **A clock in the shallows.** After a few minutes the tutorial band thins: blooms
-  shrink, a shark arrives. `weightAt` in the spawner is where depth shapes population,
-  and elapsed time can bend it.
+- ~~**A clock in the shallows.**~~ Done as `spendWater`: a band spends once its gate
+  below is open and the player stays. The arrival is the least hunter that can eat you
+  (a Mackerel in Open Water at 30 cm, not a shark), and past the Reef there is none, so
+  deeper bands only thin. If that is too gentle, a band could wake its guardian instead.
 - **A tempting pocket below each gate**, visible through the seal: prey-rich or
   jelly-rich water just past the thermocline.
 - Optionally, squeezing through undersized with a real cost.
@@ -118,7 +119,7 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 ## Suggested order
 
 1. ~~Two or three more synergies~~ — done; Ballistic once the boost is published.
-2. The shallows clock, which fixes the pacing of every run.
+2. ~~The shallows clock~~ — done.
 3. The codex, since the synergy list is already there to persist.
 4. Diet and locomotion organs, which make run two differ from run one.
 5. Transformations, then the draft reading synergies once there are enough to read.

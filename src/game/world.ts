@@ -4,6 +4,7 @@ import { PLAN_ART } from './form';
 import { armourOf, biteDamage, maxHp, type Genome } from './genome';
 import { armourAgainst, lureRangeOf, organsOf, tick as tickOrgans, wound, type Organ } from './organs';
 import { genomeFor, hunts, rangeOf, rollSpecies, SPECIES, type Species } from './species';
+import { BANDS, bandAt } from './zones';
 import { angleDelta, clamp, dist2, lerp, Rng, TAU } from './util';
 
 export const WORLD_HALF_W = 7000;
@@ -117,6 +118,11 @@ export class Creature {
   holdT = 0;
   /** Seconds before tentacles that lost their catch can strike again. */
   graspCd = 0;
+  /**
+   * Something this hunter has come for, whether or not it can see it — the arrival the
+   * shallows clock sends. Cleared when the chase runs out of stamina or the quarry is gone.
+   */
+  quarry: Creature | null = null;
   /** The organs this body carries — see `organs.ts`. Refreshed whenever the genome is. */
   organs: Organ[];
 
@@ -237,6 +243,12 @@ export class World {
   playerHeal = 0;
   /** Whether the player is in something's tentacles this frame, for the HUD to act on. */
   playerHeld = false;
+  /**
+   * How spent each band's water is, 0..1, by `BANDS` index. Written by `Game` from how
+   * long the player has stayed in water they have outgrown; read by the spawner, so the
+   * population thins where the spawn lands and not where the player happens to be.
+   */
+  readonly spent: number[] = BANDS.map(() => 0);
   /** Deepest y the player may reach; the next sealed thermocline holds them here. */
   descentLimit = DEPTH_MAX;
   /** True on any frame the player pressed against a sealed thermocline. */
@@ -283,7 +295,7 @@ export class World {
     while (this.creatures.length < target && guard++ < 50) {
       const at = this.spot(cx, cy, viewR, inner, RING[1]);
       if (!at) continue;
-      const sp = rollSpecies(this.rng, at.y);
+      const sp = rollSpecies(this.rng, at.y, this.spent[bandAt(at.y)]);
       if (!sp) continue;
       // one guardian at a time, and never again once it is dead
       if (sp.guardian && (this.deadGuardians.has(sp.id) || this.count(sp.id) >= 1)) continue;
@@ -423,6 +435,24 @@ export class World {
       // specks metres apart, which is a third of the population spent on nothing visible
       this.add(sp, x + Math.cos(a) * r * 230, this.fold(y, Math.sin(a) * r * 70));
     }
+  }
+
+  /**
+   * One hunter sent for `target`: placed where an apex arrives, at the top of its size
+   * range so it can actually take what it came for, and already on the chase. Returns
+   * null if the ring found no water to put it in.
+   */
+  summon(sp: Species, target: Creature, viewR: number): Creature | null {
+    const at = this.spot(target.x, target.y, viewR, RING_APEX[0], RING_APEX[1]);
+    if (!at) return null;
+    const c = this.add(sp, at.x, at.y);
+    c.genome.size = sp.size[1];
+    c.hpMax = maxHp(c.genome);
+    c.hp = c.hpMax;
+    c.view.rebuild(c.genome);
+    c.quarry = target;
+    c.angle = Math.atan2(target.y - c.y, target.x - c.x);
+    return c;
   }
 
   private count(id: string) {
@@ -565,7 +595,8 @@ export class World {
             break;
           }
         }
-        const prey = this.nearest(c, sense * (c.species.behavior === 'apex' ? 3 : 1),
+        if (c.quarry && (!c.quarry.alive || !c.preysOn(c.quarry))) c.quarry = null;
+        const prey = c.quarry ?? this.nearest(c, sense * (c.species.behavior === 'apex' ? 3 : 1),
           o => o !== c && c.preysOn(o) && this.notices(c, o));
         const wantsToHunt = hunts(c.species) && c.sated <= 0 && c.tired <= 0 &&
           (c.species.behavior !== 'ambush' || c.lunge <= 0);
@@ -592,12 +623,17 @@ export class World {
             // stalk, then strike: creep while far so the approach reads as intent, and only
             // open up inside striking range. Guardians keep the old steady pressure
             const striking = d < sense * 0.5 || c.species.guardian;
-            throttle = striking ? 1.12 : 0.72;
-            c.chase += dt;
+            // a summoned hunter starts past the edge of the screen, well outside its own
+            // sense: it travels in at a cruise and only starts spending its stamina once it
+            // could have found you by itself, or it tires before it has arrived
+            const travelling = c.quarry !== null && d > sense;
+            throttle = striking ? 1.12 : travelling ? 1 : 0.72;
+            if (!travelling) c.chase += dt;
             // a hunt has a budget; past it the hunter breaks off, which is what lets a
             // player escape by outlasting rather than only by outswimming
             const stamina = c.species.behavior === 'apex' || c.species.guardian ? 12 : 6;
-            if (c.chase > stamina) { c.chase = 0; c.tired = 3 + Math.random() * 2; }
+            // a summoned hunter gets one chase: outlast it and it is just another shark
+            if (c.chase > stamina) { c.chase = 0; c.tired = 3 + Math.random() * 2; c.quarry = null; }
           }
           break;
         }

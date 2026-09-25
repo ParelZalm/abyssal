@@ -109,10 +109,23 @@ unlocks nothing except the water below it and a free mutation.
 toast) and `bandAt(player.y)` exceeding `maxBand`, which plays the band card and grants
 the free draft.
 
+`spendWater` is the shallows clock, the answer to size-only gates making the easiest water
+the best place to grow. It runs only in a band whose gate below is already open — a player
+too small to leave is never pushed — and counts `overstay` seconds per band. After
+`SPEND_GRACE` (40 s) the band's `world.spent` climbs to 1 over `SPEND_RAMP` (100 s):
+`weightAt` cuts schools and plankton to 35% and raises non-guardian hunters to 2.2×, and
+the population target falls by 30%. Halfway, `riserFor(depth, size)` picks the least
+local hunter that can swallow the player at the top of its range and `World.summon`
+sends it in on `quarry`: it travels in without spending stamina until it could have
+sensed the player itself, then chases as any hunter does, and drops the quarry when it
+tires. Below the Reef nothing that is not a guardian is big enough, so deep bands get
+the thinning only. Spent water stays spent for the run.
+
 ## Run state
 
 Held on `Game`: `stage`, `xp`, `food`, `taken` (id → stacks), `takenNames` (for the HUD
-and pause sheet), `eaten`, `deepest`, `elapsed`, `maxBand`, `gatesOpen`. `reset()`
+and pause sheet), `eaten`, `deepest`, `elapsed`, `maxBand`, `gatesOpen`, `overstay` and `risen` (the
+shallows clock). `reset()`
 rebuilds all of it plus the world and the player; there is no save, and a run is seeded
 from `Math.random()` into a `Rng` so a seed would reproduce it if one were ever exposed.
 
