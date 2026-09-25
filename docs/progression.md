@@ -24,12 +24,18 @@ Three groups of fields, and the split matters:
   A synergy is an `Organ` whose `when` tests two fields and that carries a `name`; its
   effect hooks return true on a frame they did something, `World.fired` publishes that
   once per run on `world.synergies`, and `Game.digest` turns it into the toast, so the
-  combination is discovered in play rather than read off a card. `Toxic Lure` (lure +
-  venom: prey that reaches the light is poisoned before the bite) is the first. The paint
-  asks `hasSynergy(g, id)` from the same file, so a combination shows on the body through
-  the predicate that makes it act — the Toxic Lure bulb goes the sacs' green and grows
-  barbs — and the bake cache key already carries both organ bits. Every synergy gets a
-  cell on the design board's Builds row.
+  combination is discovered in play rather than read off a card. Four so far:
+  `Toxic Lure` (lure + venom: prey that reaches the light is poisoned before the bite),
+  `Ghost Light` (lure + stealth ≥ 0.4: lured prey is not panicked by its shoal's alarm),
+  `Urchin` (spikes + armour ≥ 11: recoil of 0.8 × armour on every bite taken — 11 sits
+  one above the Leviathan, which would otherwise qualify) and `Nematocyst` (venom +
+  lifesteal: bodies the player has poisoned heal the player while they tick; player only,
+  since a wound records *whether* the player poisoned it, not who). Recoil can kill:
+  `World.bite` books an attacker whose health the defender's organs took below zero. The
+  paint asks `hasSynergy(g, id)` from the same file, so a combination shows on the body
+  through the predicate that makes it act, and `synergiesOf(g)` is in the bake cache key
+  because a synergy's threshold can fall inside one quantised bucket of the fields it
+  tests. Every synergy gets a cell on the design board's Builds row.
 - **Morphology** — `hue`, `accentHue`, `finSize`, `tailSplit`, `spikes`, `jaw`,
   `eyeSize`, `glow`, `segments`, `translucent`, plus the deep-water set: `photophores`,
   `eyeAdapt`, `gape`, `veil`, `bulk`, `barbels`. Purely visual, but every trait nudges at

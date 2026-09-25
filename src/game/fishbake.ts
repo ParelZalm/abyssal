@@ -13,11 +13,11 @@
  * two animals that differ by less than a hue step are the same picture.
  */
 import { Graphics, type Renderer, type Texture } from 'pixi.js';
-import { eyeOf, fadeOf, menace, photophoreOf, type Genome } from './genome';
+import { armourOf, eyeOf, fadeOf, menace, photophoreOf, type Genome } from './genome';
 import { formFor, halfWidth, PLAN_ART, shoulderAt, spineAt, R, type Form, type Plan,
          type PlanArt } from './form';
 import { fbm, fbmSigned } from './noise';
-import { hasSynergy } from './organs';
+import { hasSynergy, synergiesOf } from './organs';
 import { hsl, lerp, TAU } from './util';
 
 let renderer: Renderer | null = null;
@@ -85,7 +85,10 @@ function key(g: Genome, plan: Plan) {
           q(g.bulk, 0.2), q(g.barbels, 0.3),
           g.lure > 0 ? 1 : 0, Math.min(3, g.claws),
           Math.min(3, g.coral), Math.min(3, g.frill), g.jet > 0 ? 1 : 0,
-          g.venom > 0 ? 1 : 0].join('|');
+          g.venom > 0 ? 1 : 0,
+          // a synergy's threshold can fall inside one bucket of the fields above — Urchin's
+          // armour test sits mid-step — so the paint's own predicate goes in whole
+          synergiesOf(g).join('+')].join('|');
 }
 
 /**
@@ -189,6 +192,9 @@ function paint(g: Genome, plan: Plan): Baked {
   // joints then outline themselves. A single surface has no overlaps to composite, so the
   // render target that cost is simply gone — the body is drawn see-through and that is all.
   if (A.smoke) pal.alpha *= 0.6;
+  // Ghost Light: a light hanging in water that has nothing behind it. The lure is painted
+  // at full strength on its own alpha, so fading the body is what makes the light stand out
+  if (hasSynergy(g, 'ghostlight')) pal.alpha *= 0.62;
 
   const art = new Graphics();
 
@@ -215,12 +221,18 @@ function paint(g: Genome, plan: Plan): Baked {
   }
   const frill = g.frill > 0 ? widest * 0.3 : 0;
   const veiling = widest * g.veil * 1.5;
+  // the longest rim thorn: 0.8 of the half-width out, then up to 0.63 of it again
+  const urchin = hasSynergy(g, 'urchin') ? widest * 0.65 * urchinReach(g) : 0;
+  // the bulb's halo is measured off the bulb, not guessed: the toxic and ghost halos both
+  // reach past it, and art outside the pinning rect widens the texture under the mesh
+  const L = g.lure > 0 ? lureAt(g, f) : null;
   const halfH = Math.max(widest * (1 + wob), caudal, arms, finReach, widest + frill,
-                         widest + veiling) * 1.08 + R * 0.1;
+                         widest + veiling, widest + urchin,
+                         L ? -L.y + L.r * L.halo : 0) * 1.08 + R * 0.1;
   // a lure and a barbel both hang out in front of the face, so the strip has to be longer
   // than the body. Whichever reaches further sets the bound.
   const front = spineAt(0, f) + Math.max(R * 0.12,
-    g.lure > 0 ? R * (0.9 + g.lure * 0.5) : 0,
+    L ? L.x - spineAt(0, f) + L.r * L.halo + R * 0.04 : 0,
     g.barbels > 0 ? R * (0.55 + g.barbels * 0.9) : 0);
   const back = spineAt(1, f) - f.len * f.fluke * R * 1.06 - (rigged ? 0 : A.armReach * R);
 
@@ -253,6 +265,7 @@ function paint(g: Genome, plan: Plan): Baked {
   if (A.dorsalFin > 0) dorsalRidge(art, f, pal, A);
   fins(art, f, pal, g, A);
   if (A.spines) spines(art, f, pal, g, men);
+  if (urchin > 0) urchinSpines(art, f, pal, g, seed);
   organs(art, f, pal, g);
   head(art, f, pal, g, A, men);
   if (g.barbels > 0) barbels(art, f, pal, g);
@@ -550,6 +563,72 @@ function organs(gr: Graphics, f: Form, pal: Palette, g: Genome) {
       gr.ellipse(spineAt(t, f), w * dir * 0.45, w * 0.5, w * 0.3)
         .fill({ color: toxic, alpha: 0.35 + Math.min(0.35, g.venom * 0.1) });
     }
+    if (hasSynergy(g, 'nematocyst')) nematocysts(gr, f, g, t);
+  }
+}
+
+/**
+ * Nematocyst: the grafted stinging cells have moved into the venom sacs. Each sac is ringed
+ * with capsules, and a duct runs from it forward to the gut, so the venom and the healing
+ * read as one circuit — what goes out through the barbs comes back in.
+ */
+function nematocysts(gr: Graphics, f: Form, g: Genome, t: number) {
+  const cell = hsl(118, 0.75, 0.72);
+  const duct = hsl(96, 0.7, 0.45);
+  const w = halfWidth(t, f);
+  const x = spineAt(t, f);
+  const n = 7 + Math.min(3, Math.round(g.lifesteal * 20));
+  for (const dir of [-1, 1] as const) {
+    const cy = w * dir * 0.45;
+    // the duct: a filled taper from the sac to the gut, narrowing as it goes forward
+    const tg = 0.36;
+    const gx = spineAt(tg, f), gy = halfWidth(tg, f) * dir * 0.12;
+    const s = w * 0.09;
+    gr.moveTo(x, cy - s)
+      .quadraticCurveTo((x + gx) / 2, (cy + gy) / 2 + dir * w * 0.12, gx, gy)
+      .quadraticCurveTo((x + gx) / 2, (cy + gy) / 2 + dir * w * 0.12 + s * 1.4, x, cy + s)
+      .closePath().fill({ color: duct, alpha: 0.5 });
+    // capsules on the rim of the sac, a hard core in a soft coat, like the photophores
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * TAU;
+      const px = x + Math.cos(a) * w * 0.58, py = cy + Math.sin(a) * w * 0.36;
+      gr.circle(px, py, w * 0.09).fill({ color: cell, alpha: 0.3 });
+      gr.circle(px, py, w * 0.045).fill({ color: cell, alpha: 0.9 });
+    }
+  }
+}
+
+/**
+ * Urchin: the spines stand in the plate. A field of thorns across the whole back, each out
+ * of a dark socket and radiating from the middle of the body the way an urchin's test does,
+ * so from above the animal is a pincushion rather than a fish with a crest. Length rides the
+ * armour, since the plate is what the mechanic pays the recoil in.
+ */
+/** Thorn length as a multiple of the threshold plate, capped so a tank is not a starburst. */
+const urchinReach = (g: Genome) => Math.min(1.6, armourOf(g) / 11);
+
+function urchinSpines(gr: Graphics, f: Form, pal: Palette, g: Genome, seed: number) {
+  const cx = spineAt(0.5, f);
+  const reach = urchinReach(g);
+  for (let t = 0.2; t <= 0.84; t += 0.055) {
+    const w = halfWidth(t, f);
+    const rows = Math.max(2, Math.round(w / (R * 0.1)));
+    for (let j = 0; j < rows; j++) {
+      const v = ((j + 0.5) / rows) * 2 - 1;
+      const jit = fbm(t * 31, v * 17, seed + 211, 1);
+      const x = spineAt(t, f) + (jit - 0.5) * R * 0.05;
+      const y = v * w * 0.8;
+      // radial off the body's centre, leaning back, so the rim thorns splay outward
+      const a = Math.atan2(y * 1.8, x - cx) + Math.PI * 0.08 * Math.sign(y || 1);
+      const len = w * (0.3 + jit * 0.25) * reach * (0.55 + Math.abs(v) * 0.6);
+      const base = len * 0.13;
+      const px = -Math.sin(a) * base, py = Math.cos(a) * base;
+      gr.circle(x, y, base * 1.5).fill({ color: pal.dark, alpha: 0.55 * pal.alpha });
+      gr.moveTo(x + px, y + py)
+        .lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len)
+        .lineTo(x - px, y - py)
+        .closePath().fill({ color: pal.bone, alpha: 0.92 * pal.alpha });
+    }
   }
 }
 
@@ -598,17 +677,32 @@ function viscera(gr: Graphics, f: Form, pal: Palette) {
  * barbs sits around it, and a thin sheen runs down the stalk to the sacs so the two organs
  * read as one system rather than two decorations that happen to share a fish.
  */
+/**
+ * Where the bulb hangs, how big it is, and how many bulb radii its furthest paint reaches —
+ * shared with the bounds, which have to hold the halo and not just the bulb.
+ */
+function lureAt(g: Genome, f: Form) {
+  const ghost = hasSynergy(g, 'ghostlight');
+  const r = R * (0.14 + g.lure * 0.05) * (ghost ? 1.3 : 1);
+  return { x: spineAt(0, f) + R * (0.8 + g.lure * 0.45), y: -R * 0.3, r, ghost,
+           halo: ghost ? 3.4 : hasSynergy(g, 'toxiclure') ? 2.2 : 1 };
+}
+
 function lure(gr: Graphics, f: Form, pal: Palette, g: Genome) {
   const toxicLure = hasSynergy(g, 'toxiclure');
   const toxic = hsl(78, 0.8, 0.5);
+  const { x: x1, y: y1, r, ghost } = lureAt(g, f);
   const x0 = spineAt(0.06, f);
-  const x1 = spineAt(0, f) + R * (0.8 + g.lure * 0.45);
-  const y1 = -R * 0.3;
   gr.moveTo(x0, -R * 0.06)
     .quadraticCurveTo(x1 * 0.8, y1 * 1.5, x1, y1)
     .quadraticCurveTo(x1 * 0.78, y1 * 1.2, x0, R * 0.06)
     .closePath().fill({ color: pal.dark, alpha: 0.85 * pal.alpha });
-  const r = R * (0.14 + g.lure * 0.05);
+  if (ghost) {
+    // Ghost Light: two soft rings under a larger bulb, so the light carries further than the
+    // animal does. On the accent even when toxic too: the barbs already say venom
+    gr.circle(x1, y1, r * 3.4).fill({ color: pal.accent, alpha: 0.1 });
+    gr.circle(x1, y1, r * 1.9).fill({ color: pal.accent, alpha: 0.22 });
+  }
   if (toxicLure) {
     // the vein: venom on its way up the stalk, a filled sliver inside the stalk's own shape
     gr.moveTo(x0, -R * 0.02)
@@ -628,7 +722,8 @@ function lure(gr: Graphics, f: Form, pal: Palette, g: Genome) {
     }
   }
   gr.circle(x1, y1, r).fill({ color: toxicLure ? toxic : pal.accent, alpha: 0.95 });
-  gr.circle(x1, y1, R * (0.08 + g.lure * 0.03)).fill({ color: 0xffffff, alpha: 0.75 });
+  gr.circle(x1, y1, R * (0.08 + g.lure * 0.03) * (ghost ? 1.3 : 1))
+    .fill({ color: 0xffffff, alpha: ghost ? 0.9 : 0.75 });
 }
 
 /** Trailing arms for the things that swim by contracting. */

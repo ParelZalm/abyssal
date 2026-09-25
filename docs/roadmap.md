@@ -8,7 +8,12 @@ The core diagnosis still holds: the presentation and the simulation are strong, 
 *decision layer* is thin. Every item is ranked by how much it adds to choices in a run,
 or to a reason to start the next one.
 
-## 1. More synergies (next up, cheap)
+## 1. More synergies (cheap)
+
+Done so far: Toxic Lure, Ghost Light, Urchin, Nematocyst. Ballistic (jet + claws) is the
+next one, and it needs a seam first: the boost lives in `Game`, so the simulation cannot
+tell a boost into a body from a swim into it. Publish a `boosting` flag on the player
+`Creature` before an organ can read it.
 
 Each one is three touches, all following Toxic Lure:
 
@@ -22,13 +27,10 @@ Candidates, from the pool as it exists:
 
 | Pair | Name | Mechanic | Body |
 | --- | --- | --- | --- |
-| lure + stealth (Counter-Illumination) | Ghost Light | Lure visible, body not: prey that arrives does not flee | Lure brighter, body fades further |
-| spikes + armour (Carapace) | Urchin | Recoil scales with armour | Spines grow from the plate |
 | jet + claws (Mantis) | Ballistic | A boost into a body is a bite | Claws fold forward along the head |
 | claws + bite (Serrated) | Vivisect | A held target bleeds; blood calls a crowd | Serrated pincer edge |
 | photophores + sense (Ampullae) | Flash Sense | Boost pulses light that reveals and stuns big-eyed prey | Photophores run to the flank |
 | translucent + frill | Drifting Bloom | Nearly invisible and stinging | Frill trails like a jelly |
-| venom + lifesteal (Cnidocyte) | Nematocyst | Poison ticks on others heal you | Sacs pulse accent-green |
 | size + ram | Whale Shark | Cruising burns less, wake draws plankton in | Wider gape, spotted back |
 
 Watch: a synergy with a `burn` or `boost` modifier needs no event and cannot return
@@ -115,7 +117,7 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 
 ## Suggested order
 
-1. Two or three more synergies, to prove the pattern and feel the combinations in play.
+1. ~~Two or three more synergies~~ — done; Ballistic once the boost is published.
 2. The shallows clock, which fixes the pacing of every run.
 3. The codex, since the synergy list is already there to persist.
 4. Diet and locomotion organs, which make run two differ from run one.

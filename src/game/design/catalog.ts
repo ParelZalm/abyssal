@@ -346,6 +346,16 @@ const BUILDS: { id: string; name: string; note: string; plan: Plan; depth: numbe
   { id: 'toxiclure', name: 'Toxic Lure', plan: 'angler', depth: 2400,
     note: 'Synergy: lure + venom. The bulb goes the sacs\' green and grows barbs; the stalk carries a vein.',
     edit: g => { g.lure = 1; g.venom = 1; g.jaw = 0.8; g.hue = 30; g.accentHue = 200; } },
+  { id: 'ghostlight', name: 'Ghost Light', plan: 'angler', depth: 3400,
+    note: 'Synergy: lure + stealth. The body fades further and the bulb grows a halo: a light with nothing behind it.',
+    edit: g => { g.lure = 1; g.stealth = 0.5; g.translucent = 0.25; g.glow = 0.5; g.jaw = 0.8;
+                 g.hue = 210; g.accentHue = 186; } },
+  { id: 'urchin', name: 'Urchin', plan: 'darter', depth: 2400,
+    note: 'Synergy: spines + carapace. Thorns stand out of the plate across the whole back, longer as the armour grows.',
+    edit: g => { g.spikes = 1; g.armor = 11; g.segments = 1; g.hue = 12; g.accentHue = 30; } },
+  { id: 'nematocyst', name: 'Nematocyst', plan: 'darter', depth: 2400,
+    note: 'Synergy: venom + lifesteal. The sacs are ringed with capsules, and a duct carries them forward to the gut.',
+    edit: g => { g.venom = 1; g.lifesteal = 0.06; g.armor = 1; g.hue = 150; g.accentHue = 96; } },
 ];
 
 function buildGroup(): DesignGroup {

@@ -900,6 +900,14 @@ export class World {
     // organs' business, and a kill is read off the wound before they run so poison cannot
     // credit a bite that already finished the job
     wound(this, att, def, { dmg, fatal, whole });
+    // recoil can finish the attacker. Nothing booked that death before, so a spined body
+    // could drive a biter's health below zero and leave it swimming; the kill is the
+    // defender's. The player is left to `Game.digest`, which ends the run on its own hp
+    if (!att.isPlayer && att.alive && att.hp <= 0) {
+      this.slay(att, def.isPlayer);
+      this.bites.push({ x: att.x, y: att.y, amount: 0, fatal: true,
+        onPlayer: false, byPlayer: def.isPlayer, size: att.genome.size });
+    }
     if (fatal) {
       this.slay(def, att.isPlayer);
       // a meal worth the name buys a longer lull; a krill barely registers

@@ -1,4 +1,4 @@
-import type { Genome } from './genome';
+import { armourOf, type Genome } from './genome';
 import type { Creature, World } from './world';
 import { dist2 } from './util';
 
@@ -137,7 +137,55 @@ export const ORGANS: Organ[] = [
       }
       return fired;
     } }),
+
+  O({ id: 'urchin', name: 'Urchin',
+    // 11 is spines on a carapace, the pairing this is for. It sits one point above the
+    // Leviathan's 10 on purpose: the final guardian has spikes too, and at 10 it would turn
+    // into an urchin — repainted and punishing every bite on the last fight of the run
+    when: g => g.spikes > 0 && armourOf(g) >= 11,
+    // the plate is what the spines stand in, so the recoil is paid in armour: the bite that
+    // glances off is the bite that impales itself. On top of the spines' own recoil
+    onWounded: (def, att, ctx) => {
+      if (ctx.whole) return false;
+      att.hp -= armourOf(def.genome) * 0.8;
+      return true;
+    } }),
+
+  O({ id: 'ghostlight', name: 'Ghost Light', when: g => g.lure > 0 && g.stealth >= 0.4,
+    // the light is visible and the animal behind it is not, so nothing drawn in has a reason
+    // to bolt: a shoal's alarm does not reach the ones already on the lure. Panic is what
+    // `World.think` checks before it lets the lure steer, so clearing it is the whole effect
+    onTick: (c, _dt, world) => {
+      const range = lureRangeOf(c);
+      let fired = false;
+      for (const o of world.creatures) {
+        if (!o.alive || o.panic <= 0 || !c.preysOn(o)) continue;
+        if (dist2(c.x, c.y, o.x, o.y) > range * range) continue;
+        o.panic = 0;
+        fired = true;
+      }
+      return fired;
+    } }),
+
+  O({ id: 'nematocyst', name: 'Nematocyst', when: g => g.venom > 0 && g.lifesteal > 0,
+    // stolen stinging cells feeding on the venom they deliver: every body still poisoned
+    // heals you while it dies. Player only, because the wound records whether the player
+    // poisoned it and not who did — an NPC has no way to find the animals it envenomed.
+    // The base share keeps one Cnidocyte Graft worth taking; lifesteal scales it from there
+    onTick: (c, dt, world) => {
+      if (!c.isPlayer || c.hp >= c.hpMax) return false;
+      let dps = 0;
+      for (const o of world.creatures) if (o.alive && o.poisonT > 0 && o.poisonByPlayer) dps += o.poison;
+      if (dps <= 0) return false;
+      c.hp = Math.min(c.hpMax, c.hp + dps * dt * (0.3 + c.genome.lifesteal * 2));
+      return true;
+    } }),
 ];
+
+/** Ids of the named synergies live on this genome — part of the bake key, see `fishbake`. */
+export function synergiesOf(g: Genome): string[] {
+  return ORGANS.filter(o => o.name && o.when(g)).map(o => o.id);
+}
 
 /**
  * Whether a named synergy is live on this genome. The paint asks this, so the body shows a
