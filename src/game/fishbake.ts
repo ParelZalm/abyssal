@@ -85,7 +85,7 @@ function key(g: Genome, plan: Plan) {
           q(g.bulk, 0.2), q(g.barbels, 0.3),
           g.lure > 0 ? 1 : 0, Math.min(3, g.claws),
           Math.min(3, g.coral), Math.min(3, g.frill), g.jet > 0 ? 1 : 0,
-          g.venom > 0 ? 1 : 0,
+          g.venom > 0 ? 1 : 0, Math.min(2, g.filter), g.crush > 0 ? 1 : 0,
           // a synergy's threshold can fall inside one bucket of the fields above — Urchin's
           // armour test sits mid-step — so the paint's own predicate goes in whole
           synergiesOf(g).join('+')].join('|');
@@ -822,7 +822,10 @@ function head(gr: Graphics, f: Form, pal: Palette, g: Genome, A: PlanArt, men: n
   // mouth: a dark sliver across the snout, opening with the jaw
   const tm = 0.05;
   const gape = Math.min(1.5, g.gape);
-  const mw = halfWidth(tm, f) * (0.6 + Math.min(1.2, g.jaw) * 0.5 + gape * 0.9) * A.mouth;
+  // a sieve is all intake: the rakers need a mouth as wide as the head to be worth having
+  const sieve = Math.min(2, g.filter);
+  const mw = halfWidth(tm, f) * (0.6 + Math.min(1.2, g.jaw) * 0.5 + gape * 0.9 + sieve * 0.45) *
+    A.mouth;
   // a gape opens backwards as well as wider: the hinge walks down the body, which is what
   // makes a gulper read as mostly mouth rather than as a fish with a big grin
   const hinge = tm * 2.4 * (1 + gape * 1.6);
@@ -844,6 +847,9 @@ function head(gr: Graphics, f: Form, pal: Palette, g: Genome, A: PlanArt, men: n
         .closePath().fill({ color: 0xf2f4e6, alpha: 0.9 * pal.alpha });
     }
   }
+
+  if (sieve > 0) rakers(gr, f, pal, sieve, tm, mw, peak);
+  if (g.crush > 0) pharynx(gr, f, pal, tm, mw);
 
   // eyes: a dark bead each side with a wet highlight
   const te = A.eyeAt;
@@ -892,6 +898,77 @@ function head(gr: Graphics, f: Form, pal: Palette, g: Genome, A: PlanArt, men: n
         .quadraticCurveTo(spineAt(tg + 0.02, f), dir * halfWidth(tg, f) * 0.78,
                           spineAt(tg - 0.07, f), dir * halfWidth(tg - 0.07, f) * 0.98)
         .closePath().fill({ color: pal.back, alpha: 0.4 * pal.alpha });
+    }
+  }
+}
+
+/**
+ * Gill Rakers: a comb across the mouth and the slits of the gills behind it. The comb is
+ * pale bars standing in the opening, which is what a sieve looks like from above; the slits
+ * are the whale shark's, a row of dark crescents down each side of the head, because a
+ * filter feeder is a body built around pushing water through itself.
+ */
+function rakers(gr: Graphics, f: Form, pal: Palette, sieve: number, tm: number, mw: number,
+                peak: number) {
+  const n = Math.round(7 + sieve * 3);
+  const x0 = spineAt(tm * 0.25, f);
+  const depth = spineAt(tm * 0.25, f) - spineAt(tm * 1.6, f);
+  for (let i = 0; i < n; i++) {
+    const v = ((i + 0.5) / n) * 2 - 1;
+    const y = v * mw * 0.62;
+    const s = mw * 0.045;
+    // the bars shorten toward the corners, where the lens of the mouth closes
+    const len = depth * (1 - v * v * 0.6);
+    gr.moveTo(x0, y - s).lineTo(x0 - len, y - s * 0.4).lineTo(x0 - len, y + s * 0.4)
+      .lineTo(x0, y + s).closePath().fill({ color: pal.belly, alpha: 0.75 * pal.alpha });
+  }
+  const slits = 4 + Math.round(sieve);
+  for (let i = 0; i < slits; i++) {
+    const t = peak * (0.5 + (i / Math.max(1, slits - 1)) * 0.55);
+    const w = halfWidth(t, f);
+    const x = spineAt(t, f);
+    const run = w * 0.55;
+    for (const dir of [-1, 1] as const) {
+      gr.moveTo(x, dir * w * 0.96)
+        .quadraticCurveTo(x - w * 0.12, dir * (w * 0.96 - run * 0.5), x, dir * (w * 0.96 - run))
+        .quadraticCurveTo(x - w * 0.04, dir * (w * 0.96 - run * 0.5), x, dir * w * 0.96)
+        .closePath().fill({ color: pal.dark, alpha: 0.6 * pal.alpha });
+    }
+  }
+}
+
+/**
+ * Crushing Pharynx: a jaw built for pressure. The adductor muscles bulge out past the
+ * cheeks — the only organ that widens the head's own outline, so a crusher reads as
+ * jowled from above — and the lips carry blunt plates rather than teeth, since a molar
+ * that points is a molar that snaps.
+ */
+function pharynx(gr: Graphics, f: Form, pal: Palette, tm: number, mw: number) {
+  // behind the eyes, not under them: over the eye the bulge reads as a frog's lids
+  const tc = 0.25;
+  const w = halfWidth(tc, f);
+  const x = spineAt(tc, f);
+  for (const dir of [-1, 1] as const) {
+    gr.ellipse(x, dir * w * 0.92, w * 0.55, w * 0.32)
+      .fill({ color: pal.skin, alpha: pal.alpha });
+    // the inner half takes the back colour, so the bulge joins the countershade rather
+    // than sitting on it as a flat patch
+    gr.ellipse(x, dir * w * 0.8, w * 0.5, w * 0.16)
+      .fill({ color: pal.back, alpha: 0.35 * pal.alpha });
+    // striation: darker bands across the muscle, running toward the hinge
+    for (const k of [-0.45, 0, 0.45]) {
+      gr.ellipse(x + w * k, dir * w * 0.95, w * 0.07, w * 0.22)
+        .fill({ color: pal.back, alpha: 0.4 * pal.alpha });
+    }
+  }
+  for (let i = 0; i < 3; i++) {
+    const v = (i + 0.5) / 3;
+    const px = spineAt(tm * (0.35 + v * 1.1), f);
+    for (const dir of [-1, 1] as const) {
+      const py = dir * mw * 0.55 * (0.4 + v * 0.6);
+      gr.ellipse(px, py, mw * 0.28, mw * 0.19).fill({ color: pal.bone, alpha: 0.95 * pal.alpha });
+      gr.ellipse(px + mw * 0.07, py - mw * 0.05, mw * 0.11, mw * 0.07)
+        .fill({ color: 0xffffff, alpha: 0.35 });
     }
   }
 }

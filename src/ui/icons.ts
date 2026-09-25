@@ -5,7 +5,7 @@
 export type IconName =
   | 'muscle' | 'fin' | 'tail' | 'jaw' | 'teeth' | 'gullet' | 'scale' | 'spike'
   | 'shield' | 'eye' | 'wave' | 'glow' | 'ghost' | 'gill' | 'pulse' | 'mass'
-  | 'bolt' | 'spiral' | 'blade' | 'drop' | 'ring' | 'funnel';
+  | 'bolt' | 'spiral' | 'blade' | 'drop' | 'ring' | 'funnel' | 'sieve' | 'molar';
 
 export const ICONS: Record<IconName, string> = {
   muscle: 'M3 12c3-6 6-8 9-8s6 2 9 8c-3 6-6 8-9 8s-6-2-9-8z',
@@ -30,6 +30,8 @@ export const ICONS: Record<IconName, string> = {
   drop: 'M12 3s7 7 7 11a7 7 0 1 1-14 0c0-4 7-11 7-11z',
   ring: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
   funnel: 'M3 5h18l-7 8v7l-4-2v-5z',
+  sieve: 'M3 7c6-3 12-3 18 0v5c-6 5-12 5-18 0zM8 7v8.5M12 6v10.5M16 7v8.5',
+  molar: 'M6 4c2 0 4 1 6 1s4-1 6-1c2 0 3 2 3 5 0 4-2 11-4 11-1 0-2-5-5-5s-4 5-5 5c-2 0-4-7-4-11 0-3 1-5 3-5z',
 };
 
 /** DOM SVG for an icon, sized in px. Rarity is carried by colour, not by style. */

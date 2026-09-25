@@ -21,6 +21,9 @@ export interface Genome {
   jet: number;         // siphon: a harder, cheaper boost
   coral: number;       // encrusting plate
   frill: number;       // stinging fringe that punishes attackers
+  // diet — organs that change what you can eat, not how hard you hit it
+  filter: number;      // gill rakers: sieve small prey from afar, but a feeble bite on large
+  crush: number;       // crushing pharynx: armour and recoil mean nothing, but it snaps slowly
 
   // morphology — purely visual, but every trait nudges it so the fish reads as evolved
   hue: number;
@@ -54,7 +57,7 @@ export function baseGenome(): Genome {
   return {
     size: 14, speed: 150, turn: 4.2, bite: 6, sense: 340, armor: 0,
     regen: 0.6, metabolism: 1, stealth: 0, gulp: 1, lifesteal: 0, pen: 0, ram: 0,
-    venom: 0, lure: 0, claws: 0, jet: 0, coral: 0, frill: 0,
+    venom: 0, lure: 0, claws: 0, jet: 0, coral: 0, frill: 0, filter: 0, crush: 0,
     hue: 30, accentHue: 200, finSize: 1, tailSplit: 0.35, spikes: 0,
     jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0,
     photophores: 0, eyeAdapt: 0, gape: 0, veil: 0, bulk: 0, barbels: 0,

@@ -49,6 +49,8 @@ export class PauseScreen implements Component {
       ['Jet', g.jet, `+${Math.round(g.jet * 40)}% boost`],
       ['Coral', g.coral, 'encrusting plate'],
       ['Frill', g.frill, 'stinging fringe'],
+      ['Rakers', g.filter, 'sieve small prey, 40% bite on large'],
+      ['Pharynx', g.crush, 'ignores armour and recoil, slow bite'],
     ];
     const grown = organs.filter(([, v]) => v > 0);
 

@@ -2,7 +2,8 @@ import { Container } from 'pixi.js';
 import { FishView } from './fishview';
 import { PLAN_ART } from './form';
 import { armourOf, biteDamage, maxHp, type Genome } from './genome';
-import { armourAgainst, lureRangeOf, organsOf, tick as tickOrgans, wound, type Organ } from './organs';
+import { armourAgainst, biteRateOf, damageOf, gulpOf, lureRangeOf, organsOf, tick as tickOrgans,
+         wound, type Organ } from './organs';
 import { genomeFor, hunts, rangeOf, rollSpecies, SPECIES, type Species } from './species';
 import { BANDS, bandAt } from './zones';
 import { angleDelta, clamp, dist2, lerp, Rng, TAU } from './util';
@@ -908,8 +909,8 @@ export class World {
     const d2 = dist2(att.mouthX, att.mouthY, def.x, def.y);
     if (d2 <= reach * reach) { this.bite(att, def); return; }
 
-    const gulp = reach + att.genome.size * att.genome.gulp *
-      (att.swallowSize > def.genome.size * 2 ? 2.6 : 0.9);
+    const whole = att.swallowSize > def.genome.size * 2;
+    const gulp = reach + gulpOf(att, att.genome.size * att.genome.gulp * (whole ? 2.6 : 0.9), whole);
     // written so a NaN distance falls out here rather than poisoning a velocity
     if (!(d2 <= gulp * gulp)) return;
     const d = Math.sqrt(d2) || 1;
@@ -920,7 +921,7 @@ export class World {
 
   private bite(att: Creature, def: Creature) {
     if (att.biteCd > 0) return;
-    att.biteCd = 0.4;
+    att.biteCd = biteRateOf(att, 0.4);
     // the bite itself throws the body forward — that lunge is most of the impact
     att.view.chomp();
     // ...except in tentacles, where the catch is already at the beak: a lunge there
@@ -935,7 +936,7 @@ export class World {
     // every guardian's grab a death with nothing to struggle against
     const whole = !att.holding && att.swallowSize > def.genome.size * 2;
     const armour = Math.max(0, armourAgainst(att, armourOf(def.genome)));
-    const dmg = whole ? def.hp : Math.max(1, biteDamage(att.genome) - armour);
+    const dmg = whole ? def.hp : Math.max(1, damageOf(att, biteDamage(att.genome)) - armour);
     def.hp -= dmg;
     const fatal = def.hp <= 0;
     // what the bodies do to each other beyond the damage — recoil, venom, grip — is the

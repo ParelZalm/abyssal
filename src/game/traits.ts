@@ -125,6 +125,17 @@ export const TRAITS: Trait[] = [
     desc: '+80% gulp reach, +15% bite. Inhale whatever drifts close.',
     apply: g => { g.gulp *= 1.8; g.bite *= 1.15; } }),
 
+  // ------------------------------------------------------------------ diet
+  // Each one is worse at something on purpose: the card is a choice of what to hunt.
+  T({ id: 'rakers', name: 'Gill Rakers', rarity: 'rare', icon: 'sieve',
+    desc: 'Sieve the water: small prey is drawn in from twice as far, but a bite on anything you cannot swallow whole does 40%.',
+    apply: g => { g.filter += 1; g.metabolism *= 0.92; } }),
+
+  T({ id: 'pharynx', name: 'Crushing Pharynx', rarity: 'rare', icon: 'molar', minStage: 3,
+    desc: 'Armour and spines mean nothing to your bite, but it closes 80% slower.',
+    maxStacks: 1,
+    apply: g => { g.crush += 1; g.bite *= 1.15; } }),
+
   // ---------------------------------------------------- reef organs (rare)
   T({ id: 'beak', name: 'Parrot Beak', rarity: 'common', icon: 'jaw',
     desc: '+30% bite, and it chews through 2 points of armour.',

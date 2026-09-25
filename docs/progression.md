@@ -11,7 +11,7 @@ Three groups of fields, and the split matters:
 
 - **Stats** — `size`, `speed`, `turn`, `bite`, `sense`, `armor`, `regen`, `metabolism`,
   `stealth`, `gulp`, `lifesteal`, `pen`, `ram`. Read by the simulation.
-- **Organs** — `venom`, `lure`, `claws`, `jet`, `coral`, `frill`, plus `pen`, `ram`,
+- **Organs** — `venom`, `lure`, `claws`, `jet`, `coral`, `frill`, `filter`, `crush`, plus `pen`, `ram`,
   `lifesteal` and `spikes`, which act like organs even though they sit in the other
   groups. Each carries a mechanic *and* a piece of morphology. The mechanic lives in
   `organs.ts`: one `Organ` record per field, keyed off the genome (NPC species carry
@@ -21,6 +21,15 @@ Three groups of fields, and the split matters:
   call the helpers at the bottom of that file and never read an organ field by name.
   Every `Creature` caches its active organs and `refreshOrgans()` beside `view.rebuild`.
   The one exception is `coral`: it is plate, so `armourOf(g)` adds it as a derived stat.
+  The two **diet** organs are the first that make a body worse at something on purpose, so
+  the build decides what the run hunts. `filter` (Gill Rakers) multiplies the gulp reach
+  on anything small enough to go down whole by `1.8 + 0.7 × filter`, and cuts every bite
+  that has to tear to 40% — a sweep through a krill cloud, and a retreat from anything its
+  own size. `crush` (Crushing Pharynx, stage 3) faces no armour and takes no recoil, and
+  pays with a bite cooldown of 0.72 s instead of 0.4. They act through four modifier hooks
+  added for them — `gulp`, `damage`, `biteRate`, `recoil` — and recoil goes through
+  `sting()` in `organs.ts`, so spines, frill and Urchin all ask the attacker's organs how
+  much of it lands.
   A synergy is an `Organ` whose `when` tests two fields and that carries a `name`; its
   effect hooks return true on a frame they did something, `World.fired` publishes its id
   once per run on `world.synergies`, and `Game.digest` turns it into the toast, so the
@@ -71,13 +80,13 @@ the same thresholds as anything else.
 
 ## The draft
 
-`traits.ts` holds 43 `Trait` records — id, rarity, icon, description, and an `apply`
+`traits.ts` holds 45 `Trait` records — id, rarity, icon, description, and an `apply`
 that mutates a `Genome`. `draftTraits(rng, reach, taken, count)` picks without
 replacement from a rarity-weighted pool.
 
 - `RARITY_WEIGHT` sets the base odds; `RARITY_CLIMB` makes rare and apex more likely as
-  `reach` grows. Measured over the live pool (14 common, 18 rare, 11 apex): 70/30/0 at
-  stage 1, 44/45/12 by stage 8 — rare overtakes common, which is the intent.
+  `reach` grows. Measured over the live pool (14 common, 20 rare, 11 apex): 70/30/0 at
+  stage 1, 42/47/11 by stage 8 — rare overtakes common, which is the intent.
 - **`reach` is not the stage.** `main.offerDraft` passes
   `max(stage, maxBand * 2 + 1)`, so diving upgrades the pool as much as feeding does.
 - `maxStacks` defaults to 2, so a run specialises without collapsing into one stat.

@@ -343,6 +343,12 @@ const BUILDS: { id: string; name: string; note: string; plan: Plan; depth: numbe
     edit: g => { g.sense = 2000; g.eyeAdapt = -0.85; g.barbels = 1.2; g.bulk = 0.7;
                  g.speed = 115; g.metabolism = 2.2; g.photophores = 0.25;
                  g.hue = 18; g.accentHue = 14; } },
+  { id: 'filterfeeder', name: 'Filter feeder', plan: 'darter', depth: 700,
+    note: 'Diet: gill rakers. A mouth as wide as the head, combed with rakers, and gill slits down both flanks.',
+    edit: g => { g.filter = 2; g.speed = 130; g.hue = 206; g.accentHue = 180; } },
+  { id: 'crusher', name: 'Crusher', plan: 'darter', depth: 6300,
+    note: 'Diet: crushing pharynx. Jowls of jaw muscle past the cheeks, and blunt plates on the lips instead of teeth.',
+    edit: g => { g.crush = 1; g.bite = 9; g.armor = 3; g.hue = 24; g.accentHue = 12; } },
   { id: 'toxiclure', name: 'Toxic Lure', plan: 'angler', depth: 2400,
     note: 'Synergy: lure + venom. The bulb goes the sacs\' green and grows barbs; the stalk carries a vein.',
     edit: g => { g.lure = 1; g.venom = 1; g.jaw = 0.8; g.hue = 30; g.accentHue = 200; } },
@@ -391,7 +397,7 @@ const RARITY_DEPTH: Record<Rarity, number> = { common: 500, rare: 2400, apex: 52
 /**
  * Every mutation on the hatchling, once. The card's text says what a trait does; this row
  * is whether the body says it too. A trait whose cell is indistinguishable from the one
- * beside it has broken the organ rule, and that is only visible with all 44 in one place.
+ * beside it has broken the organ rule, and that is only visible with the whole pool in one place.
  */
 function mutationGroup(): DesignGroup {
   return {

@@ -57,6 +57,14 @@ export interface Organ {
   burn?: (c: Creature, base: number) => number;
   /** Health returned from a swallow of this much biomass. */
   swallowHeal?: (g: Genome, gain: number) => number;
+  /** How far the mouth draws in prey, given whether it would go down whole. */
+  gulp?: (g: Genome, base: number, whole: boolean) => number;
+  /** Damage a bite that tears, rather than swallows, deals before armour. */
+  damage?: (g: Genome, base: number) => number;
+  /** Seconds between bites. */
+  biteRate?: (g: Genome, base: number) => number;
+  /** Damage this body takes from a defender's recoil — spines, frill, the urchin's plate. */
+  recoil?: (g: Genome, base: number) => number;
 
   // ---- effects
   /** The attacker's organs, after its bite has landed. */
@@ -73,6 +81,17 @@ function envenom(def: Creature, att: Creature, dps: number) {
   def.poisonByPlayer = att.isPlayer;
 }
 
+/**
+ * Recoil off a defender's organ, through the attacker's own `recoil` modifiers. Returns
+ * what actually landed, so a synergy that did nothing to a crusher does not claim it acted.
+ */
+function sting(att: Creature, amount: number) {
+  let a = amount;
+  for (const o of att.organs) if (o.recoil) a = o.recoil(att.genome, a);
+  att.hp -= a;
+  return a;
+}
+
 const O = (o: Organ) => o;
 
 export const ORGANS: Organ[] = [
@@ -82,10 +101,10 @@ export const ORGANS: Organ[] = [
     armour: (g, base) => base - g.pen }),
 
   O({ id: 'spines', when: g => g.spikes > 0,
-    onWounded: (def, att, ctx) => { if (!ctx.whole) att.hp -= def.genome.spikes * 3; } }),
+    onWounded: (def, att, ctx) => { if (!ctx.whole) sting(att, def.genome.spikes * 3); } }),
 
   O({ id: 'frill', when: g => g.frill > 0,
-    onWounded: (def, att, ctx) => { if (!ctx.whole) att.hp -= def.genome.frill * 2; } }),
+    onWounded: (def, att, ctx) => { if (!ctx.whole) sting(att, def.genome.frill * 2); } }),
 
   O({ id: 'venom', when: g => g.venom > 0,
     // keeps working after the mouth has let go; the poison tick itself is status on the
@@ -122,6 +141,26 @@ export const ORGANS: Organ[] = [
   O({ id: 'lifesteal', when: g => g.lifesteal > 0,
     swallowHeal: (g, gain) => gain * g.lifesteal }),
 
+  // ---------------------------------------------------------------- diet
+  // The rest of the pool makes one fish better at everything. A diet makes it worse at
+  // something on purpose, so the build decides what the run hunts.
+
+  O({ id: 'filter', when: g => g.filter > 0,
+    // rakers sieve: anything small enough to go down whole is drawn in from far further,
+    // which turns a krill cloud from a chase into a sweep. The mouth is a strainer, not a
+    // weapon, so a bite into anything that has to be torn barely marks it — a filter
+    // feeder that meets a fish its own size has to leave, not fight
+    gulp: (g, base, whole) => whole ? base * (1.8 + g.filter * 0.7) : base,
+    damage: (_g, base) => base * 0.4 }),
+
+  O({ id: 'crush', when: g => g.crush > 0,
+    // a pharynx that cracks shell: plate does not slow it and a spined body does not hurt
+    // it, which is what makes the vent crab and the plated deep a meal. Paid for in tempo —
+    // closing a jaw built for pressure takes nearly twice as long, so a school outpaces it
+    armour: () => 0,
+    recoil: () => 0,
+    biteRate: (_g, base) => base * 1.8 }),
+
   // ---------------------------------------------------------------- synergies
   O({ id: 'toxiclure', name: 'Toxic Lure', when: g => g.lure > 0 && g.venom > 0,
     desc: 'Illicium and venom. Prey that reaches the light is poisoned before you bite.',
@@ -151,8 +190,7 @@ export const ORGANS: Organ[] = [
     // glances off is the bite that impales itself. On top of the spines' own recoil
     onWounded: (def, att, ctx) => {
       if (ctx.whole) return false;
-      att.hp -= armourOf(def.genome) * 0.8;
-      return true;
+      return sting(att, armourOf(def.genome) * 0.8) > 0;
     } }),
 
   O({ id: 'ghostlight', name: 'Ghost Light', when: g => g.lure > 0 && g.stealth >= 0.4,
@@ -235,6 +273,24 @@ export function burnOf(c: Creature, base: number) {
   let b = base;
   for (const o of c.organs) if (o.burn) b = o.burn(c, b);
   return b;
+}
+
+export function gulpOf(c: Creature, base: number, whole: boolean) {
+  let r = base;
+  for (const o of c.organs) if (o.gulp) r = o.gulp(c.genome, r, whole);
+  return r;
+}
+
+export function damageOf(c: Creature, base: number) {
+  let d = base;
+  for (const o of c.organs) if (o.damage) d = o.damage(c.genome, d);
+  return d;
+}
+
+export function biteRateOf(c: Creature, base: number) {
+  let s = base;
+  for (const o of c.organs) if (o.biteRate) s = o.biteRate(c.genome, s);
+  return s;
 }
 
 export function swallowHealOf(c: Creature, gain: number) {

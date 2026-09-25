@@ -77,8 +77,11 @@ Gates are size-only, so the optimal play is to grind the shallows until the gate
 Most of the pool is multipliers, which converge on one optimal fish. New organs that
 change *what you do*, each an entry in `organs.ts` plus paint:
 
-- **Diet.** A filter mouth that eats plankton at range but cannot bite large prey. A
-  crusher jaw that eats armoured things and jellies safely but snaps slowly.
+- ~~**Diet.**~~ Done: Gill Rakers (`filter`) and Crushing Pharynx (`crush`), with the
+  `gulp`, `damage`, `biteRate` and `recoil` hooks they needed. Jellies do not sting in
+  the simulation, so "eats jellies safely" had nothing to protect against; the crusher's
+  safety is from spines and frill. The two can be taken together; if a mouth should be one
+  or the other, the draft needs an exclusion rule it does not have.
 - **Locomotion.** Eel body: turns on the spot, no glide. Jet body: pulses on a cooldown.
   Ambush body: nearly still, huge bite, sinks when idle. The swim physics already
   separates thrust, drag and turn, so these are parameter shapes more than new code.
@@ -122,5 +125,5 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 1. ~~Two or three more synergies~~ — done; Ballistic once the boost is published.
 2. ~~The shallows clock~~ — done.
 3. ~~The codex~~ — done.
-4. Diet and locomotion organs, which make run two differ from run one.
+4. Diet (done) and locomotion organs, which make run two differ from run one.
 5. Transformations, then the draft reading synergies once there are enough to read.
