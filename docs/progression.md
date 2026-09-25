@@ -11,12 +11,17 @@ Three groups of fields, and the split matters:
 
 - **Stats** — `size`, `speed`, `turn`, `bite`, `sense`, `armor`, `regen`, `metabolism`,
   `stealth`, `gulp`, `lifesteal`, `pen`, `ram`. Read by the simulation.
-- **Organs** — `venom`, `lure`, `claws`, `jet`, `coral`, `frill`. Each carries a
-  mechanic *and* a piece of morphology, and each is read by name where it acts: `coral`
-  is plate, so `armourOf(g)` adds it rather than the mutation quietly topping up `armor`;
-  `frill` stings, so the recoil in `World.bite` reads it beside `spikes`. An organ that
-  only reaches the simulation through some other stat is a stat in a costume — adding one
-  means touching both `world.ts` and `fishbake.ts`.
+- **Organs** — `venom`, `lure`, `claws`, `jet`, `coral`, `frill`, plus `pen`, `ram`,
+  `lifesteal` and `spikes`, which act like organs even though they sit in the other
+  groups. Each carries a mechanic *and* a piece of morphology. The mechanic lives in
+  `organs.ts`: one `Organ` record per field, keyed off the genome (NPC species carry
+  organs too, so a trait list would lose the crab's spines), with *modifier* hooks
+  (armour faced, lure range, boost, burn, swallow heal) and *effect* hooks (`onWound`,
+  `onWounded`, `onTick`). `World.bite` and the boost, burn and digest code in `main`
+  call the helpers at the bottom of that file and never read an organ field by name.
+  Every `Creature` caches its active organs and `refreshOrgans()` beside `view.rebuild`.
+  The one exception is `coral`: it is plate, so `armourOf(g)` adds it as a derived stat.
+  A synergy is an `Organ` whose `when` tests two fields.
 - **Morphology** — `hue`, `accentHue`, `finSize`, `tailSplit`, `spikes`, `jaw`,
   `eyeSize`, `glow`, `segments`, `translucent`, plus the deep-water set: `photophores`,
   `eyeAdapt`, `gape`, `veil`, `bulk`, `barbels`. Purely visual, but every trait nudges at

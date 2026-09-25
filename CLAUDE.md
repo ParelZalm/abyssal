@@ -87,9 +87,10 @@ Read `docs/decisions.md` before rebuilding anything that looks missing.
 - **Nothing on a creature is stroked.** A contour has a position of its own, so it draws
   twice wherever parts cross and the join shows. Silhouettes are carried by value —
   noise-ragged edges, countershading, mottling. See `docs/decisions.md`.
-- **Organs carry a mechanic and a morphology together.** Adding one to `Genome` means
-  touching both `world.ts` and `fishbake.ts`; a stat with no visible consequence is not
-  how this game communicates.
+- **Organs carry a mechanic and a morphology together.** Adding one to `Genome` means an
+  entry in `organs.ts` (the mechanic, as hooks the simulation calls) and paint in
+  `fishbake.ts`; a stat with no visible consequence is not how this game communicates.
+  `world.ts` and `main.ts` never read an organ field by name.
 - **Use `waterColor(y)` and `lightAt(y)` from `water.ts`** for anything that needs to
   know what the water looks like at a depth. `biomeAt(y)` blends across thermoclines;
   `tierBiome(y)` is the unblended profile for anything discrete.

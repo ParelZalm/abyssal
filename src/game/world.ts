@@ -2,6 +2,7 @@ import { Container } from 'pixi.js';
 import { FishView } from './fishview';
 import { PLAN_ART } from './form';
 import { armourOf, biteDamage, maxHp, type Genome } from './genome';
+import { armourAgainst, lureRangeOf, organsOf, tick as tickOrgans, wound, type Organ } from './organs';
 import { genomeFor, hunts, rangeOf, rollSpecies, SPECIES, type Species } from './species';
 import { angleDelta, clamp, dist2, lerp, Rng, TAU } from './util';
 
@@ -116,11 +117,19 @@ export class Creature {
   holdT = 0;
   /** Seconds before tentacles that lost their catch can strike again. */
   graspCd = 0;
+  /** The organs this body carries — see `organs.ts`. Refreshed whenever the genome is. */
+  organs: Organ[];
 
   constructor(public species: Species, public genome: Genome) {
     this.hpMax = maxHp(genome);
     this.hp = this.hpMax;
+    this.organs = organsOf(genome);
     this.view = new FishView(genome, species.plan);
+  }
+
+  /** Call after a genome change, beside `view.rebuild`: a new organ has to act as well as show. */
+  refreshOrgans() {
+    this.organs = organsOf(this.genome);
   }
 
   /** Where the mouth actually is — bites and gulps are measured from here. */
@@ -507,8 +516,8 @@ export class World {
     }
 
     // a lit lure overrides whatever the prey was doing — that is the whole point of it
-    if (p.genome.lure > 0 && p.preysOn(c) && c.panic <= 0) {
-      const range = 240 + p.genome.lure * 340;
+    const range = lureRangeOf(p);
+    if (range > 0 && p.preysOn(c) && c.panic <= 0) {
       const d2 = dist2(c.x, c.y, p.x, p.y);
       if (d2 < range * range && d2 > 900) {
         c.drive(dt, Math.atan2(p.y - c.y, p.x - c.x), 0.85);
@@ -774,6 +783,7 @@ export class World {
     } else {
       if (c.hp < c.hpMax) c.hp = Math.min(c.hpMax, c.hp + c.genome.regen * dt);
     }
+    tickOrgans(c, dt);
     // creatures the camera cannot see still swim and hunt, they just skip their art
     if (!c.view.visible) return;
     c.view.animate(dt, clamp(c.thrust, 0, 1.6), c.beat, c.bank);
@@ -871,15 +881,14 @@ export class World {
     // — but not from tentacles: a beak tears, and a whole swallow at the crown would make
     // every guardian's grab a death with nothing to struggle against
     const whole = !att.holding && att.swallowSize > def.genome.size * 2;
-    // a beak chews through plate: penetration comes off the armour, not off the damage,
-    // so it is worth exactly as much as the armour actually in front of it
-    const armour = Math.max(0, armourOf(def.genome) - att.genome.pen);
+    const armour = Math.max(0, armourAgainst(att, armourOf(def.genome)));
     const dmg = whole ? def.hp : Math.max(1, biteDamage(att.genome) - armour);
     def.hp -= dmg;
-    // dorsal spines and a stinging frill both punish whatever bites you
-    const recoil = def.genome.spikes * 3 + def.genome.frill * 2;
-    if (recoil > 0 && !whole) att.hp -= recoil;
     const fatal = def.hp <= 0;
+    // what the bodies do to each other beyond the damage — recoil, venom, grip — is the
+    // organs' business, and a kill is read off the wound before they run so poison cannot
+    // credit a bite that already finished the job
+    wound(att, def, { dmg, fatal, whole });
     if (fatal) {
       this.slay(def, att.isPlayer);
       // a meal worth the name buys a longer lull; a krill barely registers
@@ -890,19 +899,6 @@ export class World {
     }
     this.bites.push({ x: def.x, y: def.y, amount: dmg, fatal,
       onPlayer: def.isPlayer, byPlayer: att.isPlayer, size: def.genome.size });
-
-    // venom keeps working after the mouth has let go
-    if (att.genome.venom > 0 && !fatal) {
-      def.poison = Math.max(def.poison, att.genome.venom * 2.5);
-      def.poisonT = 4;
-      def.poisonByPlayer = att.isPlayer;
-    }
-    // a pincer holds what it hits
-    if (att.genome.claws > 0 && !fatal) {
-      const grip = Math.max(0.15, 0.6 - att.genome.claws * 0.2);
-      def.vx *= grip;
-      def.vy *= grip;
-    }
   }
 
   /**

@@ -10,6 +10,7 @@ import { lightAt, Water, waterColor } from './game/water';
 import type { Species } from './game/species';
 import { bandAt, BANDS, depthLabel, descentLimit, FINAL_GUARDIAN, nextGate,
          placeName } from './game/zones';
+import { boostModsOf, burnOf, swallowHealOf } from './game/organs';
 import { draftTraits, type Trait } from './game/traits';
 import { clamp, dist2, hsl, lerp, rgb, Rng } from './game/util';
 import { Creature, DEPTH_MAX, speciesById, World } from './game/world';
@@ -329,15 +330,15 @@ class Game {
 
     const wants = k.has('shift') || k.has(' ') || this.mouse.down;
     const sprinting = wants && this.food > 1 && throttle > 0.1;
-    const jet = 1 + g.jet * 0.4;
+    const boost = boostModsOf(p);
     this.boostCd = Math.max(0, this.boostCd - dt);
     if (sprinting && !this.sprinting && this.boostCd <= 0) {
       // the kick is the boost: a hard shove up front, paid for in one bite of fullness, so a
       // lunge at prey is cheap and a long chase is not
       this.boostCd = 0.45;
       this.food = Math.max(0, this.food - 1.5);
-      p.vx += Math.cos(p.angle) * g.speed * 1.6 * jet;
-      p.vy += Math.sin(p.angle) * g.speed * 1.6 * jet;
+      p.vx += Math.cos(p.angle) * g.speed * 1.6 * boost.kick;
+      p.vy += Math.sin(p.angle) * g.speed * 1.6 * boost.kick;
       p.beat = Math.PI * 0.5;
       this.fx.burst(p.mouthX, p.mouthY, 0xd8fff2, 7, 110, p.radius * 0.22);
       this.shake = Math.min(6, this.shake + 3);
@@ -347,13 +348,13 @@ class Game {
     // ~0.6 s, which is what makes it read as a boost rather than a second gear
     this.boostHeld = sprinting ? Math.min(1.2, this.boostHeld + dt) : 0;
     const surge = 1 - clamp(this.boostHeld / 0.6, 0, 1);
-    const wind = sprinting ? (1.55 + 0.75 * surge * surge) * (1 + g.jet * 0.12) : 1;
+    const wind = sprinting ? (1.55 + 0.75 * surge * surge) * boost.wind : 1;
 
     const drive = throttle * wind;
     if (this.useMouse) p.drive(dt, desired, drive);
     else p.propel(dt, turnInput, drive);
     if (sprinting) {
-      const cost = 3.2 * wind * Math.max(0.4, 1 - g.jet * 0.2);
+      const cost = 3.2 * wind * boost.cost;
       this.food = Math.max(0, this.food - cost * dt * Math.abs(throttle));
     }
 
@@ -428,7 +429,7 @@ class Game {
       this.fx.ring(this.player.x, this.player.y, hsl(this.player.genome.accentHue, 0.8, 0.7),
         this.player.radius * 1.6);
     }
-    const steal = gain > 0 ? gain * this.player.genome.lifesteal : 0;
+    const steal = gain > 0 ? swallowHealOf(this.player, gain) : 0;
     if (steal > 0) {
       this.player.hp = Math.min(this.player.hpMax, this.player.hp + steal);
     }
@@ -491,13 +492,10 @@ class Game {
 
   private metabolise(dt: number) {
     const g = this.player.genome;
-    // ram ventilation buys its cheap metabolism by needing flow over the gills: hang
-    // still on it and you burn what you saved, which is the cost the card promises
-    const idle = g.ram > 0 && Math.hypot(this.player.vx, this.player.vy) < g.speed * 0.25;
     // near-empty the body throttles down: running low slows the fall instead of speeding
     // the death, which leaves room to hunt your way back out
     const starving = this.food < FOOD_MAX * 0.25 ? 0.55 : 1;
-    const burn = g.metabolism * (1 + g.size * 0.008) * (idle ? 1.8 : 1) * starving;
+    const burn = burnOf(this.player, g.metabolism * (1 + g.size * 0.008) * starving);
     this.food = Math.max(0, this.food - burn * dt);
     if (this.food <= 0) this.player.hp -= 3 * dt;
     this.shake = Math.max(0, this.shake - dt * 22);
@@ -541,6 +539,7 @@ class Game {
       rarity: t.rarity, stacks: 1 });
     this.player.genome.accentHue += 12;
     this.player.view.rebuild(this.player.genome);
+    this.player.refreshOrgans();
     this.player.hpMax = maxHp(this.player.genome);
     this.player.hp = this.player.hpMax;
     this.ui.toast(`${t.name} acquired`);
