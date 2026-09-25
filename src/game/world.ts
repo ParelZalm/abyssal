@@ -252,6 +252,16 @@ export class World {
   hunted = false;
   /** Guardians already killed. A guardian is gone for the run, not on a respawn timer. */
   private readonly deadGuardians = new Set<string>();
+  /** Synergies the player's body has fired for the first time this frame. Drained by `Game.digest`. */
+  readonly synergies: string[] = [];
+  private readonly synergiesSeen = new Set<string>();
+
+  /** A named organ did its thing. Published once per run, and only for the player's body. */
+  fired(o: Organ, c: Creature) {
+    if (!o.name || !c.isPlayer || this.synergiesSeen.has(o.name)) return;
+    this.synergiesSeen.add(o.name);
+    this.synergies.push(o.name);
+  }
 
   constructor(private rng: Rng, private player: Creature) {
     this.layer.addChild(player.view);
@@ -471,6 +481,7 @@ export class World {
     this.lastDt = dt;
     this.bites.length = 0;
     this.spilled.length = 0;
+    this.synergies.length = 0;
     for (let i = this.blood.length - 1; i >= 0; i--) {
       if ((this.blood[i].t -= dt) <= 0) this.blood.splice(i, 1);
     }
@@ -783,7 +794,7 @@ export class World {
     } else {
       if (c.hp < c.hpMax) c.hp = Math.min(c.hpMax, c.hp + c.genome.regen * dt);
     }
-    tickOrgans(c, dt);
+    tickOrgans(this, c, dt);
     // creatures the camera cannot see still swim and hunt, they just skip their art
     if (!c.view.visible) return;
     c.view.animate(dt, clamp(c.thrust, 0, 1.6), c.beat, c.bank);
@@ -888,7 +899,7 @@ export class World {
     // what the bodies do to each other beyond the damage — recoil, venom, grip — is the
     // organs' business, and a kill is read off the wound before they run so poison cannot
     // credit a bite that already finished the job
-    wound(att, def, { dmg, fatal, whole });
+    wound(this, att, def, { dmg, fatal, whole });
     if (fatal) {
       this.slay(def, att.isPlayer);
       // a meal worth the name buys a longer lull; a krill barely registers

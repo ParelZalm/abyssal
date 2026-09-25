@@ -63,6 +63,8 @@ class Game {
   xp = 0;
   private food = FOOD_MAX;
   private taken = new Map<string, number>();
+  /** Named synergies discovered this run, in the order they first fired. */
+  private synergies: string[] = [];
   private takenNames: { name: string; desc: string; icon: Trait['icon'];
     rarity: Trait['rarity']; stacks: number }[] = [];
   private eaten = 0;
@@ -218,7 +220,7 @@ class Game {
     this.camY = this.player.y;
 
     this.stage = 1; this.xp = 0; this.food = FOOD_MAX;
-    this.taken.clear(); this.takenNames = [];
+    this.taken.clear(); this.takenNames = []; this.synergies = [];
     this.eaten = 0; this.deepest = 0; this.elapsed = 0; this.shake = 0;
     this.score = 0; this.combo = 0; this.comboT = 0;
     this.dreadSpike = 0; this.dreadHold = 0;
@@ -441,6 +443,11 @@ class Game {
       this.fx.burst(this.player.x, this.player.y, 0x8ef0b4, 12, 90, this.player.radius * 0.2);
       this.ui.toast(`Stinging cells digested — +${back} health`);
     }
+    for (const name of this.world.synergies) {
+      this.synergies.push(name);
+      this.fx.ring(this.player.x, this.player.y, 0xc8ff9a, this.player.radius * 3);
+      this.ui.toast(`${name} — your mutations have combined`);
+    }
     if (this.world.noticedBy) {
       const who = speciesById(this.world.noticedBy);
       this.world.noticedBy = null;
@@ -561,6 +568,7 @@ class Game {
       `${BANDS[this.maxBand].name}`,
       `${this.player.genome.size.toFixed(0)} cm long`,
       `${this.eaten} creatures eaten`,
+      ...(this.synergies.length ? [`Synergies: ${this.synergies.join(', ')}`] : []),
       `${depthLabel(this.deepest).toLocaleString()} m deep`,
       `${Math.floor(this.elapsed / 60)}m ${Math.floor(this.elapsed % 60)}s survived`,
     ];

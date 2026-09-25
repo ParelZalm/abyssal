@@ -21,7 +21,11 @@ Three groups of fields, and the split matters:
   call the helpers at the bottom of that file and never read an organ field by name.
   Every `Creature` caches its active organs and `refreshOrgans()` beside `view.rebuild`.
   The one exception is `coral`: it is plate, so `armourOf(g)` adds it as a derived stat.
-  A synergy is an `Organ` whose `when` tests two fields.
+  A synergy is an `Organ` whose `when` tests two fields and that carries a `name`; its
+  effect hooks return true on a frame they did something, `World.fired` publishes that
+  once per run on `world.synergies`, and `Game.digest` turns it into the toast, so the
+  combination is discovered in play rather than read off a card. `Toxic Lure` (lure +
+  venom: prey that reaches the light is poisoned before the bite) is the first.
 - **Morphology** — `hue`, `accentHue`, `finSize`, `tailSplit`, `spikes`, `jaw`,
   `eyeSize`, `glow`, `segments`, `translucent`, plus the deep-water set: `photophores`,
   `eyeAdapt`, `gape`, `veil`, `bulk`, `barbels`. Purely visual, but every trait nudges at

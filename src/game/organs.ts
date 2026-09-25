@@ -1,5 +1,6 @@
 import type { Genome } from './genome';
-import type { Creature } from './world';
+import type { Creature, World } from './world';
+import { dist2 } from './util';
 
 /**
  * Where organ *mechanics* live. The genome holds a magnitude per organ and `fishbake`
@@ -37,6 +38,12 @@ export interface Organ {
   id: string;
   /** Whether this genome carries the organ. A synergy tests two fields. */
   when: (g: Genome) => boolean;
+  /**
+   * Synergies only: the name the player is told the first time it fires. A named organ's
+   * effect hooks return true on the frame they actually did something, and `World`
+   * publishes that once per run so the discovery is a moment, not a line on a card.
+   */
+  name?: string;
 
   // ---- modifiers
   /** Armour a bite from this attacker actually faces. */
@@ -51,10 +58,17 @@ export interface Organ {
 
   // ---- effects
   /** The attacker's organs, after its bite has landed. */
-  onWound?: (att: Creature, def: Creature, ctx: WoundCtx) => void;
+  onWound?: (att: Creature, def: Creature, ctx: WoundCtx) => void | boolean;
   /** The defender's organs, after a bite has landed on it. */
-  onWounded?: (def: Creature, att: Creature, ctx: WoundCtx) => void;
-  onTick?: (c: Creature, dt: number) => void;
+  onWounded?: (def: Creature, att: Creature, ctx: WoundCtx) => void | boolean;
+  onTick?: (c: Creature, dt: number, world: World) => void | boolean;
+}
+
+/** Leave venom working in a body. Shared by the barbs and by anything that delivers them. */
+function envenom(def: Creature, att: Creature, dps: number) {
+  def.poison = Math.max(def.poison, dps);
+  def.poisonT = 4;
+  def.poisonByPlayer = att.isPlayer;
 }
 
 const O = (o: Organ) => o;
@@ -74,12 +88,7 @@ export const ORGANS: Organ[] = [
   O({ id: 'venom', when: g => g.venom > 0,
     // keeps working after the mouth has let go; the poison tick itself is status on the
     // wounded body, in `World.integrate`, because the poisoned animal owns no organ for it
-    onWound: (att, def, ctx) => {
-      if (ctx.fatal) return;
-      def.poison = Math.max(def.poison, att.genome.venom * 2.5);
-      def.poisonT = 4;
-      def.poisonByPlayer = att.isPlayer;
-    } }),
+    onWound: (att, def, ctx) => { if (!ctx.fatal) envenom(def, att, att.genome.venom * 2.5); } }),
 
   O({ id: 'claws', when: g => g.claws > 0,
     // a pincer holds what it hits
@@ -110,6 +119,24 @@ export const ORGANS: Organ[] = [
 
   O({ id: 'lifesteal', when: g => g.lifesteal > 0,
     swallowHeal: (g, gain) => gain * g.lifesteal }),
+
+  // ---------------------------------------------------------------- synergies
+  O({ id: 'toxiclure', name: 'Toxic Lure', when: g => g.lure > 0 && g.venom > 0,
+    // the lure is lit and the barbs are on it: prey that reaches the light is poisoned
+    // before the mouth has moved. Weaker than a bite's venom — it is a graze, and the
+    // lure has to keep drawing the same animal in for it to matter. `preysOn` keeps a
+    // guardian from being stung by something it came to eat.
+    onTick: (c, _dt, world) => {
+      const touch = c.radius * 1.5 + 30;
+      let fired = false;
+      for (const o of world.creatures) {
+        if (!o.alive || o.poisonT > 0 || !c.preysOn(o)) continue;
+        if (dist2(c.mouthX, c.mouthY, o.x, o.y) > touch * touch) continue;
+        envenom(o, c, c.genome.venom * 1.5);
+        fired = true;
+      }
+      return fired;
+    } }),
 ];
 
 /** The organs this genome carries. Cached on the creature — see `Creature.refreshOrgans`. */
@@ -150,11 +177,11 @@ export function swallowHealOf(c: Creature, gain: number) {
 }
 
 /** A bite has landed: run the attacker's organs, then the defender's. */
-export function wound(att: Creature, def: Creature, ctx: WoundCtx) {
-  for (const o of att.organs) o.onWound?.(att, def, ctx);
-  for (const o of def.organs) o.onWounded?.(def, att, ctx);
+export function wound(world: World, att: Creature, def: Creature, ctx: WoundCtx) {
+  for (const o of att.organs) if (o.onWound?.(att, def, ctx) === true) world.fired(o, att);
+  for (const o of def.organs) if (o.onWounded?.(def, att, ctx) === true) world.fired(o, def);
 }
 
-export function tick(c: Creature, dt: number) {
-  for (const o of c.organs) o.onTick?.(c, dt);
+export function tick(world: World, c: Creature, dt: number) {
+  for (const o of c.organs) if (o.onTick?.(c, dt, world) === true) world.fired(o, c);
 }
