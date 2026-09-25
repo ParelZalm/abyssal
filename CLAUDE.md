@@ -22,11 +22,15 @@ browser pane attaches to it.
 ## Design mode
 
 `/design.html` (`src/game/design/`) lays out every drawing the game makes — the fish form
-and its parameters, every body plan, all 18 species, the background props, and the
-water and biome palettes — each over the real water colour at its own depth. It imports the
-shipping drawing code and is never imported by it, so it cannot drift from the game. Click
-a cell to focus it with its source file; the URL carries the whole state, so a link to one
-cell is a link to one design question.
+and its parameters, every body plan, every mutation taken once on the hatchling, all the
+species, the background props, and the water and biome palettes — each over the real water
+colour at its own depth. It imports the shipping drawing code and is never imported by it,
+so it cannot drift from the game. Click a cell to focus it with its source file; the URL
+carries the whole state, so a link to one cell is a link to one design question. The
+*show* options caption the art without touching it: `labels`, `icons` (a mutation's HUD
+glyph as the chip the player sees), and `morphology` (every genome field the cell moved
+off the hatchling, phrased the way the cards phrase it). A cell that draws a genome sets
+`genome` on its `DesignItem` and gets the last two for free.
 
 It is a development tool: `design.html` is not a build entry, so it is dev-served only, and
 both pages carry a corner link to the other (`import.meta.env.DEV` in `main.ts`).

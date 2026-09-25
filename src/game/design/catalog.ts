@@ -12,7 +12,9 @@ import { FishView } from '../fishview';
 import { baseGenome, type Genome } from '../genome';
 import { PROP_SIZE, propTexture, type PropKind } from '../props';
 import { genomeFor, rangeOf, SPECIES } from '../species';
+import { TRAITS, type Rarity } from '../traits';
 import { BANDS, depthLabel, zoneOf } from '../zones';
+import type { IconName } from '../../ui/icons';
 import { rgb, Rng } from '../util';
 import { waterColor } from '../water';
 import { FishForm, shoulderAt, SPINDLE, type Form, type FormSpec } from './fishform';
@@ -33,6 +35,15 @@ export interface DesignItem {
   animate?(view: Container, dt: number, beat: number): void;
   /** Extra facts for the focus panel. */
   facts?: Record<string, string | number>;
+  /**
+   * The genome this cell draws, when it draws one. The board's *morphology* option reads
+   * every field off it that differs from the hatchling, so a cell can say what it changed
+   * without each group writing that out by hand.
+   */
+  genome?: Genome;
+  /** The HUD glyph, for cells that are a mutation. The *icons* option draws it as a chip. */
+  icon?: IconName;
+  rarity?: Rarity;
 }
 
 export interface DesignGroup {
@@ -225,6 +236,7 @@ function morphGroup(): DesignGroup {
       span: 120,
       depth: m.depth,
       facts: { param: m.key, value: v, plan: m.plan, depth: m.depth },
+      genome: (() => { const g = baseGenome(); g.size = 40; g[m.key] = v; return g; })(),
       make: () => {
         const g = baseGenome();
         g.size = 40;
@@ -283,6 +295,7 @@ function statGroup(): DesignGroup {
       span: 120,
       depth: m.depth,
       facts: { stat: m.key, value: v, plan: m.plan, depth: m.depth },
+      genome: (() => { const g = baseGenome(); g.size = 40; g[m.key] = v; return g; })(),
       make: () => {
         const g = baseGenome();
         g.size = 40;
@@ -348,6 +361,7 @@ function buildGroup(): DesignGroup {
       span: 130,
       depth: b.depth,
       facts: { plan: b.plan, depth: b.depth },
+      genome: (() => { const g = baseGenome(); g.size = 40; b.edit(g); return g; })(),
       make: () => {
         const g = baseGenome();
         g.size = 40;
@@ -356,6 +370,43 @@ function buildGroup(): DesignGroup {
       },
       animate: fishAnimate,
     })),
+  };
+}
+
+// ------------------------------------------------------------------ mutations
+
+/** The water a rarity is usually first met in: commons open the run, apex cards are deep. */
+const RARITY_DEPTH: Record<Rarity, number> = { common: 500, rare: 2400, apex: 5200 };
+
+/**
+ * Every mutation on the hatchling, once. The card's text says what a trait does; this row
+ * is whether the body says it too. A trait whose cell is indistinguishable from the one
+ * beside it has broken the organ rule, and that is only visible with all 44 in one place.
+ */
+function mutationGroup(): DesignGroup {
+  return {
+    id: 'mutations',
+    name: 'Mutations',
+    note: 'Every mutation taken once on the hatchling: does the body say what the card says?',
+    items: TRAITS.map(t => {
+      const g = baseGenome();
+      g.size = 40;
+      t.apply(g);
+      return {
+        id: t.id,
+        name: t.name,
+        note: t.desc,
+        source: 'src/game/traits.ts',
+        span: 130,
+        depth: RARITY_DEPTH[t.rarity],
+        facts: { rarity: t.rarity, stacks: t.maxStacks ?? 2, stage: t.minStage ?? 1 },
+        genome: g,
+        icon: t.icon,
+        rarity: t.rarity,
+        make: () => boardFish(g, 'darter'),
+        animate: fishAnimate,
+      };
+    }),
   };
 }
 
@@ -381,6 +432,7 @@ function speciesGroup(): DesignGroup {
           hue: Math.round(g.hue), bite: sp.bite, glow: sp.glow ?? 0,
           translucent: sp.translucent ?? 0,
         },
+        genome: g,
         make: () => boardFish(g, sp.plan),
         animate: fishAnimate,
       };
@@ -555,6 +607,6 @@ function protoSceneryGroup(): DesignGroup {
 
 export function catalog(): DesignGroup[] {
   return [formGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(),
-          speciesGroup(), guardianGroup(), propGroup(), waterGroup(),
+          mutationGroup(), speciesGroup(), guardianGroup(), propGroup(), waterGroup(),
           protoSceneryGroup()];
 }
