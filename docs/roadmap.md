@@ -46,16 +46,14 @@ Shark's `frenzy` is new). See `docs/progression.md`. Left open: a second form in
 run, and whether a transformed player should be read differently by the ocean (a Shark
 that other sharks treat as a rival).
 
-## 3. The draft reads synergies
+## 3. ~~The draft reads synergies~~
 
-Only worth doing once there are five or more synergies.
-
-- A card that would complete a synergy or a transformation gets a second glow. The
-  rarity edge light in `style.css` (`.card.rare`, `.card.apex`) is the place.
-- Weight `draftTraits` slightly toward partners of what is owned, the way `reach`
-  already bends toward rarity. Enough that builds happen, not enough to guarantee them.
-- A reroll or banish, paid in fullness or health, so the draft is a resource choice.
-- Show the pair that almost was on the end screen.
+Done in `game/prospects.ts`: the completing card's second light and note, a lean of ×1.5
+toward completing cards and ×1.15 toward begun families, a reroll paid in fullness at a
+climbing price, and the end screen's "one card short of". A banish was left out — the
+reroll already makes the draft a resource choice, and a banish needs a run-long exclusion
+list the pool does not have yet. With only four synergies the lean mostly serves forms;
+it gets more interesting as synergies are added (§1).
 
 ## 4. Depth as a choice, not a ladder
 
@@ -124,4 +122,7 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 2. ~~The shallows clock~~ — done.
 3. ~~The codex~~ — done.
 4. ~~Diet and locomotion organs~~ — done.
-5. ~~Transformations~~ — done; then the draft reading synergies and families (§3).
+5. ~~Transformations~~ and ~~the draft reading them~~ — done.
+6. Next up, by the same ranking: Ballistic and more synergies (§1) now that the draft
+   rewards them, then zone pools and costs on apex cards (§5), then the tempting pocket
+   below each gate (§4).

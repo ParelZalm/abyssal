@@ -12,7 +12,8 @@ import { riserFor, type Species } from './game/species';
 import { bandAt, BANDS, depthLabel, descentLimit, FINAL_GUARDIAN, nextGate,
          placeName } from './game/zones';
 import { boostModsOf, burnOf, POISE_MAX, swallowHealOf, SYNERGIES } from './game/organs';
-import { familyCounts, formDue, type Transformation } from './game/forms';
+import { FAMILY_NAMES, familyCounts, formDue, type Transformation } from './game/forms';
+import { completes, leanOf, nearMisses } from './game/prospects';
 import { draftTraits, TRAITS, type Trait } from './game/traits';
 import { clamp, dist2, hsl, lerp, rgb, Rng } from './game/util';
 import { Creature, DEPTH_MAX, speciesById, World } from './game/world';
@@ -34,6 +35,12 @@ const COMBO_WINDOW = 3.5;
 const comboMult = (n: number) => Math.min(3, 1 + Math.max(0, n - 1) * 0.25);
 /** Past a 10-kill chain every further kill adds +10% biomass, uncapped: the reward for a long run. */
 const chainBiomass = (n: number) => 1 + Math.max(0, n - 10) * 0.1;
+/**
+ * Fullness a reroll costs, times how many this draft has had. Paid out of the bar that
+ * keeps you alive, so a reroll is a bet that the next hand is worth a meal — and the second
+ * one in a row is a worse bet than the first.
+ */
+const REROLL_COST = 15;
 const BEST_KEY = 'abyssal.best';
 function loadBest() {
   try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; }
@@ -80,6 +87,8 @@ class Game {
   private found: string[] = [];
   /** The run's one metamorphosis, once it has happened. See `game/forms.ts`. */
   private form: Transformation | null = null;
+  /** Rerolls spent on the draft currently open; the next costs one more step. */
+  private rerolls = 0;
   private takenNames: { name: string; desc: string; icon: Trait['icon'];
     rarity: Trait['rarity']; stacks: number }[] = [];
   private eaten = 0;
@@ -251,7 +260,7 @@ class Game {
     this.camY = this.player.y;
 
     this.stage = 1; this.xp = 0; this.food = FOOD_MAX;
-    this.taken.clear(); this.takenNames = []; this.synergies = []; this.found = []; this.form = null;
+    this.taken.clear(); this.takenNames = []; this.synergies = []; this.found = []; this.form = null; this.rerolls = 0;
     this.eaten = 0; this.deepest = 0; this.elapsed = 0; this.shake = 0;
     this.score = 0; this.combo = 0; this.comboT = 0;
     this.dreadSpike = 0; this.dreadHold = 0;
@@ -617,13 +626,48 @@ class Game {
     this.offerDraft();
   }
 
-  /** Depth unlocks the rarer half of the pool just as much as biomass does. */
-  private offerDraft(heading = `Evolution — stage ${this.stage}`) {
+  /**
+   * Depth unlocks the rarer half of the pool just as much as biomass does. The draw leans
+   * toward the build (`leanOf`), and a reroll leaves out the hand it replaces.
+   */
+  private offerDraft(heading = `Evolution — stage ${this.stage}`, shown = new Set<string>()) {
     const reach = Math.max(this.stage, this.maxBand * 2 + 1);
-    const offer = draftTraits(this.rng, reach, this.taken, 3);
+    const g = this.player.genome;
+    const owned = this.takenTraits();
+    const counts = familyCounts(owned);
+    const lean = new Map(TRAITS.map(t =>
+      [t.id, shown.has(t.id) ? 0 : leanOf(g, owned, this.form, counts, t)]));
+    let offer = draftTraits(this.rng, reach, this.taken, 3, t => lean.get(t.id) ?? 1);
+    // late in a run the pool can be too thin to leave a whole hand out
+    if (offer.length < 3) offer = draftTraits(this.rng, reach, this.taken, 3);
+    const cost = REROLL_COST * (this.rerolls + 1);
     this.phase = 'draft';
-    this.ui.showMutation(heading, offer, t => this.applyTrait(t),
-      t => !this.codex.traits[t.id]);
+    this.ui.showMutation(heading, offer, t => { this.rerolls = 0; this.applyTrait(t); }, {
+      isNew: t => !this.codex.traits[t.id],
+      note: t => this.prospectNote(t),
+      reroll: {
+        cost,
+        // never the last of the bar: a reroll that starves you is not a choice
+        can: this.food > cost,
+        pay: () => {
+          this.food -= cost;
+          this.rerolls++;
+          this.offerDraft(heading, new Set(offer.map(t => t.id)));
+        },
+      },
+    });
+  }
+
+  /**
+   * What a card would finish, as the card says it. An undiscovered synergy is announced but
+   * not named — the draft tells you something is there, the codex keeps what it is.
+   */
+  private prospectNote(t: Trait): string | null {
+    const found = completes(this.player.genome, this.takenTraits(), this.form, t);
+    if (!found.length) return null;
+    return found.map(p => p.kind === 'form' ? `Transforms you — ${p.form.name}`
+      : this.codex.synergies.includes(p.id) ? `Completes ${p.name}`
+      : 'Completes an undiscovered synergy').join(' · ');
   }
 
   private applyTrait(t: Trait) {
@@ -646,7 +690,7 @@ class Game {
     // the card just taken goes last, so a trait of two families that completes both
     // transforms into the one it lists first
     const due = this.form ? null
-      : formDue([...this.takenTraits().filter(x => x !== t), t]);
+      : formDue([...this.takenTraits().filter(x => x.id !== t.id), t]);
     if (due) this.transform(due);
   }
 
@@ -682,6 +726,12 @@ class Game {
     if (record) { this.best = final; saveBest(final); }
     this.codex.runs++;
     saveCodex(this.codex);
+    // what the run was one card short of, which is what makes the next run's first draft
+    // a plan rather than a lottery
+    const misses = nearMisses(this.player.genome, this.takenTraits(), this.form, this.taken)
+      .slice(0, 3).map(m => m.prospect.kind === 'form'
+        ? `the ${m.prospect.form.name} (one more ${FAMILY_NAMES[m.prospect.form.family].toLowerCase()} mutation)`
+        : `${this.codex.synergies.includes(m.prospect.id) ? m.prospect.name : 'an undiscovered synergy'} (${m.via.name})`);
     const stats = [
       record ? `${final.toLocaleString()} points — new best` : `${final.toLocaleString()} points (best ${this.best.toLocaleString()})`,
       `Stage ${this.stage}`,
@@ -693,6 +743,7 @@ class Game {
       `${depthLabel(this.deepest).toLocaleString()} m deep`,
       `${Math.floor(this.elapsed / 60)}m ${Math.floor(this.elapsed % 60)}s survived`,
       ...(this.found.length ? [`New in the codex: ${this.found.join(', ')}`] : []),
+      ...(misses.length ? [`One card short of ${misses.join(', ')}`] : []),
     ];
     const restart = () => { this.reset(); this.phase = 'play'; };
     if (won) this.ui.showWin(stats, this.codex, restart);

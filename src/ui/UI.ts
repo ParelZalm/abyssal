@@ -5,7 +5,7 @@ import { Hud } from './hud/Hud';
 import type { Component } from './Component';
 import { CodexScreen } from './screens/CodexScreen';
 import { DeathScreen } from './screens/DeathScreen';
-import { MutationScreen } from './screens/MutationScreen';
+import { MutationScreen, type DraftOptions } from './screens/MutationScreen';
 import { PauseScreen } from './screens/PauseScreen';
 import { BandScreen } from './screens/BandScreen';
 import { TitleScreen } from './screens/TitleScreen';
@@ -49,12 +49,11 @@ export class UI {
     }, () => this.showCodex(codex, () => this.showTitle(onStart, codex))));
   }
 
-  showMutation(heading: string, traits: Trait[], pick: (t: Trait) => void,
-               isNew: (t: Trait) => boolean) {
+  showMutation(heading: string, traits: Trait[], pick: (t: Trait) => void, opts: DraftOptions) {
     this.show(new MutationScreen(heading, traits, t => {
       this.hide();
       pick(t);
-    }, isNew));
+    }, opts));
   }
 
   showDeath(cause: string, stats: string[], codex: Codex, onRestart: () => void) {

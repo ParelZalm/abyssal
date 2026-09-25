@@ -220,3 +220,20 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 .card .fam { display: block; margin-top: 10px; font-size: 10px; letter-spacing: .14em;
   text-transform: uppercase; color: var(--dim); opacity: .8; }
 .codex .synergies h3:not(:first-child) { margin-top: 16px; }
+
+/* a card that would finish something gets a second light, outside the rarity's own, so the
+   two read at once: how good the card is, and what it would complete */
+.card.completes { outline: 1px solid rgba(200,255,154,.7); outline-offset: 4px;
+  animation: completes-breathe 2.2s ease-in-out infinite; }
+/* an apex card already breathes its own glow; run both rather than lose one */
+.card.apex.completes { animation: apex-breathe 2.6s ease-in-out infinite,
+  completes-breathe 2.2s ease-in-out infinite; }
+@keyframes completes-breathe {
+  0%, 100% { outline-color: rgba(200,255,154,.4); }
+  50% { outline-color: rgba(200,255,154,.95); }
+}
+@media (prefers-reduced-motion: reduce) { .card.completes { animation: none; } }
+.card .note { display: block; margin-top: 8px; font-size: 11px; font-weight: 600;
+  letter-spacing: .06em; color: #c8ff9a; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn.ghost:disabled:hover { border-color: var(--edge); color: var(--ink); }

@@ -106,6 +106,19 @@ replacement from a rarity-weighted pool.
 - `maxStacks` defaults to 2, so a run specialises without collapsing into one stat.
 - `minStage` gates the organs out of the opening draft.
 
+- **The draft reads the build** (`game/prospects.ts`). `completes(g, owned, form, t)` takes
+  the card on a copy of the genome and asks the organ registry which synergies turn live,
+  and `formDue` whether it is the third of a family — so a threshold synergy like Urchin
+  is read exactly, and nothing in the file knows which traits pair. A card that completes
+  something wears a second, green outline light beside its rarity light and says what it
+  finishes; an undiscovered synergy is announced but not named. `leanOf` weights the draw
+  ×1.5 for a completing card and ×1.15 for one that advances a family already begun,
+  passed to `draftTraits` as `lean` (0 excludes a card from that draw).
+- **Reroll**: 15 fullness, then 30, then 45 within one draft, never allowed to take the
+  last of the bar, and the new hand leaves out the one it replaces.
+- **Near misses**: the end screen lists up to three things the run was one card short of
+  (`nearMisses`), counting only cards it could still have been offered.
+
 A draft is offered on level-up (`xp >= xpNeed`, which is `45 * 1.5^(stage-1)`) and once
 per new band reached. Both set `phase = 'draft'`; `applyTrait` rebuilds the view,
 refills health and returns to `play`.

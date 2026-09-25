@@ -242,14 +242,21 @@ const RARITY_WEIGHT: Record<Rarity, number> = { common: 10, rare: 3.2, apex: 0.9
 /** Rare and apex traits get likelier as you go; commons do not. */
 const RARITY_CLIMB: Record<Rarity, number> = { common: 0, rare: 0.18, apex: 0.34 };
 
-/** Draw `count` distinct traits, weighted by rarity and gated by reach. */
-export function draftTraits(rng: Rng, stage: number, taken: Map<string, number>, count = 3): Trait[] {
+/**
+ * Draw `count` distinct traits, weighted by rarity and gated by reach. `lean` multiplies a
+ * trait's weight — the draft bending toward the build (`prospects.ts`) — and a lean of 0
+ * takes a trait out of this draw altogether, which is how a reroll avoids dealing the same
+ * hand back.
+ */
+export function draftTraits(rng: Rng, stage: number, taken: Map<string, number>, count = 3,
+                            lean: (t: Trait) => number = () => 1): Trait[] {
   const pool = TRAITS.filter(t => {
     if ((t.minStage ?? 0) > stage) return false;
     const stacks = taken.get(t.id) ?? 0;
-    return stacks < (t.maxStacks ?? 2);
+    return stacks < (t.maxStacks ?? 2) && lean(t) > 0;
   });
-  const weigh = (t: Trait) => RARITY_WEIGHT[t.rarity] * (1 + stage * RARITY_CLIMB[t.rarity]);
+  const weigh = (t: Trait) =>
+    RARITY_WEIGHT[t.rarity] * (1 + stage * RARITY_CLIMB[t.rarity]) * lean(t);
 
   const out: Trait[] = [];
   const avail = [...pool];
