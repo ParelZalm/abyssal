@@ -190,3 +190,30 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 .traits-label:empty { display: none; }
 .combo.hot { color: #ff9f5a; }
 .combo.hot > i { background: #ff9f5a; box-shadow: 0 0 10px rgba(255,140,70,.9); }
+
+.actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--edge); }
+.btn.ghost:hover { border-color: var(--accent); color: var(--accent); filter: none; }
+.card .r b { color: var(--accent); font-weight: 650; margin-right: 8px; }
+
+/* codex: three columns that scroll on their own, so a long species list does not push the
+   synergies off the bottom of the sheet */
+.codex .sheet { grid-template-columns: minmax(200px, 250px) minmax(220px, 300px) minmax(220px, 280px);
+  overflow: visible; max-height: none; }
+.codex .sheet section { max-height: 62vh; overflow-y: auto; }
+.codex .zones h4 { margin: 12px 0 5px; font-size: 10.5px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--dim); font-weight: 500; }
+.codex .zones h4:first-child { margin-top: 0; }
+.codex ul.stats li.unknown span { color: var(--dim); opacity: .4; letter-spacing: .2em; }
+.codex ul.stats li:not(.unknown) span { color: var(--ink); }
+.codex ul.stats li.guardian span { color: #ffc270; }
+.codex .grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.codex .chip.unknown { opacity: .38; font-size: 12px; }
+.codex .pool p { margin: 12px 0 0; font-size: 11px; color: var(--dim); opacity: .7; }
+.codex ul.inventory li { grid-template-columns: 1fr; }
+.codex ul.inventory li.unknown h4 { color: var(--dim); opacity: .5; letter-spacing: .2em; }
+.codex ul.inventory li.unknown p { opacity: .6; }
+@media (max-width: 860px) {
+  .codex .sheet { grid-template-columns: 1fr; max-height: 62vh; overflow-y: auto; }
+  .codex .sheet section { max-height: none; overflow: visible; }
+}

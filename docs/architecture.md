@@ -35,9 +35,9 @@ silhouettes.
 ## Dependency direction
 
 `world` never reaches up into `main`. It exposes what happened last frame as plain
-fields — `bites`, `playerGain`, `playerHeal`, `leviathanKilled`, `blocked` — and `main`
-reads them in `digest()` and turns them into particles, growth, toasts and phase
-changes. Keep it that way: the simulation should stay runnable without the presentation.
+fields — `bites`, `playerGain`, `playerHeal`, `devoured`, `synergies`,
+`killedGuardian`, `blocked` — and `main` reads them in `digest()` and turns them into
+particles, growth, toasts, codex entries and phase changes. Keep it that way: the simulation should stay runnable without the presentation.
 
 `fishview`, `form` and `fishbake` know about `genome` and nothing else. They never
 read world state.

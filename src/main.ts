@@ -1,5 +1,6 @@
 import { Application, Container, Graphics } from 'pixi.js';
 import './style.css';
+import { loadCodex, recordSpecies, recordSynergy, recordTrait, saveCodex } from './game/codex';
 import { baseGenome, maxHp, type Genome } from './game/genome';
 import { setBakeRenderer } from './game/fishbake';
 import { Fx } from './game/fx';
@@ -10,7 +11,7 @@ import { lightAt, Water, waterColor } from './game/water';
 import { riserFor, type Species } from './game/species';
 import { bandAt, BANDS, depthLabel, descentLimit, FINAL_GUARDIAN, nextGate,
          placeName } from './game/zones';
-import { boostModsOf, burnOf, swallowHealOf } from './game/organs';
+import { boostModsOf, burnOf, swallowHealOf, SYNERGIES } from './game/organs';
 import { draftTraits, type Trait } from './game/traits';
 import { clamp, dist2, hsl, lerp, rgb, Rng } from './game/util';
 import { Creature, DEPTH_MAX, speciesById, World } from './game/world';
@@ -72,6 +73,10 @@ class Game {
   private taken = new Map<string, number>();
   /** Named synergies discovered this run, in the order they first fired. */
   private synergies: string[] = [];
+  /** What every run has found, kept across runs. See `game/codex.ts`. */
+  private codex = loadCodex();
+  /** Names this run added to the codex for the first time, for the end screen. */
+  private found: string[] = [];
   private takenNames: { name: string; desc: string; icon: Trait['icon'];
     rarity: Trait['rarity']; stacks: number }[] = [];
   private eaten = 0;
@@ -153,7 +158,12 @@ class Game {
       console.error('[abyssal] WebGL context lost', this.snapshot());
       this.ui.toast('Graphics context lost — reload the page if the ocean does not return');
     });
-    this.ui.showTitle(() => { this.phase = 'play'; });
+    // kill counts are only written on a discovery and at the end of a run, so a tab closed
+    // mid-run would drop them; hidden is the last event a mobile browser reliably sends
+    addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') saveCodex(this.codex);
+    });
+    this.ui.showTitle(() => { this.phase = 'play'; }, this.codex);
   }
 
   private snapshot() {
@@ -234,7 +244,7 @@ class Game {
     this.camY = this.player.y;
 
     this.stage = 1; this.xp = 0; this.food = FOOD_MAX;
-    this.taken.clear(); this.takenNames = []; this.synergies = [];
+    this.taken.clear(); this.takenNames = []; this.synergies = []; this.found = [];
     this.eaten = 0; this.deepest = 0; this.elapsed = 0; this.shake = 0;
     this.score = 0; this.combo = 0; this.comboT = 0;
     this.dreadSpike = 0; this.dreadHold = 0;
@@ -459,8 +469,17 @@ class Game {
       this.fx.burst(this.player.x, this.player.y, 0x8ef0b4, 12, 90, this.player.radius * 0.2);
       this.ui.toast(`Stinging cells digested — +${back} health`);
     }
-    for (const name of this.world.synergies) {
+    for (const id of this.world.devoured) {
+      if (!recordSpecies(this.codex, id)) continue;
+      const name = speciesById(id).name;
+      this.discover(name);
+      // a guardian's fall is announced below, and would only overwrite this
+      if (!speciesById(id).guardian) this.ui.toast(`New in the codex — ${name}`);
+    }
+    for (const id of this.world.synergies) {
+      const name = SYNERGIES.find(o => o.id === id)!.name!;
       this.synergies.push(name);
+      if (recordSynergy(this.codex, id)) this.discover(name);
       this.fx.ring(this.player.x, this.player.y, 0xc8ff9a, this.player.radius * 3);
       this.ui.toast(`${name} — your mutations have combined`);
     }
@@ -479,6 +498,12 @@ class Game {
     }
     if (this.xp >= this.xpNeed) this.levelUp();
     if (this.player.hp <= 0) this.finish(false);
+  }
+
+  /** A first for the codex: saved now, since a discovery is what a player would miss. */
+  private discover(name: string) {
+    this.found.push(name);
+    saveCodex(this.codex);
   }
 
   /**
@@ -583,12 +608,15 @@ class Game {
     const reach = Math.max(this.stage, this.maxBand * 2 + 1);
     const offer = draftTraits(this.rng, reach, this.taken, 3);
     this.phase = 'draft';
-    this.ui.showMutation(heading, offer, t => this.applyTrait(t));
+    this.ui.showMutation(heading, offer, t => this.applyTrait(t),
+      t => !this.codex.traits[t.id]);
   }
 
   private applyTrait(t: Trait) {
     t.apply(this.player.genome);
     this.taken.set(t.id, (this.taken.get(t.id) ?? 0) + 1);
+    const first = recordTrait(this.codex, t.id);
+    if (first) this.discover(t.name);
     const existing = this.takenNames.find(x => x.name === t.name);
     if (existing) existing.stacks++;
     else this.takenNames.push({ name: t.name, desc: t.desc, icon: t.icon,
@@ -598,7 +626,7 @@ class Game {
     this.player.refreshOrgans();
     this.player.hpMax = maxHp(this.player.genome);
     this.player.hp = this.player.hpMax;
-    this.ui.toast(`${t.name} acquired`);
+    this.ui.toast(first ? `${t.name} acquired — new in the codex` : `${t.name} acquired`);
     this.fx.ring(this.player.x, this.player.y, 0xfff0b0, this.player.radius * 4);
     this.phase = 'play';
   }
@@ -611,6 +639,8 @@ class Game {
     const final = Math.round(this.score);
     const record = final > this.best;
     if (record) { this.best = final; saveBest(final); }
+    this.codex.runs++;
+    saveCodex(this.codex);
     const stats = [
       record ? `${final.toLocaleString()} points — new best` : `${final.toLocaleString()} points (best ${this.best.toLocaleString()})`,
       `Stage ${this.stage}`,
@@ -620,10 +650,12 @@ class Game {
       ...(this.synergies.length ? [`Synergies: ${this.synergies.join(', ')}`] : []),
       `${depthLabel(this.deepest).toLocaleString()} m deep`,
       `${Math.floor(this.elapsed / 60)}m ${Math.floor(this.elapsed % 60)}s survived`,
+      ...(this.found.length ? [`New in the codex: ${this.found.join(', ')}`] : []),
     ];
     const restart = () => { this.reset(); this.phase = 'play'; };
-    if (won) this.ui.showWin(stats, restart);
-    else this.ui.showDeath(this.food <= 0 ? 'You starved' : 'Something bigger found you', stats, restart);
+    if (won) this.ui.showWin(stats, this.codex, restart);
+    else this.ui.showDeath(this.food <= 0 ? 'You starved' : 'Something bigger found you', stats,
+      this.codex, restart);
   }
 
   private render(dt: number) {

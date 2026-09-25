@@ -18,10 +18,17 @@ export const ul = (className?: string) => el('ul', undefined, className);
 export const li = (className?: string) => el('li', undefined, className);
 export const kbd = (text: string) => el('kbd', text);
 
-export function button(text: string, onClick: () => void): HTMLButtonElement {
-  const b = el('button', text, 'btn');
+export function button(text: string, onClick: () => void, className = 'btn'): HTMLButtonElement {
+  const b = el('button', text, className);
   b.addEventListener('click', onClick);
   return b;
+}
+
+/** A primary action with a quieter one beside it. */
+export function actions(...buttons: HTMLButtonElement[]) {
+  const d = el('div', undefined, 'actions');
+  d.append(...buttons);
+  return d;
 }
 
 /** Build a paragraph that may include <kbd> children from a simple tag pattern. */

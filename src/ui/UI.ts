@@ -1,6 +1,8 @@
+import type { Codex } from '../game/codex';
 import type { Trait } from '../game/traits';
 import { Hud } from './hud/Hud';
 import type { Component } from './Component';
+import { CodexScreen } from './screens/CodexScreen';
 import { DeathScreen } from './screens/DeathScreen';
 import { MutationScreen } from './screens/MutationScreen';
 import { PauseScreen } from './screens/PauseScreen';
@@ -37,33 +39,39 @@ export class UI {
     this.hud.showToast(text);
   }
 
-  showTitle(onStart: () => void) {
+  showTitle(onStart: () => void, codex: Codex) {
     this.show(new TitleScreen(() => {
       this.hide();
       this.hud.setChrome(true);
       onStart();
-    }));
+    }, () => this.showCodex(codex, () => this.showTitle(onStart, codex))));
   }
 
-  showMutation(heading: string, traits: Trait[], pick: (t: Trait) => void) {
+  showMutation(heading: string, traits: Trait[], pick: (t: Trait) => void,
+               isNew: (t: Trait) => boolean) {
     this.show(new MutationScreen(heading, traits, t => {
       this.hide();
       pick(t);
-    }));
+    }, isNew));
   }
 
-  showDeath(cause: string, stats: string[], onRestart: () => void) {
+  showDeath(cause: string, stats: string[], codex: Codex, onRestart: () => void) {
     this.show(new DeathScreen(cause, stats, () => {
       this.hide();
       onRestart();
-    }));
+    }, () => this.showCodex(codex, () => this.showDeath(cause, stats, codex, onRestart))));
   }
 
-  showWin(stats: string[], onRestart: () => void) {
+  showWin(stats: string[], codex: Codex, onRestart: () => void) {
     this.show(new WinScreen(stats, () => {
       this.hide();
       onRestart();
-    }));
+    }, () => this.showCodex(codex, () => this.showWin(stats, codex, onRestart))));
+  }
+
+  /** The codex over whatever screen opened it; `onBack` puts that screen back. */
+  showCodex(codex: Codex, onBack: () => void) {
+    this.show(new CodexScreen(codex, onBack));
   }
 
   showBand(index: number, onContinue: () => void) {

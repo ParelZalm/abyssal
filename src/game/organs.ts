@@ -44,6 +44,8 @@ export interface Organ {
    * publishes that once per run so the discovery is a moment, not a line on a card.
    */
   name?: string;
+  /** Synergies only: what the codex says it does, once it has been found. */
+  desc?: string;
 
   // ---- modifiers
   /** Armour a bite from this attacker actually faces. */
@@ -122,6 +124,7 @@ export const ORGANS: Organ[] = [
 
   // ---------------------------------------------------------------- synergies
   O({ id: 'toxiclure', name: 'Toxic Lure', when: g => g.lure > 0 && g.venom > 0,
+    desc: 'Illicium and venom. Prey that reaches the light is poisoned before you bite.',
     // the lure is lit and the barbs are on it: prey that reaches the light is poisoned
     // before the mouth has moved. Weaker than a bite's venom — it is a graze, and the
     // lure has to keep drawing the same animal in for it to matter. `preysOn` keeps a
@@ -139,6 +142,7 @@ export const ORGANS: Organ[] = [
     } }),
 
   O({ id: 'urchin', name: 'Urchin',
+    desc: 'Spines on heavy armour. Every bite taken recoils on the biter.',
     // 11 is spines on a carapace, the pairing this is for. It sits one point above the
     // Leviathan's 10 on purpose: the final guardian has spikes too, and at 10 it would turn
     // into an urchin — repainted and punishing every bite on the last fight of the run
@@ -152,6 +156,7 @@ export const ORGANS: Organ[] = [
     } }),
 
   O({ id: 'ghostlight', name: 'Ghost Light', when: g => g.lure > 0 && g.stealth >= 0.4,
+    desc: 'Illicium and stealth. Prey on the lure ignores its shoal\'s alarm.',
     // the light is visible and the animal behind it is not, so nothing drawn in has a reason
     // to bolt: a shoal's alarm does not reach the ones already on the lure. Panic is what
     // `World.think` checks before it lets the lure steer, so clearing it is the whole effect
@@ -168,6 +173,7 @@ export const ORGANS: Organ[] = [
     } }),
 
   O({ id: 'nematocyst', name: 'Nematocyst', when: g => g.venom > 0 && g.lifesteal > 0,
+    desc: 'Venom and lifesteal. Bodies you have poisoned heal you while they die.',
     // stolen stinging cells feeding on the venom they deliver: every body still poisoned
     // heals you while it dies. Player only, because the wound records whether the player
     // poisoned it and not who did — an NPC has no way to find the animals it envenomed.
@@ -181,6 +187,9 @@ export const ORGANS: Organ[] = [
       return true;
     } }),
 ];
+
+/** Every named synergy, in the order the registry declares them — the codex's list. */
+export const SYNERGIES = ORGANS.filter(o => o.name);
 
 /** Ids of the named synergies live on this genome — part of the bake key, see `fishbake`. */
 export function synergiesOf(g: Genome): string[] {

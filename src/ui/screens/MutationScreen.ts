@@ -6,7 +6,8 @@ import { createIcon } from '../icons';
 export class MutationScreen implements Component {
   readonly element = div('overlay');
 
-  constructor(heading: string, traits: Trait[], pick: (t: Trait) => void) {
+  constructor(heading: string, traits: Trait[], pick: (t: Trait) => void,
+              isNew: (t: Trait) => boolean) {
     const cards = div('cards');
     for (const t of traits) {
       const card = document.createElement('button');
@@ -18,6 +19,12 @@ export class MutationScreen implements Component {
       mark.append(createIcon(t.icon, 26));
       const rarity = span(t.rarity);
       rarity.className = 'r';
+      // never taken in any run: the codex has a gap this card fills
+      if (isNew(t)) {
+        const tag = document.createElement('b');
+        tag.textContent = 'new';
+        rarity.prepend(tag);
+      }
       top.append(mark, rarity);
 
       card.append(top, h3(t.name), p(t.desc));

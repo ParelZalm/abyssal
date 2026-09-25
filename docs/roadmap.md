@@ -100,9 +100,10 @@ a small puzzle with a tell. Squid arms that can be torn free are the model to co
 
 The biggest roguelite gap. There is no save beyond the best score in `localStorage`.
 
-- **Codex.** Species eaten, mutations taken, synergies discovered, persisted. The run's
-  synergy list already exists on `Game.synergies`; persist it across runs. Cheap, and it
-  gives every run a discovery goal.
+- ~~**Codex.**~~ Done: `game/codex.ts`, a Codex screen off the title and end screens,
+  firsts toasted and listed on the end screen, and a *new* mark on draft cards for traits
+  never taken. Species show as names and counts; drawing each one there would need a
+  bake to an image, which is the same work as the run summary's silhouettes (§8).
 - **Starting forms.** Reach the twilight once and you can hatch as a lanternfish-like
   body. Varies the opening ten minutes.
 - **Daily seed.** Runs already seed a `Rng`; expose the seed and share it.
@@ -120,6 +121,6 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 
 1. ~~Two or three more synergies~~ — done; Ballistic once the boost is published.
 2. ~~The shallows clock~~ — done.
-3. The codex, since the synergy list is already there to persist.
+3. ~~The codex~~ — done.
 4. Diet and locomotion organs, which make run two differ from run one.
 5. Transformations, then the draft reading synergies once there are enough to read.

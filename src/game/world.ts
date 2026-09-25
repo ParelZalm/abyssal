@@ -239,6 +239,8 @@ export class World {
   spilled: Blood[] = [];
   /** Biomass the player earned this frame. */
   playerGain = 0;
+  /** Species ids of the bodies the player killed this frame, for the codex. An event. */
+  readonly devoured: string[] = [];
   /** Health, as a fraction of max, the player absorbed this frame. */
   playerHeal = 0;
   /** Whether the player is in something's tentacles this frame, for the HUD to act on. */
@@ -264,15 +266,18 @@ export class World {
   hunted = false;
   /** Guardians already killed. A guardian is gone for the run, not on a respawn timer. */
   private readonly deadGuardians = new Set<string>();
-  /** Synergies the player's body has fired for the first time this frame. Drained by `Game.digest`. */
+  /**
+   * Organ ids of the synergies the player's body has fired for the first time this frame.
+   * Ids, not names, because the codex keeps them across runs. Drained by `Game.digest`.
+   */
   readonly synergies: string[] = [];
   private readonly synergiesSeen = new Set<string>();
 
   /** A named organ did its thing. Published once per run, and only for the player's body. */
   fired(o: Organ, c: Creature) {
-    if (!o.name || !c.isPlayer || this.synergiesSeen.has(o.name)) return;
-    this.synergiesSeen.add(o.name);
-    this.synergies.push(o.name);
+    if (!o.name || !c.isPlayer || this.synergiesSeen.has(o.id)) return;
+    this.synergiesSeen.add(o.id);
+    this.synergies.push(o.id);
   }
 
   constructor(private rng: Rng, private player: Creature) {
@@ -512,6 +517,7 @@ export class World {
     this.bites.length = 0;
     this.spilled.length = 0;
     this.synergies.length = 0;
+    this.devoured.length = 0;
     for (let i = this.blood.length - 1; i >= 0; i--) {
       if ((this.blood[i].t -= dt) <= 0) this.blood.splice(i, 1);
     }
@@ -1042,6 +1048,7 @@ export class World {
     this.blood.push(spill);
     this.spilled.push(spill);
     if (!byPlayer) return;
+    this.devoured.push(def.species.id);
     this.playerGain += def.genome.size * def.species.nutrition;
     this.playerHeal += def.species.heal ?? 0;
     if (def.species.guardian) {

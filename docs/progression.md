@@ -22,7 +22,7 @@ Three groups of fields, and the split matters:
   Every `Creature` caches its active organs and `refreshOrgans()` beside `view.rebuild`.
   The one exception is `coral`: it is plate, so `armourOf(g)` adds it as a derived stat.
   A synergy is an `Organ` whose `when` tests two fields and that carries a `name`; its
-  effect hooks return true on a frame they did something, `World.fired` publishes that
+  effect hooks return true on a frame they did something, `World.fired` publishes its id
   once per run on `world.synergies`, and `Game.digest` turns it into the toast, so the
   combination is discovered in play rather than read off a card. Four so far:
   `Toxic Lure` (lure + venom: prey that reaches the light is poisoned before the bite),
@@ -35,7 +35,8 @@ Three groups of fields, and the split matters:
   paint asks `hasSynergy(g, id)` from the same file, so a combination shows on the body
   through the predicate that makes it act, and `synergiesOf(g)` is in the bake cache key
   because a synergy's threshold can fall inside one quantised bucket of the fields it
-  tests. Every synergy gets a cell on the design board's Builds row.
+  tests. Every synergy gets a cell on the design board's Builds row, and a `desc` — the
+  line the codex shows once it has been found.
 - **Morphology** — `hue`, `accentHue`, `finSize`, `tailSplit`, `spikes`, `jaw`,
   `eyeSize`, `glow`, `segments`, `translucent`, plus the deep-water set: `photophores`,
   `eyeAdapt`, `gape`, `veil`, `bulk`, `barbels`. Purely visual, but every trait nudges at
@@ -126,8 +127,27 @@ the thinning only. Spent water stays spent for the run.
 Held on `Game`: `stage`, `xp`, `food`, `taken` (id → stacks), `takenNames` (for the HUD
 and pause sheet), `eaten`, `deepest`, `elapsed`, `maxBand`, `gatesOpen`, `overstay` and `risen` (the
 shallows clock). `reset()`
-rebuilds all of it plus the world and the player; there is no save, and a run is seeded
-from `Math.random()` into a `Rng` so a seed would reproduce it if one were ever exposed.
+rebuilds all of it plus the world and the player. A run is seeded from `Math.random()`
+into a `Rng`, so a seed would reproduce it if one were ever exposed.
+
+## The codex
+
+The only thing besides the best score that outlives a run. `game/codex.ts` keeps kills
+per species id, stacks per trait id, the synergy ids that have fired and a run count, in
+`localStorage` under `abyssal.codex`. Ids rather than names, so a rename does not orphan
+a find; a load keeps ids the game no longer has, and a corrupt store reads as empty.
+
+- **Where it is fed.** `World.slay` pushes the species id of every kill the player
+  books onto `world.devoured` (an event, cleared each `update`); `Game.digest` records
+  it, and records the synergy ids off `world.synergies`. `applyTrait` records the trait.
+- **When it is written.** On a first — a species, trait or synergy never seen in any
+  run, which also toasts and goes on the end screen's *New in the codex* line — at the
+  end of a run, and when the page is hidden. Kill counts ride along with those, so the
+  store is not rewritten on every kill.
+- **Where it is read.** The Codex screen, off the title and both end screens, lists
+  every species by zone, the whole trait pool as HUD chips, and the synergies; anything
+  unfound keeps its slot as `???`, since what is left to find is the point. A draft card
+  for a trait never taken carries a *new* mark beside its rarity.
 
 Fullness (`food`) drains at `metabolism * (1.2 + size * 0.014)` and hits health at zero
 — the cost that stops size-stacking from being free.

@@ -1,10 +1,10 @@
 import type { Component } from '../Component';
-import { button, div, h1, h2, kbd, keysLine, p } from '../dom/element';
+import { actions, button, div, h1, h2, kbd, keysLine, p } from '../dom/element';
 
 export class TitleScreen implements Component {
   readonly element = div('overlay');
 
-  constructor(onStart: () => void) {
+  constructor(onStart: () => void, onCodex: () => void) {
     this.element.append(
       h2('A fish evolution roguelite'),
       h1('Abyssal'),
@@ -18,7 +18,7 @@ export class TitleScreen implements Component {
         'Hold ', kbd('Space'), ' / ', kbd('Shift'), ' / ', kbd('click'),
         ' to boost \u00a0·\u00a0 ', kbd('P'), ' pause',
       ]),
-      button('Hatch', onStart),
+      actions(button('Hatch', onStart), button('Codex', onCodex, 'btn ghost')),
     );
   }
 
