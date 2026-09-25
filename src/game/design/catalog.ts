@@ -9,6 +9,7 @@
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { PLAN_FORMS, type Plan } from '../form';
 import { FishView } from '../fishview';
+import { FAMILY_NAMES, TRANSFORMS, type Family } from '../forms';
 import { baseGenome, type Genome } from '../genome';
 import { PROP_SIZE, propTexture, type PropKind } from '../props';
 import { genomeFor, rangeOf, SPECIES } from '../species';
@@ -373,12 +374,28 @@ const BUILDS: { id: string; name: string; note: string; plan: Plan; depth: numbe
     edit: g => { g.venom = 1; g.lifesteal = 0.06; g.armor = 1; g.hue = 150; g.accentHue = 96; } },
 ];
 
+/** The water each form is likeliest to happen in: families ripen at different depths. */
+const FORM_DEPTH: Record<Family, number> = {
+  grazer: 700, predator: 1500, sprinter: 2400, lurker: 4200, luminous: 5200,
+};
+
+/**
+ * The player after each transformation: the family's plan, the wraith's smoke kept on it,
+ * and the grant applied — so a form that reads as the NPC it borrowed a plan from shows
+ * here before it shows in a run.
+ */
+const FORM_BUILDS: typeof BUILDS = Object.values(TRANSFORMS).map(t => ({
+  id: `form-${t.family}`, name: t.name, plan: t.plan, depth: FORM_DEPTH[t.family],
+  note: `Form: ${FAMILY_NAMES[t.family].toLowerCase()}. ${t.desc}`,
+  edit: (g: Genome) => { g.smoke = 1; t.apply(g); },
+}));
+
 function buildGroup(): DesignGroup {
   return {
     id: 'builds',
     name: 'Builds',
     note: 'Whole animals, with every parameter set together the way a species would set it.',
-    items: BUILDS.map(b => ({
+    items: [...BUILDS, ...FORM_BUILDS].map(b => ({
       id: b.id,
       name: b.name,
       note: b.note,

@@ -1,3 +1,4 @@
+import type { Family, Transformation } from '../game/forms';
 import type { Genome } from '../game/genome';
 import type { Rarity } from '../game/traits';
 import type { IconName } from './icons';
@@ -9,6 +10,9 @@ export interface TraitEntry {
 export interface PauseInfo {
   genome: Genome;
   traits: TraitEntry[];
+  /** Different traits taken of each family, and the form they became if any. */
+  families: Record<Family, number>;
+  form: Transformation | null;
   stage: number;
   zone: string;
   depth: number;

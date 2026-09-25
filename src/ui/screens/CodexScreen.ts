@@ -1,4 +1,5 @@
 import type { Codex } from '../../game/codex';
+import { TRANSFORMS } from '../../game/forms';
 import { SYNERGIES } from '../../game/organs';
 import { SPECIES } from '../../game/species';
 import { TRAITS } from '../../game/traits';
@@ -79,7 +80,21 @@ function synergySection(codex: Codex) {
     row.append(body);
     rows.append(row);
   }
-  return section('synergies', heading('Synergies', found, SYNERGIES.length), rows);
+  const forms = ul('inventory');
+  const all = Object.values(TRANSFORMS);
+  let became = 0;
+  for (const t of all) {
+    const known = codex.forms.includes(t.family);
+    if (known) became++;
+    const row = li(known ? 'rare' : 'unknown');
+    const body = div();
+    body.append(h4(known ? t.name : UNKNOWN),
+      p(known ? t.desc : 'Three different mutations of one kind remake the body.'));
+    row.append(body);
+    forms.append(row);
+  }
+  return section('synergies', heading('Synergies', found, SYNERGIES.length), rows,
+    heading('Forms', became, all.length), forms);
 }
 
 /** Everything every run so far has found. */

@@ -110,6 +110,37 @@ A draft is offered on level-up (`xp >= xpNeed`, which is `45 * 1.5^(stage-1)`) a
 per new band reached. Both set `phase = 'draft'`; `applyTrait` rebuilds the view,
 refills health and returns to `play`.
 
+## Transformations
+
+`game/forms.ts`. Every trait carries one or two `families` — predator, sprinter, lurker,
+luminous, grazer; plate and the plain stat cards carry none. Three *different* traits of
+one family (stacks do not count) transform the player, once per run, in `Game.transform`
+off `applyTrait`: the plan changes to that family's, and the family's grant is applied to
+the genome.
+
+| Family | Form | Plan | Grant |
+| --- | --- | --- | --- |
+| predator | Shark | `shark` | `frenzy` +1 (bites on bodies below half health × 1.4), +10% speed |
+| sprinter | Squid | `squid` | `mantle` = 1 and `jet` +1 |
+| lurker | Moray | `eel` | `lurk` = 1, +0.2 stealth |
+| luminous | Angler | `angler` | `lure` +1, `gape` +0.4 |
+| grazer | Bloom | `jelly` | `filter` +1, `frill` +1 |
+
+- **Only plans the roster already draws, never a guardian's**, which is why there is no
+  armoured form: every plated plan belongs to a guardian, and wearing one would spend the
+  silhouette the player is meant to recognise on sight.
+- **The smoke stays.** The wraith's see-through body is `Genome.smoke` (set on the player
+  in `reset`), not only the wraith plan's `smoke` art flag, so a transformed player is a
+  smoky shark among real ones. The paint reads either.
+- **Grants are organ magnitudes**, so the registry carries them and nothing reads a form
+  by name. `frenzy` is the one organ only a form grants; the `damage` hook gained the
+  defender for it.
+- A trait of two families that completes both transforms into the one it lists first.
+- `FishView.setPlan` swaps the plan in place; the player's `Species` is a per-run copy of
+  `PLAYER_SPECIES`, since the plan lives on it.
+- Draft cards show a trait's families, the pause sheet shows progress per family (or the
+  form once taken), the end screen names it, and the codex keeps every form reached.
+
 ## Zones, bands and gates
 
 `zones.ts` is five `Zone` records — the places the player names, each owning a guardian
@@ -147,7 +178,7 @@ the thinning only. Spent water stays spent for the run.
 
 ## Run state
 
-Held on `Game`: `stage`, `xp`, `food`, `taken` (id → stacks), `takenNames` (for the HUD
+Held on `Game`: `stage`, `xp`, `food`, `taken` (id → stacks), `form`, `takenNames` (for the HUD
 and pause sheet), `eaten`, `deepest`, `elapsed`, `maxBand`, `gatesOpen`, `overstay` and `risen` (the
 shallows clock). `reset()`
 rebuilds all of it plus the world and the player. A run is seeded from `Math.random()`
@@ -156,7 +187,8 @@ into a `Rng`, so a seed would reproduce it if one were ever exposed.
 ## The codex
 
 The only thing besides the best score that outlives a run. `game/codex.ts` keeps kills
-per species id, stacks per trait id, the synergy ids that have fired and a run count, in
+per species id, stacks per trait id, the synergy ids that have fired, the families whose
+form has been reached and a run count, in
 `localStorage` under `abyssal.codex`. Ids rather than names, so a rename does not orphan
 a find; a load keeps ids the game no longer has, and a corrupt store reads as empty.
 

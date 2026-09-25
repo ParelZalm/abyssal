@@ -86,7 +86,7 @@ function key(g: Genome, plan: Plan) {
           g.lure > 0 ? 1 : 0, Math.min(3, g.claws),
           Math.min(3, g.coral), Math.min(3, g.frill), g.jet > 0 ? 1 : 0,
           g.venom > 0 ? 1 : 0, Math.min(2, g.filter), g.crush > 0 ? 1 : 0,
-          g.eel > 0 ? 1 : 0, g.mantle > 0 ? 1 : 0, g.lurk > 0 ? 1 : 0,
+          g.eel > 0 ? 1 : 0, g.mantle > 0 ? 1 : 0, g.lurk > 0 ? 1 : 0, g.smoke > 0 ? 1 : 0,
           // a synergy's threshold can fall inside one bucket of the fields above — Urchin's
           // armour test sits mid-step — so the paint's own predicate goes in whole
           synergiesOf(g).join('+')].join('|');
@@ -192,7 +192,8 @@ function paint(g: Genome, plan: Plan): Baked {
   // faded by one AlphaFilter, because per-part alpha composites every overlap twice and the
   // joints then outline themselves. A single surface has no overlaps to composite, so the
   // render target that cost is simply gone — the body is drawn see-through and that is all.
-  if (A.smoke) pal.alpha *= 0.6;
+  const smoke = A.smoke || g.smoke > 0;
+  if (smoke) pal.alpha *= 0.6;
   // Ghost Light: a light hanging in water that has nothing behind it. The lure is painted
   // at full strength on its own alpha, so fading the body is what makes the light stand out
   if (hasSynergy(g, 'ghostlight')) pal.alpha *= 0.62;
@@ -266,7 +267,7 @@ function paint(g: Genome, plan: Plan): Baked {
   if (g.mantle > 0) mantle(art, f, pal);
 
   // --- on top ------------------------------------------------------------
-  if (A.smoke) viscera(art, f, pal);
+  if (smoke) viscera(art, f, pal);
   if (A.dorsalFin > 0) dorsalRidge(art, f, pal, A);
   fins(art, f, pal, g, A);
   if (A.spines) spines(art, f, pal, g, men);

@@ -82,7 +82,7 @@ export interface Organ {
   /** How far the mouth draws in prey, given whether it would go down whole. */
   gulp?: (g: Genome, base: number, whole: boolean) => number;
   /** Damage a bite that tears, rather than swallows, deals before armour. */
-  damage?: (c: Creature, base: number) => number;
+  damage?: (c: Creature, base: number, def: Creature) => number;
   /** How hard this body is to notice, 0..1 — the genome's stealth before any organ. */
   stealth?: (c: Creature, base: number) => number;
   swim?: (g: Genome, m: SwimMods) => void;
@@ -220,6 +220,11 @@ export const ORGANS: Organ[] = [
     damage: (c, base) => base * (1 + 0.8 * c.poise),
     onWound: att => { att.poise = 0; } }),
 
+  O({ id: 'frenzy', when: g => g.frenzy > 0,
+    // blood in the water is a reason to press, not to wait: a wounded body is the one worth
+    // committing to, so the shark form finishes what it starts
+    damage: (c, base, def) => def.hp < def.hpMax * 0.5 ? base * (1 + 0.4 * c.genome.frenzy) : base }),
+
   // ---------------------------------------------------------------- synergies
   O({ id: 'toxiclure', name: 'Toxic Lure', when: g => g.lure > 0 && g.venom > 0,
     desc: 'Illicium and venom. Prey that reaches the light is poisoned before you bite.',
@@ -340,9 +345,9 @@ export function gulpOf(c: Creature, base: number, whole: boolean) {
   return r;
 }
 
-export function damageOf(c: Creature, base: number) {
+export function damageOf(c: Creature, base: number, def: Creature) {
   let d = base;
-  for (const o of c.organs) if (o.damage) d = o.damage(c, d);
+  for (const o of c.organs) if (o.damage) d = o.damage(c, d, def);
   return d;
 }
 

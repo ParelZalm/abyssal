@@ -1,3 +1,4 @@
+import { FAMILY_NAMES, FORM_AT, type Family } from '../../game/forms';
 import { armourOf, biteDamage, maxHp } from '../../game/genome';
 import type { Component } from '../Component';
 import { div, h1, h2, h3, h4, kbd, keysLine, li, p, span, ul } from '../dom/element';
@@ -101,6 +102,18 @@ export class PauseScreen implements Component {
     const invSec = document.createElement('section');
     invSec.className = 'inv';
     invSec.append(mutHeading, inv);
+
+    // how close each kind of animal is; once one has happened the rest are moot for the run
+    const lineage = ul('stats');
+    if (info.form) {
+      lineage.append(statRow('Form', info.form.name, info.form.desc));
+    } else {
+      for (const f of Object.keys(FAMILY_NAMES) as Family[]) {
+        const n = info.families[f];
+        if (n > 0) lineage.append(statRow(FAMILY_NAMES[f], `${Math.min(n, FORM_AT)} / ${FORM_AT}`));
+      }
+    }
+    if (lineage.childElementCount) bodySec.append(h3('Lineage'), lineage);
 
     const sheet = div('sheet');
     sheet.append(bodySec, invSec);

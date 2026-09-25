@@ -1,6 +1,6 @@
 import { Application, Container, Graphics } from 'pixi.js';
 import './style.css';
-import { loadCodex, recordSpecies, recordSynergy, recordTrait, saveCodex } from './game/codex';
+import { loadCodex, recordForm, recordSpecies, recordSynergy, recordTrait, saveCodex } from './game/codex';
 import { baseGenome, maxHp, type Genome } from './game/genome';
 import { setBakeRenderer } from './game/fishbake';
 import { Fx } from './game/fx';
@@ -12,7 +12,8 @@ import { riserFor, type Species } from './game/species';
 import { bandAt, BANDS, depthLabel, descentLimit, FINAL_GUARDIAN, nextGate,
          placeName } from './game/zones';
 import { boostModsOf, burnOf, POISE_MAX, swallowHealOf, SYNERGIES } from './game/organs';
-import { draftTraits, type Trait } from './game/traits';
+import { familyCounts, formDue, type Transformation } from './game/forms';
+import { draftTraits, TRAITS, type Trait } from './game/traits';
 import { clamp, dist2, hsl, lerp, rgb, Rng } from './game/util';
 import { Creature, DEPTH_MAX, speciesById, World } from './game/world';
 import { UI } from './ui/UI';
@@ -77,6 +78,8 @@ class Game {
   private codex = loadCodex();
   /** Names this run added to the codex for the first time, for the end screen. */
   private found: string[] = [];
+  /** The run's one metamorphosis, once it has happened. See `game/forms.ts`. */
+  private form: Transformation | null = null;
   private takenNames: { name: string; desc: string; icon: Trait['icon'];
     rarity: Trait['rarity']; stacks: number }[] = [];
   private eaten = 0;
@@ -225,7 +228,9 @@ class Game {
 
     const g: Genome = baseGenome();
     g.hue = this.rng.range(18, 48);
-    this.player = new Creature(PLAYER_SPECIES, g);
+    g.smoke = 1;
+    // a copy, because a transformation changes the plan and the next run must not inherit it
+    this.player = new Creature({ ...PLAYER_SPECIES }, g);
     this.player.isPlayer = true;
     this.player.x = 0;
     this.player.y = 260;
@@ -246,7 +251,7 @@ class Game {
     this.camY = this.player.y;
 
     this.stage = 1; this.xp = 0; this.food = FOOD_MAX;
-    this.taken.clear(); this.takenNames = []; this.synergies = []; this.found = [];
+    this.taken.clear(); this.takenNames = []; this.synergies = []; this.found = []; this.form = null;
     this.eaten = 0; this.deepest = 0; this.elapsed = 0; this.shake = 0;
     this.score = 0; this.combo = 0; this.comboT = 0;
     this.dreadSpike = 0; this.dreadHold = 0;
@@ -285,6 +290,8 @@ class Game {
       this.ui.showPause({
         genome: this.player.genome,
         traits: this.takenNames,
+        families: familyCounts(this.takenTraits()),
+        form: this.form,
         stage: this.stage,
         zone: placeName(this.player.y),
         depth: this.player.y,
@@ -636,6 +643,33 @@ class Game {
     this.ui.toast(first ? `${t.name} acquired — new in the codex` : `${t.name} acquired`);
     this.fx.ring(this.player.x, this.player.y, 0xfff0b0, this.player.radius * 4);
     this.phase = 'play';
+    // the card just taken goes last, so a trait of two families that completes both
+    // transforms into the one it lists first
+    const due = this.form ? null
+      : formDue([...this.takenTraits().filter(x => x !== t), t]);
+    if (due) this.transform(due);
+  }
+
+  private takenTraits() {
+    return TRAITS.filter(t => this.taken.has(t.id));
+  }
+
+  /** The metamorphosis: a new plan, the organ it earns, and a screen to mark it. */
+  private transform(to: Transformation) {
+    this.form = to;
+    const p = this.player;
+    to.apply(p.genome);
+    p.species.plan = to.plan;
+    p.view.setPlan(to.plan, p.genome);
+    p.refreshOrgans();
+    p.hpMax = maxHp(p.genome);
+    p.hp = p.hpMax;
+    if (recordForm(this.codex, to.family)) this.discover(to.name);
+    this.fx.ring(p.x, p.y, 0xd8c8ff, p.radius * 6);
+    this.fx.burst(p.x, p.y, 0xd8c8ff, 30, 200, p.radius * 0.3);
+    this.shake = Math.min(10, this.shake + 6);
+    this.phase = 'draft';
+    this.ui.showTransform(to, () => { this.phase = 'play'; });
   }
 
   private finish(won: boolean) {
@@ -654,6 +688,7 @@ class Game {
       `${BANDS[this.maxBand].name}`,
       `${this.player.genome.size.toFixed(0)} cm long`,
       `${this.eaten} creatures eaten`,
+      ...(this.form ? [`Became a ${this.form.name}`] : []),
       ...(this.synergies.length ? [`Synergies: ${this.synergies.join(', ')}`] : []),
       `${depthLabel(this.deepest).toLocaleString()} m deep`,
       `${Math.floor(this.elapsed / 60)}m ${Math.floor(this.elapsed % 60)}s survived`,

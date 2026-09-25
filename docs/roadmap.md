@@ -37,17 +37,14 @@ Watch: a synergy with a `burn` or `boost` modifier needs no event and cannot ret
 `true`, so it will never toast. Fire it from an `onTick` the first time the condition is
 met, or give modifiers a way to report.
 
-## 2. Transformations (Isaac's Guppy)
+## 2. ~~Transformations (Isaac's Guppy)~~
 
-Tag every trait in `src/game/traits.ts` with one or two families: *predator*, *lurker*,
-*grazer*, *armoured*, *sprinter*, *luminous*. Three from one family rebuilds the body
-plan into a form the game already draws (three luminous becomes an angler plan with a
-passive lure).
-
-- Needs a `families` field on `Trait`, a count on `Game` beside `taken`, and a plan
-  change on the player that `view.rebuild` already supports.
-- Decide whether a transformation grants a stat block too, or is purely the plan's
-  art plus a mechanic. The organ rule says it needs a mechanic.
+Done: `game/forms.ts`, five families (armoured dropped — every plated plan is a
+guardian's), three different traits of one family, once per run. Each form is a plan the
+roster draws, with the wraith's smoke kept on it, plus a grant of existing organs (the
+Shark's `frenzy` is new). See `docs/progression.md`. Left open: a second form in a long
+run, and whether a transformed player should be read differently by the ocean (a Shark
+that other sharks treat as a rival).
 
 ## 3. The draft reads synergies
 
@@ -127,4 +124,4 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 2. ~~The shallows clock~~ — done.
 3. ~~The codex~~ — done.
 4. ~~Diet and locomotion organs~~ — done.
-5. Transformations, then the draft reading synergies once there are enough to read.
+5. ~~Transformations~~ — done; then the draft reading synergies and families (§3).

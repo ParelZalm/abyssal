@@ -1,3 +1,4 @@
+import { FAMILY_NAMES } from '../../game/forms';
 import type { Trait } from '../../game/traits';
 import type { Component } from '../Component';
 import { div, h1, h2, h3, p, span } from '../dom/element';
@@ -28,6 +29,12 @@ export class MutationScreen implements Component {
       top.append(mark, rarity);
 
       card.append(top, h3(t.name), p(t.desc));
+      // the family is what a card is a step toward; without it a transformation is luck
+      if (t.families?.length) {
+        const fam = span(t.families.map(f => FAMILY_NAMES[f]).join(' · '));
+        fam.className = 'fam';
+        card.append(fam);
+      }
       card.addEventListener('click', () => pick(t));
       cards.append(card);
     }

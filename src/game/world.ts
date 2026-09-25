@@ -963,7 +963,7 @@ export class World {
     // every guardian's grab a death with nothing to struggle against
     const whole = !att.holding && att.swallowSize > def.genome.size * 2;
     const armour = Math.max(0, armourAgainst(att, armourOf(def.genome)));
-    const dmg = whole ? def.hp : Math.max(1, damageOf(att, biteDamage(att.genome)) - armour);
+    const dmg = whole ? def.hp : Math.max(1, damageOf(att, biteDamage(att.genome), def) - armour);
     def.hp -= dmg;
     const fatal = def.hp <= 0;
     // what the bodies do to each other beyond the damage — recoil, venom, grip — is the

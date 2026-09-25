@@ -146,6 +146,12 @@ export class FishView extends Container {
     super.destroy(options);
   }
 
+  /** A new silhouette for the same animal — the player's transformation. */
+  setPlan(plan: Plan, g: Genome) {
+    this.plan = plan;
+    this.rebuild(g);
+  }
+
   rebuild(g: Genome) {
     this.g = g;
     const m = this.motion = motionFor(g, this.plan);

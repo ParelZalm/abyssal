@@ -1,4 +1,5 @@
 import type { Codex } from '../game/codex';
+import type { Transformation } from '../game/forms';
 import type { Trait } from '../game/traits';
 import { Hud } from './hud/Hud';
 import type { Component } from './Component';
@@ -8,6 +9,7 @@ import { MutationScreen } from './screens/MutationScreen';
 import { PauseScreen } from './screens/PauseScreen';
 import { BandScreen } from './screens/BandScreen';
 import { TitleScreen } from './screens/TitleScreen';
+import { TransformScreen } from './screens/TransformScreen';
 import { WinScreen } from './screens/WinScreen';
 import type { HudState, PauseInfo } from './types';
 
@@ -76,6 +78,13 @@ export class UI {
 
   showBand(index: number, onContinue: () => void) {
     this.show(new BandScreen(index, () => {
+      this.hide();
+      onContinue();
+    }));
+  }
+
+  showTransform(to: Transformation, onContinue: () => void) {
+    this.show(new TransformScreen(to, () => {
       this.hide();
       onContinue();
     }));

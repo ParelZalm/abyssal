@@ -28,6 +28,7 @@ export interface Genome {
   eel: number;         // anguilliform body: full turning at any speed, no glide
   mantle: number;      // mantle pump: swims in hard pulses with a glide between
   lurk: number;        // lie in wait: stillness hides you and winds up the next bite
+  frenzy: number;      // the shark's: bites on the wounded hit harder. Only a form grants it
 
   // morphology — purely visual, but every trait nudges it so the fish reads as evolved
   hue: number;
@@ -40,6 +41,12 @@ export interface Genome {
   glow: number;
   segments: number;
   translucent: number;
+  /**
+   * The wraith's body of smoke: see-through, with spine and gut showing. The player's alone,
+   * and on the genome rather than the plan so it survives a transformation onto a plan
+   * that the roster's own animals also wear.
+   */
+  smoke: number;
 
   // deep-water morphology — the vocabulary that tells one zone's animals from another's.
   // Hue alone cannot do it: everything below the twilight is drawn against black water.
@@ -62,9 +69,9 @@ export function baseGenome(): Genome {
     size: 14, speed: 150, turn: 4.2, bite: 6, sense: 340, armor: 0,
     regen: 0.6, metabolism: 1, stealth: 0, gulp: 1, lifesteal: 0, pen: 0, ram: 0,
     venom: 0, lure: 0, claws: 0, jet: 0, coral: 0, frill: 0, filter: 0, crush: 0,
-    eel: 0, mantle: 0, lurk: 0,
+    eel: 0, mantle: 0, lurk: 0, frenzy: 0,
     hue: 30, accentHue: 200, finSize: 1, tailSplit: 0.35, spikes: 0,
-    jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0,
+    jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0, smoke: 0,
     photophores: 0, eyeAdapt: 0, gape: 0, veil: 0, bulk: 0, barbels: 0,
   };
 }
