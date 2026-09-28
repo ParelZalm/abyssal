@@ -38,6 +38,8 @@ export interface Species {
   segments?: number;
   translucent?: number;
   claws?: number;
+  /** An illicium. On an animal that is not the player it is a trap: see the `lure` organ. */
+  lure?: number;
 
   // deep-water morphology
   photophores?: number;
@@ -194,7 +196,7 @@ export const SPECIES: Species[] = [
   { id: 'anglerfish', name: 'Anglerfish', behavior: 'ambush', plan: 'angler',
     zone: 'midnight', bleed: 800,
     size: [40, 66], hue: [252, 278], accent: 55, speed: 130, bite: 26,
-    nutrition: 2.6, weight: 7, jaw: 1.1, glow: 0.9, armor: 2, spikes: 1,
+    nutrition: 2.6, weight: 7, jaw: 1.1, glow: 0.9, armor: 2, spikes: 1, lure: 1,
     gape: 0.7, eyeAdapt: 0.3, photophores: 0.3, sense: 520 },
 
   { id: 'gulper', name: 'Gulper Eel', behavior: 'hunter', plan: 'eel',
@@ -339,6 +341,7 @@ export function genomeFor(sp: Species, rng: Rng): Genome {
   g.segments = sp.segments ?? 0;
   g.translucent = sp.translucent ?? 0;
   g.claws = sp.claws ?? 0;
+  g.lure = sp.lure ?? 0;
 
   g.photophores = sp.photophores ?? 0;
   g.eyeAdapt = sp.eyeAdapt ?? 0;

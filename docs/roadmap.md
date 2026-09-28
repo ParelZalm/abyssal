@@ -100,6 +100,10 @@ Beaten by behaviour, not just size: the anglerfish only if you avoid its lure, a
 edible once you split it, a shark that flees the blood you leave. Each guardian should be
 a small puzzle with a tell. Squid arms that can be torn free are the model to copy.
 
+- ~~**The anglerfish, the bait ball and shark blood.**~~ Done: see *Tactics* in
+  `docs/simulation.md`.
+- **Guardian tells.** Next.
+
 ## 7. Something survives death
 
 The biggest roguelite gap. There is no save beyond the best score in `localStorage`.

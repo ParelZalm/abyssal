@@ -640,6 +640,11 @@ class Game {
     }
     this.squeeze(dt, gate, !!forcible);
 
+    if (this.world.glanced && this.hintCd <= 0) {
+      this.hintCd = 3;
+      this.ui.toast('The shoal has balled up — boost into it to scatter it');
+    }
+
     if (this.world.playerHeld && this.hintCd <= 0) {
       this.hintCd = 4;
       this.ui.toast('Caught — boost to tear free');

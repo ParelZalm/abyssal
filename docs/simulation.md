@@ -167,6 +167,29 @@ heading converges on the spot within seconds however small the weight, because e
 closes a fixed fraction of what is left — which is a summons, not a nudge. What you get
 instead is a guardian that drifts your way when something large dies under its nose.
 
+Every `Blood` carries the `kind` (plan) of what bled, and a drip from a bleeding body
+(Vivisect) carries its `from`, which cannot smell its own. **Sharks are the exception to
+blood as a lure**: `smell` skips shark blood for a shark, and `smellDeath` turns any shark
+— the Great White included — away from shark blood inside 0.6 of the reach that would
+draw it to another kill, whatever it was hunting. Killing a reef shark clears the water of
+sharks for as long as its cloud lasts (up to 14 s), and a bleeding shark carries the
+warning with it.
+
+## Tactics
+
+Three animals are beaten by behaviour rather than by size:
+
+- **Bait balls.** A schooling body with six or more of its own kind within
+  `3 × size + 40` is `balled`: a bite that has to tear glances off it (a gulp that would
+  swallow it whole still works), and the player is told to scatter it. Every boost kick
+  (`Creature.kicks`, answered once in `World.update`) scatters schooling bodies within
+  `4 × radius + 220` of the player — they bolt outward, panicked, and are loose for 3 s.
+- **Shark blood**, above.
+- **The anglerfish's lure.** NPC anglerfish carry `lure` 1. On anything but the player the
+  `lure` organ's `onTick` is a trap: whatever touches the bulb — placed by `lureBulb`, the
+  same point the paint hangs it at — is struck for 2.5 bites at once, whatever its size,
+  and the angler lunges. From behind or beside it is prey like any other.
+
 ## Notice
 
 A guardian ignores anything smaller than `noticeSize(zone)`, which is interpolated between

@@ -1,6 +1,6 @@
 import { Container } from 'pixi.js';
 import { FishView } from './fishview';
-import { PLAN_ART } from './form';
+import { PLAN_ART, type Plan } from './form';
 import { armourOf, biteDamage, maxHp, type Genome } from './genome';
 import { armourAgainst, biteRateOf, damageOf, glareOf, gulpOf, lureRangeOf, organsOf, stealthOf,
          swimOf, takenOf, tick as tickOrgans, wound, type Organ, type SwimMods } from './organs';
@@ -58,7 +58,18 @@ export interface Blood {
    * hunter with nothing in sight would otherwise chase the drop it just left beside itself.
    */
   from?: Creature;
+  /** The plan of what bled. Sharks read it: a shark's blood is a warning to other sharks. */
+  kind?: Plan;
 }
+
+/**
+ * The plans that are sharks. Sharks avoid the scent of a dead shark — the necromone that
+ * real ones flee — so killing one clears the water of the others for as long as it lingers,
+ * the Great White included. The one way to hold a guardian off that is not a stat.
+ */
+const SHARKS = new Set<Plan>(['shark', 'greatshark']);
+/** A school holds as a bait ball with this many of its own kind packed around a body. */
+const BALL_N = 6;
 
 /** How long a cloud draws anything, per centimetre of what died. Capped by `BLOOD_MAX`. */
 const BLOOD_LIFE = 0.16;
@@ -181,6 +192,8 @@ export class Creature {
   stun = 0;
   /** Seconds left inflated (the Inflation organ): too big to swallow, slow, prickly. */
   puffT = 0;
+  /** Seconds a schooling body is scattered from its ball and can be picked off. */
+  scatter = 0;
 
   constructor(public species: Species, public genome: Genome) {
     this.hpMax = maxHp(genome);
@@ -337,6 +350,10 @@ export class World {
   readonly spent: number[] = BANDS.map(() => 0);
   /** Deepest y the player may reach; the next sealed thermocline holds them here. */
   descentLimit = DEPTH_MAX;
+  /** True on a frame the player's bite glanced off a bait ball. */
+  glanced = false;
+  /** The player's boost kicks already answered by a scatter. */
+  private seenKicks = 0;
   /** True on any frame the player pressed against a sealed thermocline. */
   blocked = false;
   /** Species id of a guardian killed this run, or null. Drained by `Game.digest`. */
@@ -372,7 +389,7 @@ export class World {
     this.synergies.push(o.id);
   }
 
-  constructor(private rng: Rng, private player: Creature) {
+  constructor(private rng: Rng, readonly player: Creature) {
     this.layer.addChild(player.view);
     this.glow.addChild(player.view.glow);
     this.fog.addChild(player.view.fog);
@@ -658,10 +675,12 @@ export class World {
     this.playerGain = 0;
     this.playerHeal = 0;
     this.blocked = false;
+    this.glanced = false;
     this.hunted = false;
     this.playerHeld = false;
     const p = this.player;
 
+    if (p.kicks !== this.seenKicks) { this.seenKicks = p.kicks; this.scatterFrom(p); }
     for (const c of this.creatures) this.think(c, dt, p);
     this.think(p, dt, p);
 
@@ -685,6 +704,7 @@ export class World {
     c.tired = Math.max(0, c.tired - dt);
     c.moodT -= dt;
     c.graspCd = Math.max(0, c.graspCd - dt);
+    c.scatter = Math.max(0, c.scatter - dt);
 
     // dazzled: the body hangs where the flash caught it and drifts on what it was doing
     if (c.stun > 0) {
@@ -739,6 +759,18 @@ export class World {
             if (c.panic <= 0 && c.species.behavior === 'school') this.alarm(c);
             c.panic = 1.2;
             c.mood = 'cruise';
+            break;
+          }
+        }
+        // a shark will not stay where a shark died, whatever it was hunting
+        if (SHARKS.has(c.species.plan)) {
+          const warn = this.smellDeath(c, sense);
+          if (warn) {
+            desired = Math.atan2(c.y - warn.y, c.x - warn.x);
+            throttle = 1.1;
+            c.chase = 0;
+            c.quarry = null;
+            if (c.species.guardian) c.aware = false;
             break;
           }
         }
@@ -943,8 +975,11 @@ export class World {
   private smell(c: Creature, sense: number, keen = 1): Blood | null {
     let best: Blood | null = null;
     let bs = 0;
+    const shark = SHARKS.has(c.species.plan);
     for (const b of this.blood) {
       if (b.from === c) continue;
+      // a shark is not drawn by a shark's blood; `smellDeath` sends it the other way
+      if (shark && b.kind && SHARKS.has(b.kind)) continue;
       const reach = b.size * BLOOD_REACH * (0.6 + sense / 900) * keen;
       const d2 = dist2(c.x, c.y, b.x, b.y);
       if (d2 > reach * reach) continue;
@@ -953,6 +988,54 @@ export class World {
       if (strength > bs) { bs = strength; best = b; }
     }
     return best;
+  }
+
+  /**
+   * Shark blood close enough to turn a shark away, or null. Close means inside six tenths
+   * of the reach that would draw it to any other kill: the warning is the cloud itself, not
+   * its edge, so a shark skirts the spot rather than leaving the screen.
+   */
+  private smellDeath(c: Creature, sense: number): Blood | null {
+    for (const b of this.blood) {
+      if (!b.kind || !SHARKS.has(b.kind) || b.from === c) continue;
+      const reach = b.size * BLOOD_REACH * (0.6 + sense / 900) * 0.6;
+      if (dist2(c.x, c.y, b.x, b.y) < reach * reach) return b;
+    }
+    return null;
+  }
+
+  /**
+   * Whether a schooling body is inside a bait ball: enough of its own kind packed close
+   * that a mouth cannot single it out. Scattered bodies are not — that is the way in.
+   */
+  private balled(def: Creature) {
+    if (def.species.behavior !== 'school' || def.scatter > 0) return false;
+    const r = def.genome.size * 3 + 40;
+    let n = 0;
+    for (const o of this.creatures) {
+      if (o === def || !o.alive || o.species.id !== def.species.id) continue;
+      if (dist2(o.x, o.y, def.x, def.y) < r * r && ++n >= BALL_N) return true;
+    }
+    return false;
+  }
+
+  /**
+   * A boost kick into a school breaks the ball: every schooling body near the kick bolts
+   * outward and stays loose for three seconds, which is the window to pick one off.
+   */
+  private scatterFrom(p: Creature) {
+    const r = p.radius * 4 + 220;
+    for (const o of this.creatures) {
+      if (!o.alive || o.species.behavior !== 'school') continue;
+      const d2 = dist2(o.x, o.y, p.x, p.y);
+      if (d2 > r * r) continue;
+      const a = Math.atan2(o.y - p.y, o.x - p.x);
+      o.scatter = 3;
+      o.panic = Math.max(o.panic, 1.2);
+      o.angle = a;
+      o.vx += Math.cos(a) * o.genome.speed * 0.8;
+      o.vy += Math.sin(a) * o.genome.speed * 0.8;
+    }
   }
 
   /** Cheap deterministic-ish jitter per creature, used for perception rolls. */
@@ -1006,7 +1089,8 @@ export class World {
     c.hp -= c.bleed * dt;
     if ((c.drip -= dt) <= 0) {
       c.drip = DRIP_EVERY;
-      const drop: Blood = { x: c.x, y: c.y, size: c.genome.size * DRIP_SIZE, t: DRIP_LIFE, from: c };
+      const drop: Blood = { x: c.x, y: c.y, size: c.genome.size * DRIP_SIZE, t: DRIP_LIFE, from: c,
+        kind: c.species.plan };
       this.blood.push(drop);
       this.spilled.push(drop);
     }
@@ -1116,6 +1200,12 @@ export class World {
     // every guardian's grab a death with nothing to struggle against
     // an inflated body is two and a half times too wide for a mouth that would have taken it
     const whole = !att.holding && att.swallowSize > def.genome.size * 2 * (def.puffT > 0 ? 2.5 : 1);
+    // a bite into a bait ball glances off the wall of bodies: the mouth that could have
+    // gulped one goes on gulping, but one that has to tear cannot pick a target out of it
+    if (!whole && this.balled(def)) {
+      if (att.isPlayer) this.glanced = true;
+      return;
+    }
     this.land(att, def, whole, 1);
   }
 
@@ -1243,7 +1333,7 @@ export class World {
     if (def.holding) this.letGo(def, 0);
     if (def.heldBy) this.letGo(def.heldBy, 0);
     const spill: Blood = { x: def.x, y: def.y, size: def.genome.size,
-      t: Math.min(BLOOD_MAX, def.genome.size * BLOOD_LIFE) };
+      t: Math.min(BLOOD_MAX, def.genome.size * BLOOD_LIFE), kind: def.species.plan };
     this.blood.push(spill);
     this.spilled.push(spill);
     if (!byPlayer) return;

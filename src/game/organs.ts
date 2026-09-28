@@ -1,4 +1,4 @@
-import { formFor } from './form';
+import { formFor, lureBulb, R } from './form';
 import { armourOf, biteDamage, eyeOf, type Genome } from './genome';
 import type { IconName } from '../ui/icons';
 import type { Creature, World } from './world';
@@ -179,6 +179,9 @@ function sting(att: Creature, amount: number) {
 
 const O = (o: Organ) => o;
 
+/** An NPC lure's strike on whatever touches its bulb, as a multiple of a bite. */
+const LURE_STRIKE = 2.5;
+
 /** Seconds an ink cloud hides you in. */
 const INK_LIFE = 3.5;
 /** Seconds a body stays inflated. */
@@ -227,7 +230,28 @@ export const ORGANS: Organ[] = [
     } }),
 
   O({ id: 'lure', when: g => g.lure > 0,
-    lureRange: (g, base) => Math.max(base, 240 + g.lure * 340) }),
+    lureRange: (g, base) => Math.max(base, 240 + g.lure * 340),
+    // on any animal but the player, the lit bulb is a trigger: whatever touches it is
+    // struck at once, for two and a half bites, whatever its size — an anglerfish is not
+    // beaten by being bigger than it, only by not swimming into the light. Come at it from
+    // behind or beside and it is a meal. The player's own lure draws prey instead (`think`)
+    onTick: (c, _dt, world) => {
+      if (c.isPlayer || c.biteCd > 0) return;
+      const p = world.player;
+      if (!p.alive) return;
+      const b = lureBulb(c.genome, formFor(c.genome, c.species.plan));
+      const k = c.genome.size / R;
+      const cos = Math.cos(c.angle), sin = Math.sin(c.angle);
+      const bx = c.x + (b.x * cos - b.y * sin) * k, by = c.y + (b.x * sin + b.y * cos) * k;
+      const touch = p.radius * 0.8 + c.genome.size * 0.25;
+      if (dist2(p.x, p.y, bx, by) > touch * touch) return;
+      c.angle = Math.atan2(p.y - c.y, p.x - c.x);
+      c.vx += cos * c.genome.speed;
+      c.vy += sin * c.genome.speed;
+      world.hit(c, p, LURE_STRIKE);
+      c.biteCd = 2.5;
+      c.lunge = 1.6;
+    } }),
 
   O({ id: 'jet', when: g => g.jet > 0,
     boost: (g, m) => {

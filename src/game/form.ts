@@ -385,6 +385,15 @@ export function halfWidth(t: number, f: Form): number {
   return w * f.width * R;
 }
 
+/**
+ * Where a lure's bulb hangs, in R units: out past the nose on its stalk, a little to one
+ * side. Shared by the paint and by the organ that strikes whatever touches the bulb, so the
+ * light you see is the trigger that fires.
+ */
+export function lureBulb(g: Genome, f: Form) {
+  return { x: spineAt(0, f) + R * (0.8 + g.lure * 0.45), y: -R * 0.3 };
+}
+
 /** Position along the spine at t. The nose is +x: the animal faces the way it swims. */
 export function spineAt(t: number, f: Form) {
   return lerp(f.len * 0.52, -f.len * 0.48, t) * R;

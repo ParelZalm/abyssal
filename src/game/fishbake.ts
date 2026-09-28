@@ -14,7 +14,7 @@
  */
 import { Graphics, type Renderer, type Texture } from 'pixi.js';
 import { armourOf, eyeOf, fadeOf, menace, photophoreOf, type Genome } from './genome';
-import { formFor, halfWidth, PLAN_ART, shoulderAt, spineAt, R, type Form, type Plan,
+import { formFor, halfWidth, lureBulb, PLAN_ART, shoulderAt, spineAt, R, type Form, type Plan,
          type PlanArt } from './form';
 import { fbm, fbmSigned } from './noise';
 import { BLOOM_TRAIL, hasSynergy, synergiesOf } from './organs';
@@ -826,7 +826,7 @@ function viscera(gr: Graphics, f: Form, pal: Palette) {
 function lureAt(g: Genome, f: Form) {
   const ghost = hasSynergy(g, 'ghostlight');
   const r = R * (0.14 + g.lure * 0.05) * (ghost ? 1.3 : 1);
-  return { x: spineAt(0, f) + R * (0.8 + g.lure * 0.45), y: -R * 0.3, r, ghost,
+  return { ...lureBulb(g, f), r, ghost,
            halo: ghost ? 3.4 : hasSynergy(g, 'toxiclure') ? 2.2 : 1 };
 }
 
