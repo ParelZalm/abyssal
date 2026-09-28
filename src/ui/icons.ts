@@ -6,7 +6,7 @@ export type IconName =
   | 'muscle' | 'fin' | 'tail' | 'jaw' | 'teeth' | 'gullet' | 'scale' | 'spike'
   | 'shield' | 'eye' | 'wave' | 'glow' | 'ghost' | 'gill' | 'pulse' | 'mass'
   | 'bolt' | 'spiral' | 'blade' | 'drop' | 'ring' | 'funnel' | 'sieve' | 'molar'
-  | 'coil' | 'bell' | 'crouch';
+  | 'coil' | 'bell' | 'crouch' | 'ink' | 'shock' | 'puff';
 
 export const ICONS: Record<IconName, string> = {
   muscle: 'M3 12c3-6 6-8 9-8s6 2 9 8c-3 6-6 8-9 8s-6-2-9-8z',
@@ -35,6 +35,9 @@ export const ICONS: Record<IconName, string> = {
   coil: 'M2 14c2-5 4-5 6-1s4 4 6 0 4-5 6-2 2 2 2 2',
   bell: 'M5 14a7 7 0 0 1 14 0v2H5zM8 16v4M12 16v5M16 16v4',
   crouch: 'M2 15c4-5 16-5 20 0-4 3-16 3-20 0zM9 11.5V9M15 11.5V9',
+  ink: 'M7 18a4 4 0 0 1-.6-7.95A5 5 0 0 1 16 8.5a4.5 4.5 0 1 1 1 9.5z',
+  shock: 'M2 12l4-5 3 7 4-10 3 9 3-4 3 3',
+  puff: 'M12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2',
   molar: 'M6 4c2 0 4 1 6 1s4-1 6-1c2 0 3 2 3 5 0 4-2 11-4 11-1 0-2-5-5-5s-4 5-5 5c-2 0-4-7-4-11 0-3 1-5 3-5z',
 };
 

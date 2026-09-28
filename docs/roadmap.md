@@ -89,7 +89,8 @@ change *what you do*, each an entry in `organs.ts` plus paint:
   price in its text.
 - ~~**Cursed cards.**~~ Done: Blood Lamp (+90% bite, `glare`) and Brittle Frame (speed and
   turning, `brittle`). More curses belong here as the pool grows.
-- **One active organ slot** on a cooldown: ink cloud, discharge, inflate.
+- ~~**One active organ slot.**~~ Done: Ink Sac, Electric Organ and Inflation, one at a
+  time, on E or the right button.
 - ~~**Zone pools.**~~ Done: `Trait.band` replaced `minStage`. A card is offered in its band
   or deeper — the band the player is in when the draft happens — and leans ×1.6 at home.
 
@@ -132,6 +133,6 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 7. ~~Zone pools and costs on apex cards~~ — done.
 8. ~~The pocket below each gate, and forcing a seal~~ — done.
 9. ~~Sense modes and Flash Sense~~ — done.
-10. Next up, by the same ranking: cursed cards and the active organ slot (§5), then enemies
-    that ask for tactics (§6), then starting forms and a daily seed (§7), then the small
-    feel wins (§8).
+10. ~~Cursed cards and the active organ slot~~ — done.
+11. Next up, by the same ranking: enemies that ask for tactics (§6), then starting forms
+    and a daily seed (§7), then the small feel wins (§8).

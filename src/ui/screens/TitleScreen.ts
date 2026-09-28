@@ -16,7 +16,8 @@ export class TitleScreen implements Component {
       ]),
       keysLine([
         'Hold ', kbd('Space'), ' / ', kbd('Shift'), ' / ', kbd('click'),
-        ' to boost \u00a0·\u00a0 ', kbd('P'), ' pause',
+        ' to boost \u00a0·\u00a0 ', kbd('E'), ' / ', kbd('right-click'), ' active organ \u00a0·\u00a0 ',
+        kbd('P'), ' pause',
       ]),
       actions(button('Hatch', onStart), button('Codex', onCodex, 'btn ghost')),
     );

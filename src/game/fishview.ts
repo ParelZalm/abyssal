@@ -385,8 +385,15 @@ export class FishView extends Container {
     }
   }
 
+  /**
+   * How far the body is blown up past its own size — 1 always, except while the Inflation
+   * organ holds it swollen. A scale on the whole skinned strip, set from outside each frame,
+   * because the swell is a state of the animal and not a different animal to bake.
+   */
+  swell = 1;
+
   animate(dt: number, thrust: number, beat: number, bank: number) {
-    const unit = this.g.size / R;
+    const unit = this.g.size / R * this.swell;
     let sx = 1;
     let sy = 1 - Math.abs(bank) * 0.16;
     if (this.chompT > 0) {

@@ -29,4 +29,6 @@ export interface HudState {
   score: number; best: number; elapsed: number;
   combo: number; comboMult: number; comboBiomass: number; comboLeft: number;
   danger: number;
+  /** The one active organ, if the body has one: its mark, and how ready it is, 0..1. */
+  active: { name: string; icon: IconName; ready: number } | null;
 }

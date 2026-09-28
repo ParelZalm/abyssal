@@ -1,4 +1,5 @@
 import type { HudState } from '../types';
+import { ActiveSlot } from './ActiveSlot';
 import { DangerIndicator } from './DangerIndicator';
 import { DepthBar } from './DepthBar';
 import { GateLabel } from './GateLabel';
@@ -18,6 +19,7 @@ export class Hud {
   private readonly run = new RunStrip();
   private readonly toast = new Toast();
   private readonly danger = new DangerIndicator();
+  private readonly active = new ActiveSlot();
 
   constructor() {
     // wrapper stays layout-neutral; children keep their absolute positions under #ui
@@ -30,6 +32,7 @@ export class Hud {
       this.gate.element,
       this.toast.element,
       this.danger.element,
+      this.active.element,
     );
     this.setChrome(false);
   }
@@ -39,6 +42,7 @@ export class Hud {
     this.traits.setVisible(on);
     this.run.setVisible(on);
     this.depth.setVisible(on);
+    this.active.setVisible(on);
     if (!on) this.gate.hide();
   }
 
@@ -48,6 +52,7 @@ export class Hud {
     this.run.update(s);
     this.depth.update(s.depth, s.size);
     this.danger.update(s.danger);
+    this.active.update(s.active);
   }
 
   gateLabel(text: string | null, screenY: number, screenH: number) {

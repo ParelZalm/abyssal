@@ -206,6 +206,24 @@ export const TRAITS: Trait[] = [
     desc: 'A stinging fringe: attackers take recoil, and you are 15% harder to notice.',
     apply: g => { g.frill += 1; g.stealth += 0.15; } }),
 
+  // ---------------------------------------------------------------- actives
+  // One slot: each fires on E or the right button, and taking one replaces whichever the
+  // body already had, so the card is a choice of escape and not a collection.
+  T({ id: 'inksac', band: 'twilight', name: 'Ink Sac', rarity: 'rare', icon: 'ink', families: ['lurker'],
+    desc: 'Active (E): a cloud of ink. Nothing that hunts can find you inside it for 3.5 s, and whatever was chasing loses you. Every 12 s. Replaces your active organ.',
+    maxStacks: 1,
+    apply: g => { g.ink = 1; g.discharge = 0; g.inflate = 0; } }),
+
+  T({ id: 'electric', band: 'midnight', name: 'Electric Organ', rarity: 'rare', icon: 'shock', families: ['predator'],
+    desc: 'Active (E): a shock that hits everything around you for 70% of a bite and stuns it. Every 9 s. Replaces your active organ.',
+    maxStacks: 1,
+    apply: g => { g.discharge = 1; g.ink = 0; g.inflate = 0; } }),
+
+  T({ id: 'inflate', band: 'reef', name: 'Inflation', rarity: 'rare', icon: 'puff', families: ['grazer'],
+    desc: 'Active (E): swell for 3 s — too wide to swallow, bites do a third, biters are pricked, and you barely swim. Every 11 s. Replaces your active organ.',
+    maxStacks: 1,
+    apply: g => { g.inflate = 1; g.ink = 0; g.discharge = 0; } }),
+
   // ---------------------------------------------------------------- cursed
   T({ id: 'bloodlamp', band: 'twilight', name: 'Blood Lamp', rarity: 'rare', icon: 'glow', families: ['predator'],
     desc: '+90% bite. A furnace of a body.',

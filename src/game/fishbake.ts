@@ -84,6 +84,7 @@ function key(g: Genome, plan: Plan) {
           q(photophoreOf(g), 0.2), q(g.eyeAdapt, 0.3), q(g.gape, 0.25), q(g.veil, 0.25),
           q(g.bulk, 0.2), q(g.barbels, 0.3), Math.min(2, g.serrate), Math.min(2, g.electro),
           g.glare > 0 ? 1 : 0, g.brittle > 0 ? 1 : 0,
+          g.ink > 0 ? 1 : 0, g.discharge > 0 ? 1 : 0, g.inflate > 0 ? 1 : 0,
           g.lure > 0 ? 1 : 0, Math.min(3, g.claws),
           Math.min(3, g.coral), Math.min(3, g.frill), g.jet > 0 ? 1 : 0,
           g.venom > 0 ? 1 : 0, Math.min(2, g.filter), g.crush > 0 ? 1 : 0,
@@ -271,6 +272,9 @@ function paint(g: Genome, plan: Plan): Baked {
   if (hasSynergy(g, 'flashsense')) flankLights(art, f, pal);
   if (g.glare > 0) embers(art, f, seed);
   if (g.brittle > 0) crazing(art, f, pal, seed);
+  if (g.discharge > 0) electroplates(art, f, pal);
+  if (g.inflate > 0) prickles(art, f, pal, seed);
+  if (g.ink > 0) inkSac(art, f);
   if (A.cilia) cilia(art, f, pal);
   if (g.lurk > 0) camouflage(art, f, pal, seed);
   if (g.mantle > 0) mantle(art, f, pal);
@@ -1281,6 +1285,63 @@ function flankLights(gr: Graphics, f: Form, pal: Palette) {
       gr.circle(x, y, r).fill({ color: 0xe8fbff, alpha: 0.9 });
     }
   }
+}
+
+/**
+ * Electric Organ: the electrocytes stacked in columns down both flanks, as the torpedo
+ * ray's are — pale hexagonal cells in two kidney-shaped fields behind the head, the organ
+ * the shock comes out of.
+ */
+function electroplates(gr: Graphics, f: Form, pal: Palette) {
+  const cell = hsl(212, 0.55, 0.78);
+  for (let t = 0.24; t < 0.58; t += 0.034) {
+    const w = halfWidth(t, f);
+    const x = spineAt(t, f);
+    for (const dir of [-1, 1] as const) {
+      for (let j = 0; j < 3; j++) {
+        const y = dir * w * (0.34 + j * 0.2);
+        const r = w * 0.085;
+        gr.poly(Array.from({ length: 6 }, (_, k) => {
+          const a = (k / 6) * TAU;
+          return [x + Math.cos(a) * r, y + Math.sin(a) * r * 0.9];
+        }).flat()).fill({ color: cell, alpha: 0.42 * pal.alpha });
+      }
+    }
+  }
+}
+
+/**
+ * Inflation: the puffer's skin, stubbled with prickles that lie flat until it swells — small
+ * pale thorns over the whole body, and the loose pale belly the swell stretches.
+ */
+function prickles(gr: Graphics, f: Form, pal: Palette, seed: number) {
+  for (let t = 0.1; t < 0.88; t += 0.045) {
+    const w = halfWidth(t, f);
+    const rows = Math.max(3, Math.round(w / (R * 0.06)));
+    for (let j = 0; j < rows; j++) {
+      const v = ((j + 0.5) / rows) * 2 - 1;
+      const jit = fbm(t * 29, v * 13, seed + 263, 1);
+      const x = spineAt(t, f) + (jit - 0.5) * R * 0.03;
+      const y = v * w * 0.85;
+      const s = w * 0.06;
+      gr.moveTo(x + s, y).lineTo(x - s * 1.6, y + s * 0.5).lineTo(x - s * 1.6, y - s * 0.5)
+        .closePath().fill({ color: pal.bone, alpha: 0.75 * pal.alpha });
+    }
+  }
+}
+
+/**
+ * Ink Sac: the dark sac on the gut, glossy, with a duct forward to the funnel it fires
+ * through — drawn on the midline, where a squid's sits under the mantle.
+ */
+function inkSac(gr: Graphics, f: Form) {
+  const t = 0.56;
+  const w = halfWidth(t, f);
+  const x = spineAt(t, f);
+  gr.moveTo(x, -w * 0.08).lineTo(spineAt(0.32, f), -w * 0.04).lineTo(spineAt(0.32, f), w * 0.04)
+    .lineTo(x, w * 0.08).closePath().fill({ color: 0x06040a, alpha: 0.7 });
+  gr.ellipse(x, 0, w * 0.55, w * 0.34).fill({ color: 0x06040a, alpha: 0.92 });
+  gr.ellipse(x + w * 0.15, -w * 0.1, w * 0.16, w * 0.08).fill({ color: 0xffffff, alpha: 0.28 });
 }
 
 /**

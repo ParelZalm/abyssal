@@ -12,7 +12,8 @@ Three groups of fields, and the split matters:
 - **Stats** — `size`, `speed`, `turn`, `bite`, `sense`, `armor`, `regen`, `metabolism`,
   `stealth`, `gulp`, `lifesteal`, `pen`, `ram`. Read by the simulation.
 - **Organs** — `venom`, `lure`, `claws`, `jet`, `coral`, `frill`, `filter`, `crush`, `eel`,
-  `mantle`, `lurk`, `electro`, the curses `glare` and `brittle`, plus `pen`, `ram`,
+  `mantle`, `lurk`, `electro`, the curses `glare` and `brittle`, the actives `ink`,
+  `discharge` and `inflate`, plus `pen`, `ram`,
   `lifesteal` and `spikes`, which act like organs even though they sit in the other
   groups. Each carries a mechanic *and* a piece of morphology. The mechanic lives in
   `organs.ts`: one `Organ` record per field, keyed off the genome (NPC species carry
@@ -40,6 +41,20 @@ Three groups of fields, and the split matters:
   (below half health, bleeding, poisoned or dazzled) from twice that. A body found by feel
   and not by sight is drawn in a cold cast (`FELT_TINT`) so the two read differently.
   Pores pepper the snout.
+  The three **active** organs fill one slot the player fires by hand — E or the right
+  button — on a cooldown kept by `Game.fireActive`. An `active` record on the organ gives
+  its name, HUD glyph, cooldown and `fire(c, world)`, and `activeOf` takes the first; the
+  cards clear the other two fields when taken, so the slot is always one. A press is
+  consumed whether or not it fired. `Ink Sac` (12 s) leaves a cloud of `3 × size + 200` on
+  `world.inks` for 3.5 s, inside which `World.nearest` does not return the player, and
+  drops the chase of every hunter already on it. `Electric Organ` (9 s) hits everything
+  within `3 × size + 160` through `World.hit` for 0.7 of a bite and stuns it for 0.7 s (a
+  guardian 0.25). `Inflation` (11 s) swells the body 1.4× for 3 s (`FishView.swell`): a
+  mouth needs 2.5 times its usual gape to swallow it (a reef shark that took a 30 cm body
+  whole tore 22 instead), bites land at 0.35 through the `taken` hook, biters are pricked
+  for `3 + 0.12 × size`, and the swim bleeds speed. Everything organs throw into the water
+  is published on `world.pulses` with a kind, for `Game.digest` to draw. The slot sits
+  bottom centre with a fill that climbs back as it recovers.
   The three **locomotion** organs are parameter shapes on the one swim model, through a
   `swim` hook that folds into `SwimMods` — cached on the creature beside its organs and
   read by `Creature.propel` and `agility`. `eel` (Anguilliform Body) keeps full turning at
@@ -135,7 +150,7 @@ the same thresholds as anything else.
 
 ## The draft
 
-`traits.ts` holds 50 `Trait` records — id, rarity, icon, description, an optional home
+`traits.ts` holds 53 `Trait` records — id, rarity, icon, description, an optional home
 `band`, and an `apply` that mutates a `Genome`. `draftTraits(rng, reach, band, taken,
 count, lean)` picks without replacement from a rarity-weighted pool.
 

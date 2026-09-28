@@ -1,5 +1,6 @@
 import { formFor } from './form';
 import { armourOf, biteDamage, eyeOf, type Genome } from './genome';
+import type { IconName } from '../ui/icons';
 import type { Creature, World } from './world';
 import { dist2 } from './util';
 
@@ -102,8 +103,14 @@ export interface Organ {
    * is found from 1.6 times as far, by what hunts it and what it hunts. Curses only.
    */
   glare?: (g: Genome, base: number) => number;
-  /** Damage a blow does to this body once armour has had its say. Curses only, so far. */
-  taken?: (g: Genome, dmg: number) => number;
+  /** Damage a blow does to this body once armour has had its say. */
+  taken?: (c: Creature, dmg: number) => number;
+  /**
+   * The one active organ: what the player fires by hand, and how long it takes to come
+   * back. Only one is ever carried — the cards clear the others — so `activeOf` takes the
+   * first. `fire` acts on the world and publishes what it did on `world.pulses`.
+   */
+  active?: { name: string; icon: IconName; cd: number; fire: (c: Creature, world: World) => void };
 
   // ---- effects
   /** The attacker's organs, after its bite has landed. */
@@ -171,6 +178,11 @@ function sting(att: Creature, amount: number) {
 }
 
 const O = (o: Organ) => o;
+
+/** Seconds an ink cloud hides you in. */
+const INK_LIFE = 3.5;
+/** Seconds a body stays inflated. */
+export const PUFF_TIME = 3;
 
 /**
  * How large an eye Flash Sense dazzles, as `eyeOf`. 1.35 takes in every light-gathering
@@ -305,7 +317,57 @@ export const ORGANS: Organ[] = [
   O({ id: 'brittle', when: g => g.brittle > 0,
     // light enough to be fast, thin enough that a bite goes through: after armour, so
     // plate still helps and the frame is the part that shatters
-    taken: (g, dmg) => dmg * (1 + g.brittle * 0.5) }),
+    taken: (c, dmg) => dmg * (1 + c.genome.brittle * 0.5) }),
+
+  // ---------------------------------------------------------------- actives
+  // Fired by hand, one slot, on a cooldown. Each is an escape or an answer that the rest of
+  // the pool cannot give, so the slot is a choice of how to get out of trouble.
+
+  O({ id: 'ink', when: g => g.ink > 0,
+    // a cloud where you were: nothing that hunts can find a body inside it (`World.nearest`
+    // skips the player there), and whatever was already on you loses the thread. The cloud
+    // stays put, so it is somewhere to hide or a screen to break away behind, not both
+    active: { name: 'Ink Sac', icon: 'ink', cd: 12, fire: (c, world) => {
+      const r = c.genome.size * 3 + 200;
+      world.inks.push({ x: c.x, y: c.y, r, t: INK_LIFE });
+      world.pulses.push({ x: c.x, y: c.y, r, kind: 'ink' });
+      for (const o of world.creatures) {
+        if (!o.alive || !o.preysOn(c) || dist2(o.x, o.y, c.x, c.y) > (r * 2) ** 2) continue;
+        o.chase = 0;
+        o.quarry = null;
+        o.tired = Math.max(o.tired, 1.2);
+      }
+    } } }),
+
+  O({ id: 'discharge', when: g => g.discharge > 0,
+    // the electric ray's shock: everything close takes most of a bite at once and is
+    // stunned for a moment, guardians barely. It lands on prey and predator alike, which is
+    // the point — the one move that answers a crowd
+    active: { name: 'Electric Organ', icon: 'shock', cd: 9, fire: (c, world) => {
+      const r = c.genome.size * 3 + 160;
+      world.pulses.push({ x: c.x, y: c.y, r, kind: 'discharge' });
+      for (const o of [...world.creatures]) {
+        if (!o.alive || o === c || dist2(o.x, o.y, c.x, c.y) > (r + o.radius) ** 2) continue;
+        world.hit(c, o, 0.7);
+        const t = o.species.guardian ? 0.25 : 0.7;
+        o.stun = Math.max(o.stun, t);
+        o.biteCd = Math.max(o.biteCd, t);
+      }
+    } } }),
+
+  O({ id: 'inflate', when: g => g.inflate > 0,
+    // the puffer's answer to being eaten is to stop being edible: for a few seconds the body
+    // swells (`FishView.swell`), cannot be swallowed whole, takes a third of every bite and
+    // pricks what bites it — at the price of swimming like a balloon
+    active: { name: 'Inflation', icon: 'puff', cd: 11, fire: (c, world) => {
+      c.puffT = PUFF_TIME;
+      world.pulses.push({ x: c.x, y: c.y, r: c.radius * 2, kind: 'inflate' });
+    } },
+    taken: (c, dmg) => c.puffT > 0 ? dmg * 0.35 : dmg,
+    onWounded: (def, att, ctx) => {
+      if (def.puffT <= 0 || ctx.whole) return;
+      sting(att, 3 + def.genome.size * 0.12);
+    } }),
 
   O({ id: 'frenzy', when: g => g.frenzy > 0,
     // blood in the water is a reason to press, not to wait: a wounded body is the one worth
@@ -473,7 +535,7 @@ export const ORGANS: Organ[] = [
       // a kick from before the pairing was complete is not a flash: only a fresh surge fires
       if (c.boosting <= 0) return false;
       const r = feelOf(c) * 1.5;
-      world.flashes.push({ x: c.x, y: c.y, r });
+      world.pulses.push({ x: c.x, y: c.y, r, kind: 'flash' });
       let fired = false;
       for (const o of world.creatures) {
         if (!o.alive || o === c || eyeOf(o.genome) < BIG_EYE) continue;
@@ -580,8 +642,13 @@ export function glareOf(c: Creature) {
 
 export function takenOf(c: Creature, dmg: number) {
   let d = dmg;
-  for (const o of c.organs) if (o.taken) d = o.taken(c.genome, d);
+  for (const o of c.organs) if (o.taken) d = o.taken(c, d);
   return d;
+}
+
+/** The body's one active organ, or null. */
+export function activeOf(c: Creature) {
+  return c.organs.find(o => o.active)?.active ?? null;
 }
 
 export function stealthOf(c: Creature) {

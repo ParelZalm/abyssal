@@ -11,7 +11,8 @@ import { lightAt, Water, waterColor } from './game/water';
 import { riserFor, type Species } from './game/species';
 import { bandAt, BANDS, depthLabel, descentLimit, FINAL_GUARDIAN, nextGate,
          placeName, type Band } from './game/zones';
-import { boostModsOf, burnOf, feelOf, POISE_MAX, swallowHealOf, SYNERGIES } from './game/organs';
+import { activeOf, boostModsOf, burnOf, feelOf, POISE_MAX, PUFF_TIME, swallowHealOf,
+         SYNERGIES } from './game/organs';
 import { FAMILY_NAMES, familyCounts, formDue, type Transformation } from './game/forms';
 import { completes, leanOf, nearMisses } from './game/prospects';
 import { draftTraits, TRAITS, type Trait } from './game/traits';
@@ -136,6 +137,9 @@ class Game {
   private overstay: number[] = [];
   /** Bands that have already sent their hunter this run. */
   private risen = new Set<number>();
+  /** Seconds until the active organ can fire again, and a press waiting to be read. */
+  private activeCd = 0;
+  private wantActive = false;
   /** Index of a band the player has forced its way into while too small for it, or -1. */
   private squeezed = -1;
   /** Seconds of boosting against the current seal, toward `SQUEEZE_TIME`. */
@@ -285,7 +289,7 @@ class Game {
     this.dreadSpike = 0; this.dreadHold = 0;
     this.maxBand = 0; this.hintCd = 0; this.gatesOpen = 0;
     this.overstay = BANDS.map(() => 0); this.risen.clear();
-    this.squeezed = -1; this.squeezeT = 0;
+    this.squeezed = -1; this.squeezeT = 0; this.activeCd = 0; this.wantActive = false;
     this.wakeCd = 0; this.sprinting = false; this.poised = false; this.boostHeld = 0; this.boostCd = 0; this.hitStop = 0;
     this.zoom = this.zoomFor(g.size);
     // the first fill is the exception to spawning off-screen: there is no frame to
@@ -300,6 +304,7 @@ class Game {
       this.keys.add(k === 'spacebar' ? ' ' : k);
       if ('wasd'.includes(k) || k.startsWith('arrow')) this.useMouse = false;
       if (k === 'p' && (this.phase === 'play' || this.phase === 'paused')) this.togglePause();
+      if (k === 'e' && !e.repeat) this.wantActive = true;
     });
     addEventListener('keyup', e => {
       const k = e.key.toLowerCase();
@@ -308,7 +313,13 @@ class Game {
     addEventListener('pointermove', e => {
       this.mouse.x = e.clientX; this.mouse.y = e.clientY; this.useMouse = true;
     });
-    addEventListener('pointerdown', e => { if (e.target === this.app.canvas) this.mouse.down = true; });
+    addEventListener('pointerdown', e => {
+      if (e.target !== this.app.canvas) return;
+      // the right button fires the active organ; the left is the boost
+      if (e.button === 2) this.wantActive = true;
+      else this.mouse.down = true;
+    });
+    this.app.canvas.addEventListener('contextmenu', e => e.preventDefault());
     addEventListener('pointerup', () => { this.mouse.down = false; });
     addEventListener('blur', () => { this.keys.clear(); this.mouse.down = false; });
   }
@@ -414,6 +425,7 @@ class Game {
       this.shake = Math.min(6, this.shake + 3);
     }
     this.sprinting = sprinting;
+    this.fireActive(dt);
     // a lurking body has nothing on the HUD to say it is wound; one ring as the poise tops
     // out is the tell that the next bite is the big one
     const poised = p.poise >= POISE_MAX;
@@ -478,10 +490,24 @@ class Game {
     for (const s of this.world.spilled) {
       this.fx.blood(s.x, s.y, this.bloodColour(s.y), s.size * 0.9);
     }
-    // Flash Sense: the whole reach lit at once, then gone
-    for (const f of this.world.flashes) {
-      this.fx.ring(f.x, f.y, 0xe8fbff, f.r);
-      this.fx.burst(f.x, f.y, 0xe8fbff, 16, f.r * 0.6, 3.2);
+    // what organs threw into the water: light, ink, a shock, a swelling
+    for (const f of this.world.pulses) {
+      if (f.kind === 'flash') {
+        this.fx.ring(f.x, f.y, 0xe8fbff, f.r);
+        this.fx.burst(f.x, f.y, 0xe8fbff, 16, f.r * 0.6, 3.2);
+      } else if (f.kind === 'ink') {
+        for (let i = 0; i < 5; i++) {
+          const a = Math.random() * Math.PI * 2, d = Math.random() * f.r * 0.5;
+          this.fx.blood(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d, 0x0a0710, f.r * 0.45);
+        }
+      } else if (f.kind === 'discharge') {
+        this.fx.ring(f.x, f.y, 0xb8d4ff, f.r);
+        this.fx.ring(f.x, f.y, 0xe4f0ff, f.r * 0.6);
+        this.fx.burst(f.x, f.y, 0xcfe2ff, 22, f.r * 0.9, 2.4);
+        this.shake = Math.min(12, this.shake + 7);
+      } else {
+        this.fx.ring(f.x, f.y, 0xf2ead0, f.r);
+      }
     }
     for (const b of this.world.bites) {
       const col = b.onPlayer ? 0xff5a4a : 0xff9a7a;
@@ -626,6 +652,24 @@ class Game {
       this.fx.ring(p.x, p.y, 0xcfe4ff, p.radius * 4);
       this.ui.showBand(band, () => this.offerDraft(`${BANDS[band].name} — thermocline reward`));
     }
+  }
+
+  /**
+   * The active organ, on its cooldown. A press is always consumed, fired or not, so one
+   * tapped early does not go off by itself the moment the organ recovers.
+   */
+  private fireActive(dt: number) {
+    const p = this.player;
+    this.activeCd = Math.max(0, this.activeCd - dt);
+    const a = activeOf(p);
+    if (this.wantActive && a && this.activeCd <= 0) {
+      a.fire(p, this.world);
+      this.activeCd = a.cd;
+    }
+    this.wantActive = false;
+    // the swell eases in fast and out slow, so the body pops up and then sags
+    p.view.swell = p.puffT > 0
+      ? 1 + 0.4 * Math.min(1, (PUFF_TIME - p.puffT) / 0.15, p.puffT / 0.5) : 1;
   }
 
   /**
@@ -964,6 +1008,10 @@ class Game {
       score: Math.round(this.score), best: this.best, elapsed: this.elapsed,
       combo: this.combo, comboMult: comboMult(this.combo), comboBiomass: chainBiomass(this.combo), comboLeft: this.comboT / COMBO_WINDOW,
       danger: this.phase === 'over' ? 0 : dread,
+      active: (() => {
+        const a = activeOf(p);
+        return a ? { name: a.name, icon: a.icon, ready: 1 - this.activeCd / a.cd } : null;
+      })(),
     });
   }
 }

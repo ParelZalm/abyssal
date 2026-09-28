@@ -83,6 +83,8 @@ const POCKET_DEPTH: [number, number] = [70, 320];
 
 export type Mood = 'cruise' | 'rest' | 'dart';
 
+export interface Pulse { x: number; y: number; r: number; kind: 'flash' | 'ink' | 'discharge' | 'inflate' }
+
 export class Creature {
   x = 0; y = 0; vx = 0; vy = 0; angle = 0;
   hp: number; hpMax: number;
@@ -177,6 +179,8 @@ export class Creature {
   flashed = 0;
   /** Seconds left dazzled: no steering, no bite. Flash Sense's, and held here for any other. */
   stun = 0;
+  /** Seconds left inflated (the Inflation organ): too big to swallow, slow, prickly. */
+  puffT = 0;
 
   constructor(public species: Species, public genome: Genome) {
     this.hpMax = maxHp(genome);
@@ -347,10 +351,13 @@ export class World {
   /** Guardians already killed. A guardian is gone for the run, not on a respawn timer. */
   private readonly deadGuardians = new Set<string>();
   /**
-   * Light an organ has thrown this frame — Flash Sense's burst — for `Game` to draw. The
-   * simulation has no display objects, so a flash is published as a place and a reach.
+   * What an organ threw into the water this frame — Flash Sense's light, an ink cloud, a
+   * discharge, a body swelling — for `Game` to draw. The simulation has no display objects,
+   * so each is published as a place, a reach and a kind. Cleared every `update`.
    */
-  readonly flashes: { x: number; y: number; r: number }[] = [];
+  readonly pulses: Pulse[] = [];
+  /** Ink clouds still hanging where they were thrown: the player cannot be found inside one. */
+  readonly inks: { x: number; y: number; r: number; t: number }[] = [];
   /**
    * Organ ids of the synergies the player's body has fired for the first time this frame.
    * Ids, not names, because the codex keeps them across runs. Drained by `Game.digest`.
@@ -640,7 +647,10 @@ export class World {
     this.bites.length = 0;
     this.spilled.length = 0;
     this.synergies.length = 0;
-    this.flashes.length = 0;
+    this.pulses.length = 0;
+    for (let i = this.inks.length - 1; i >= 0; i--) {
+      if ((this.inks[i].t -= dt) <= 0) this.inks.splice(i, 1);
+    }
     this.devoured.length = 0;
     for (let i = this.blood.length - 1; i >= 0; i--) {
       if ((this.blood[i].t -= dt) <= 0) this.blood.splice(i, 1);
@@ -958,6 +968,13 @@ export class World {
     c.y = clamp(ny, 30, floor);
     c.biteCd = Math.max(0, c.biteCd - dt);
     c.boosting = Math.max(0, c.boosting - dt);
+    if (c.puffT > 0) {
+      // a balloon does not swim: the swell bleeds speed off whatever the body tries to do
+      c.puffT = Math.max(0, c.puffT - dt);
+      const k = Math.exp(-2.2 * dt);
+      c.vx *= k;
+      c.vy *= k;
+    }
     if (c.fade < 1) c.fade = Math.min(1, c.fade + dt / FADE_IN);
     // nothing heals while a wound is still working on it
     const wounded = c.poisonT > 0 || c.bleedT > 0;
@@ -1027,8 +1044,11 @@ export class World {
     // a glaring player is found from further, by hunters and prey alike: its distance is
     // read shrunk by the glare rather than every searcher's radius being grown for it
     const shine = 1 + glareOf(this.player);
+    const inked = this.inks.some(k => dist2(k.x, k.y, this.player.x, this.player.y) < k.r * k.r);
     const test = (o: Creature) => {
       if (!o.alive || !ok(o)) return;
+      // inside an ink cloud the player is not there to be found, by hunters or by prey
+      if (o.isPlayer && inked) return;
       const d = dist2(from.x, from.y, o.x, o.y) / (o.isPlayer ? shine * shine : 1);
       if (d < bd) { bd = d; best = o; }
     };
@@ -1094,7 +1114,8 @@ export class World {
     // anything less than half your gape goes down whole, the way a real gulp works
     // — but not from tentacles: a beak tears, and a whole swallow at the crown would make
     // every guardian's grab a death with nothing to struggle against
-    const whole = !att.holding && att.swallowSize > def.genome.size * 2;
+    // an inflated body is two and a half times too wide for a mouth that would have taken it
+    const whole = !att.holding && att.swallowSize > def.genome.size * 2 * (def.puffT > 0 ? 2.5 : 1);
     this.land(att, def, whole, 1);
   }
 

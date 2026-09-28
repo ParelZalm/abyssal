@@ -34,6 +34,10 @@ export interface Genome {
   // curses — organs that are all cost, carried by a card whose gift is worth it
   glare: number;       // a body that shines: everything finds it from further
   brittle: number;     // a frame of glass: every bite taken lands harder
+  // actives — the one organ slot the player fires by hand. Taking one clears the others
+  ink: number;         // ink sac: a cloud that hides you from everything that hunts
+  discharge: number;   // electric organ: a shock that strikes and stuns all around
+  inflate: number;     // inflation: swell too big to swallow, and hard to bite
 
   // morphology — purely visual, but every trait nudges it so the fish reads as evolved
   hue: number;
@@ -81,6 +85,7 @@ export function baseGenome(): Genome {
     regen: 0.6, metabolism: 1, stealth: 0, gulp: 1, lifesteal: 0, pen: 0, ram: 0,
     venom: 0, lure: 0, claws: 0, jet: 0, coral: 0, frill: 0, filter: 0, crush: 0,
     eel: 0, mantle: 0, lurk: 0, frenzy: 0, electro: 0, glare: 0, brittle: 0,
+    ink: 0, discharge: 0, inflate: 0,
     hue: 30, accentHue: 200, finSize: 1, tailSplit: 0.35, spikes: 0, serrate: 0,
     jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0, smoke: 0,
     photophores: 0, eyeAdapt: 0, gape: 0, veil: 0, bulk: 0, barbels: 0,
