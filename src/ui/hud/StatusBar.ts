@@ -20,6 +20,14 @@ export class StatusBar {
     this.element.append(caption);
   }
 
+  private lastLow = false;
+  /** Pulse the bar as a warning. */
+  setLow(on: boolean) {
+    if (on === this.lastLow) return;
+    this.lastLow = on;
+    this.element.classList.toggle('low', on);
+  }
+
   private lastPct = -1;
   private lastText = '';
 

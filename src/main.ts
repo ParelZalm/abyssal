@@ -2,6 +2,7 @@ import { Application, Container, Graphics } from 'pixi.js';
 import './style.css';
 import { loadCodex, recordDepth, recordForm, recordSpecies, recordSynergy, recordTrait,
          saveCodex } from './game/codex';
+import { heartbeat, toggleMute, wakeAudio } from './game/sound';
 import { backfillDepth, startById, STARTS, type Start } from './game/starts';
 import type { RunChoice } from './ui/screens/TitleScreen';
 import { baseGenome, maxHp, sightOf, type Genome } from './game/genome';
@@ -149,6 +150,9 @@ class Game {
   private overstay: number[] = [];
   /** Bands that have already sent their hunter this run. */
   private risen = new Set<number>();
+  /** How hungry the last warning was (0 fed, 1 low, 2 empty), and the next heartbeat. */
+  private hunger = 0;
+  private beatT = 0;
   /** Guardians whose tell has already been explained this run. */
   private toldBy = new Set<string>();
   /** Seconds until the active organ can fire again, and a press waiting to be read. */
@@ -321,6 +325,7 @@ class Game {
     this.maxBand = 0; this.hintCd = 0; this.gatesOpen = 0;
     this.overstay = BANDS.map(() => 0); this.risen.clear(); this.toldBy.clear();
     this.squeezed = -1; this.squeezeT = 0; this.activeCd = 0; this.wantActive = false;
+    this.hunger = 0; this.beatT = 0;
     this.wakeCd = 0; this.sprinting = false; this.poised = false; this.boostHeld = 0; this.boostCd = 0; this.hitStop = 0;
     this.hatch(startById(choice.start));
     this.zoom = this.zoomFor(g.size);
@@ -337,6 +342,8 @@ class Game {
       if ('wasd'.includes(k) || k.startsWith('arrow')) this.useMouse = false;
       if (k === 'p' && (this.phase === 'play' || this.phase === 'paused')) this.togglePause();
       if (k === 'e' && !e.repeat) this.wantActive = true;
+      if (k === 'm' && !e.repeat) this.ui.toast(toggleMute() ? 'Sound off' : 'Sound on');
+      wakeAudio();
     });
     addEventListener('keyup', e => {
       const k = e.key.toLowerCase();
@@ -346,6 +353,8 @@ class Game {
       this.mouse.x = e.clientX; this.mouse.y = e.clientY; this.useMouse = true;
     });
     addEventListener('pointerdown', e => {
+      // any press may be the gesture a browser wants before it will play a sound
+      wakeAudio();
       if (e.target !== this.app.canvas) return;
       // the right button fires the active organ; the left is the boost
       if (e.button === 2) this.wantActive = true;
@@ -794,6 +803,46 @@ class Game {
     this.world.pocket(speciesById(gate.band.pocket), gate.band.top, p.x, viewR, POCKET_BODIES);
   }
 
+  /**
+   * Hunger, said before it kills: a toast as fullness falls under a quarter and again at
+   * empty, the bar pulsing red (`StatusPanel`), and a heartbeat that quickens as the bar
+   * drains — the one thing the game says out loud, since the bar is easy to stop reading
+   * in a chase.
+   */
+  private hungerWarning(dt: number) {
+    const low = this.food / FOOD_MAX;
+    const stage = low <= 0 ? 2 : low < 0.25 ? 1 : 0;
+    if (stage > this.hunger) {
+      this.ui.toast(stage === 2 ? 'Starving — your health is draining'
+        : 'Hungry — eat soon, or you will start to starve');
+    }
+    this.hunger = stage;
+    if (!stage) { this.beatT = 0; return; }
+    if ((this.beatT -= dt) > 0) return;
+    const urgency = 1 - clamp(low / 0.25, 0, 1);
+    heartbeat(urgency);
+    this.beatT = lerp(1.15, 0.5, urgency);
+  }
+
+  /**
+   * Why the run ended, in the words the death screen leads with: what last hurt the body if
+   * that was in the last few seconds, and how — bitten, pricked by what it bit, or poisoned —
+   * or the water itself when it was a forced band that did it.
+   */
+  private causeOfDeath() {
+    const p = this.player;
+    if (this.food <= 0) return 'You starved';
+    const by = p.hurtBy;
+    if (by && Creature.clock - p.hurtAt < 4) {
+      const a = by.guardian ? 'The' : /^[aeiou]/i.test(by.name) ? 'An' : 'A';
+      if (p.hurtHow === 'sting') return `You bit ${a.toLowerCase()} ${by.name}, and it bit back`;
+      if (p.hurtHow === 'poison') return `${a} ${by.name}'s venom finished you`;
+      return `${a} ${by.name} found you`;
+    }
+    if (this.squeezed >= 0) return `The weight of ${BANDS[this.squeezed].name} crushed you`;
+    return 'Something bigger found you';
+  }
+
   private metabolise(dt: number) {
     const g = this.player.genome;
     // near-empty the body throttles down: running low slows the fall instead of speeding
@@ -802,6 +851,7 @@ class Game {
     const burn = burnOf(this.player, g.metabolism * (1 + g.size * 0.008) * starving);
     this.food = Math.max(0, this.food - burn * dt);
     if (this.food <= 0) this.player.hp -= 3 * dt;
+    this.hungerWarning(dt);
     this.shake = Math.max(0, this.shake - dt * 22);
     this.comboT = Math.max(0, this.comboT - dt);
     if (this.comboT <= 0) this.combo = 0;
@@ -976,8 +1026,7 @@ class Game {
     };
     const title = () => this.showTitle();
     if (won) this.ui.showWin(stats, this.codex, restart, title);
-    else this.ui.showDeath(this.food <= 0 ? 'You starved' : 'Something bigger found you', stats,
-      this.codex, restart, title);
+    else this.ui.showDeath(this.causeOfDeath(), stats, this.codex, restart, title);
   }
 
   private render(dt: number) {

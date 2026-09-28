@@ -210,6 +210,15 @@ export class Creature {
   puffT = 0;
   /** Seconds a schooling body is scattered from its ball and can be picked off. */
   scatter = 0;
+  /**
+   * What last hurt this body and how, for the death screen: the species, whether it was a
+   * bite (or a blow) or its spines, and the run clock when it happened (`World.clock`).
+   */
+  hurtBy: Species | null = null;
+  hurtHow: 'bite' | 'sting' | 'poison' = 'bite';
+  hurtAt = -1;
+  /** The world's clock, shared so `hurt` can stamp without a reference to the world. */
+  static clock = 0;
   /** A guardian's pattern: the tell's seconds left, the rush's, the opening's, the cooldown. */
   tellT = 0;
   rushT = 0;
@@ -225,6 +234,13 @@ export class Creature {
     this.organs = organsOf(genome);
     this.swim = swimOf(genome, this.organs);
     this.view = new FishView(genome, species.plan);
+  }
+
+  /** Book what just hurt this body. */
+  hurt(by: Creature, how: 'bite' | 'sting' | 'poison') {
+    this.hurtBy = by.species;
+    this.hurtHow = how;
+    this.hurtAt = Creature.clock;
   }
 
   /** A boost kick: open the surge window an organ can strike in. */
@@ -687,6 +703,7 @@ export class World {
 
   update(dt: number) {
     this.lastDt = dt;
+    Creature.clock += dt;
     this.bites.length = 0;
     this.spilled.length = 0;
     this.synergies.length = 0;
@@ -1349,6 +1366,7 @@ export class World {
     const dmg = whole ? def.hp
       : takenOf(def, Math.max(1, damageOf(att, biteDamage(att.genome), def) * mult - armour)) * open;
     def.hp -= dmg;
+    def.hurt(att, 'bite');
     const fatal = def.hp <= 0;
     // what the bodies do to each other beyond the damage — recoil, venom, grip — is the
     // organs' business, and a kill is read off the wound before they run so poison cannot

@@ -341,5 +341,10 @@ a find; a load keeps ids the game no longer has, and a corrupt store reads as em
   unfound keeps its slot as `???`, since what is left to find is the point. A draft card
   for a trait never taken carries a *new* mark beside its rarity.
 
+**Hunger is said before it kills** (`Game.hungerWarning`): a toast under a quarter and at
+empty, the bar pulsing red, and a heartbeat every 1.15 s quickening to 0.5 s as fullness
+runs out — `game/sound.ts`, two synthesised sine thumps, woken on the first key or press
+since a browser will not start audio before one, and muted with M.
+
 Fullness (`food`) drains at `metabolism * (1.2 + size * 0.014)` and hits health at zero
 — the cost that stops size-stacking from being free.

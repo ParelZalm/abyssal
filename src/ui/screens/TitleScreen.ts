@@ -56,7 +56,7 @@ export class TitleScreen implements Component {
       keysLine([
         'Hold ', kbd('Space'), ' / ', kbd('Shift'), ' / ', kbd('click'),
         ' to boost \u00a0·\u00a0 ', kbd('E'), ' / ', kbd('right-click'), ' active organ \u00a0·\u00a0 ',
-        kbd('P'), ' pause',
+        kbd('P'), ' pause \u00a0·\u00a0 ', kbd('M'), ' sound',
       ]),
       ...(codex.deepest > 0 ? [forms] : []),
       actions(

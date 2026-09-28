@@ -265,3 +265,9 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 .start > p { margin: 4px 0 0; font-size: 11px; line-height: 1.35; color: var(--dim); }
 .start.picked { border-color: var(--accent); box-shadow: 0 0 16px rgba(88,224,200,.18); }
 .start:disabled { cursor: default; opacity: .45; }
+
+/* fullness under a quarter: the bar pulses red, in time with the heartbeat's slowest pace */
+.bar.low { animation: bar-low 1.15s ease-in-out infinite; }
+@keyframes bar-low { 0%, 100% { box-shadow: 0 0 0 1px rgba(255,90,74,.25); }
+  50% { box-shadow: 0 0 0 1px rgba(255,90,74,.9), 0 0 14px rgba(255,90,74,.45); } }
+@media (prefers-reduced-motion: reduce) { .bar.low { animation: none; box-shadow: 0 0 0 1px rgba(255,90,74,.8); } }

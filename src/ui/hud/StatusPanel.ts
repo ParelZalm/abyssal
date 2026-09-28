@@ -52,6 +52,7 @@ export class StatusPanel {
   update(s: HudState) {
     this.hp.update(s.hp / s.hpMax, `${Math.ceil(s.hp)} / ${s.hpMax}`);
     this.food.update(s.food / s.foodMax);
+    this.food.setLow(s.food < s.foodMax * 0.25);
     this.xp.update(s.xp / s.xpNeed);
     this.set('stage', this.stage, String(s.stage));
     this.set('size', this.size, `${s.size.toFixed(0)} cm`);

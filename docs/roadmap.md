@@ -121,9 +121,12 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 
 ## 8. Small feel wins
 
-- Name what killed you on the death screen. `finish` in `main.ts` only knows starved or
-  not; the killer's species has to be carried from `World.slay`.
-- An audible, readable hunger warning before the starvation spiral.
+- ~~Name what killed you on the death screen.~~ Done: `Creature.hurt` books the species
+  and how (bite, sting, poison) on every wound; `Game.causeOfDeath` reads it if it is under
+  4 s old, and otherwise names starvation or the forced band's pressure.
+- ~~An audible, readable hunger warning.~~ Done: toasts at a quarter and at empty, the
+  fullness bar pulsing red, and a synthesised heartbeat (`game/sound.ts`, the game's first
+  sound) that quickens as the bar drains. M mutes it, remembered.
 - The fish's silhouette at each stage on the run summary. Needs a bake per stage.
 - Synergy toasts share the toast slot with everything else. A discovery might deserve a
   card of its own.

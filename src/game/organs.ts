@@ -125,6 +125,7 @@ function envenom(def: Creature, att: Creature, dps: number) {
   def.poison = Math.max(def.poison, dps);
   def.poisonT = 4;
   def.poisonByPlayer = att.isPlayer;
+  def.hurt(att, 'poison');
 }
 
 /**
@@ -170,10 +171,11 @@ export const POISE_MAX = 2;
  * Recoil off a defender's organ, through the attacker's own `recoil` modifiers. Returns
  * what actually landed, so a synergy that did nothing to a crusher does not claim it acted.
  */
-function sting(att: Creature, amount: number) {
+function sting(att: Creature, amount: number, from: Creature) {
   let a = amount;
   for (const o of att.organs) if (o.recoil) a = o.recoil(att.genome, a);
   att.hp -= a;
+  if (a > 0) att.hurt(from, 'sting');
   return a;
 }
 
@@ -210,10 +212,10 @@ export const ORGANS: Organ[] = [
     armour: (g, base) => base - g.pen }),
 
   O({ id: 'spines', when: g => g.spikes > 0,
-    onWounded: (def, att, ctx) => { if (!ctx.whole) sting(att, def.genome.spikes * 3); } }),
+    onWounded: (def, att, ctx) => { if (!ctx.whole) sting(att, def.genome.spikes * 3, def); } }),
 
   O({ id: 'frill', when: g => g.frill > 0,
-    onWounded: (def, att, ctx) => { if (!ctx.whole) sting(att, def.genome.frill * 2); } }),
+    onWounded: (def, att, ctx) => { if (!ctx.whole) sting(att, def.genome.frill * 2, def); } }),
 
   O({ id: 'venom', when: g => g.venom > 0,
     // keeps working after the mouth has let go; the poison tick itself is status on the
@@ -390,7 +392,7 @@ export const ORGANS: Organ[] = [
     taken: (c, dmg) => c.puffT > 0 ? dmg * 0.35 : dmg,
     onWounded: (def, att, ctx) => {
       if (def.puffT <= 0 || ctx.whole) return;
-      sting(att, 3 + def.genome.size * 0.12);
+      sting(att, 3 + def.genome.size * 0.12, def);
     } }),
 
   O({ id: 'frenzy', when: g => g.frenzy > 0,
@@ -427,7 +429,7 @@ export const ORGANS: Organ[] = [
     // glances off is the bite that impales itself. On top of the spines' own recoil
     onWounded: (def, att, ctx) => {
       if (ctx.whole) return false;
-      return sting(att, armourOf(def.genome) * 0.8) > 0;
+      return sting(att, armourOf(def.genome) * 0.8, def) > 0;
     } }),
 
   O({ id: 'ghostlight', name: 'Ghost Light', when: g => g.lure > 0 && g.stealth >= 0.4,
