@@ -36,6 +36,12 @@ export interface Genome {
   finSize: number;
   tailSplit: number;
   spikes: number;
+  /**
+   * A saw edge on the teeth. Drawn and nothing else on its own — the bite it came with is
+   * already in `bite` — but it is the field Vivisect keys off, because a multiplier on `bite`
+   * cannot tell serrated teeth from any other card that raised it.
+   */
+  serrate: number;
   jaw: number;
   eyeSize: number;
   glow: number;
@@ -70,7 +76,7 @@ export function baseGenome(): Genome {
     regen: 0.6, metabolism: 1, stealth: 0, gulp: 1, lifesteal: 0, pen: 0, ram: 0,
     venom: 0, lure: 0, claws: 0, jet: 0, coral: 0, frill: 0, filter: 0, crush: 0,
     eel: 0, mantle: 0, lurk: 0, frenzy: 0,
-    hue: 30, accentHue: 200, finSize: 1, tailSplit: 0.35, spikes: 0,
+    hue: 30, accentHue: 200, finSize: 1, tailSplit: 0.35, spikes: 0, serrate: 0,
     jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0, smoke: 0,
     photophores: 0, eyeAdapt: 0, gape: 0, veil: 0, bulk: 0, barbels: 0,
   };

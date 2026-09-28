@@ -10,9 +10,11 @@ or to a reason to start the next one.
 
 ## 1. More synergies (cheap)
 
-Done so far: Toxic Lure, Ghost Light, Urchin, Nematocyst, Ballistic. Ballistic brought
-the boost seam (`Creature.boosting`, opened by `kick()`) and `World.hit`, a non-bite blow,
-so a synergy can now act on the boost or strike with something other than the mouth.
+Done so far: Toxic Lure, Ghost Light, Urchin, Nematocyst, Ballistic, Vivisect, Drifting
+Bloom, Whale Shark. Ballistic brought the boost seam (`Creature.boosting`, opened by
+`kick()`) and `World.hit`, a non-bite blow, so a synergy can now act on the boost or strike
+with something other than the mouth. Vivisect brought the bleed (`Creature.bleed`, ticked
+in `World.bleedOut`), which drips blood a hunter can follow.
 
 Each one is three touches, all following Toxic Lure:
 
@@ -22,18 +24,26 @@ Each one is three touches, all following Toxic Lure:
    `hasSynergy(g, id)`. Fills only, no strokes.
 3. A cell in the `BUILDS` list in `src/game/design/catalog.ts`.
 
-Candidates, from the pool as it exists:
+Check the `when` against the roster too: `species.ts` gives NPCs claws, glow, sense and
+translucency, and a synergy one of them qualifies for repaints it. If a pair has no organ
+field on one side, add a morphology field for the trait (as `serrate` was for Serrated
+Teeth) rather than thresholding a stat several cards raise.
+
+Left from the table:
 
 | Pair | Name | Mechanic | Body |
 | --- | --- | --- | --- |
-| claws + bite (Serrated) | Vivisect | A held target bleeds; blood calls a crowd | Serrated pincer edge |
 | photophores + sense (Ampullae) | Flash Sense | Boost pulses light that reveals and stuns big-eyed prey | Photophores run to the flank |
-| translucent + frill | Drifting Bloom | Nearly invisible and stinging | Frill trails like a jelly |
-| size + ram | Whale Shark | Cruising burns less, wake draws plankton in | Wider gape, spotted back |
+
+Flash Sense waits on the electroreception organ in §5. Neither of its traits sets an organ
+field — Photophores raises `glow`, Ampullae multiplies `sense` — and any threshold on those
+two that the player reaches is met by the Leviathan (glow 0.7, sense 2000), which would be
+repainted on the last fight of the run. An `electro`
+field from the sense-mode organ is the honest key.
 
 Watch: a synergy with a `burn` or `boost` modifier needs no event and cannot return
-`true`, so it will never toast. Fire it from an `onTick` the first time the condition is
-met, or give modifiers a way to report.
+`true`, so it will never toast. Whale Shark toasts because its wake is an `onTick` that
+returns true when it pulled something; a pure modifier synergy still needs that.
 
 ## 2. ~~Transformations (Isaac's Guppy)~~
 
@@ -121,6 +131,7 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 3. ~~The codex~~ — done.
 4. ~~Diet and locomotion organs~~ — done.
 5. ~~Transformations~~ and ~~the draft reading them~~ — done.
-6. Next up, by the same ranking: more synergies from the table in §1 now that the draft
-   rewards them, then zone pools and costs on apex cards (§5), then the tempting pocket
-   below each gate (§4).
+6. ~~Vivisect, Drifting Bloom and Whale Shark~~ — done. Flash Sense waits on §5's sense
+   modes.
+7. Next up, by the same ranking: zone pools and costs on apex cards (§5), then the
+   tempting pocket below each gate (§4), then the electroreception organ and Flash Sense.

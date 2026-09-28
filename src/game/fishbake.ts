@@ -17,7 +17,7 @@ import { armourOf, eyeOf, fadeOf, menace, photophoreOf, type Genome } from './ge
 import { formFor, halfWidth, PLAN_ART, shoulderAt, spineAt, R, type Form, type Plan,
          type PlanArt } from './form';
 import { fbm, fbmSigned } from './noise';
-import { hasSynergy, synergiesOf } from './organs';
+import { BLOOM_TRAIL, hasSynergy, synergiesOf } from './organs';
 import { hsl, lerp, TAU } from './util';
 
 let renderer: Renderer | null = null;
@@ -82,7 +82,7 @@ function key(g: Genome, plan: Plan) {
           // even though nothing in the paint reads them directly
           q(g.speed, 25), q(g.metabolism, 0.4),
           q(photophoreOf(g), 0.2), q(g.eyeAdapt, 0.3), q(g.gape, 0.25), q(g.veil, 0.25),
-          q(g.bulk, 0.2), q(g.barbels, 0.3),
+          q(g.bulk, 0.2), q(g.barbels, 0.3), Math.min(2, g.serrate),
           g.lure > 0 ? 1 : 0, Math.min(3, g.claws),
           Math.min(3, g.coral), Math.min(3, g.frill), g.jet > 0 ? 1 : 0,
           g.venom > 0 ? 1 : 0, Math.min(2, g.filter), g.crush > 0 ? 1 : 0,
@@ -238,7 +238,9 @@ function paint(g: Genome, plan: Plan): Baked {
     L ? L.x - spineAt(0, f) + L.r * L.halo + R * 0.04 : 0,
     g.barbels > 0 ? R * (0.55 + g.barbels * 0.9) : 0,
     hasSynergy(g, 'ballistic') ? ballisticReach(g) + R * 0.08 : 0);
-  const back = spineAt(1, f) - f.len * f.fluke * R * 1.06 - (rigged ? 0 : A.armReach * R);
+  const bloom = hasSynergy(g, 'driftingbloom');
+  const back = Math.min(spineAt(1, f) - f.len * f.fluke * R * 1.06 - (rigged ? 0 : A.armReach * R),
+    bloom ? spineAt(0.9, f) - f.len * BLOOM_TRAIL * R * 1.08 : Infinity);
 
   // an invisible rect pins the texture to exactly this rect, so the UVs line up with the
   // body rather than with whatever the art happened to touch
@@ -248,6 +250,7 @@ function paint(g: Genome, plan: Plan): Baked {
   if (A.arms > 0 && !rigged) tentacles(art, f, pal, A, g);
   if (g.veil > 0) veil(art, f, pal, g, seed);
   if (g.eel > 0) ribbonFin(art, f, pal, seed);
+  if (bloom) bloomTrail(art, f, pal, g, seed);
   if (A.blunt > 0) bluntSnout(art, f, pal, A);
   if (A.tail === 'fluke') fluke(art, f, pal, A);
   else if (A.tail === 'mantle') mantleFins(art, f, pal, A);
@@ -262,6 +265,7 @@ function paint(g: Genome, plan: Plan): Baked {
 
   countershade(art, f, pal, A, seed);
   if (A.mottle > 0) mottle(art, f, pal, g, A, seed);
+  if (hasSynergy(g, 'whaleshark')) whaleSpots(art, f, pal, seed);
   if (photophoreOf(g) > 0) photophores(art, f, pal, g, seed);
   if (A.cilia) cilia(art, f, pal);
   if (g.lurk > 0) camouflage(art, f, pal, seed);
@@ -521,8 +525,9 @@ function organs(gr: Graphics, f: Form, pal: Palette, g: Genome) {
     }
   }
 
-  // frill: a fringe of stinging tentacles along the rear margin
-  if (g.frill > 0) {
+  // frill: a fringe of stinging tentacles along the rear margin — unless it has let go of the
+  // body and trails behind it, which is the Drifting Bloom and is painted under the body
+  if (g.frill > 0 && !hasSynergy(g, 'driftingbloom')) {
     const n = Math.round(7 + g.frill * 3);
     for (let i = 0; i < n; i++) {
       const v = n === 1 ? 0.5 : i / (n - 1);
@@ -541,6 +546,8 @@ function organs(gr: Graphics, f: Form, pal: Palette, g: Genome) {
   // claws: pincers on the shoulders, opened toward the prey — or, with the siphon behind
   // them, folded forward along the head as a club, which is the Ballistic body
   if (hasSynergy(g, 'ballistic')) raptorials(gr, f, pal, g);
+  // Vivisect: the pincer's inner edge is a saw, so what it closes on is cut as it is held
+  const vivisect = hasSynergy(g, 'vivisect');
   for (let i = 0; !hasSynergy(g, 'ballistic') && i < g.claws; i++) {
     const t = shoulderAt(f) * (0.8 - i * 0.12);
     const w = halfWidth(t, f);
@@ -551,6 +558,8 @@ function organs(gr: Graphics, f: Form, pal: Palette, g: Genome) {
         .quadraticCurveTo(x + len * 0.7, y + dir * len * 0.2, x + len, y + dir * len * 0.7)
         .quadraticCurveTo(x + len * 0.35, y + dir * len * 0.15, x + len * 0.55, y - dir * len * 0.1)
         .closePath().fill({ color: pal.bone, alpha: 0.9 * pal.alpha });
+      if (vivisect) sawEdge(gr, x + len, y + dir * len * 0.7, x + len * 0.55, y - dir * len * 0.1,
+                            x + len * 1.2, y, len * 0.12, 5, pal.bone, 0.95 * pal.alpha);
     }
   }
 
@@ -573,6 +582,92 @@ function organs(gr: Graphics, f: Form, pal: Palette, g: Genome) {
         .fill({ color: toxic, alpha: 0.35 + Math.min(0.35, g.venom * 0.1) });
     }
     if (hasSynergy(g, 'nematocyst')) nematocysts(gr, f, g, t);
+  }
+}
+
+/**
+ * A row of small teeth along an edge from (x0, y0) to (x1, y1), pointing to whichever side of
+ * it (px, py) is on. The serrated lip and the Vivisect pincer.
+ */
+function sawEdge(gr: Graphics, x0: number, y0: number, x1: number, y1: number, px: number,
+                 py: number, h: number, n: number, color: number, alpha: number) {
+  const dx = x1 - x0, dy = y1 - y0;
+  const l = Math.hypot(dx, dy) || 1;
+  let nx = -dy / l, ny = dx / l;
+  if ((px - x0) * nx + (py - y0) * ny < 0) { nx = -nx; ny = -ny; }
+  for (let i = 0; i < n; i++) {
+    const a = i / n, b = (i + 1) / n;
+    // raked toward the far end, the way a cutting tooth leans into the pull
+    const m = a + (b - a) * 0.75;
+    gr.moveTo(x0 + dx * a, y0 + dy * a)
+      .lineTo(x0 + dx * m + nx * h, y0 + dy * m + ny * h)
+      .lineTo(x0 + dx * b, y0 + dy * b)
+      .closePath().fill({ color, alpha });
+  }
+}
+
+/**
+ * Drifting Bloom: the stinging fringe has let go of the flank and trails behind the body as
+ * a jelly's tentacles do. Long thin filaments from the rear margin to well past the tail,
+ * each beaded with stinging cells, because the trail is where the sting now is — its reach
+ * is `BLOOM_TRAIL`, the same one `organs.ts` stings over.
+ */
+function bloomTrail(gr: Graphics, f: Form, pal: Palette, g: Genome, seed: number) {
+  const n = 6 + Math.min(4, Math.round(g.frill * 2));
+  const tip = spineAt(0.9, f) - f.len * BLOOM_TRAIL * R;
+  const cell = pal.accent;
+  for (let i = 0; i < n; i++) {
+    const v = (i + 0.5) / n * 2 - 1;
+    const t0 = 0.66 + Math.abs(v) * 0.08;
+    const x0 = spineAt(t0, f), y0 = halfWidth(t0, f) * v * 0.85;
+    // the outer ones shorter, so the trail tapers to a tassel rather than ending on a ruler
+    const reach = 1 - Math.abs(v) * 0.3 + fbm(i * 3.1, 2, seed + 191) * 0.2;
+    const x1 = lerp(x0, tip, reach);
+    const w = R * 0.022;
+    const steps = 14;
+    const pts: { x: number; y: number }[] = [];
+    for (let k = 0; k <= steps; k++) {
+      const s = k / steps;
+      const sway = fbmSigned(s * 3 + i * 1.7, v * 4, seed + 197) * R * 0.12 * s;
+      pts.push({ x: lerp(x0, x1, s), y: y0 * (1 - s * 0.45) + sway });
+    }
+    gr.moveTo(pts[0].x, pts[0].y - w);
+    for (let k = 1; k <= steps; k++) gr.lineTo(pts[k].x, pts[k].y - w * (1 - k / steps * 0.7));
+    for (let k = steps; k >= 0; k--) gr.lineTo(pts[k].x, pts[k].y + w * (1 - k / steps * 0.7));
+    // on the accent and off the body's alpha: a glass body fades its skin to almost
+    // nothing, and a filament in skin colour went with it, leaving beads hung on air
+    gr.closePath().fill({ color: pal.accent, alpha: 0.32 });
+    // the stinging cells, bright beads down each filament — this is what reads as armed
+    for (let k = 2; k <= steps; k += 2) {
+      gr.circle(pts[k].x, pts[k].y, w * 1.9).fill({ color: cell, alpha: 0.28 });
+      gr.circle(pts[k].x, pts[k].y, w * 0.9).fill({ color: cell, alpha: 0.85 });
+    }
+  }
+}
+
+/**
+ * Whale Shark: pale spots across the back, in rows broken by lighter bars — the pattern that
+ * says whale shark from any distance. Laid on the countershade so they sit in the dark of
+ * the back, where the real animal's are.
+ */
+function whaleSpots(gr: Graphics, f: Form, pal: Palette, seed: number) {
+  const spot = hsl(48, 0.2, 0.82);
+  for (let t = 0.1; t < 0.9; t += 0.045) {
+    const w = halfWidth(t, f);
+    const rows = Math.max(3, Math.round(w / (R * 0.075)));
+    for (let j = 0; j < rows; j++) {
+      const v = ((j + 0.5) / rows) * 2 - 1;
+      if (Math.abs(v) > 0.8) continue;
+      const jit = fbm(t * 37, v * 23, seed + 223, 1);
+      const x = spineAt(t, f) + (jit - 0.5) * R * 0.03;
+      const r = w * 0.07 * (0.8 + jit * 0.5) * (1 - t * 0.4);
+      gr.circle(x, v * w * 0.75, r).fill({ color: spot, alpha: 0.7 * pal.alpha });
+    }
+    // every third column a bar across the back, between the spots
+    if (Math.round(t / 0.045) % 3 === 0) {
+      gr.ellipse(spineAt(t + 0.022, f), 0, R * 0.012, w * 0.6)
+        .fill({ color: spot, alpha: 0.35 * pal.alpha });
+    }
   }
 }
 
@@ -863,7 +958,9 @@ function head(gr: Graphics, f: Form, pal: Palette, g: Genome, A: PlanArt, men: n
   const gape = Math.min(1.5, g.gape);
   // a sieve is all intake: the rakers need a mouth as wide as the head to be worth having
   const sieve = Math.min(2, g.filter);
-  const mw = halfWidth(tm, f) * (0.6 + Math.min(1.2, g.jaw) * 0.5 + gape * 0.9 + sieve * 0.45) *
+  // and a whale shark's is a net held open, as wide as the head is
+  const net = hasSynergy(g, 'whaleshark') ? 0.7 : 0;
+  const mw = halfWidth(tm, f) * (0.6 + Math.min(1.2, g.jaw) * 0.5 + gape * 0.9 + sieve * 0.45 + net) *
     A.mouth;
   // a gape opens backwards as well as wider: the hinge walks down the body, which is what
   // makes a gulper read as mostly mouth rather than as a fish with a big grin
@@ -873,8 +970,16 @@ function head(gr: Graphics, f: Form, pal: Palette, g: Genome, A: PlanArt, men: n
     .quadraticCurveTo(spineAt(tm * 0.1, f), 0, spineAt(tm * 0.2, f), -mw * 0.7)
     .closePath().fill({ color: pal.dark, alpha: 0.85 * Math.min(1, A.mouth + 0.2) * pal.alpha });
 
-  // teeth, once the jaw is worth showing
-  if (g.jaw > 0.55) {
+  // teeth, once the jaw is worth showing. A serrated mouth is lined along both lips with a
+  // row of small teeth instead of carrying a few large ones: a saw has many, and from above
+  // that is what separates it from a bigger jaw
+  if (g.serrate > 0) {
+    const n = 5 + Math.round(Math.min(2, g.serrate) * 2);
+    for (const dir of [-1, 1] as const) {
+      sawEdge(gr, spineAt(tm * 0.25, f), dir * mw * 0.64, spineAt(hinge * 0.8, f), dir * mw * 0.12,
+              spineAt(tm, f), 0, mw * 0.14, n, 0xf2f4e6, 0.9 * pal.alpha);
+    }
+  } else if (g.jaw > 0.55) {
     const teeth = Math.min(7, Math.round(2 + g.jaw * 4));
     for (let i = 0; i < teeth; i++) {
       const v = (i + 0.5) / teeth;

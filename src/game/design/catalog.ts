@@ -375,6 +375,15 @@ const BUILDS: { id: string; name: string; note: string; plan: Plan; depth: numbe
   { id: 'nematocyst', name: 'Nematocyst', plan: 'darter', depth: 2400,
     note: 'Synergy: venom + lifesteal. The sacs are ringed with capsules, and a duct carries them forward to the gut.',
     edit: g => { g.venom = 1; g.lifesteal = 0.06; g.armor = 1; g.hue = 150; g.accentHue = 96; } },
+  { id: 'vivisect', name: 'Vivisect', plan: 'darter', depth: 1500,
+    note: 'Synergy: claws + serrated teeth. Both lips are lined with a saw, and so is the inside of each pincer.',
+    edit: g => { g.claws = 1; g.serrate = 1; g.bite = 12; g.jaw = 0.55; g.hue = 356; g.accentHue = 20; } },
+  { id: 'driftingbloom', name: 'Drifting Bloom', plan: 'darter', depth: 3400,
+    note: 'Synergy: frill + glass body. The fringe lets go of the flank and trails past the tail, beaded with stinging cells.',
+    edit: g => { g.frill = 1; g.translucent = 0.5; g.stealth = 0.55; g.hue = 296; g.accentHue = 186; } },
+  { id: 'whaleshark', name: 'Whale Shark', plan: 'shark', depth: 5200,
+    note: 'Synergy: ram gills past the Midnight gate. A mouth as wide as the head, and pale spots in rows across the back.',
+    edit: g => { g.ram = 1; g.size = 100; g.speed = 220; g.metabolism = 0.7; g.hue = 214; g.accentHue = 200; } },
 ];
 
 /** The water each form is likeliest to happen in: families ripen at different depths. */
@@ -398,23 +407,24 @@ function buildGroup(): DesignGroup {
     id: 'builds',
     name: 'Builds',
     note: 'Whole animals, with every parameter set together the way a species would set it.',
-    items: [...BUILDS, ...FORM_BUILDS].map(b => ({
-      id: b.id,
-      name: b.name,
-      note: b.note,
-      source: 'src/game/design/catalog.ts',
-      span: 130,
-      depth: b.depth,
-      facts: { plan: b.plan, depth: b.depth },
-      genome: (() => { const g = baseGenome(); g.size = 40; b.edit(g); return g; })(),
-      make: () => {
-        const g = baseGenome();
-        g.size = 40;
-        b.edit(g);
-        return boardFish(g, b.plan);
-      },
-      animate: fishAnimate,
-    })),
+    items: [...BUILDS, ...FORM_BUILDS].map(b => {
+      const built = () => { const g = baseGenome(); g.size = 40; b.edit(g); return g; };
+      const g = built();
+      return {
+        id: b.id,
+        name: b.name,
+        note: b.note,
+        source: 'src/game/design/catalog.ts',
+        // a build that has to be big to be itself (Whale Shark) gets a cell to match, so the
+        // row is framed at one scale rather than one animal overflowing its cell
+        span: 130 * (g.size / 40),
+        depth: b.depth,
+        facts: { plan: b.plan, depth: b.depth },
+        genome: g,
+        make: () => boardFish(built(), b.plan),
+        animate: fishAnimate,
+      };
+    }),
   };
 }
 

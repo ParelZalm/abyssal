@@ -108,7 +108,7 @@ export const TRAITS: Trait[] = [
 
   T({ id: 'serrate', name: 'Serrated Teeth', rarity: 'rare', icon: 'teeth', families: ['predator'], minStage: 2,
     desc: '+85% bite. Wounds that do not close.',
-    apply: g => { g.bite *= 1.85; g.jaw += 0.25; } }),
+    apply: g => { g.bite *= 1.85; g.jaw += 0.25; g.serrate += 1; } }),
 
   T({ id: 'segments', name: 'Segmented Trunk', rarity: 'rare', icon: 'gill', families: ['lurker'], minStage: 2,
     desc: '+30% turning, +2 armour. An eel’s whip.',

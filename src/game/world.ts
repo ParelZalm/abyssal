@@ -53,6 +53,11 @@ export interface Blood {
   size: number;
   /** Seconds left. */
   t: number;
+  /**
+   * The living body a drip came from, if it is one. It cannot smell its own: a bleeding
+   * hunter with nothing in sight would otherwise chase the drop it just left beside itself.
+   */
+  from?: Creature;
 }
 
 /** How long a cloud draws anything, per centimetre of what died. Capped by `BLOOD_MAX`. */
@@ -60,6 +65,14 @@ const BLOOD_LIFE = 0.16;
 const BLOOD_MAX = 14;
 /** Scent reach, per centimetre of the body. A 5 cm krill is barely worth crossing water for. */
 const BLOOD_REACH = 11;
+/**
+ * A bleeding body's drip: how often, how much of its own length each drop counts as for
+ * scent, and how long a drop lasts. Close enough together that the drops read as one trail,
+ * and each lasts three seconds because `smell` fades anything younger than that out.
+ */
+const DRIP_EVERY = 0.35;
+const DRIP_SIZE = 0.6;
+const DRIP_LIFE = 3;
 
 export type Mood = 'cruise' | 'rest' | 'dart';
 
@@ -110,6 +123,12 @@ export class Creature {
   poison = 0;
   poisonT = 0;
   poisonByPlayer = false;
+  /** An open wound (Vivisect): damage per second, seconds left, who is owed the kill. */
+  bleed = 0;
+  bleedT = 0;
+  bleedByPlayer = false;
+  /** Seconds until the wound next drips blood into the water. */
+  drip = 0;
   /** What this animal's tentacles are holding, and what is holding this one. */
   holding: Creature | null = null;
   heldBy: Creature | null = null;
@@ -843,6 +862,7 @@ export class World {
     let best: Blood | null = null;
     let bs = 0;
     for (const b of this.blood) {
+      if (b.from === c) continue;
       const reach = b.size * BLOOD_REACH * (0.6 + sense / 900) * keen;
       const d2 = dist2(c.x, c.y, b.x, b.y);
       if (d2 > reach * reach) continue;
@@ -867,6 +887,8 @@ export class World {
     c.biteCd = Math.max(0, c.biteCd - dt);
     c.boosting = Math.max(0, c.boosting - dt);
     if (c.fade < 1) c.fade = Math.min(1, c.fade + dt / FADE_IN);
+    // nothing heals while a wound is still working on it
+    const wounded = c.poisonT > 0 || c.bleedT > 0;
     if (c.poisonT > 0) {
       c.poisonT -= dt;
       c.hp -= c.poison * dt;
@@ -875,14 +897,35 @@ export class World {
         this.bites.push({ x: c.x, y: c.y, amount: c.poison, fatal: true,
           onPlayer: c.isPlayer, byPlayer: c.poisonByPlayer, size: c.genome.size });
       }
-    } else {
-      if (c.hp < c.hpMax) c.hp = Math.min(c.hpMax, c.hp + c.genome.regen * dt);
     }
+    if (c.bleedT > 0 && c.alive) this.bleedOut(c, dt);
+    if (!wounded && c.hp < c.hpMax) c.hp = Math.min(c.hpMax, c.hp + c.genome.regen * dt);
     tickOrgans(this, c, dt);
     // creatures the camera cannot see still swim and hunt, they just skip their art
     if (!c.view.visible) return;
     c.view.animate(dt, clamp(c.thrust, 0, 1.6), c.beat, c.bank);
     c.syncView();
+  }
+
+  /**
+   * An open wound. It hurts like venom, but it also drips: every drop is blood in the water
+   * where the animal is now, so `smell` leads hunters along the path it took rather than to
+   * the spot it was bitten — a fleeing animal brings the crowd with it.
+   */
+  private bleedOut(c: Creature, dt: number) {
+    c.bleedT -= dt;
+    c.hp -= c.bleed * dt;
+    if ((c.drip -= dt) <= 0) {
+      c.drip = DRIP_EVERY;
+      const drop: Blood = { x: c.x, y: c.y, size: c.genome.size * DRIP_SIZE, t: DRIP_LIFE, from: c };
+      this.blood.push(drop);
+      this.spilled.push(drop);
+    }
+    if (c.hp <= 0) {
+      this.slay(c, c.bleedByPlayer);
+      this.bites.push({ x: c.x, y: c.y, amount: c.bleed, fatal: true,
+        onPlayer: c.isPlayer, byPlayer: c.bleedByPlayer, size: c.genome.size });
+    }
   }
 
 /**

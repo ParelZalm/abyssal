@@ -47,7 +47,7 @@ Three groups of fields, and the split matters:
   A synergy is an `Organ` whose `when` tests two fields and that carries a `name`; its
   effect hooks return true on a frame they did something, `World.fired` publishes its id
   once per run on `world.synergies`, and `Game.digest` turns it into the toast, so the
-  combination is discovered in play rather than read off a card. Five so far:
+  combination is discovered in play rather than read off a card. Eight so far:
   `Toxic Lure` (lure + venom: prey that reaches the light is poisoned before the bite),
   `Ghost Light` (lure + stealth ≥ 0.4: lured prey is not panicked by its shoal's alarm),
   `Urchin` (spikes + armour ≥ 11: recoil of 0.8 × armour on every bite taken — 11 sits
@@ -59,14 +59,33 @@ Three groups of fields, and the split matters:
   animals included). Ballistic reads `Creature.boosting`, the seam `Game` opens with
   `kick(0.4)` on every boost, and strikes through `World.hit` — a blow with no cooldown
   and no swallow that shares `land` with the bite, so armour, organs and the kill are
-  booked the same way. The claws fold forward along the head into clubs. Recoil can kill:
+  booked the same way. The claws fold forward along the head into clubs.
+  `Vivisect` (claws + `serrate`): a bite that does not kill opens a bleed of
+  `(0.2 + 0.05 × serrate) × bite` per second for 5 s. A bleed is status on the wounded body
+  like venom, ticked in `World.bleedOut` and kept apart from poison so Nematocyst does not
+  feed on it; what it adds is the trail — every 0.35 s it leaves a drop of blood (`Blood`
+  at 0.6 of the body's length, 3 s) where the animal is now, so `smell` leads hunters along
+  its path rather than to where it was bitten. A drop carries `from`, and a body cannot
+  smell its own. `serrate` is a morphology field Serrated Teeth now sets, because a synergy
+  keyed off `bite` could not tell the saw from any other card that raised it.
+  `Drifting Bloom` (frill + translucent ≥ 0.5, which Glass Body alone reaches): the fringe
+  trails `BLOOM_TRAIL` (0.85) body lengths past the tail, and a hunter whose mouth reaches
+  that segment — or that bites the body anywhere — is envenomed at `2 + 2 × frill`, slowed
+  to 0.35, and neither chases nor bites for 2.5 s; once per poisoning. Chased from behind
+  by a reef shark it cannot swallow, a pinned player took 0 bites in 2.5 s against 4
+  without it; bitten from the front, 1 against 5. Swallowed whole, nothing helps.
+  `Whale Shark` (ram + size ≥ 96, the Midnight gate): while cruising at 0.6 of top speed
+  or faster, burn × 0.8, and anything under a quarter of the body's length in a cone ahead
+  within `7 × size` is drawn to the mouth. Seven because the whole-swallow gulp already
+  reaches about `3.8 × size` on a body that big; a wake inside it measured as nothing.
+  Recoil can kill:
   `World.bite` books an attacker whose health the defender's organs took below zero. The
   paint asks `hasSynergy(g, id)` from the same file, so a combination shows on the body
   through the predicate that makes it act, and `synergiesOf(g)` is in the bake cache key
   because a synergy's threshold can fall inside one quantised bucket of the fields it
   tests. Every synergy gets a cell on the design board's Builds row, and a `desc` — the
   line the codex shows once it has been found.
-- **Morphology** — `hue`, `accentHue`, `finSize`, `tailSplit`, `spikes`, `jaw`,
+- **Morphology** — `hue`, `accentHue`, `finSize`, `tailSplit`, `spikes`, `serrate`, `jaw`,
   `eyeSize`, `glow`, `segments`, `translucent`, plus the deep-water set: `photophores`,
   `eyeAdapt`, `gape`, `veil`, `bulk`, `barbels`. Purely visual, but every trait nudges at
   least one so a build looks like what it does. The deep-water six exist because hue

@@ -1,4 +1,5 @@
-import { armourOf, type Genome } from './genome';
+import { formFor } from './form';
+import { armourOf, biteDamage, type Genome } from './genome';
 import type { Creature, World } from './world';
 import { dist2 } from './util';
 
@@ -106,6 +107,42 @@ function envenom(def: Creature, att: Creature, dps: number) {
   def.poisonByPlayer = att.isPlayer;
 }
 
+/**
+ * Open a wound that does not close. Like venom it is status on the wounded body and ticks in
+ * `World.integrate`, but it is kept apart from it: Nematocyst heals off the player's poison,
+ * and a bleed is not that — it is the one wound anything that hunts can smell.
+ */
+function cut(def: Creature, att: Creature, dps: number) {
+  def.bleed = Math.max(def.bleed, dps);
+  def.bleedT = 5;
+  def.bleedByPlayer = att.isPlayer;
+}
+
+/**
+ * Drifting Bloom's trailing tentacles, as a share of the body's own length past the tail.
+ * Shared with the paint, so the filaments that show are the reach that stings.
+ */
+export const BLOOM_TRAIL = 0.85;
+
+/** Seconds a stung hunter gives up the chase for — Drifting Bloom's escape. */
+const STUNG_OFF = 2.5;
+
+/**
+ * A hunter that has met the bloom's stinging cells: poisoned, slowed, and off the hunt for
+ * `STUNG_OFF`. Its bite is held as long, not only its chase: contacts resolve regardless of
+ * what a hunter wants, so one stung inside its own strike reach kept biting on its cooldown
+ * while it drifted, and a body it had caught up with was no better off for stinging it.
+ */
+function stingOff(o: Creature, c: Creature) {
+  envenom(o, c, 2 + c.genome.frill * 2);
+  o.vx *= 0.35;
+  o.vy *= 0.35;
+  o.biteCd = Math.max(o.biteCd, STUNG_OFF);
+  o.tired = Math.max(o.tired, STUNG_OFF);
+  o.chase = 0;
+  o.quarry = null;
+}
+
 /** Seconds of stillness a lurking body can bank. At 2, a bite hits 2.6 times as hard. */
 export const POISE_MAX = 2;
 
@@ -121,6 +158,12 @@ function sting(att: Creature, amount: number) {
 }
 
 const O = (o: Organ) => o;
+
+/** Whale Shark's size floor: the Midnight gate, so ram gills only pay off on a giant. */
+const WHALE_SIZE = 96;
+
+/** Swimming fast enough that the flow alone ventilates the gills and fills the mouth. */
+const cruising = (c: Creature) => Math.hypot(c.vx, c.vy) >= c.genome.speed * 0.6;
 
 export const ORGANS: Organ[] = [
   O({ id: 'beak', when: g => g.pen > 0,
@@ -293,6 +336,81 @@ export const ORGANS: Organ[] = [
         if (dist2(c.mouthX, c.mouthY, o.x, o.y) > reach * reach) continue;
         c.boostHits.add(o);
         world.hit(c, o, 0.6 + 0.5 * Math.min(2.2, rush));
+        fired = true;
+      }
+      return fired;
+    } }),
+
+  O({ id: 'vivisect', name: 'Vivisect', when: g => g.claws > 0 && g.serrate > 0,
+    desc: 'Claws and serrated teeth. What you bite bleeds, and the blood calls a crowd.',
+    // the pincer holds and the saw cuts, so a wound made in the grip does not close. Worth
+    // one more bite over five seconds and it does not need the mouth to stay on, but its
+    // real consequence is the trail: every drip is blood in the water on the animal's own
+    // path (`World.bleedOut`), so what tears free is followed — by you, and by everything
+    // else that hunts by smell. A kill is a crowd; a bleed is a crowd that moves
+    onWound: (att, def, ctx) => {
+      if (ctx.fatal || ctx.whole) return false;
+      cut(def, att, biteDamage(att.genome) * (0.2 + 0.05 * Math.min(2, att.genome.serrate)));
+      return true;
+    } }),
+
+  O({ id: 'driftingbloom', name: 'Drifting Bloom', when: g => g.frill > 0 && g.translucent >= 0.5,
+    desc: 'Frill on a glass body. A hunter that meets your trailing tentacles, or bites you, is stung and breaks off.',
+    // the fringe lets go of the body and trails like a jelly's, and on a body that is hard to
+    // see, the first thing a pursuer finds is the tentacles. A stung hunter is poisoned,
+    // loses most of its speed and drops the chase, which makes this the build that escapes
+    // by being caught up with. A big one's strike reaches past the trail, so a bite does
+    // the same from the other side. Once per poisoning, so it cannot pin a hunter forever
+    onTick: (c, _dt, world) => {
+      const len = formFor(c.genome, c.species.plan).len * c.genome.size;
+      const ax = Math.cos(c.angle), ay = Math.sin(c.angle);
+      // the filaments as a segment behind the centre, from where `bloomTrail` roots them on
+      // the rear flank (t = 0.66 of the spine, 0.14 of the length back) to their tips
+      const t0 = len * 0.14, t1 = len * (0.38 + BLOOM_TRAIL);
+      let fired = false;
+      for (const o of world.creatures) {
+        if (!o.alive || o.poisonT > 0 || !o.preysOn(c)) continue;
+        const dx = o.mouthX - c.x, dy = o.mouthY - c.y;
+        const along = -(dx * ax + dy * ay);
+        if (along < t0 || along > t1) continue;
+        const off = Math.abs(dx * ay - dy * ax);
+        if (off > c.radius * 0.7 + o.radius * 0.5) continue;
+        stingOff(o, c);
+        fired = true;
+      }
+      return fired;
+    },
+    onWounded: (def, att, ctx) => {
+      if (ctx.whole || !att.alive || att.poisonT > 0) return false;
+      stingOff(att, def);
+      return true;
+    } }),
+
+  O({ id: 'whaleshark', name: 'Whale Shark', when: g => g.ram > 0 && g.size >= WHALE_SIZE,
+    desc: 'Ram gills on a giant. Cruising costs less, and small prey ahead is swept into your mouth.',
+    // a mouth held open at speed is a net. Past the Midnight gate a ram ventilator is big
+    // enough that the water it pushes through itself carries food with it: anything under a
+    // quarter of your length in a cone ahead is drawn to the mouth while you cruise, which
+    // turns a krill cloud from a hunt into a line you swim through. The same flow over the
+    // gills is why cruising is cheap — and hanging still still costs what ram's does.
+    // The reach is 7 × size because the whole-swallow gulp already reaches about 3.8 × size
+    // on a body this big: a wake inside the gulp's own reach measured as nothing at all
+    burn: (c, base) => cruising(c) ? base * 0.8 : base,
+    onTick: (c, dt, world) => {
+      if (!cruising(c)) return false;
+      const reach = c.genome.size * 7;
+      let fired = false;
+      for (const o of world.creatures) {
+        if (!o.alive || o.genome.size * 4 > c.genome.size || !c.preysOn(o)) continue;
+        const dx = c.mouthX - o.x, dy = c.mouthY - o.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 > reach * reach || d2 < 1) continue;
+        const d = Math.sqrt(d2);
+        // ahead only: the flow goes in at the mouth, so what is beside or behind is not in it
+        if (-(dx * Math.cos(c.angle) + dy * Math.sin(c.angle)) < d * 0.6) continue;
+        const pull = (1 - d / reach) * c.genome.size * 12 * dt;
+        o.vx += (dx / d) * pull;
+        o.vy += (dy / d) * pull;
         fired = true;
       }
       return fired;
