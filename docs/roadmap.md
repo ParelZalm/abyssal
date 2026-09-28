@@ -29,17 +29,9 @@ translucency, and a synergy one of them qualifies for repaints it. If a pair has
 field on one side, add a morphology field for the trait (as `serrate` was for Serrated
 Teeth) rather than thresholding a stat several cards raise.
 
-Left from the table:
-
-| Pair | Name | Mechanic | Body |
-| --- | --- | --- | --- |
-| photophores + sense (Ampullae) | Flash Sense | Boost pulses light that reveals and stuns big-eyed prey | Photophores run to the flank |
-
-Flash Sense waits on the electroreception organ in §5. Neither of its traits sets an organ
-field — Photophores raises `glow`, Ampullae multiplies `sense` — and any threshold on those
-two that the player reaches is met by the Leviathan (glow 0.7, sense 2000), which would be
-repainted on the last fight of the run. An `electro`
-field from the sense-mode organ is the honest key.
+The table is done: Flash Sense came last, keyed on the `electro` field once Ampullae
+became the electroreception organ, since a threshold on `glow` and `sense` would have
+repainted the Leviathan. More pairs are for the next pass over the pool.
 
 Watch: a synergy with a `burn` or `boost` modifier needs no event and cannot return
 `true`, so it will never toast. Whale Shark toasts because its wake is an `onTick` that
@@ -90,8 +82,9 @@ change *what you do*, each an entry in `organs.ts` plus paint:
   Wait (`lurk`), through a `swim` hook on `Creature.propel` and a `stealth` hook. No
   species carries them yet; the Ribbon Eel and the Anglerfish are the obvious first
   NPCs to give them to, once the player versions have been played.
-- **Sense modes.** Electroreception that sees through darkness at short range, against
-  big eyes that see far but go blind below the twilight.
+- ~~**Sense modes.**~~ Done: `sightOf` dims the eye with the light, Tapetum's
+  `eyeAdapt` wins it back, and `electro` (Ampullae) feels the living at short range in any
+  water, the wounded from twice as far. Flash Sense sits on top.
 - ~~**Costs on apex cards.**~~ Done: every apex card carries a turn, speed or metabolism
   price in its text.
 - **Cursed cards.** +90% bite but you glow, so everything sees you.
@@ -137,5 +130,7 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
    modes.
 7. ~~Zone pools and costs on apex cards~~ — done.
 8. ~~The pocket below each gate, and forcing a seal~~ — done.
-9. Next up, by the same ranking: sense modes — the electroreception organ, then Flash
-   Sense on top of it (§5).
+9. ~~Sense modes and Flash Sense~~ — done.
+10. Next up, by the same ranking: cursed cards and the active organ slot (§5), then enemies
+    that ask for tactics (§6), then starting forms and a daily seed (§7), then the small
+    feel wins (§8).

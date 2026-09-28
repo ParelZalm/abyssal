@@ -12,7 +12,7 @@ Three groups of fields, and the split matters:
 - **Stats** — `size`, `speed`, `turn`, `bite`, `sense`, `armor`, `regen`, `metabolism`,
   `stealth`, `gulp`, `lifesteal`, `pen`, `ram`. Read by the simulation.
 - **Organs** — `venom`, `lure`, `claws`, `jet`, `coral`, `frill`, `filter`, `crush`, `eel`,
-  `mantle`, `lurk`, plus `pen`, `ram`,
+  `mantle`, `lurk`, `electro`, plus `pen`, `ram`,
   `lifesteal` and `spikes`, which act like organs even though they sit in the other
   groups. Each carries a mechanic *and* a piece of morphology. The mechanic lives in
   `organs.ts`: one `Organ` record per field, keyed off the genome (NPC species carry
@@ -31,6 +31,15 @@ Three groups of fields, and the split matters:
   added for them — `gulp`, `damage`, `biteRate`, `recoil` — and recoil goes through
   `sting()` in `organs.ts`, so spines, frill and Urchin all ask the attacker's organs how
   much of it lands.
+  The **sense** organ, `electro` (Ampullae of Lorenzini), is a second way of perceiving
+  beside the eye. Eyes are `sense` through `sightOf(g, light)`: 2.55 × sense in the
+  sunlit water, 0.9 × in the Abyss (at sense 520: 1255 and 469 units, against the 620 the
+  deep used to allow), and a light-gathering eye — `eyeAdapt`, which Tapetum Lucidum now
+  raises by 0.5 — wins it back to 670. The ampullae act through a `feel` hook: within
+  `2.5 × size + 240 × electro` everything is shown whatever the light, and a wounded body
+  (below half health, bleeding, poisoned or dazzled) from twice that. A body found by feel
+  and not by sight is drawn in a cold cast (`FELT_TINT`) so the two read differently.
+  Pores pepper the snout.
   The three **locomotion** organs are parameter shapes on the one swim model, through a
   `swim` hook that folds into `SwimMods` — cached on the creature beside its organs and
   read by `Creature.propel` and `agility`. `eel` (Anguilliform Body) keeps full turning at
@@ -47,7 +56,7 @@ Three groups of fields, and the split matters:
   A synergy is an `Organ` whose `when` tests two fields and that carries a `name`; its
   effect hooks return true on a frame they did something, `World.fired` publishes its id
   once per run on `world.synergies`, and `Game.digest` turns it into the toast, so the
-  combination is discovered in play rather than read off a card. Eight so far:
+  combination is discovered in play rather than read off a card. Nine so far:
   `Toxic Lure` (lure + venom: prey that reaches the light is poisoned before the bite),
   `Ghost Light` (lure + stealth ≥ 0.4: lured prey is not panicked by its shoal's alarm),
   `Urchin` (spikes + armour ≥ 11: recoil of 0.8 × armour on every bite taken — 11 sits
@@ -78,6 +87,13 @@ Three groups of fields, and the split matters:
   or faster, burn × 0.8, and anything under a quarter of the body's length in a cone ahead
   within `7 × size` is drawn to the mouth. Seven because the whole-swallow gulp already
   reaches about `3.8 × size` on a body that big; a wake inside it measured as nothing.
+  `Flash Sense` (electro + glow ≥ 0.6, the Photophores card's): every boost kick fires a
+  flash over 1.5 × the feel range, published on `world.flashes` for `Game` to draw, and
+  every body inside it with `eyeOf` ≥ 1.35 is dazzled for 1.6 s (a guardian for a third
+  of that) — `Creature.stun` stops its steering and holds its bite. The light-gathering
+  eyes of the deep and the two biggest sunlit hunters qualify; the trench's blind animals
+  do not. `Creature.kicks` counts boosts so the flash fires once per kick. A bright row
+  of outward lights runs along each flank.
   Recoil can kill:
   `World.bite` books an attacker whose health the defender's organs took below zero. The
   paint asks `hasSynergy(g, id)` from the same file, so a combination shows on the body

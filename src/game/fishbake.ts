@@ -82,7 +82,7 @@ function key(g: Genome, plan: Plan) {
           // even though nothing in the paint reads them directly
           q(g.speed, 25), q(g.metabolism, 0.4),
           q(photophoreOf(g), 0.2), q(g.eyeAdapt, 0.3), q(g.gape, 0.25), q(g.veil, 0.25),
-          q(g.bulk, 0.2), q(g.barbels, 0.3), Math.min(2, g.serrate),
+          q(g.bulk, 0.2), q(g.barbels, 0.3), Math.min(2, g.serrate), Math.min(2, g.electro),
           g.lure > 0 ? 1 : 0, Math.min(3, g.claws),
           Math.min(3, g.coral), Math.min(3, g.frill), g.jet > 0 ? 1 : 0,
           g.venom > 0 ? 1 : 0, Math.min(2, g.filter), g.crush > 0 ? 1 : 0,
@@ -267,6 +267,7 @@ function paint(g: Genome, plan: Plan): Baked {
   if (A.mottle > 0) mottle(art, f, pal, g, A, seed);
   if (hasSynergy(g, 'whaleshark')) whaleSpots(art, f, pal, seed);
   if (photophoreOf(g) > 0) photophores(art, f, pal, g, seed);
+  if (hasSynergy(g, 'flashsense')) flankLights(art, f, pal);
   if (A.cilia) cilia(art, f, pal);
   if (g.lurk > 0) camouflage(art, f, pal, seed);
   if (g.mantle > 0) mantle(art, f, pal);
@@ -994,6 +995,7 @@ function head(gr: Graphics, f: Form, pal: Palette, g: Genome, A: PlanArt, men: n
 
   if (sieve > 0) rakers(gr, f, pal, sieve, tm, mw, peak);
   if (g.crush > 0) pharynx(gr, f, pal, tm, mw);
+  if (g.electro > 0) ampullae(gr, f, pal, g);
 
   // eyes: a dark bead each side with a wet highlight
   const te = A.eyeAt;
@@ -1077,6 +1079,32 @@ function rakers(gr: Graphics, f: Form, pal: Palette, sieve: number, tm: number, 
         .quadraticCurveTo(x - w * 0.12, dir * (w * 0.96 - run * 0.5), x, dir * (w * 0.96 - run))
         .quadraticCurveTo(x - w * 0.04, dir * (w * 0.96 - run * 0.5), x, dir * w * 0.96)
         .closePath().fill({ color: pal.dark, alpha: 0.6 * pal.alpha });
+    }
+  }
+}
+
+/**
+ * Ampullae of Lorenzini: the pores of the electric sense, peppered over the snout the way
+ * they are on a shark's — dark pits, each with a pale jelly rim, densest at the nose and
+ * thinning back toward the eyes. A second stack spreads them further down the head.
+ */
+function ampullae(gr: Graphics, f: Form, pal: Palette, g: Genome) {
+  const reach = 0.16 + Math.min(2, g.electro) * 0.06;
+  let k = 0;
+  for (let t = 0.015; t < reach; t += 0.018) {
+    const w = halfWidth(t, f);
+    const rows = Math.max(2, Math.round(w / (R * 0.05)));
+    // fewer toward the back, so the field reads as a spray from the nose
+    const keep = 1 - (t / reach) * 0.6;
+    for (let j = 0; j < rows; j++) {
+      k++;
+      if (((k * 37) % 100) / 100 > keep) continue;
+      const v = ((j + 0.5) / rows) * 2 - 1;
+      const x = spineAt(t, f) + (((k * 53) % 7) - 3) * R * 0.002;
+      const y = v * w * 0.78;
+      const r = R * 0.011 * (1 - t / reach * 0.4);
+      gr.circle(x, y, r * 1.9).fill({ color: pal.belly, alpha: 0.45 * pal.alpha });
+      gr.circle(x, y, r).fill({ color: pal.dark, alpha: 0.9 * pal.alpha });
     }
   }
 }
@@ -1227,6 +1255,27 @@ function photophores(gr: Graphics, f: Form, pal: Palette, g: Genome, seed: numbe
       gr.circle(x, y, r * 2.4).fill({ color: pal.accent, alpha: 0.16 });
       gr.circle(x, y, r).fill({ color: pal.accent, alpha: 0.85 });
       gr.circle(x, y, r * 0.45).fill({ color: 0xffffff, alpha: 0.7 });
+    }
+  }
+}
+
+/**
+ * Flash Sense: the photophores have run up onto the flank. One bright row along each side,
+ * larger than the belly's and set wide, because these point outward — they are the flash,
+ * not the counter-illumination — and a row at the very edge of the silhouette is what makes
+ * the whole outline light when it fires.
+ */
+function flankLights(gr: Graphics, f: Form, pal: Palette) {
+  const n = 12;
+  for (let i = 0; i < n; i++) {
+    const t = 0.14 + (i / (n - 1)) * 0.66;
+    const w = halfWidth(t, f);
+    const x = spineAt(t, f);
+    const r = R * 0.05 * (1 - Math.abs(t - 0.45) * 0.8);
+    for (const dir of [-1, 1] as const) {
+      const y = dir * w * 0.93;
+      gr.circle(x, y, r * 2.6).fill({ color: 0xe8fbff, alpha: 0.14 });
+      gr.circle(x, y, r).fill({ color: 0xe8fbff, alpha: 0.9 });
     }
   }
 }

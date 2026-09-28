@@ -171,6 +171,12 @@ export class Creature {
   boosting = 0;
   /** Bodies this boost has already struck, so one kick is one blow per body. */
   readonly boostHits = new Set<Creature>();
+  /** Boost kicks so far, so an organ can answer each kick exactly once. */
+  kicks = 0;
+  /** The kick Flash Sense last fired on. */
+  flashed = 0;
+  /** Seconds left dazzled: no steering, no bite. Flash Sense's, and held here for any other. */
+  stun = 0;
 
   constructor(public species: Species, public genome: Genome) {
     this.hpMax = maxHp(genome);
@@ -184,6 +190,7 @@ export class Creature {
   kick(window: number) {
     this.boosting = window;
     this.boostHits.clear();
+    this.kicks++;
   }
 
   /** Call after a genome change, beside `view.rebuild`: a new organ has to act as well as show. */
@@ -339,6 +346,11 @@ export class World {
   hunted = false;
   /** Guardians already killed. A guardian is gone for the run, not on a respawn timer. */
   private readonly deadGuardians = new Set<string>();
+  /**
+   * Light an organ has thrown this frame — Flash Sense's burst — for `Game` to draw. The
+   * simulation has no display objects, so a flash is published as a place and a reach.
+   */
+  readonly flashes: { x: number; y: number; r: number }[] = [];
   /**
    * Organ ids of the synergies the player's body has fired for the first time this frame.
    * Ids, not names, because the codex keeps them across runs. Drained by `Game.digest`.
@@ -628,6 +640,7 @@ export class World {
     this.bites.length = 0;
     this.spilled.length = 0;
     this.synergies.length = 0;
+    this.flashes.length = 0;
     this.devoured.length = 0;
     for (let i = this.blood.length - 1; i >= 0; i--) {
       if ((this.blood[i].t -= dt) <= 0) this.blood.splice(i, 1);
@@ -662,6 +675,13 @@ export class World {
     c.tired = Math.max(0, c.tired - dt);
     c.moodT -= dt;
     c.graspCd = Math.max(0, c.graspCd - dt);
+
+    // dazzled: the body hangs where the flash caught it and drifts on what it was doing
+    if (c.stun > 0) {
+      c.stun = Math.max(0, c.stun - dt);
+      c.drive(dt, c.angle, 0);
+      return;
+    }
 
     // a squid with something in its arms stops hunting and hangs onto it, nose to the catch
     const held = c.holding;

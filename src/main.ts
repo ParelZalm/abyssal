@@ -1,7 +1,7 @@
 import { Application, Container, Graphics } from 'pixi.js';
 import './style.css';
 import { loadCodex, recordForm, recordSpecies, recordSynergy, recordTrait, saveCodex } from './game/codex';
-import { baseGenome, maxHp, type Genome } from './game/genome';
+import { baseGenome, maxHp, sightOf, type Genome } from './game/genome';
 import { setBakeRenderer } from './game/fishbake';
 import { Fx } from './game/fx';
 import { Ocean } from './game/ocean';
@@ -11,7 +11,7 @@ import { lightAt, Water, waterColor } from './game/water';
 import { riserFor, type Species } from './game/species';
 import { bandAt, BANDS, depthLabel, descentLimit, FINAL_GUARDIAN, nextGate,
          placeName, type Band } from './game/zones';
-import { boostModsOf, burnOf, POISE_MAX, swallowHealOf, SYNERGIES } from './game/organs';
+import { boostModsOf, burnOf, feelOf, POISE_MAX, swallowHealOf, SYNERGIES } from './game/organs';
 import { FAMILY_NAMES, familyCounts, formDue, type Transformation } from './game/forms';
 import { completes, leanOf, nearMisses } from './game/prospects';
 import { draftTraits, TRAITS, type Trait } from './game/traits';
@@ -41,6 +41,8 @@ const chainBiomass = (n: number) => 1 + Math.max(0, n - 10) * 0.1;
  * one in a row is a worse bet than the first.
  */
 const REROLL_COST = 15;
+/** The cast on a body the ampullae found but the eyes could not: cold, like the field. */
+const FELT_TINT = 0x9fc4ff;
 /**
  * Forcing a seal. A body within `SQUEEZE_MIN` of the gate can boost against the shear for
  * `SQUEEZE_TIME` seconds to break through, paying `SQUEEZE_COST` of its health at once and
@@ -476,6 +478,11 @@ class Game {
     for (const s of this.world.spilled) {
       this.fx.blood(s.x, s.y, this.bloodColour(s.y), s.size * 0.9);
     }
+    // Flash Sense: the whole reach lit at once, then gone
+    for (const f of this.world.flashes) {
+      this.fx.ring(f.x, f.y, 0xe8fbff, f.r);
+      this.fx.burst(f.x, f.y, 0xe8fbff, 16, f.r * 0.6, 3.2);
+    }
     for (const b of this.world.bites) {
       const col = b.onPlayer ? 0xff5a4a : 0xff9a7a;
       this.fx.burst(b.x, b.y, col, b.fatal ? 22 : 8, b.fatal ? 220 : 120, b.fatal ? 3.6 : 2.4);
@@ -868,9 +875,11 @@ class Game {
     this.ocean.update(dt, view);
     this.scenery.update(view);
 
-    // Visibility: the deeper you are, the more you rely on sense and their glow.
+    // Visibility: the deeper you are, the more you rely on sense and their glow — and past
+    // the reach of the eyes, on whatever the body feels without them (`feelOf`)
     const light = lightAt(p.y);
-    const sense = p.genome.sense * (1.15 + light * 1.4);
+    const sense = sightOf(p.genome, light);
+    const feel = feelOf(p);
     const edgeX = view.w * 0.55, edgeY = view.h * 0.55;
     let danger = 0;
     for (const c of this.world.creatures) {
@@ -897,6 +906,14 @@ class Game {
         const own = c.genome.glow * 260 + c.genome.size * 3;
         const vis = clamp(1 - (d - sense - own) / (sense * 0.55), 0, 1);
         alpha = clamp(light * 1.35 + vis, 0.02, 1);
+        // felt, not seen: the whole body shows, in a cold cast, so the player can tell a
+        // shape found by the ampullae from one the eyes resolved. A wounded field carries
+        // twice as far, which is what makes a bleeding or poisoned animal findable
+        const hurt = c.hp < c.hpMax * 0.5 || c.bleedT > 0 || c.poisonT > 0 || c.stun > 0;
+        if (feel > 0 && alpha < 0.9 && d - c.radius < feel * (hurt ? 2 : 1)) {
+          alpha = 1;
+          if (tint === 0xffffff) tint = FELT_TINT;
+        }
       }
       // an off-screen view is not placed (see `World.integrate`), so it still sits wherever
       // it left the frame; reveal it without moving it and it draws there for a frame and

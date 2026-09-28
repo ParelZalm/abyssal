@@ -29,6 +29,8 @@ export interface Genome {
   mantle: number;      // mantle pump: swims in hard pulses with a glide between
   lurk: number;        // lie in wait: stillness hides you and winds up the next bite
   frenzy: number;      // the shark's: bites on the wounded hit harder. Only a form grants it
+  // senses — a second way of perceiving, beside the eye that `sense` is
+  electro: number;     // ampullae: feel the living at short range, whatever the light
 
   // morphology — purely visual, but every trait nudges it so the fish reads as evolved
   hue: number;
@@ -75,7 +77,7 @@ export function baseGenome(): Genome {
     size: 14, speed: 150, turn: 4.2, bite: 6, sense: 340, armor: 0,
     regen: 0.6, metabolism: 1, stealth: 0, gulp: 1, lifesteal: 0, pen: 0, ram: 0,
     venom: 0, lure: 0, claws: 0, jet: 0, coral: 0, frill: 0, filter: 0, crush: 0,
-    eel: 0, mantle: 0, lurk: 0, frenzy: 0,
+    eel: 0, mantle: 0, lurk: 0, frenzy: 0, electro: 0,
     hue: 30, accentHue: 200, finSize: 1, tailSplit: 0.35, spikes: 0, serrate: 0,
     jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0, smoke: 0,
     photophores: 0, eyeAdapt: 0, gape: 0, veil: 0, bulk: 0, barbels: 0,
@@ -107,6 +109,20 @@ export function biteDamage(g: Genome) {
 export function eyeOf(g: Genome) {
   const range = Math.log2(Math.max(1, g.sense / 340)) * 0.3;
   return g.eyeSize * (1 + range) * (1 + g.eyeAdapt * 0.9);
+}
+
+/**
+ * How far this body's eyes carry at a light level (`lightAt`), in world units — the
+ * player's sight. Eyes are what `sense` is, and eyes need light: two and a half times the
+ * sense radius in the sunlit water, under nine tenths of it in the Abyss — about three
+ * quarters of what a plain eye used to see there, when the deep dimmed hardly at all and
+ * "you find prey by feel, or not at all" was not true. A floor of 0.7 was tried and made
+ * every run's deep water a wall of shadow; this is the compromise. A light-gathering eye
+ * (`eyeAdapt` > 0, the tapetum's) wins the dark back and more. The other way to find things
+ * in the deep is not an eye at all — see the `feel` hook in `organs.ts`.
+ */
+export function sightOf(g: Genome, light: number) {
+  return g.sense * (0.85 + light * 1.7 + Math.max(0, g.eyeAdapt) * 0.8 * (1 - light));
 }
 
 /**

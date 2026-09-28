@@ -92,7 +92,7 @@ export const TRAITS: Trait[] = [
 
   T({ id: 'tapetum', band: 'twilight', name: 'Tapetum Lucidum', rarity: 'rare', icon: 'eye', families: ['luminous'],
     desc: '+35% sense, and the abyss dims far less.',
-    apply: g => { g.sense *= 1.35; g.eyeSize += 0.5; g.glow += 0.15; } }),
+    apply: g => { g.sense *= 1.35; g.eyeSize += 0.5; g.eyeAdapt += 0.5; g.glow += 0.15; } }),
 
   T({ id: 'photophore', band: 'twilight', name: 'Photophores', rarity: 'rare', icon: 'glow', families: ['luminous'],
     desc: 'Bioluminescence: +30% sense, and light to hunt by.',
@@ -205,8 +205,8 @@ export const TRAITS: Trait[] = [
   // rarest", which is no choice at all; the costs are chosen to fight the card's own build —
   // a jaw that slows the turn, plate that has to be fed — so taking one is a commitment.
   T({ id: 'ampullae', band: 'twilight', name: 'Ampullae of Lorenzini', rarity: 'apex', icon: 'wave', families: ['predator'],
-    desc: '+85% sense, but +12% metabolism. A brain that never stops listening.',
-    apply: g => { g.sense *= 1.85; g.eyeSize += 0.2; g.metabolism *= 1.12; } }),
+    desc: 'Electroreception: feel every living thing close by in total darkness, and the wounded from twice as far. +30% sense, but +12% metabolism.',
+    apply: g => { g.electro += 1; g.sense *= 1.3; g.metabolism *= 1.12; } }),
 
   T({ id: 'apexjaw', band: 'midnight', name: 'Apex Predator', rarity: 'apex', icon: 'teeth', families: ['predator'],
     desc: '+110% bite, +14% size, but −18% turning. Nothing here outranks you, and it turns like it.',

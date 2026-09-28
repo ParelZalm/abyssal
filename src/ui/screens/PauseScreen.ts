@@ -55,6 +55,7 @@ export class PauseScreen implements Component {
       ['Eel body', g.eel, 'turns at any speed, no glide'],
       ['Mantle', g.mantle, 'a kick every 0.85 s'],
       ['Lurk', g.lurk, 'stillness hides you and winds the bite'],
+      ['Ampullae', g.electro, `feels the living within ${Math.round(g.size * 2.5 + 240 * g.electro)} m`],
     ];
     const grown = organs.filter(([, v]) => v > 0);
 

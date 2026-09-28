@@ -1,5 +1,5 @@
 import { formFor } from './form';
-import { armourOf, biteDamage, type Genome } from './genome';
+import { armourOf, biteDamage, eyeOf, type Genome } from './genome';
 import type { Creature, World } from './world';
 import { dist2 } from './util';
 
@@ -91,6 +91,12 @@ export interface Organ {
   biteRate?: (g: Genome, base: number) => number;
   /** Damage this body takes from a defender's recoil — spines, frill, the urchin's plate. */
   recoil?: (g: Genome, base: number) => number;
+  /**
+   * How far this body perceives the living without light, in world units — a sense that
+   * is not an eye. Everything inside it is known whatever the water; the wounded, whose
+   * fields are loud, from twice as far. 0 with no organ.
+   */
+  feel?: (g: Genome, base: number) => number;
 
   // ---- effects
   /** The attacker's organs, after its bite has landed. */
@@ -158,6 +164,16 @@ function sting(att: Creature, amount: number) {
 }
 
 const O = (o: Organ) => o;
+
+/**
+ * How large an eye Flash Sense dazzles, as `eyeOf`. 1.35 takes in every light-gathering
+ * eye below the twilight — lanternfish, dragonfish, anglers, the giant squids — and the two
+ * largest hunters by sheer size, and leaves out the reef's plain eyes and the trench's
+ * blind ones, which is the point: the flash is a weapon against things built to see.
+ */
+const BIG_EYE = 1.35;
+/** Seconds a flash dazzles for; a guardian recovers in a third of it. */
+const DAZZLE = 1.6;
 
 /** Whale Shark's size floor: the Midnight gate, so ram gills only pay off on a giant. */
 const WHALE_SIZE = 96;
@@ -262,6 +278,14 @@ export const ORGANS: Organ[] = [
     stealth: (c, base) => base + 0.35 * Math.min(1, c.poise / (POISE_MAX * 0.75)),
     damage: (c, base) => base * (1 + 0.8 * c.poise),
     onWound: att => { att.poise = 0; } }),
+
+  // ---------------------------------------------------------------- senses
+  O({ id: 'electro', when: g => g.electro > 0,
+    // the ampullae read the field every muscle makes, so darkness does not matter to them
+    // and distance does: a short radius, grown with the body carrying it and with each
+    // stack. At 60 cm it is 390 units, at 170 cm 665 — inside what eyes see in the sunlit
+    // water, past what they see below the twilight, which is where it is for
+    feel: (g, base) => Math.max(base, g.size * 2.5 + 240 * g.electro) }),
 
   O({ id: 'frenzy', when: g => g.frenzy > 0,
     // blood in the water is a reason to press, not to wait: a wounded body is the one worth
@@ -416,6 +440,35 @@ export const ORGANS: Organ[] = [
       return fired;
     } }),
 
+  O({ id: 'flashsense', name: 'Flash Sense', when: g => g.electro > 0 && g.glow >= 0.6,
+    desc: 'Ampullae and photophores. Every boost fires a flash that dazzles anything with big eyes nearby.',
+    // the photophores fire all at once on the boost kick, and the ampullae tell you where to
+    // aim it: every body with a light-gathering eye inside half again the electric range is
+    // dazzled — it stops, drifts, and cannot bite until it recovers. The blind are immune,
+    // which makes this a deep-water answer that the trench does not have to respect.
+    // Once per kick, through the kick counter, so a held boost is one flash
+    onTick: (c, _dt, world) => {
+      if (c.kicks === c.flashed) return false;
+      c.flashed = c.kicks;
+      // a kick from before the pairing was complete is not a flash: only a fresh surge fires
+      if (c.boosting <= 0) return false;
+      const r = feelOf(c) * 1.5;
+      world.flashes.push({ x: c.x, y: c.y, r });
+      let fired = false;
+      for (const o of world.creatures) {
+        if (!o.alive || o === c || eyeOf(o.genome) < BIG_EYE) continue;
+        if (dist2(c.x, c.y, o.x, o.y) > (r + o.radius) ** 2) continue;
+        const t = o.species.guardian ? DAZZLE / 3 : DAZZLE;
+        o.stun = Math.max(o.stun, t);
+        o.biteCd = Math.max(o.biteCd, t);
+        o.vx *= 0.2;
+        o.vy *= 0.2;
+        o.panic = 0;
+        fired = true;
+      }
+      return fired;
+    } }),
+
   O({ id: 'nematocyst', name: 'Nematocyst', when: g => g.venom > 0 && g.lifesteal > 0,
     desc: 'Venom and lifesteal. Bodies you have poisoned heal you while they die.',
     // stolen stinging cells feeding on the venom they deliver: every body still poisoned
@@ -491,6 +544,12 @@ export function damageOf(c: Creature, base: number, def: Creature) {
   let d = base;
   for (const o of c.organs) if (o.damage) d = o.damage(c, d, def);
   return d;
+}
+
+export function feelOf(c: Creature) {
+  let r = 0;
+  for (const o of c.organs) if (o.feel) r = o.feel(c.genome, r);
+  return r;
 }
 
 export function stealthOf(c: Creature) {
