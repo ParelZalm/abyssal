@@ -1,4 +1,4 @@
-import { Container, Filter, GlProgram, Sprite, Texture, type UniformGroup } from 'pixi.js';
+import { Container, Filter, GlProgram, RenderTexture, Sprite, Texture, type Renderer, type UniformGroup } from 'pixi.js';
 import { waterAt } from './zones';
 import { clamp, lerp } from './util';
 import type { View } from './view';
@@ -213,10 +213,20 @@ export function lightAt(y: number) {
   return clamp(1 - y / 6200, 0.03, 1);
 }
 
+/**
+ * Texels of water shaded per CSS pixel. The water is low-frequency fog, and upscaled it
+ * only softens the thinnest rays. Shaded per device pixel on a Retina canvas it was
+ * ~11 ms of GPU, more than a whole 120 Hz frame, which is what heated the laptop.
+ */
+const SHADE_SCALE = 0.4;
+
 /** Full-screen procedural water: fog, thermoclines and the tier below. */
 export class Water {
   layer = new Container();
+  /** Carries the filter; drawn off-stage into `target`, never into the scene. */
   private sprite = new Sprite(Texture.WHITE);
+  private target = RenderTexture.create({ width: 1, height: 1, resolution: 1, antialias: false });
+  private shown = new Sprite(this.target);
   /** The live uniform store Pixi builds from the definitions below. */
   private u!: {
     uView: Float32Array; uCam: Float32Array; uTime: number;
@@ -247,25 +257,31 @@ export class Water {
     uAmbient: { value: 0.1, type: 'f32' },
   };
 
-  constructor() {
+  constructor(private renderer: Renderer) {
     const filter = new Filter({
       glProgram: GlProgram.from({ vertex, fragment, name: 'water' }),
       resources: { waterUniforms: this.defs },
-      // the water is all low-frequency fog; shading it at half resolution costs a
-      // quarter of the fragments and is indistinguishable once it is upscaled
-      resolution: 0.4,
+      // A filter's `resolution` only sizes its input; a lone filter writes straight to its
+      // output at that output's resolution. So a low value here saved nothing on screen —
+      // the shading resolution is the size of `target`, and this just matches it.
+      resolution: 1,
       antialias: false,
     });
     // write through the group Pixi actually uploads, not the definition object
     this.group = filter.resources.waterUniforms as UniformGroup;
     this.u = this.group.uniforms as typeof this.u;
     this.sprite.filters = [filter];
-    this.layer.addChild(this.sprite);
+    this.layer.addChild(this.shown);
   }
 
   resize(w: number, h: number) {
-    this.sprite.width = w;
-    this.sprite.height = h;
+    const tw = Math.max(1, Math.ceil(w * SHADE_SCALE));
+    const th = Math.max(1, Math.ceil(h * SHADE_SCALE));
+    if (tw !== this.target.width || th !== this.target.height) this.target.resize(tw, th);
+    this.sprite.width = tw;
+    this.sprite.height = th;
+    this.shown.width = w;
+    this.shown.height = h;
   }
 
   update(view: View, glow: number, dread: number, gateY: number, gateOpen: boolean) {
@@ -296,6 +312,7 @@ export class Water {
     u.uAmbient = lerp(u.uAmbient, b.ambient, 0.05);
     for (let i = 0; i < 3; i++) u.uAccent[i] = lerp(u.uAccent[i], b.accent[i], 0.05);
     this.group.update();
+    this.renderer.render({ container: this.sprite, target: this.target });
   }
 
 }

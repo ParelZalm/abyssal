@@ -97,7 +97,7 @@ class Game {
   private seed = 0;
   private ocean!: Ocean;
   private scenery!: Scenery;
-  private water = new Water();
+  private water!: Water;
   private world!: World;
   private player!: Creature;
 
@@ -185,13 +185,18 @@ class Game {
     await this.app.init({
       // one GLSL program for the water, so pin the renderer to WebGL
       preference: 'webgl',
-      background: 0x02101f, antialias: true, resizeTo: window,
+      // Creature art is baked with its own MSAA and gets its edges from transparent texels,
+      // so the canvas's MSAA only touches the halo and burst rings. On a Retina canvas it
+      // was a third of the remaining GPU frame and a 4x-sample buffer the size of the
+      // screen, for stair-steps too small to see; below 2x they show, and the canvas is small
+      background: 0x02101f, antialias: devicePixelRatio < 2, resizeTo: window,
       resolution: Math.min(devicePixelRatio, 2), autoDensity: true,
     });
     document.getElementById('stage')!.append(this.app.canvas);
     // creature art is baked into textures, which needs a live renderer before the first
     // creature exists — so this has to come before reset()
     setBakeRenderer(this.app.renderer);
+    this.water = new Water(this.app.renderer);
 
     if (import.meta.env.DEV) devSwitch();
 

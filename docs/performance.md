@@ -2,13 +2,21 @@
 
 ## Where it stands
 
-**8.3 ms median, ~9.3 ms p95** while actively hunting, on a 120 Hz display — which is
-the vsync interval, so the frame is pinned rather than merely fast. At 3× normal
-population the median is 8.8 ms.
+The frame is pinned to vsync at 120 Hz, but that says nothing about heat: a frame that
+fits the interval can still keep the GPU busy for all of it. Measure GPU time, not frame
+deltas.
 
-To measure it again, drive the page from the console (see the debug handle in
-`CLAUDE.md`) and sample `requestAnimationFrame` deltas over a few hundred frames rather
-than trusting a single reading.
+On an M2 Pro at a full-screen 1728×1080 (a 3456×2160 canvas), about 115 creatures:
+**~1.1 ms of GPU and ~1.2 ms of CPU per frame**. Before the water was given a real
+low-resolution target it was **~10–12 ms of GPU**, more than the whole 8.3 ms interval,
+which is what made a laptop run hot. The water alone was ~11 ms of that.
+
+To measure it again: `EXT_disjoint_timer_query_webgl2` works under ANGLE/Metal. Wrap
+`app.renderer.render` in a `TIME_ELAPSED` query and take medians over a few hundred
+frames; toggle `game.water.layer.visible` and `game.camera.visible` to split the cost.
+Apple GPUs change clock with load, so compare runs back to back and trust ratios over
+absolute milliseconds. A hidden browser pane pauses rAF; stop the ticker and call
+`app.ticker.update(t)` by hand to keep sampling.
 
 ## What the budget was spent on
 
@@ -17,10 +25,14 @@ population the frame was 10.8 ms median, but 8.2 ms with the water hidden and 8.
 with the creatures hidden — so the full-screen shader and the per-creature draws were
 each individually large enough that together they blew the budget.
 
-Four changes fixed it, in order of what they bought:
+These changes fixed it:
 
-1. **The water shades at `resolution: 0.4`.** It is low-frequency fog; a quarter of the
-   fragments is indistinguishable once upscaled. Worth ~5 ms on its own.
+1. **The water shades into its own texture at 0.4 texels per CSS pixel** and is drawn
+   upscaled. It is low-frequency fog. This was first written as the filter's
+   `resolution: 0.4`, which does nothing: in Pixi 8 a lone filter writes straight to its
+   output at the output's resolution, so the shader ran on every device pixel
+   while these notes credited it with a saving. `SHADE_SCALE` in `water.ts` is the real
+   lever, and `Water.update` renders the target itself.
 2. **The noise hash has no `sin`.** A transcendental in the inner loop of a 4-octave FBM
    called five times per pixel is the single most expensive thing in the shader.
 3. **Octave counts are graded** — four for the main cloud field, three for the warp and
@@ -28,6 +40,11 @@ Four changes fixed it, in order of what they bought:
    computed instead of paying for another FBM.
 4. **Off-screen creatures skip their art entirely.** `main.render` sets
    `view.visible = false` outside the frame; they still swim, hunt and get eaten.
+5. **No canvas MSAA at 2x and above.** Creature art is baked with its own MSAA and gets
+   its edges from transparent texels, so the canvas's multisampling only reached the halo
+   and burst rings. On a Retina canvas it was a third of the remaining GPU frame and a
+   4×-sample buffer the size of the screen. Below 2x it stays on, because stair-steps
+   show at that size and the canvas is a quarter as big.
 
 ## Rules to keep
 
@@ -45,6 +62,9 @@ Four changes fixed it, in order of what they bought:
   all of the above.
 - **Pool.** `fx.ts` pools particles; any recycling background system should pool sprites
   the same way rather than constructing per placement.
+- **A filter's `resolution` does not shrink what it shades.** It sizes the filter's
+  input texture. A full-screen effect that should run at low resolution has to render
+  into a small `RenderTexture` of its own and be drawn upscaled, as `Water` does.
 - **Prefer a baked texture to a filter.** A `BlurFilter` on a container costs a
   full-screen render target per band; the same look baked into the texture at boot via
   canvas `ctx.filter` costs nothing per frame.
