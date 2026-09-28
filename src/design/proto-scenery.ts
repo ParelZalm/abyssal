@@ -24,10 +24,10 @@
  * own; the real bands are untouched.
  */
 import { Container, Sprite, Texture } from 'pixi.js';
-import { blurred } from '../props';
-import { shadeFor } from '../scenery';
-import { hash01 as h, lerp, Rng, TAU } from '../util';
-import { lightAt } from '../water';
+import { blurred } from '../render/props';
+import { shadeFor } from '../render/scenery';
+import { hash01 as h, lerp, Rng, TAU } from '../core/util';
+import { lightAt } from '../render/water';
 
 /** The patch every tier composes into — read it as one screen of water. */
 export const PROTO_W = 1000;

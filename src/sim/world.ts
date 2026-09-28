@@ -1,20 +1,19 @@
 import { Container } from 'pixi.js';
-import { FishView } from './fishview';
-import { PLAN_ART, type Plan } from './form';
-import { armourOf, biteDamage, maxHp, type Genome } from './genome';
+import { FishView } from '../render/creature/fishview';
+import { PLAN_ART, type Plan } from '../content/form';
+import { armourOf, biteDamage, maxHp, type Genome } from '../content/genome';
 import { armourAgainst, biteRateOf, damageOf, glareOf, gulpOf, lureRangeOf, organsOf, stealthOf,
          swimOf, takenOf, tick as tickOrgans, wound, type Organ, type SwimMods } from './organs';
-import { genomeFor, hunts, rangeOf, rollSpecies, SPECIES, type Species } from './species';
-import { BANDS, bandAt } from './zones';
-import { angleDelta, clamp, dist2, lerp, Rng, TAU } from './util';
+import { genomeFor, hunts, rangeOf, rollSpecies, SPECIES, type Species } from '../content/species';
+import { BANDS, bandAt } from '../content/zones';
+import { angleDelta, clamp, dist2, lerp, Rng, TAU } from '../core/util';
 
 export const WORLD_HALF_W = 7000;
 /** Forward drag coefficient: terminal speed works out to genome.speed × throttle. */
 const DRAG_FWD = 3.1;
 /** Sideways drag — a body with a keel barely slides. */
 const DRAG_LAT = 9;
-import { DEPTH_MAX, noticeSize } from './zones';
-export { DEPTH_MAX };
+import { DEPTH_MAX, noticeSize } from '../content/zones';
 
 /**
  * The lid and the silt. Nothing is placed in either — and crucially, a draw that lands

@@ -1,9 +1,9 @@
-import type { Codex } from '../../game/codex';
-import { TRANSFORMS } from '../../game/forms';
-import { SYNERGIES } from '../../game/organs';
-import { SPECIES } from '../../game/species';
-import { TRAITS } from '../../game/traits';
-import { ZONES } from '../../game/zones';
+import type { Codex } from '../../run/codex';
+import { TRANSFORMS } from '../../content/forms';
+import { SYNERGIES } from '../../sim/organs';
+import { SPECIES } from '../../content/species';
+import { TRAITS } from '../../content/traits';
+import { ZONES } from '../../content/zones';
 import type { Component } from '../Component';
 import { actions, button, div, h1, h2, h3, h4, li, p, span, ul } from '../dom/element';
 import { createIcon } from '../icons';

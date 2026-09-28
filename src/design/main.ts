@@ -11,14 +11,14 @@
  * tokens the HUD uses — so a cell here sits in the same frame it will sit in there.
  */
 import { Application, Container, Graphics, Rectangle, Text } from 'pixi.js';
-import '../../style.css';
-import { baseGenome, type Genome } from '../genome';
-import { rgb } from '../util';
-import { waterColor } from '../water';
-import { ICONS, createIcon, type IconName } from '../../ui/icons';
-import type { Rarity } from '../traits';
+import '../style.css';
+import { baseGenome, type Genome } from '../content/genome';
+import { rgb } from '../core/util';
+import { waterColor } from '../render/water';
+import { ICONS, createIcon, type IconName } from '../ui/icons';
+import type { Rarity } from '../content/traits';
 import { catalog, type DesignGroup, type DesignItem } from './catalog';
-import { setBakeRenderer } from '../fishbake';
+import { setBakeRenderer } from '../render/creature/fishbake';
 import { setFormRenderer } from './fishform';
 
 const params = new URLSearchParams(location.search);

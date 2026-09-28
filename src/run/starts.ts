@@ -1,7 +1,7 @@
 import type { Codex } from './codex';
-import type { Genome } from './genome';
-import { SPECIES } from './species';
-import { BANDS, ZONES } from './zones';
+import type { Genome } from '../content/genome';
+import { SPECIES } from '../content/species';
+import { BANDS, ZONES } from '../content/zones';
 
 /**
  * Starting forms: bodies a run can hatch as instead of the hatchling, each unlocked by

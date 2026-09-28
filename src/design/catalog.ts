@@ -7,17 +7,17 @@
  * that is the whole point of the page, so keep it accurate when things move.
  */
 import { Container, Graphics, Sprite } from 'pixi.js';
-import { PLAN_FORMS, type Plan } from '../form';
-import { FishView } from '../fishview';
-import { FAMILY_NAMES, TRANSFORMS, type Family } from '../forms';
-import { baseGenome, type Genome } from '../genome';
-import { PROP_SIZE, propTexture, type PropKind } from '../props';
-import { genomeFor, rangeOf, SPECIES } from '../species';
-import { TRAITS, type Rarity, type Trait } from '../traits';
-import { BANDS, depthLabel, zoneOf } from '../zones';
-import type { IconName } from '../../ui/icons';
-import { rgb, Rng } from '../util';
-import { waterColor } from '../water';
+import { PLAN_FORMS, type Plan } from '../content/form';
+import { FishView } from '../render/creature/fishview';
+import { FAMILY_NAMES, TRANSFORMS, type Family } from '../content/forms';
+import { baseGenome, type Genome } from '../content/genome';
+import { PROP_SIZE, propTexture, type PropKind } from '../render/props';
+import { genomeFor, rangeOf, SPECIES } from '../content/species';
+import { TRAITS, type Rarity, type Trait } from '../content/traits';
+import { BANDS, depthLabel, zoneOf } from '../content/zones';
+import type { IconName } from '../ui/icons';
+import { rgb, Rng } from '../core/util';
+import { waterColor } from '../render/water';
 import { FishForm, shoulderAt, SPINDLE, type Form, type FormSpec } from './fishform';
 import { protoKinds, protoScene, PROTO_W, ProtoScene } from './proto-scenery';
 

@@ -1,6 +1,6 @@
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { dotTexture } from './textures';
-import { TAU } from './util';
+import { TAU } from '../core/util';
 
 interface P {
   node: Sprite | Graphics;

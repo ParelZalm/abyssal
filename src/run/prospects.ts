@@ -1,7 +1,7 @@
-import { formDue, type Family, type Transformation } from './forms';
-import type { Genome } from './genome';
-import { SYNERGIES, synergiesOf } from './organs';
-import { TRAITS, type Trait } from './traits';
+import { formDue, type Family, type Transformation } from '../content/forms';
+import type { Genome } from '../content/genome';
+import { SYNERGIES, synergiesOf } from '../sim/organs';
+import { TRAITS, type Trait } from '../content/traits';
 
 /**
  * What a card would finish: the draft reading the build back to the player.

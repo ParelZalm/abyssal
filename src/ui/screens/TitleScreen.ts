@@ -1,6 +1,6 @@
-import type { Codex } from '../../game/codex';
-import { dailySeed, STARTS, type Start } from '../../game/starts';
-import { BANDS } from '../../game/zones';
+import type { Codex } from '../../run/codex';
+import { dailySeed, STARTS, type Start } from '../../run/starts';
+import { BANDS } from '../../content/zones';
 import type { Component } from '../Component';
 import { actions, button, div, h1, h2, kbd, keysLine, p, span } from '../dom/element';
 

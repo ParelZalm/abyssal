@@ -1,6 +1,6 @@
-import type { Plan } from './fishview';
+import type { Plan } from './form';
 import { baseGenome, type Genome } from './genome';
-import { clamp, type Rng } from './util';
+import { clamp, type Rng } from '../core/util';
 import { DEPTH_MAX, ZONES, type ZoneId } from './zones';
 
 export type Behavior = 'plankton' | 'school' | 'drift' | 'hunter' | 'ambush' | 'apex';

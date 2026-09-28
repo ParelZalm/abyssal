@@ -1,5 +1,5 @@
-import { BANDS } from '../../game/zones';
-import { DEPTH_MAX } from '../../game/world';
+import { BANDS } from '../../content/zones';
+import { DEPTH_MAX } from '../../content/zones';
 import { div } from '../dom/element';
 
 export class DepthBar {

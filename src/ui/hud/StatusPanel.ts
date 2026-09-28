@@ -1,4 +1,4 @@
-import { BANDS, depthLabel, placeName } from '../../game/zones';
+import { BANDS, depthLabel, placeName } from '../../content/zones';
 import { div, span } from '../dom/element';
 import type { HudState } from '../types';
 import { StatusBar } from './StatusBar';

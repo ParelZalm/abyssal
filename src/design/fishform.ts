@@ -16,12 +16,12 @@
  * playground that has its own photophores answers questions about its own photophores.
  */
 import { Container, Graphics, MeshSimple, type Renderer, type Texture } from 'pixi.js';
-import { halfWidth, quintic, R, shoulderAt, spineAt, type Form } from '../form';
-import { fbm, fbmSigned } from '../noise';
-import { hsl, lerp } from '../util';
+import { halfWidth, quintic, R, shoulderAt, spineAt, type Form } from '../content/form';
+import { fbm, fbmSigned } from '../core/noise';
+import { hsl, lerp } from '../core/util';
 
-export type { Form } from '../form';
-export { halfWidth, shoulderAt, spineAt } from '../form';
+export type { Form } from '../content/form';
+export { halfWidth, shoulderAt, spineAt } from '../content/form';
 
 /** The baseline this board explores around — the game's darter, give or take. */
 export const SPINDLE: Form = {

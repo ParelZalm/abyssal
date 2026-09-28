@@ -1,29 +1,29 @@
 import { Application, Container, Graphics } from 'pixi.js';
 import './style.css';
 import { loadCodex, recordDepth, recordForm, recordSpecies, recordSynergy, recordTrait,
-         saveCodex } from './game/codex';
-import { heartbeat, toggleMute, wakeAudio } from './game/sound';
-import { backfillDepth, startById, STARTS, type Start } from './game/starts';
+         saveCodex } from './run/codex';
+import { heartbeat, toggleMute, wakeAudio } from './audio/sound';
+import { backfillDepth, startById, STARTS, type Start } from './run/starts';
 import type { RunChoice } from './ui/screens/TitleScreen';
-import { baseGenome, maxHp, sightOf, type Genome } from './game/genome';
-import { bakeFish, releaseFish, setBakeRenderer } from './game/fishbake';
-import type { Plan } from './game/form';
+import { baseGenome, maxHp, sightOf, type Genome } from './content/genome';
+import { bakeFish, releaseFish, setBakeRenderer } from './render/creature/fishbake';
+import type { Plan } from './content/form';
 import type { LineageFrame } from './ui/screens/lineage';
-import { Fx } from './game/fx';
-import { Ocean } from './game/ocean';
-import { Scenery } from './game/scenery';
-import type { View } from './game/view';
-import { lightAt, Water, waterColor } from './game/water';
-import { riserFor, type Species } from './game/species';
-import { bandAt, BANDS, depthLabel, descentLimit, FINAL_GUARDIAN, nextGate,
-         placeName, type Band } from './game/zones';
+import { Fx } from './render/fx';
+import { Ocean } from './render/ocean';
+import { Scenery } from './render/scenery';
+import type { View } from './render/view';
+import { lightAt, Water, waterColor } from './render/water';
+import { riserFor, type Species } from './content/species';
+import { bandAt, BANDS, DEPTH_MAX, depthLabel, descentLimit, FINAL_GUARDIAN, nextGate,
+         placeName, type Band } from './content/zones';
 import { activeOf, boostModsOf, burnOf, feelOf, POISE_MAX, PUFF_TIME, swallowHealOf,
-         SYNERGIES } from './game/organs';
-import { FAMILY_NAMES, familyCounts, formDue, type Transformation } from './game/forms';
-import { completes, leanOf, nearMisses } from './game/prospects';
-import { draftTraits, TRAITS, type Trait } from './game/traits';
-import { clamp, dist2, hsl, lerp, rgb, Rng } from './game/util';
-import { Creature, DEPTH_MAX, speciesById, World } from './game/world';
+         SYNERGIES } from './sim/organs';
+import { FAMILY_NAMES, familyCounts, formDue, type Transformation } from './content/forms';
+import { completes, leanOf, nearMisses } from './run/prospects';
+import { draftTraits, TRAITS, type Trait } from './content/traits';
+import { clamp, dist2, hsl, lerp, rgb, Rng } from './core/util';
+import { Creature, speciesById, World } from './sim/world';
 import { UI } from './ui/UI';
 
 // the Sunlit zone's own tagline is "warm, crowded"; a budget that reads as crowded when

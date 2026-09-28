@@ -1,8 +1,8 @@
 import { Container, Filter, GlProgram, RenderTexture, Sprite, Texture, type Renderer, type UniformGroup } from 'pixi.js';
-import { waterAt } from './zones';
-import { clamp, lerp } from './util';
+import { waterAt } from '../content/zones';
+import { clamp, lerp } from '../core/util';
 import type { View } from './view';
-import { DEPTH_MAX } from './world';
+import { DEPTH_MAX } from '../content/zones';
 
 const vertex = `
 attribute vec2 aPosition;

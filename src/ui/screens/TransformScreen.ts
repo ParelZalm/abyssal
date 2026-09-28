@@ -1,4 +1,4 @@
-import { FAMILY_NAMES, FORM_AT, type Transformation } from '../../game/forms';
+import { FAMILY_NAMES, FORM_AT, type Transformation } from '../../content/forms';
 import type { Component } from '../Component';
 import { button, div, h1, h2, p } from '../dom/element';
 

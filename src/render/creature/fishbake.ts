@@ -13,12 +13,12 @@
  * two animals that differ by less than a hue step are the same picture.
  */
 import { Graphics, type Renderer, type Texture } from 'pixi.js';
-import { armourOf, eyeOf, fadeOf, menace, photophoreOf, type Genome } from './genome';
+import { armourOf, eyeOf, fadeOf, menace, photophoreOf, type Genome } from '../../content/genome';
 import { formFor, halfWidth, lureBulb, PLAN_ART, shoulderAt, spineAt, R, type Form, type Plan,
-         type PlanArt } from './form';
-import { fbm, fbmSigned } from './noise';
-import { BLOOM_TRAIL, hasSynergy, synergiesOf } from './organs';
-import { hsl, lerp, TAU } from './util';
+         type PlanArt } from '../../content/form';
+import { fbm, fbmSigned } from '../../core/noise';
+import { BLOOM_TRAIL, hasSynergy, synergiesOf } from '../../sim/organs';
+import { hsl, lerp, TAU } from '../../core/util';
 
 let renderer: Renderer | null = null;
 /** Called once at boot; baking needs a GPU context to render into. */

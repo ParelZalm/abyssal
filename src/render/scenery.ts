@@ -4,9 +4,9 @@
  * themselves are the third try. See `docs/decisions.md`.
  */
 import { Container, Sprite } from 'pixi.js';
-import { bandWater } from './zones';
+import { bandWater } from '../content/zones';
 import { drifts, PROP_SIZE, propTexture, type PropKind } from './props';
-import { clamp, lerp, rgb, TAU } from './util';
+import { clamp, lerp, rgb, TAU } from '../core/util';
 import type { View } from './view';
 import { lightAt, waterColor } from './water';
 

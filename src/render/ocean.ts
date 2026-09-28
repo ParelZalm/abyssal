@@ -1,7 +1,7 @@
 import { Container, Sprite } from 'pixi.js';
-import { waterAt } from './zones';
+import { waterAt } from '../content/zones';
 import { dotTexture } from './textures';
-import type { Rng } from './util';
+import type { Rng } from '../core/util';
 import type { View } from './view';
 import { lightAt } from './water';
 

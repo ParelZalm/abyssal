@@ -1,7 +1,7 @@
-import type { IconName } from '../ui/icons';
+import type { IconName } from './icon';
 import type { Family } from './forms';
 import type { Genome } from './genome';
-import type { Rng } from './util';
+import type { Rng } from '../core/util';
 import { BANDS } from './zones';
 
 /** A band's id, as `zones.ts` names them. */

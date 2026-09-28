@@ -1,5 +1,5 @@
-import { FAMILY_NAMES, FORM_AT, type Family } from '../../game/forms';
-import { armourOf, biteDamage, maxHp } from '../../game/genome';
+import { FAMILY_NAMES, FORM_AT, type Family } from '../../content/forms';
+import { armourOf, biteDamage, maxHp } from '../../content/genome';
 import type { Component } from '../Component';
 import { div, h1, h2, h3, h4, kbd, keysLine, li, p, span, ul } from '../dom/element';
 import { createIcon } from '../icons';

@@ -1,6 +1,6 @@
-import type { Family, Transformation } from '../game/forms';
-import type { Genome } from '../game/genome';
-import type { Rarity } from '../game/traits';
+import type { Family, Transformation } from '../content/forms';
+import type { Genome } from '../content/genome';
+import type { Rarity } from '../content/traits';
 import type { IconName } from './icons';
 
 export interface TraitEntry {

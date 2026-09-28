@@ -14,12 +14,10 @@
  */
 import { Container, MeshSimple, Sprite } from 'pixi.js';
 import { bakeFish, releaseFish, type Baked, type Rig } from './fishbake';
-import { PLAN_ART, quintic, R, type Plan } from './form';
-import { menace, type Genome } from './genome';
-import { glowTexture } from './textures';
-import { hsl, lerp } from './util';
-
-export type { Plan } from './form';
+import { PLAN_ART, quintic, R, type Plan } from '../../content/form';
+import { menace, type Genome } from '../../content/genome';
+import { glowTexture } from '../textures';
+import { hsl, lerp } from '../../core/util';
 
 interface Motion {
   /** Columns in the strip. More only pays where the body is long enough to hold a wave. */

@@ -1,6 +1,6 @@
-import { FAMILY_NAMES } from '../../game/forms';
-import type { Trait } from '../../game/traits';
-import { BANDS } from '../../game/zones';
+import { FAMILY_NAMES } from '../../content/forms';
+import type { Trait } from '../../content/traits';
+import { BANDS } from '../../content/zones';
 import type { Component } from '../Component';
 import { actions, button, div, h1, h2, h3, p, span } from '../dom/element';
 import { createIcon } from '../icons';

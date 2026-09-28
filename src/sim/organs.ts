@@ -1,8 +1,8 @@
-import { formFor, lureBulb, R } from './form';
-import { armourOf, biteDamage, eyeOf, type Genome } from './genome';
-import type { IconName } from '../ui/icons';
+import { formFor, lureBulb, R } from '../content/form';
+import { armourOf, biteDamage, eyeOf, type Genome } from '../content/genome';
+import type { IconName } from '../content/icon';
 import type { Creature, World } from './world';
-import { dist2 } from './util';
+import { dist2 } from '../core/util';
 
 /**
  * Where organ *mechanics* live. The genome holds a magnitude per organ and `fishbake`

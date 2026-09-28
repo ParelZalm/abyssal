@@ -1,5 +1,5 @@
-import type { PropKind } from './props';
-import { clamp, lerp } from './util';
+import type { PropKind } from '../render/props';
+import { clamp, lerp } from '../core/util';
 
 /** Floor of the water column, in world units. Depth runs 0 here to DEPTH_MAX. */
 export const DEPTH_MAX = 9000;

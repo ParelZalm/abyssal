@@ -1,4 +1,4 @@
-import { BANDS, depthLabel, zoneOf } from '../../game/zones';
+import { BANDS, depthLabel, zoneOf } from '../../content/zones';
 import type { Component } from '../Component';
 import { button, div, h1, h2, p } from '../dom/element';
 

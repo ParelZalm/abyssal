@@ -12,7 +12,7 @@
  * the widest point moves on its own instead of being a third number to keep in sync.
  */
 import { armourOf, type Genome } from './genome';
-import { clamp, lerp } from './util';
+import { clamp, lerp } from '../core/util';
 
 /** Reference half-length the body is drawn at; the view scales the whole thing to real size. */
 export const R = 10;

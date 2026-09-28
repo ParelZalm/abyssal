@@ -1,6 +1,6 @@
-import type { Codex } from '../game/codex';
-import type { Transformation } from '../game/forms';
-import type { Trait } from '../game/traits';
+import type { Codex } from '../run/codex';
+import type { Transformation } from '../content/forms';
+import type { Trait } from '../content/traits';
 import { Hud } from './hud/Hud';
 import type { Component } from './Component';
 import { CodexScreen } from './screens/CodexScreen';

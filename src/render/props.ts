@@ -7,7 +7,7 @@
  * layer only places and tints them.
  */
 import { Texture } from 'pixi.js';
-import { hash01 as h, TAU } from './util';
+import { hash01 as h, TAU } from '../core/util';
 
 export type PropKind = 'disc' | 'blob' | 'mass' | 'wisp';
 

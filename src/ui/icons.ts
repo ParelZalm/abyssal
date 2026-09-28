@@ -1,13 +1,11 @@
+import type { IconName } from '../content/icon';
+
+export type { IconName };
+
 /**
  * Abstract 24×24 stroke glyphs for mutations. They are deliberately geometric rather than
  * literal — at HUD chip size a drawing of a fin reads as a smudge, a shape reads as a mark.
  */
-export type IconName =
-  | 'muscle' | 'fin' | 'tail' | 'jaw' | 'teeth' | 'gullet' | 'scale' | 'spike'
-  | 'shield' | 'eye' | 'wave' | 'glow' | 'ghost' | 'gill' | 'pulse' | 'mass'
-  | 'bolt' | 'spiral' | 'blade' | 'drop' | 'ring' | 'funnel' | 'sieve' | 'molar'
-  | 'coil' | 'bell' | 'crouch' | 'ink' | 'shock' | 'puff';
-
 export const ICONS: Record<IconName, string> = {
   muscle: 'M3 12c3-6 6-8 9-8s6 2 9 8c-3 6-6 8-9 8s-6-2-9-8z',
   fin: 'M5 20c2-8 7-14 14-16-1 8-5 14-14 16z',
