@@ -1,6 +1,7 @@
 import type { HudState } from '../types';
 import { ActiveSlot } from './ActiveSlot';
 import { DangerIndicator } from './DangerIndicator';
+import { DiscoveryCard } from './DiscoveryCard';
 import { DepthBar } from './DepthBar';
 import { GateLabel } from './GateLabel';
 import { StatusPanel } from './StatusPanel';
@@ -20,6 +21,7 @@ export class Hud {
   private readonly toast = new Toast();
   private readonly danger = new DangerIndicator();
   private readonly active = new ActiveSlot();
+  private readonly discovery = new DiscoveryCard();
 
   constructor() {
     // wrapper stays layout-neutral; children keep their absolute positions under #ui
@@ -33,6 +35,7 @@ export class Hud {
       this.toast.element,
       this.danger.element,
       this.active.element,
+      this.discovery.element,
     );
     this.setChrome(false);
   }
@@ -61,5 +64,9 @@ export class Hud {
 
   showToast(text: string) {
     this.toast.show(text);
+  }
+
+  showDiscovery(name: string, desc: string, first: boolean) {
+    this.discovery.show(name, desc, first);
   }
 }

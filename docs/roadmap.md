@@ -127,9 +127,11 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 - ~~An audible, readable hunger warning.~~ Done: toasts at a quarter and at empty, the
   fullness bar pulsing red, and a synthesised heartbeat (`game/sound.ts`, the game's first
   sound) that quickens as the bar drains. M mutes it, remembered.
-- The fish's silhouette at each stage on the run summary. Needs a bake per stage.
-- Synergy toasts share the toast slot with everything else. A discovery might deserve a
-  card of its own.
+- ~~The fish's silhouette at each stage on the run summary.~~ Done: `Game.lineage` keeps
+  a genome copy at hatching, every level-up and a transformation; the end screens bake up
+  to eight of them and read them back off the GPU, drawn to scale.
+- ~~A card of its own for a discovery.~~ Done: `DiscoveryCard`, under the run strip for
+  four seconds with the synergy's codex line, never pausing play.
 
 ## Suggested order
 
@@ -146,4 +148,7 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 10. ~~Cursed cards and the active organ slot~~ — done.
 11. ~~Enemies that ask for tactics~~ — done.
 12. ~~Starting forms and a daily seed~~ — done.
-13. Next up: the small feel wins (§8).
+13. ~~The small feel wins~~ — done. What is left is marked as left open in each section:
+    a second form in a long run and how the ocean reads a transformed player (§2), a
+    Leviathan pattern of its own (§6), a daily best (§7), and more synergies and curses as
+    the pool grows (§1, §5).

@@ -6,7 +6,9 @@ import { heartbeat, toggleMute, wakeAudio } from './game/sound';
 import { backfillDepth, startById, STARTS, type Start } from './game/starts';
 import type { RunChoice } from './ui/screens/TitleScreen';
 import { baseGenome, maxHp, sightOf, type Genome } from './game/genome';
-import { setBakeRenderer } from './game/fishbake';
+import { bakeFish, releaseFish, setBakeRenderer } from './game/fishbake';
+import type { Plan } from './game/form';
+import type { LineageFrame } from './ui/screens/lineage';
 import { Fx } from './game/fx';
 import { Ocean } from './game/ocean';
 import { Scenery } from './game/scenery';
@@ -150,6 +152,11 @@ class Game {
   private overstay: number[] = [];
   /** Bands that have already sent their hunter this run. */
   private risen = new Set<number>();
+  /**
+   * The body at each stage of the run — a genome copy and its plan, taken at hatching, on
+   * every level-up and at a transformation — for the silhouettes on the end screen.
+   */
+  private lineage: { g: Genome; plan: Plan; stage: number; label?: string }[] = [];
   /** How hungry the last warning was (0 fed, 1 low, 2 empty), and the next heartbeat. */
   private hunger = 0;
   private beatT = 0;
@@ -328,6 +335,8 @@ class Game {
     this.hunger = 0; this.beatT = 0;
     this.wakeCd = 0; this.sprinting = false; this.poised = false; this.boostHeld = 0; this.boostCd = 0; this.hitStop = 0;
     this.hatch(startById(choice.start));
+    this.lineage = [];
+    this.remember();
     this.zoom = this.zoomFor(g.size);
     // the first fill is the exception to spawning off-screen: there is no frame to
     // protect yet, and an empty opening screen is worse than watching the water populate
@@ -624,11 +633,12 @@ class Game {
       if (!speciesById(id).guardian) this.ui.toast(`New in the codex — ${name}`);
     }
     for (const id of this.world.synergies) {
-      const name = SYNERGIES.find(o => o.id === id)!.name!;
-      this.synergies.push(name);
-      if (recordSynergy(this.codex, id)) this.discover(name);
+      const o = SYNERGIES.find(x => x.id === id)!;
+      this.synergies.push(o.name!);
+      const first = recordSynergy(this.codex, id);
+      if (first) this.discover(o.name!);
       this.fx.ring(this.player.x, this.player.y, 0xc8ff9a, this.player.radius * 3);
-      this.ui.toast(`${name} — your mutations have combined`);
+      this.ui.discovery(o.name!, o.desc ?? '', first);
     }
     if (this.world.noticedBy) {
       const who = speciesById(this.world.noticedBy);
@@ -873,6 +883,7 @@ class Game {
     this.player.hp = this.player.hpMax;
     this.fx.ring(this.player.x, this.player.y, 0x9ef5e2, this.player.radius * 3);
 
+    this.remember();
     this.offerDraft();
   }
 
@@ -966,6 +977,35 @@ class Game {
     if (due) this.transform(due);
   }
 
+  /** Snapshot the body for the lineage row. */
+  private remember(label?: string) {
+    const p = this.player;
+    this.lineage.push({ g: { ...p.genome }, plan: p.species.plan, stage: this.stage, label });
+  }
+
+  /**
+   * The lineage as images: each snapshot baked the way the game bakes any body and read
+   * back off the GPU, at most eight, evenly picked with the first and the last kept — a long
+   * run levels a dozen times and the row is about the shape of the growth, not every step.
+   */
+  private silhouettes(): LineageFrame[] {
+    const all = [...this.lineage, { g: { ...this.player.genome }, plan: this.player.species.plan,
+      stage: this.stage, label: 'At the end' }];
+    const n = Math.min(8, all.length);
+    const pick = n < 2 ? all : Array.from({ length: n }, (_, i) =>
+      all[Math.round(i * (all.length - 1) / (n - 1))]);
+    const out: LineageFrame[] = [];
+    for (const s of pick) {
+      try {
+        const baked = bakeFish(s.g, s.plan);
+        const image = this.app.renderer.extract.canvas(baked.texture) as HTMLCanvasElement;
+        releaseFish(baked);
+        out.push({ image, stage: s.stage, size: s.g.size, label: s.label });
+      } catch { /* a silhouette that cannot be read back is left out, not the whole screen */ }
+    }
+    return out;
+  }
+
   private takenTraits() {
     return TRAITS.filter(t => this.taken.has(t.id));
   }
@@ -981,6 +1021,7 @@ class Game {
     p.hpMax = maxHp(p.genome);
     p.hp = p.hpMax;
     if (recordForm(this.codex, to.family)) this.discover(to.name);
+    this.remember(to.name);
     this.fx.ring(p.x, p.y, 0xd8c8ff, p.radius * 6);
     this.fx.burst(p.x, p.y, 0xd8c8ff, 30, 200, p.radius * 0.3);
     this.shake = Math.min(10, this.shake + 6);
@@ -1025,8 +1066,9 @@ class Game {
       this.phase = 'play';
     };
     const title = () => this.showTitle();
-    if (won) this.ui.showWin(stats, this.codex, restart, title);
-    else this.ui.showDeath(this.causeOfDeath(), stats, this.codex, restart, title);
+    const lineage = this.silhouettes();
+    if (won) this.ui.showWin(stats, this.codex, restart, title, lineage);
+    else this.ui.showDeath(this.causeOfDeath(), stats, this.codex, restart, title, lineage);
   }
 
   private render(dt: number) {

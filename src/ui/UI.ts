@@ -9,6 +9,7 @@ import { MutationScreen, type DraftOptions } from './screens/MutationScreen';
 import { PauseScreen } from './screens/PauseScreen';
 import { BandScreen } from './screens/BandScreen';
 import { TitleScreen, type RunChoice } from './screens/TitleScreen';
+import type { LineageFrame } from './screens/lineage';
 import { TransformScreen } from './screens/TransformScreen';
 import { WinScreen } from './screens/WinScreen';
 import type { HudState, PauseInfo } from './types';
@@ -41,6 +42,10 @@ export class UI {
     this.hud.showToast(text);
   }
 
+  discovery(name: string, desc: string, first: boolean) {
+    this.hud.showDiscovery(name, desc, first);
+  }
+
   showTitle(onStart: (choice: RunChoice) => void, codex: Codex) {
     this.show(new TitleScreen(choice => {
       this.hide();
@@ -56,18 +61,22 @@ export class UI {
     }, opts));
   }
 
-  showDeath(cause: string, stats: string[], codex: Codex, onRestart: () => void, onTitle: () => void) {
+  showDeath(cause: string, stats: string[], codex: Codex, onRestart: () => void, onTitle: () => void,
+            lineage: LineageFrame[] = []) {
     this.show(new DeathScreen(cause, stats, () => {
       this.hide();
       onRestart();
-    }, () => this.showCodex(codex, () => this.showDeath(cause, stats, codex, onRestart, onTitle)), onTitle));
+    }, () => this.showCodex(codex, () => this.showDeath(cause, stats, codex, onRestart, onTitle, lineage)),
+    onTitle, lineage));
   }
 
-  showWin(stats: string[], codex: Codex, onRestart: () => void, onTitle: () => void) {
+  showWin(stats: string[], codex: Codex, onRestart: () => void, onTitle: () => void,
+          lineage: LineageFrame[] = []) {
     this.show(new WinScreen(stats, () => {
       this.hide();
       onRestart();
-    }, () => this.showCodex(codex, () => this.showWin(stats, codex, onRestart, onTitle)), onTitle));
+    }, () => this.showCodex(codex, () => this.showWin(stats, codex, onRestart, onTitle, lineage)),
+    onTitle, lineage));
   }
 
   /** The codex over whatever screen opened it; `onBack` puts that screen back. */
