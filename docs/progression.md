@@ -12,7 +12,7 @@ Three groups of fields, and the split matters:
 - **Stats** — `size`, `speed`, `turn`, `bite`, `sense`, `armor`, `regen`, `metabolism`,
   `stealth`, `gulp`, `lifesteal`, `pen`, `ram`. Read by the simulation.
 - **Organs** — `venom`, `lure`, `claws`, `jet`, `coral`, `frill`, `filter`, `crush`, `eel`,
-  `mantle`, `lurk`, `electro`, plus `pen`, `ram`,
+  `mantle`, `lurk`, `electro`, the curses `glare` and `brittle`, plus `pen`, `ram`,
   `lifesteal` and `spikes`, which act like organs even though they sit in the other
   groups. Each carries a mechanic *and* a piece of morphology. The mechanic lives in
   `organs.ts`: one `Organ` record per field, keyed off the genome (NPC species carry
@@ -135,7 +135,7 @@ the same thresholds as anything else.
 
 ## The draft
 
-`traits.ts` holds 48 `Trait` records — id, rarity, icon, description, an optional home
+`traits.ts` holds 50 `Trait` records — id, rarity, icon, description, an optional home
 `band`, and an `apply` that mutates a `Genome`. `draftTraits(rng, reach, band, taken,
 count, lean)` picks without replacement from a rarity-weighted pool.
 
@@ -155,10 +155,10 @@ count, lean)` picks without replacement from a rarity-weighted pool.
   | Band (reach) | Cards | Common / rare / apex | Home cards |
   | --- | --- | --- | --- |
   | Open Water (1) | 19 | 76 / 24 / 0 | 19% |
-  | Reef Shelf (3) | 31 | 57 / 43 / 0 | 42% |
-  | Twilight (5) | 39 | 45 / 52 / 3 | 21% |
-  | Midnight (7) | 45 | 41 / 49 / 10 | 9% |
-  | Abyss (9) | 48 | 37 / 51 / 12 | 5% |
+  | Reef Shelf (3) | 32 | 56 / 44 / 0 | 43% |
+  | Twilight (5) | 41 | 43 / 55 / 2 | 23% |
+  | Midnight (7) | 47 | 39 / 51 / 10 | 8% |
+  | Abyss (9) | 50 | 35 / 53 / 12 | 4% |
 
   Since the band is where you are, levelling in the shallows keeps the pool shallow, and a
   thermocline reward — drafted as you arrive — is the new water's own cards.
@@ -167,6 +167,14 @@ count, lean)` picks without replacement from a rarity-weighted pool.
   Neurotoxin, White Muscle Burst, Ampullae, Leviathan Blood), and the heavy organs swim
   slower (Abyssal Heart, Deep Lantern, Mantis Strike). Ram's cost was already its own
   mechanic. Without a price the draft was "take the rarest".
+- **Cursed cards** carry a `curse`, the price in red on its own line beside a *cursed*
+  mark. The gift is bigger than the rarity gives (Blood Lamp +90% bite, Brittle Frame +35%
+  speed and +25% turning), and the curse is an organ with paint, not a stat going down:
+  `glare` (a `glare` hook, read in `World.nearest`, which shrinks the player's distance by
+  `1 + 0.6 × glare` so hunters and prey both find it from 60% further, and in `notices`,
+  which lets guardians register it smaller) paints three coals down the back; `brittle`
+  (a defender-side `taken` hook, after armour, ×1.5) crazes the skin with pale slivers.
+  One stack each.
 - `maxStacks` defaults to 2, so a run specialises without collapsing into one stat.
 
 - **The draft reads the build** (`game/prospects.ts`). `completes(g, owned, form, t)` takes

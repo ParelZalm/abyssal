@@ -83,6 +83,7 @@ function key(g: Genome, plan: Plan) {
           q(g.speed, 25), q(g.metabolism, 0.4),
           q(photophoreOf(g), 0.2), q(g.eyeAdapt, 0.3), q(g.gape, 0.25), q(g.veil, 0.25),
           q(g.bulk, 0.2), q(g.barbels, 0.3), Math.min(2, g.serrate), Math.min(2, g.electro),
+          g.glare > 0 ? 1 : 0, g.brittle > 0 ? 1 : 0,
           g.lure > 0 ? 1 : 0, Math.min(3, g.claws),
           Math.min(3, g.coral), Math.min(3, g.frill), g.jet > 0 ? 1 : 0,
           g.venom > 0 ? 1 : 0, Math.min(2, g.filter), g.crush > 0 ? 1 : 0,
@@ -268,6 +269,8 @@ function paint(g: Genome, plan: Plan): Baked {
   if (hasSynergy(g, 'whaleshark')) whaleSpots(art, f, pal, seed);
   if (photophoreOf(g) > 0) photophores(art, f, pal, g, seed);
   if (hasSynergy(g, 'flashsense')) flankLights(art, f, pal);
+  if (g.glare > 0) embers(art, f, seed);
+  if (g.brittle > 0) crazing(art, f, pal, seed);
   if (A.cilia) cilia(art, f, pal);
   if (g.lurk > 0) camouflage(art, f, pal, seed);
   if (g.mantle > 0) mantle(art, f, pal);
@@ -1276,6 +1279,49 @@ function flankLights(gr: Graphics, f: Form, pal: Palette) {
       const y = dir * w * 0.93;
       gr.circle(x, y, r * 2.6).fill({ color: 0xe8fbff, alpha: 0.14 });
       gr.circle(x, y, r).fill({ color: 0xe8fbff, alpha: 0.9 });
+    }
+  }
+}
+
+/**
+ * Blood Lamp: the body burns. Three coals down the back, each a hot core in a wide soft
+ * halo, in the red that the deep takes first — so in dark water the curse is visible from
+ * as far as it is felt, which is the point of drawing it.
+ */
+function embers(gr: Graphics, f: Form, seed: number) {
+  const hot = hsl(8, 0.95, 0.55), core = hsl(34, 1, 0.72);
+  for (let i = 0; i < 3; i++) {
+    const t = 0.3 + i * 0.17 + (fbm(i * 5.3, 1, seed + 241) - 0.5) * 0.04;
+    const w = halfWidth(t, f);
+    const x = spineAt(t, f);
+    gr.circle(x, 0, w * 0.9).fill({ color: hot, alpha: 0.16 });
+    gr.circle(x, 0, w * 0.5).fill({ color: hot, alpha: 0.5 });
+    gr.circle(x, 0, w * 0.22).fill({ color: core, alpha: 0.95 });
+  }
+}
+
+/**
+ * Brittle Frame: the skin is crazed like fired glass — pale slivers across both flanks,
+ * each a thin filled wedge at its own angle, so the body reads as something that has
+ * already started to break. Fills, not lines: a crack drawn as a stroke would double at
+ * every bend of the swim.
+ */
+function crazing(gr: Graphics, f: Form, pal: Palette, seed: number) {
+  for (let t = 0.12; t < 0.86; t += 0.035) {
+    const w = halfWidth(t, f);
+    for (const dir of [-1, 1] as const) {
+      const n = fbm(t * 19, dir * 3, seed + 251, 1);
+      if (n < 0.35) continue;
+      const x = spineAt(t, f);
+      const y = dir * w * (0.25 + n * 0.55);
+      const a = (n - 0.5) * 2.4 + dir * 0.4;
+      const len = w * (0.35 + n * 0.4);
+      const px = -Math.sin(a) * len * 0.07, py = Math.cos(a) * len * 0.07;
+      gr.moveTo(x - Math.cos(a) * len * 0.5, y - Math.sin(a) * len * 0.5)
+        .lineTo(x + px, y + py)
+        .lineTo(x + Math.cos(a) * len * 0.5, y + Math.sin(a) * len * 0.5)
+        .lineTo(x - px, y - py)
+        .closePath().fill({ color: 0xeef4ea, alpha: 0.7 * pal.alpha });
     }
   }
 }

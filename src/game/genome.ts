@@ -31,6 +31,9 @@ export interface Genome {
   frenzy: number;      // the shark's: bites on the wounded hit harder. Only a form grants it
   // senses — a second way of perceiving, beside the eye that `sense` is
   electro: number;     // ampullae: feel the living at short range, whatever the light
+  // curses — organs that are all cost, carried by a card whose gift is worth it
+  glare: number;       // a body that shines: everything finds it from further
+  brittle: number;     // a frame of glass: every bite taken lands harder
 
   // morphology — purely visual, but every trait nudges it so the fish reads as evolved
   hue: number;
@@ -77,7 +80,7 @@ export function baseGenome(): Genome {
     size: 14, speed: 150, turn: 4.2, bite: 6, sense: 340, armor: 0,
     regen: 0.6, metabolism: 1, stealth: 0, gulp: 1, lifesteal: 0, pen: 0, ram: 0,
     venom: 0, lure: 0, claws: 0, jet: 0, coral: 0, frill: 0, filter: 0, crush: 0,
-    eel: 0, mantle: 0, lurk: 0, frenzy: 0, electro: 0,
+    eel: 0, mantle: 0, lurk: 0, frenzy: 0, electro: 0, glare: 0, brittle: 0,
     hue: 30, accentHue: 200, finSize: 1, tailSplit: 0.35, spikes: 0, serrate: 0,
     jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0, smoke: 0,
     photophores: 0, eyeAdapt: 0, gape: 0, veil: 0, bulk: 0, barbels: 0,

@@ -87,7 +87,8 @@ change *what you do*, each an entry in `organs.ts` plus paint:
   water, the wounded from twice as far. Flash Sense sits on top.
 - ~~**Costs on apex cards.**~~ Done: every apex card carries a turn, speed or metabolism
   price in its text.
-- **Cursed cards.** +90% bite but you glow, so everything sees you.
+- ~~**Cursed cards.**~~ Done: Blood Lamp (+90% bite, `glare`) and Brittle Frame (speed and
+  turning, `brittle`). More curses belong here as the pool grows.
 - **One active organ slot** on a cooldown: ink cloud, discharge, inflate.
 - ~~**Zone pools.**~~ Done: `Trait.band` replaced `minStage`. A card is offered in its band
   or deeper — the band the player is in when the draft happens — and leans ×1.6 at home.

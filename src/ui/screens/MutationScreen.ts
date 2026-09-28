@@ -22,7 +22,7 @@ export class MutationScreen implements Component {
     for (const t of traits) {
       const note = opts.note(t);
       const card = document.createElement('button');
-      card.className = `card ${t.rarity}${note ? ' completes' : ''}`;
+      card.className = `card ${t.rarity}${note ? ' completes' : ''}${t.curse ? ' cursed' : ''}`;
 
       const top = div('top');
       const mark = span();
@@ -35,9 +35,20 @@ export class MutationScreen implements Component {
         tag.textContent = 'new';
         rarity.prepend(tag);
       }
+      if (t.curse) {
+        const tag = document.createElement('i');
+        tag.textContent = 'cursed';
+        rarity.prepend(tag);
+      }
       top.append(mark, rarity);
 
       card.append(top, h3(t.name), p(t.desc));
+      // the price in its own line and colour: a curse read as part of the gift is a trap
+      if (t.curse) {
+        const c = p(t.curse);
+        c.className = 'curse';
+        card.append(c);
+      }
       // the family is what a card is a step toward; without it a transformation is luck.
       // The band is where it lives, which is where to be when you level for it
       if (t.families?.length || t.band) {

@@ -26,6 +26,12 @@ export interface Trait {
    * deep cards are a reason to be deep when you level. None: offered anywhere.
    */
   band?: BandId;
+  /**
+   * A cursed card's price, in the words the card shows it in red. The gift is bigger than a
+   * card of its rarity would give, and the curse is an organ — a mechanic and a mark on the
+   * body — so taking one is choosing a way to be worse, not a number going down.
+   */
+  curse?: string;
   /** How many times one run may take this. Two by default: enough to double down on a
    *  favourite, not enough to turn one stat absurd. */
   maxStacks?: number;
@@ -199,6 +205,19 @@ export const TRAITS: Trait[] = [
   T({ id: 'frill', band: 'reef', name: 'Anemone Frill', rarity: 'rare', icon: 'spiral', families: ['lurker'],
     desc: 'A stinging fringe: attackers take recoil, and you are 15% harder to notice.',
     apply: g => { g.frill += 1; g.stealth += 0.15; } }),
+
+  // ---------------------------------------------------------------- cursed
+  T({ id: 'bloodlamp', band: 'twilight', name: 'Blood Lamp', rarity: 'rare', icon: 'glow', families: ['predator'],
+    desc: '+90% bite. A furnace of a body.',
+    curse: 'You shine: everything finds you from 60% further, and guardians notice you sooner.',
+    maxStacks: 1,
+    apply: g => { g.bite *= 1.9; g.glare += 1; g.glow += 0.8; } }),
+
+  T({ id: 'brittle', band: 'reef', name: 'Brittle Frame', rarity: 'rare', icon: 'blade', families: ['sprinter'],
+    desc: '+35% speed, +25% turning. Hollow bones, all of it muscle.',
+    curse: 'Every bite you take lands 50% harder.',
+    maxStacks: 1,
+    apply: g => { g.speed *= 1.35; g.turn *= 1.25; g.brittle += 1; } }),
 
   // ------------------------------------------------------------------ apex
   // Every apex card costs something, and says so. Without a price the draft was "take the

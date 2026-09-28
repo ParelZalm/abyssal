@@ -97,6 +97,13 @@ export interface Organ {
    * fields are loud, from twice as far. 0 with no organ.
    */
   feel?: (g: Genome, base: number) => number;
+  /**
+   * How much further than its sense radius other animals find this body, as a share: 0.6
+   * is found from 1.6 times as far, by what hunts it and what it hunts. Curses only.
+   */
+  glare?: (g: Genome, base: number) => number;
+  /** Damage a blow does to this body once armour has had its say. Curses only, so far. */
+  taken?: (g: Genome, dmg: number) => number;
 
   // ---- effects
   /** The attacker's organs, after its bite has landed. */
@@ -286,6 +293,19 @@ export const ORGANS: Organ[] = [
     // stack. At 60 cm it is 390 units, at 170 cm 665 — inside what eyes see in the sunlit
     // water, past what they see below the twilight, which is where it is for
     feel: (g, base) => Math.max(base, g.size * 2.5 + 240 * g.electro) }),
+
+  // ---------------------------------------------------------------- curses
+  // All cost: the card that carries one is paid for with it, and says so in red.
+
+  O({ id: 'glare', when: g => g.glare > 0,
+    // a lit body in dark water is the one thing everything can find: hunters come from
+    // further and prey bolts sooner, through the same search (`World.nearest`) both use
+    glare: (g, base) => base + g.glare * 0.6 }),
+
+  O({ id: 'brittle', when: g => g.brittle > 0,
+    // light enough to be fast, thin enough that a bite goes through: after armour, so
+    // plate still helps and the frame is the part that shatters
+    taken: (g, dmg) => dmg * (1 + g.brittle * 0.5) }),
 
   O({ id: 'frenzy', when: g => g.frenzy > 0,
     // blood in the water is a reason to press, not to wait: a wounded body is the one worth
@@ -550,6 +570,18 @@ export function feelOf(c: Creature) {
   let r = 0;
   for (const o of c.organs) if (o.feel) r = o.feel(c.genome, r);
   return r;
+}
+
+export function glareOf(c: Creature) {
+  let r = 0;
+  for (const o of c.organs) if (o.glare) r = o.glare(c.genome, r);
+  return r;
+}
+
+export function takenOf(c: Creature, dmg: number) {
+  let d = dmg;
+  for (const o of c.organs) if (o.taken) d = o.taken(c.genome, d);
+  return d;
 }
 
 export function stealthOf(c: Creature) {

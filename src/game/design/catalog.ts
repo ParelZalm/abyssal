@@ -462,7 +462,7 @@ function mutationGroup(): DesignGroup {
       return {
         id: t.id,
         name: t.name,
-        note: t.desc,
+        note: t.curse ? `${t.desc} Curse: ${t.curse}` : t.desc,
         source: 'src/game/traits.ts',
         span: 130,
         depth: homeDepth(t),

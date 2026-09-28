@@ -2,8 +2,8 @@ import { Container } from 'pixi.js';
 import { FishView } from './fishview';
 import { PLAN_ART } from './form';
 import { armourOf, biteDamage, maxHp, type Genome } from './genome';
-import { armourAgainst, biteRateOf, damageOf, gulpOf, lureRangeOf, organsOf, stealthOf, swimOf,
-         tick as tickOrgans, wound, type Organ, type SwimMods } from './organs';
+import { armourAgainst, biteRateOf, damageOf, glareOf, gulpOf, lureRangeOf, organsOf, stealthOf,
+         swimOf, takenOf, tick as tickOrgans, wound, type Organ, type SwimMods } from './organs';
 import { genomeFor, hunts, rangeOf, rollSpecies, SPECIES, type Species } from './species';
 import { BANDS, bandAt } from './zones';
 import { angleDelta, clamp, dist2, lerp, Rng, TAU } from './util';
@@ -1016,16 +1016,20 @@ export class World {
    */
   private notices(hunter: Creature, o: Creature): boolean {
     if (!hunter.species.guardian) return true;
-    const shy = o.isPlayer ? clamp(stealthOf(o), 0, 1) : 0;
-    return o.genome.size >= noticeSize(hunter.species.zone) * (1 + shy * 0.5);
+    // and glare lowers it: a lit body is registered before it has grown into the water
+    const shy = o.isPlayer ? clamp(stealthOf(o), 0, 1) - glareOf(o) * 0.5 : 0;
+    return o.genome.size >= noticeSize(hunter.species.zone) * Math.max(0.6, 1 + shy * 0.5);
   }
 
   private nearest(from: Creature, radius: number, ok: (c: Creature) => boolean): Creature | null {
     let best: Creature | null = null;
     let bd = radius * radius;
+    // a glaring player is found from further, by hunters and prey alike: its distance is
+    // read shrunk by the glare rather than every searcher's radius being grown for it
+    const shine = 1 + glareOf(this.player);
     const test = (o: Creature) => {
       if (!o.alive || !ok(o)) return;
-      const d = dist2(from.x, from.y, o.x, o.y);
+      const d = dist2(from.x, from.y, o.x, o.y) / (o.isPlayer ? shine * shine : 1);
       if (d < bd) { bd = d; best = o; }
     };
     for (const o of this.creatures) test(o);
@@ -1109,7 +1113,7 @@ export class World {
   private land(att: Creature, def: Creature, whole: boolean, mult: number) {
     const armour = Math.max(0, armourAgainst(att, armourOf(def.genome)));
     const dmg = whole ? def.hp
-      : Math.max(1, damageOf(att, biteDamage(att.genome), def) * mult - armour);
+      : takenOf(def, Math.max(1, damageOf(att, biteDamage(att.genome), def) * mult - armour));
     def.hp -= dmg;
     const fatal = def.hp <= 0;
     // what the bodies do to each other beyond the damage — recoil, venom, grip — is the
