@@ -382,6 +382,8 @@ class Game {
       // the kick is the boost: a hard shove up front, paid for in one bite of fullness, so a
       // lunge at prey is cheap and a long chase is not
       this.boostCd = 0.45;
+      // the surge an organ can strike in: about as long as the kick carries the body
+      p.kick(0.4);
       this.food = Math.max(0, this.food - 1.5);
       p.vx += Math.cos(p.angle) * g.speed * 1.6 * boost.kick;
       p.vy += Math.sin(p.angle) * g.speed * 1.6 * boost.kick;

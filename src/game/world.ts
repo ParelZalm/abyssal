@@ -132,6 +132,13 @@ export class Creature {
   pulseT = 0;
   /** Seconds of stillness banked by a lurking body, spent on its next bite. */
   poise = 0;
+  /**
+   * Seconds left in the surge of a boost kick, 0 otherwise. The boost lives in `Game`, so
+   * this is the seam that lets an organ tell a boost into a body from a swim into it.
+   */
+  boosting = 0;
+  /** Bodies this boost has already struck, so one kick is one blow per body. */
+  readonly boostHits = new Set<Creature>();
 
   constructor(public species: Species, public genome: Genome) {
     this.hpMax = maxHp(genome);
@@ -139,6 +146,12 @@ export class Creature {
     this.organs = organsOf(genome);
     this.swim = swimOf(genome, this.organs);
     this.view = new FishView(genome, species.plan);
+  }
+
+  /** A boost kick: open the surge window an organ can strike in. */
+  kick(window: number) {
+    this.boosting = window;
+    this.boostHits.clear();
   }
 
   /** Call after a genome change, beside `view.rebuild`: a new organ has to act as well as show. */
@@ -852,6 +865,7 @@ export class World {
     if (c.isPlayer && ny > floor) this.blocked = true;
     c.y = clamp(ny, 30, floor);
     c.biteCd = Math.max(0, c.biteCd - dt);
+    c.boosting = Math.max(0, c.boosting - dt);
     if (c.fade < 1) c.fade = Math.min(1, c.fade + dt / FADE_IN);
     if (c.poisonT > 0) {
       c.poisonT -= dt;
@@ -962,8 +976,25 @@ export class World {
     // — but not from tentacles: a beak tears, and a whole swallow at the crown would make
     // every guardian's grab a death with nothing to struggle against
     const whole = !att.holding && att.swallowSize > def.genome.size * 2;
+    this.land(att, def, whole, 1);
+  }
+
+  /**
+   * A blow that is not a bite — an organ striking with something other than the mouth.
+   * No cooldown and never a swallow, but otherwise the same wound: armour, organs, and a
+   * kill booked to whoever landed it. Public because organs deliver it (`organs.ts`).
+   */
+  hit(att: Creature, def: Creature, mult: number) {
+    if (!att.alive || !def.alive) return;
+    att.view.chomp();
+    this.land(att, def, false, mult);
+  }
+
+  /** The damage, the organs, and the death, for a bite or a blow. */
+  private land(att: Creature, def: Creature, whole: boolean, mult: number) {
     const armour = Math.max(0, armourAgainst(att, armourOf(def.genome)));
-    const dmg = whole ? def.hp : Math.max(1, damageOf(att, biteDamage(att.genome), def) - armour);
+    const dmg = whole ? def.hp
+      : Math.max(1, damageOf(att, biteDamage(att.genome), def) * mult - armour);
     def.hp -= dmg;
     const fatal = def.hp <= 0;
     // what the bodies do to each other beyond the damage — recoil, venom, grip — is the

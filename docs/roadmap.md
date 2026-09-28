@@ -10,10 +10,9 @@ or to a reason to start the next one.
 
 ## 1. More synergies (cheap)
 
-Done so far: Toxic Lure, Ghost Light, Urchin, Nematocyst. Ballistic (jet + claws) is the
-next one, and it needs a seam first: the boost lives in `Game`, so the simulation cannot
-tell a boost into a body from a swim into it. Publish a `boosting` flag on the player
-`Creature` before an organ can read it.
+Done so far: Toxic Lure, Ghost Light, Urchin, Nematocyst, Ballistic. Ballistic brought
+the boost seam (`Creature.boosting`, opened by `kick()`) and `World.hit`, a non-bite blow,
+so a synergy can now act on the boost or strike with something other than the mouth.
 
 Each one is three touches, all following Toxic Lure:
 
@@ -27,7 +26,6 @@ Candidates, from the pool as it exists:
 
 | Pair | Name | Mechanic | Body |
 | --- | --- | --- | --- |
-| jet + claws (Mantis) | Ballistic | A boost into a body is a bite | Claws fold forward along the head |
 | claws + bite (Serrated) | Vivisect | A held target bleeds; blood calls a crowd | Serrated pincer edge |
 | photophores + sense (Ampullae) | Flash Sense | Boost pulses light that reveals and stuns big-eyed prey | Photophores run to the flank |
 | translucent + frill | Drifting Bloom | Nearly invisible and stinging | Frill trails like a jelly |
@@ -118,11 +116,11 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 
 ## Suggested order
 
-1. ~~Two or three more synergies~~ — done; Ballistic once the boost is published.
+1. ~~Two or three more synergies~~ — done, Ballistic included.
 2. ~~The shallows clock~~ — done.
 3. ~~The codex~~ — done.
 4. ~~Diet and locomotion organs~~ — done.
 5. ~~Transformations~~ and ~~the draft reading them~~ — done.
-6. Next up, by the same ranking: Ballistic and more synergies (§1) now that the draft
+6. Next up, by the same ranking: more synergies from the table in §1 now that the draft
    rewards them, then zone pools and costs on apex cards (§5), then the tempting pocket
    below each gate (§4).

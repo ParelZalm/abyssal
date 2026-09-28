@@ -236,7 +236,8 @@ function paint(g: Genome, plan: Plan): Baked {
   // than the body. Whichever reaches further sets the bound.
   const front = spineAt(0, f) + Math.max(R * 0.12,
     L ? L.x - spineAt(0, f) + L.r * L.halo + R * 0.04 : 0,
-    g.barbels > 0 ? R * (0.55 + g.barbels * 0.9) : 0);
+    g.barbels > 0 ? R * (0.55 + g.barbels * 0.9) : 0,
+    hasSynergy(g, 'ballistic') ? ballisticReach(g) + R * 0.08 : 0);
   const back = spineAt(1, f) - f.len * f.fluke * R * 1.06 - (rigged ? 0 : A.armReach * R);
 
   // an invisible rect pins the texture to exactly this rect, so the UVs line up with the
@@ -537,8 +538,10 @@ function organs(gr: Graphics, f: Form, pal: Palette, g: Genome) {
     }
   }
 
-  // claws: pincers on the shoulders, opened toward the prey
-  for (let i = 0; i < g.claws; i++) {
+  // claws: pincers on the shoulders, opened toward the prey — or, with the siphon behind
+  // them, folded forward along the head as a club, which is the Ballistic body
+  if (hasSynergy(g, 'ballistic')) raptorials(gr, f, pal, g);
+  for (let i = 0; !hasSynergy(g, 'ballistic') && i < g.claws; i++) {
     const t = shoulderAt(f) * (0.8 - i * 0.12);
     const w = halfWidth(t, f);
     const len = w * 0.9;
@@ -572,6 +575,36 @@ function organs(gr: Graphics, f: Form, pal: Palette, g: Genome) {
     if (hasSynergy(g, 'nematocyst')) nematocysts(gr, f, g, t);
   }
 }
+
+/**
+ * Ballistic: the mantis shrimp's raptorial claws. Folded, not opened — a club is cocked
+ * along the body and fired, so it lies flat against the head from the shoulder to past
+ * the nose, a long bone blade each side ending in a heavy heel. Past the nose on purpose:
+ * the heel is what lands, and it has to be the first thing to reach whatever you boost at.
+ */
+function raptorials(gr: Graphics, f: Form, pal: Palette, g: Genome) {
+  const t0 = shoulderAt(f) * 0.9;
+  const w0 = halfWidth(t0, f);
+  const x0 = spineAt(t0, f);
+  const tip = spineAt(0, f) + ballisticReach(g);
+  const heavy = 1 + Math.min(1, (g.claws - 1) * 0.35);
+  for (const dir of [-1, 1] as const) {
+    const y0 = dir * w0 * 0.86;
+    const y1 = dir * halfWidth(0.08, f) * 0.95;
+    const s = w0 * 0.19 * heavy;
+    gr.moveTo(x0, y0 - dir * s)
+      .quadraticCurveTo((x0 + tip) / 2, y0 + dir * s * 0.6, tip, y1)
+      .quadraticCurveTo((x0 + tip) / 2, y0 - dir * s * 1.6, x0, y0 + dir * s * 0.4)
+      .closePath().fill({ color: pal.bone, alpha: 0.92 * pal.alpha });
+    // the heel: a swollen knuckle at the tip, with the dark socket of the hinge behind it
+    gr.ellipse(tip - s * 1.2, y1, s * 1.5, s * 1.1).fill({ color: pal.bone, alpha: pal.alpha });
+    gr.ellipse(x0 + (tip - x0) * 0.45, (y0 + y1) / 2, s * 0.7, s * 0.5)
+      .fill({ color: pal.dark, alpha: 0.5 * pal.alpha });
+  }
+}
+
+/** How far past the nose the Ballistic heel reaches — shared with the strip bounds. */
+const ballisticReach = (g: Genome) => R * (0.22 + Math.min(1, (g.claws - 1) * 0.35) * 0.08);
 
 /**
  * Nematocyst: the grafted stinging cells have moved into the venom sacs. Each sac is ringed

@@ -47,13 +47,19 @@ Three groups of fields, and the split matters:
   A synergy is an `Organ` whose `when` tests two fields and that carries a `name`; its
   effect hooks return true on a frame they did something, `World.fired` publishes its id
   once per run on `world.synergies`, and `Game.digest` turns it into the toast, so the
-  combination is discovered in play rather than read off a card. Four so far:
+  combination is discovered in play rather than read off a card. Five so far:
   `Toxic Lure` (lure + venom: prey that reaches the light is poisoned before the bite),
   `Ghost Light` (lure + stealth ≥ 0.4: lured prey is not panicked by its shoal's alarm),
   `Urchin` (spikes + armour ≥ 11: recoil of 0.8 × armour on every bite taken — 11 sits
   one above the Leviathan, which would otherwise qualify) and `Nematocyst` (venom +
   lifesteal: bodies the player has poisoned heal the player while they tick; player only,
-  since a wound records *whether* the player poisoned it, not who). Recoil can kill:
+  since a wound records *whether* the player poisoned it, not who) and `Ballistic` (jet +
+  claws: inside a boost kick's surge and at 0.9 of cruise or faster, whatever the head
+  meets is struck for `0.6 + 0.5 × speed/cruise` of a bite, once per body per boost, bigger
+  animals included). Ballistic reads `Creature.boosting`, the seam `Game` opens with
+  `kick(0.4)` on every boost, and strikes through `World.hit` — a blow with no cooldown
+  and no swallow that shares `land` with the bite, so armour, organs and the kill are
+  booked the same way. The claws fold forward along the head into clubs. Recoil can kill:
   `World.bite` books an attacker whose health the defender's organs took below zero. The
   paint asks `hasSynergy(g, id)` from the same file, so a combination shows on the body
   through the predicate that makes it act, and `synergiesOf(g)` is in the bake cache key

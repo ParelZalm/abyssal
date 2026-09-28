@@ -274,6 +274,30 @@ export const ORGANS: Organ[] = [
       return fired;
     } }),
 
+  O({ id: 'ballistic', name: 'Ballistic', when: g => g.jet > 0 && g.claws > 0,
+    desc: 'Siphon and claws. A boost into a body is a strike, whatever its size.',
+    // the mantis shrimp's club: the jet is the wind-up and the claws are the blow. Inside a
+    // kick's surge and at speed, whatever the head meets is struck — once per body per
+    // boost — including things that could eat you, which is the one way to answer a
+    // predator with the boost rather than run from it. Faster is harder: at the kick's own
+    // speed, about 1.6 of a bite
+    onTick: (c, _dt, world) => {
+      if (c.boosting <= 0) return false;
+      const top = Math.max(1, c.genome.speed);
+      const rush = Math.hypot(c.vx, c.vy) / top;
+      if (rush < 0.9) return false;
+      let fired = false;
+      for (const o of world.creatures) {
+        if (!o.alive || o === c || c.boostHits.has(o)) continue;
+        const reach = c.radius * 0.6 + o.radius;
+        if (dist2(c.mouthX, c.mouthY, o.x, o.y) > reach * reach) continue;
+        c.boostHits.add(o);
+        world.hit(c, o, 0.6 + 0.5 * Math.min(2.2, rush));
+        fired = true;
+      }
+      return fired;
+    } }),
+
   O({ id: 'nematocyst', name: 'Nematocyst', when: g => g.venom > 0 && g.lifesteal > 0,
     desc: 'Venom and lifesteal. Bodies you have poisoned heal you while they die.',
     // stolen stinging cells feeding on the venom they deliver: every body still poisoned
