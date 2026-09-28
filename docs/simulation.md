@@ -190,6 +190,26 @@ Three animals are beaten by behaviour rather than by size:
   same point the paint hangs it at — is struck for 2.5 bites at once, whatever its size,
   and the angler lunges. From behind or beside it is prey like any other.
 
+**Guardians have patterns** (`Species.pattern`, run by `World.patternStep` ahead of the
+rest of `think`): a tell, a committed attack, and an opening. Each starts only on a
+guardian already hunting the player, within 0.7 of its sense and outside its own length,
+and comes round every 6 s.
+
+- `charge` (Great White, Leviathan): 1.1 s lining up — slow, turning to face you, a red
+  ring and a tighter frame — then a 0.9 s rush at 2.4× its speed on a heading locked a
+  third of a second ahead of you. The rush cannot steer and bites for 1.8 × only what is
+  in its line: none of the lunge's extra reach and no gulp, which is what makes the dodge
+  possible. At 110 cm a sidestep at a boost's 300 u/s once the rush starts clears it; at
+  200 u/s it does not. A miss leaves it `exposed` for 2.5 s — slow, lazy, and taking every
+  bite at 1.5 ×.
+- `click` (Sperm Whale): 1.4 s of three clicks, then a blast in a cone of 0.6 rad either
+  side of its head out to 0.85 × sense that stuns the player for 1.3 s (no drive, no boost)
+  and lands half a bite; then the same rush. Behind it or beside it, nothing.
+- The squids keep their arms: a grab you tear free of by boosting.
+
+The first tell from each guardian toasts its counter (`world.tellBy`); after that the
+tell has to be read.
+
 ## Notice
 
 A guardian ignores anything smaller than `noticeSize(zone)`, which is interpolated between

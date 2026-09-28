@@ -24,6 +24,13 @@ export interface Species {
   bleed?: number;
   /** The one animal in its zone that is not prey. */
   guardian?: true;
+  /**
+   * A guardian's attack, with a tell before it and an opening after (`World.patternStep`).
+   * `charge`: it lines up, then rushes in a straight line it cannot steer, and a miss
+   * leaves its flank open. `click`: three clicks, then a forward blast that stuns what is in
+   * front of it, then the rush. The squids have their arms instead.
+   */
+  pattern?: 'charge' | 'click';
 
   size: [number, number];
   hue: [number, number];
@@ -121,7 +128,7 @@ export const SPECIES: Species[] = [
   // Slate rather than the reef shark's blue, and a much lower jaw than the bite implies:
   // `formFor` turns jaw into cheek, and cheek is a wider head. A great white bites like
   // this and is still a cone all the way back to the gills.
-  { id: 'greatwhite', name: 'Great White', behavior: 'apex', plan: 'greatshark',
+  { id: 'greatwhite', name: 'Great White', behavior: 'apex', plan: 'greatshark', pattern: 'charge',
     zone: 'sunlit', guardian: true, bleed: 200,
     size: [115, 155], hue: [208, 220], accent: 200, speed: 260, bite: 52,
     nutrition: 4, weight: 1.4, jaw: 0.5, armor: 5, finSize: 1.3,
@@ -205,7 +212,7 @@ export const SPECIES: Species[] = [
     nutrition: 2.8, weight: 6, jaw: 1.3, segments: 3, finSize: 0.6,
     gape: 1.3, eyeAdapt: -0.3, photophores: 0.4 },
 
-  { id: 'spermwhale', name: 'Sperm Whale', behavior: 'apex', plan: 'whale',
+  { id: 'spermwhale', name: 'Sperm Whale', behavior: 'apex', plan: 'whale', pattern: 'click',
     // it dives through this zone specifically to hunt the Twilight's guardian, which is
     // the one relationship in the roster the player can watch happen
     zone: 'midnight', guardian: true, bleed: 1600,
@@ -279,7 +286,7 @@ export const SPECIES: Species[] = [
     nutrition: 3.3, weight: 7, armor: 6, claws: 3, bulk: 0.9, spikes: 1,
     eyeAdapt: -0.6, barbels: 0.8, metabolism: 1.8 },
 
-  { id: 'leviathan', name: 'Leviathan', behavior: 'apex', plan: 'leviathan',
+  { id: 'leviathan', name: 'Leviathan', behavior: 'apex', plan: 'leviathan', pattern: 'charge',
     zone: 'trenches', guardian: true,
     size: [300, 380], hue: [248, 266], accent: 158, speed: 230, bite: 88,
     nutrition: 7, weight: 1.2, jaw: 1.4, armor: 10, spikes: 2, segments: 4,

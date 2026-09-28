@@ -137,6 +137,8 @@ class Game {
   private overstay: number[] = [];
   /** Bands that have already sent their hunter this run. */
   private risen = new Set<number>();
+  /** Guardians whose tell has already been explained this run. */
+  private toldBy = new Set<string>();
   /** Seconds until the active organ can fire again, and a press waiting to be read. */
   private activeCd = 0;
   private wantActive = false;
@@ -288,7 +290,7 @@ class Game {
     this.score = 0; this.combo = 0; this.comboT = 0;
     this.dreadSpike = 0; this.dreadHold = 0;
     this.maxBand = 0; this.hintCd = 0; this.gatesOpen = 0;
-    this.overstay = BANDS.map(() => 0); this.risen.clear();
+    this.overstay = BANDS.map(() => 0); this.risen.clear(); this.toldBy.clear();
     this.squeezed = -1; this.squeezeT = 0; this.activeCd = 0; this.wantActive = false;
     this.wakeCd = 0; this.sprinting = false; this.poised = false; this.boostHeld = 0; this.boostCd = 0; this.hitStop = 0;
     this.zoom = this.zoomFor(g.size);
@@ -407,6 +409,13 @@ class Game {
       throttle = ahead ? 1 : astern ? -0.45 : 0;
     }
 
+    // stunned by a sperm whale's click: no drive and no boost until it wears off
+    if (p.stun > 0) {
+      p.stun = Math.max(0, p.stun - dt);
+      throttle = 0;
+      turnInput = 0;
+    }
+
     const wants = k.has('shift') || k.has(' ') || this.mouse.down;
     const sprinting = wants && this.food > 1 && throttle > 0.1;
     const boost = boostModsOf(p);
@@ -505,9 +514,30 @@ class Game {
         this.fx.ring(f.x, f.y, 0xe4f0ff, f.r * 0.6);
         this.fx.burst(f.x, f.y, 0xcfe2ff, 22, f.r * 0.9, 2.4);
         this.shake = Math.min(12, this.shake + 7);
+      } else if (f.kind === 'tell') {
+        // a guardian lining up: a red ring on it, and the frame tightens
+        this.fx.ring(f.x, f.y, 0xff5a4a, f.r);
+        this.dreadSpike = Math.min(1, this.dreadSpike + 0.6);
+      } else if (f.kind === 'click') {
+        this.fx.ring(f.x, f.y, 0xe6f2ff, f.r);
+      } else if (f.kind === 'blast') {
+        this.fx.ring(f.x, f.y, 0xe6f2ff, f.r * 0.35);
+        this.fx.ring(f.x, f.y, 0xe6f2ff, f.r * 0.7);
+        this.shake = Math.min(14, this.shake + 8);
+      } else if (f.kind === 'exposed') {
+        this.fx.ring(f.x, f.y, 0xffe28a, f.r);
       } else {
         this.fx.ring(f.x, f.y, 0xf2ead0, f.r);
       }
+    }
+    // the first tell from each guardian names the counter; after that the tell is enough
+    const tell = this.world.tellBy;
+    if (tell && !this.toldBy.has(tell)) {
+      this.toldBy.add(tell);
+      const who = speciesById(tell);
+      this.ui.toast(who.pattern === 'click'
+        ? `The ${who.name} is clicking — get out from in front of it`
+        : `The ${who.name} is lining up — get out of its line, then bite its flank`);
     }
     for (const b of this.world.bites) {
       const col = b.onPlayer ? 0xff5a4a : 0xff9a7a;

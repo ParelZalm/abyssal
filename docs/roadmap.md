@@ -102,7 +102,9 @@ a small puzzle with a tell. Squid arms that can be torn free are the model to co
 
 - ~~**The anglerfish, the bait ball and shark blood.**~~ Done: see *Tactics* in
   `docs/simulation.md`.
-- **Guardian tells.** Next.
+- ~~**Guardian tells.**~~ Done: the Great White and the Leviathan charge, the Sperm Whale
+  clicks, the squids grab. Left open: a pattern of its own for the Leviathan, which shares
+  the Great White's for now.
 
 ## 7. Something survives death
 
@@ -138,5 +140,6 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 8. ~~The pocket below each gate, and forcing a seal~~ — done.
 9. ~~Sense modes and Flash Sense~~ — done.
 10. ~~Cursed cards and the active organ slot~~ — done.
-11. Next up, by the same ranking: enemies that ask for tactics (§6), then starting forms
-    and a daily seed (§7), then the small feel wins (§8).
+11. ~~Enemies that ask for tactics~~ — done.
+12. Next up, by the same ranking: starting forms and a daily seed (§7), then the small
+    feel wins (§8).
