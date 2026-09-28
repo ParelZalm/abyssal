@@ -7,9 +7,10 @@
  * layer only places and tints them.
  */
 import { Texture } from 'pixi.js';
+import type { PropKind } from '../content/zones';
 import { hash01 as h, TAU } from '../core/util';
 
-export type PropKind = 'disc' | 'blob' | 'mass' | 'wisp';
+export type { PropKind };
 
 /** Relative size of each kind, so a mass out there is not a disc's size. */
 export const PROP_SIZE: Record<PropKind, number> = {

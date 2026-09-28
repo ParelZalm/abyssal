@@ -2,7 +2,7 @@
 
 ## Genome
 
-`src/game/genome.ts` is one flat interface, `Genome`, and four derived functions:
+`src/content/genome.ts` is one flat interface, `Genome`, and four derived functions:
 `maxHp`, `biteDamage`, `armourOf`, `menace`. Everything else in the game reads those
 rather than recomputing — in particular nothing reads `g.armor` raw, because plate is
 armour too.
@@ -16,11 +16,11 @@ Three groups of fields, and the split matters:
   `discharge` and `inflate`, plus `pen`, `ram`,
   `lifesteal` and `spikes`, which act like organs even though they sit in the other
   groups. Each carries a mechanic *and* a piece of morphology. The mechanic lives in
-  `organs.ts`: one `Organ` record per field, keyed off the genome (NPC species carry
+  `sim/organs/`: one `Organ` record per field, keyed off the genome (NPC species carry
   organs too, so a trait list would lose the crab's spines), with *modifier* hooks
   (armour faced, lure range, boost, burn, swallow heal) and *effect* hooks (`onWound`,
-  `onWounded`, `onTick`). `World.bite` and the boost, burn and digest code in `main`
-  call the helpers at the bottom of that file and never read an organ field by name.
+  `onWounded`, `onTick`). `Combat.bite`, the `PlayerController` boost and `Metabolism`
+  call the folds in `sim/organs/query.ts` and never read an organ field by name.
   Every `Creature` caches its active organs and `refreshOrgans()` beside `view.rebuild`.
   The one exception is `coral`: it is plate, so `armourOf(g)` adds it as a derived stat.
   The two **diet** organs are the first that make a body worse at something on purpose, so
@@ -30,7 +30,7 @@ Three groups of fields, and the split matters:
   own size. `crush` (Crushing Pharynx, a reef card) faces no armour and takes no recoil, and
   pays with a bite cooldown of 0.72 s instead of 0.4. They act through four modifier hooks
   added for them — `gulp`, `damage`, `biteRate`, `recoil` — and recoil goes through
-  `sting()` in `organs.ts`, so spines, frill and Urchin all ask the attacker's organs how
+  `sting()` in `sim/organs/effects.ts`, so spines, frill and Urchin all ask the attacker's organs how
   much of it lands.
   The **sense** organ, `electro` (Ampullae of Lorenzini), is a second way of perceiving
   beside the eye. Eyes are `sense` through `sightOf(g, light)`: 2.55 × sense in the
@@ -42,7 +42,7 @@ Three groups of fields, and the split matters:
   and not by sight is drawn in a cold cast (`FELT_TINT`) so the two read differently.
   Pores pepper the snout.
   The three **active** organs fill one slot the player fires by hand — E or the right
-  button — on a cooldown kept by `Game.fireActive`. An `active` record on the organ gives
+  button — on a cooldown kept by `PlayerController.fireActive`. An `active` record on the organ gives
   its name, HUD glyph, cooldown and `fire(c, world)`, and `activeOf` takes the first; the
   cards clear the other two fields when taken, so the slot is always one. A press is
   consumed whether or not it fired. `Ink Sac` (12 s) leaves a cloud of `3 × size + 200` on
@@ -53,7 +53,7 @@ Three groups of fields, and the split matters:
   mouth needs 2.5 times its usual gape to swallow it (a reef shark that took a 30 cm body
   whole tore 22 instead), bites land at 0.35 through the `taken` hook, biters are pricked
   for `3 + 0.12 × size`, and the swim bleeds speed. Everything organs throw into the water
-  is published on `world.pulses` with a kind, for `Game.digest` to draw. The slot sits
+  is published on `world.pulses` with a kind, for `Impacts.drain` to draw. The slot sits
   bottom centre with a fill that climbs back as it recovers.
   The three **locomotion** organs are parameter shapes on the one swim model, through a
   `swim` hook that folds into `SwimMods` — cached on the creature beside its organs and
@@ -70,7 +70,7 @@ Three groups of fields, and the split matters:
   `formFor` and the swim wave in `motionFor` (`fishview.ts`) as well as the paint.
   A synergy is an `Organ` whose `when` tests two fields and that carries a `name`; its
   effect hooks return true on a frame they did something, `World.fired` publishes its id
-  once per run on `world.synergies`, and `Game.digest` turns it into the toast, so the
+  once per run on `world.synergies`, and `Game.digest` turns it into the discovery card, so the
   combination is discovered in play rather than read off a card. Nine so far:
   `Toxic Lure` (lure + venom: prey that reaches the light is poisoned before the bite),
   `Ghost Light` (lure + stealth ≥ 0.4: lured prey is not panicked by its shoal's alarm),
@@ -110,7 +110,7 @@ Three groups of fields, and the split matters:
   do not. `Creature.kicks` counts boosts so the flash fires once per kick. A bright row
   of outward lights runs along each flank.
   Recoil can kill:
-  `World.bite` books an attacker whose health the defender's organs took below zero. The
+  `Combat.land` books an attacker whose health the defender's organs took below zero. The
   paint asks `hasSynergy(g, id)` from the same file, so a combination shows on the body
   through the predicate that makes it act, and `synergiesOf(g)` is in the bake cache key
   because a synergy's threshold can fall inside one quantised bucket of the fields it
@@ -156,7 +156,7 @@ count, lean)` picks without replacement from a rarity-weighted pool.
 
 - `RARITY_WEIGHT` sets the base odds; `RARITY_CLIMB` makes rare and apex more likely as
   `reach` grows.
-- **`reach` is not the stage.** `main.offerDraft` passes
+- **`reach` is not the stage.** `Evolution.offerDraft` passes
   `max(stage, maxBand * 2 + 1)`, so diving upgrades the odds as much as feeding does.
 - **Zone pools.** A trait's `band` is the water it belongs to: it is only offered when the
   draft happens in that band or deeper — the band the player is *in*, `bandAt(player.y)`,
@@ -192,7 +192,7 @@ count, lean)` picks without replacement from a rarity-weighted pool.
   One stack each.
 - `maxStacks` defaults to 2, so a run specialises without collapsing into one stat.
 
-- **The draft reads the build** (`game/prospects.ts`). `completes(g, owned, form, t)` takes
+- **The draft reads the build** (`run/prospects.ts`). `completes(g, owned, form, t)` takes
   the card on a copy of the genome and asks the organ registry which synergies turn live,
   and `formDue` whether it is the third of a family — so a threshold synergy like Urchin
   is read exactly, and nothing in the file knows which traits pair. A card that completes
@@ -206,15 +206,15 @@ count, lean)` picks without replacement from a rarity-weighted pool.
   (`nearMisses`), counting only cards it could still have been offered.
 
 A draft is offered on level-up (`xp >= xpNeed`, which is `45 * 1.5^(stage-1)`) and once
-per new band reached. Both set `phase = 'draft'`; `applyTrait` rebuilds the view,
+per new band reached. Both set `phase = 'draft'`; `Evolution.take` rebuilds the view,
 refills health and returns to `play`.
 
 ## Transformations
 
-`game/forms.ts`. Every trait carries one or two `families` — predator, sprinter, lurker,
+`content/forms.ts`. Every trait carries one or two `families` — predator, sprinter, lurker,
 luminous, grazer; plate and the plain stat cards carry none. Three *different* traits of
-one family (stacks do not count) transform the player, once per run, in `Game.transform`
-off `applyTrait`: the plan changes to that family's, and the family's grant is applied to
+one family (stacks do not count) transform the player, once per run, in `Evolution.transform`
+off `Evolution.take`: the plan changes to that family's, and the family's grant is applied to
 the genome.
 
 | Family | Form | Plan | Grant |
@@ -261,7 +261,7 @@ Depth unlocks the water below it, its own draft pool (see *Zone pools*) and a fr
 mutation.
 
 **The pocket under a seal.** While a gate is shut and the player is in the band above it,
-within about a view of the shear, `Game.tendPocket` has `Spawner.pocket` keep 14 bodies of
+within about a view of the shear, `Bands.tendPocket` has `Spawner.pocket` keep 14 bodies of
 the band's `pocket` species — reef fish, lanternfish, bristlemouths, dumbos, snailfish —
 in the first 70–320 units under the thermocline. They are placed in frame and fade in out
 of the shadow (an off-screen arrival swam about at the edge and was never seen), and they
@@ -269,7 +269,7 @@ carry `Creature.hold`, a depth range that replaces their species' own in `think`
 the ordinary band hold pushes anything 220 units down from its band's top. The pocket is
 the reason to look down through a seal: the withheld water is visibly richer.
 
-**Forcing a seal.** A body at 70% of a gate or more can boost into it: `Game.squeeze`
+**Forcing a seal.** A body at 70% of a gate or more can boost into it: `Bands.squeeze`
 counts time held at the shear (`world.blocked`) with the boost down, easing off twice as
 fast as it builds, and at 1 s puts the body through for 30% of its maximum health. That
 band is `squeezed` — open to its own floor and drawn open by the shader — and until the
@@ -278,11 +278,11 @@ regenerates nothing. A forced entry is a raid on the pocket and the new band's c
 (its thermocline reward is drafted on arrival as usual), not a way to live there early.
 The seal label and the blocked toast both say so once the body is big enough.
 
-`checkBands` watches two things: the count of open gates (for the "thermocline parts"
+`Bands.check` watches two things: the count of open gates (for the "thermocline parts"
 toast) and `bandAt(player.y)` exceeding `maxBand`, which plays the band card and grants
 the free draft.
 
-`spendWater` is the shallows clock, the answer to size-only gates making the easiest water
+`Bands.spendWater` is the shallows clock, the answer to size-only gates making the easiest water
 the best place to grow. It runs only in a band whose gate below is already open — a player
 too small to leave is never pushed — and counts `overstay` seconds per band. After
 `SPEND_GRACE` (40 s) the band's `world.spent` climbs to 1 over `SPEND_RAMP` (100 s):
@@ -302,7 +302,7 @@ shallows clock). `reset()`
 rebuilds all of it plus the world and the player, from a `RunChoice` — a starting form
 and, optionally, a seed.
 
-**Seeds.** Every run has one: `Game.seed`, random unless given, shown on the end screen as
+**Seeds.** Every run has one: `Run.seed`, random unless given, shown on the end screen as
 `Seed n` (or `Daily yyyy-mm-dd`), and a `?seed=n` in the address starts that ocean from
 Hatch. The world and the ocean draw from `rng`; the draft draws from its own `draftRng`
 (the seed xor a constant), so the same seed and the same picks deal the same hands however
@@ -312,7 +312,7 @@ draft, not a replay. **The daily** (`dailySeed`, FNV-1a of the UTC date) is alwa
 hatchling, so it is one run for everyone; *Spawn again* after a daily retries the same
 ocean, after any other run it rolls a new one with the same body.
 
-**Starting forms** (`game/starts.ts`). One per zone some run has reached —
+**Starting forms** (`run/starts.ts`). One per zone some run has reached —
 `Codex.deepest`, written the moment a band is first entered and backfilled from the kill
 counts of codices older than it: the Reef Wrasse hatches with Parrot Beak, the
 Lanternfish with Photophores (smaller and quicker), the Angler Larva with Illicium
@@ -323,15 +323,15 @@ last pick; the end screens offer *Choose a body* to go back to it.
 
 ## The codex
 
-The only thing besides the best score that outlives a run. `game/codex.ts` keeps kills
+The only thing besides the best score that outlives a run. `run/codex.ts` keeps kills
 per species id, stacks per trait id, the synergy ids that have fired, the families whose
 form has been reached and a run count, in
 `localStorage` under `abyssal.codex`. Ids rather than names, so a rename does not orphan
 a find; a load keeps ids the game no longer has, and a corrupt store reads as empty.
 
-- **Where it is fed.** `World.slay` pushes the species id of every kill the player
+- **Where it is fed.** `Combat.slay` pushes the species id of every kill the player
   books onto `world.devoured` (an event, cleared each `update`); `Game.digest` records
-  it, and records the synergy ids off `world.synergies`. `applyTrait` records the trait.
+  it, and records the synergy ids off `world.synergies`. `Evolution.take` records the trait.
 - **When it is written.** On a first — a species, trait or synergy never seen in any
   run, which also toasts and goes on the end screen's *New in the codex* line — at the
   end of a run, and when the page is hidden. Kill counts ride along with those, so the
@@ -341,9 +341,9 @@ a find; a load keeps ids the game no longer has, and a corrupt store reads as em
   unfound keeps its slot as `???`, since what is left to find is the point. A draft card
   for a trait never taken carries a *new* mark beside its rarity.
 
-**Hunger is said before it kills** (`Game.hungerWarning`): a toast under a quarter and at
+**Hunger is said before it kills** (`Metabolism.warn`): a toast under a quarter and at
 empty, the bar pulsing red, and a heartbeat every 1.15 s quickening to 0.5 s as fullness
-runs out — `game/sound.ts`, two synthesised sine thumps, woken on the first key or press
+runs out — `audio/sound.ts`, two synthesised sine thumps, woken on the first key or press
 since a browser will not start audio before one, and muted with M.
 
 Fullness (`food`) drains at `metabolism * (1.2 + size * 0.014)` and hits health at zero

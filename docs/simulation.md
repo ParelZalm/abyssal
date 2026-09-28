@@ -1,7 +1,10 @@
 # Simulation
 
-All of it is `src/game/world.ts`, about 420 lines. `Creature` is one animal; `World`
-owns the list and the rules between them.
+All of it is `src/sim/`. `Creature` (`creature.ts`) is one animal; `World` (`world.ts`)
+owns the list, the outbox and the three update passes. The passes and the spawner are
+classes of their own over it: `Behaviour` (`think`, perception, smell), `Patterns`
+(a guardian's set piece), `Combat` (contacts, bites, grasping, bleeding, deaths) and
+`Spawner`.
 
 ## Swimming
 
@@ -57,13 +60,13 @@ then `strike` decides what happens:
   **`hunts`**: only `hunter`, `ambush` and `apex` strike at all. Letting everything with a
   mouth eat gutted the shallows — an anchovy shoal is bigger than a krill swarm, so it ate
   its way through every swarm it crossed and the first minute of a run had nothing left in
-  it to catch. The red danger tint in `main.render` goes through the same predicate, so
+  it to catch. The red danger tint in `Scene.draw` goes through the same predicate, so
   something that cannot actually eat you never glows as though it could.
 - Small enough to swallow → gone in one, credited through `slay`.
 - Otherwise a `bite`, on `biteCd`, with `biteDamage(genome)` against `armor`.
 - `venom` leaves `poison` on the victim with `poisonByPlayer` recorded, so a kill that
   lands after the mouth has let go is still the player's.
-- Every bite pushes a `Bite` record onto `world.bites`; `main.digest` drains it.
+- Every bite pushes a `Bite` record onto `world.bites`; `Game.digest` hands it to `Impacts`.
 - Plans with `PLAN_ART.grasp > 0` (the squids) never bite on contact. `Combat.grasp`
   latches the feeding tentacles on prey up to `size × grasp` past the mouth, in a forward
   cone, then reels it to the crown and bites there — never whole, and only after 0.9 s
@@ -117,7 +120,7 @@ a fixed point just above the start: creatures flickered into being and teleporte
 there for the whole run.
 
 **Fading in.** Every body carries `fade`, 0 to 1 over `FADE_IN`, exposed as `emergence`
-and multiplied into the alpha `main.render` hands `view.show`. Anything spawned off-screen
+and multiplied into the alpha `Scene.draw` hands `view.show`. Anything spawned off-screen
 finishes it unseen; the cases that cannot be — the first fill, and the thin water above you
 in the shallows where there is no off-screen to hide in — resolve out of the murk instead.
 The player is born whole.
@@ -150,7 +153,7 @@ school, and without the strays the ocean is a row of set pieces with nothing bet
 ## Blood
 
 A kill pushes a `Blood` onto `world.blood` — a position, the body length of what died, and
-a countdown — and onto `world.spilled`, the per-frame event `Game.digest` drains to draw
+a countdown — and onto `world.spilled`, the per-frame event `Impacts.drain` draws
 the cloud (`Fx.blood`, and `bloodColour` for the depth: red is the first thing the water
 takes, so a cloud in the Abyss is a black smear and not a crimson one).
 
@@ -182,7 +185,7 @@ Three animals are beaten by behaviour rather than by size:
 - **Bait balls.** A schooling body with six or more of its own kind within
   `3 × size + 40` is `balled`: a bite that has to tear glances off it (a gulp that would
   swallow it whole still works), and the player is told to scatter it. Every boost kick
-  (`Creature.kicks`, answered once in `World.update`) scatters schooling bodies within
+  (`Creature.kicks`, answered once in `World.update` by `Behaviour.scatterFrom`) scatters schooling bodies within
   `4 × radius + 220` of the player — they bolt outward, panicked, and are loose for 3 s.
 - **Shark blood**, above.
 - **The anglerfish's lure.** NPC anglerfish carry `lure` 1. On anything but the player the
@@ -214,7 +217,7 @@ tell has to be read.
 
 A guardian ignores anything smaller than `noticeSize(zone)`, which is interpolated between
 the gate that opens its zone and the gate that opens the next. It has seen you and does not
-care, which is the scene that sells a zone. `World.notices` gates the prey filter;
+care, which is the scene that sells a zone. `Behaviour.notices` gates the prey filter;
 `noticedBy` publishes the instant one turns toward the player and `hunted` stays true while
 any is chasing. `Game` turns those into a spike-and-sustain envelope on the water shader's
 `uDread`. Stealth multiplies the threshold up. See
@@ -222,7 +225,7 @@ any is chasing. `Game` turns those into a spike-and-sustain envelope on the wate
 is not a share of the guardian's own body, which was tried first and is backwards.
 
 Population target itself falls with depth (`POP_SHALLOW` 140 → `POP_DEEP` 46 in
-`main.ts`) because deep creatures are far larger, and by up to 30% more in a band the
+`run/Bands.ts`, applied by `Bands.stock`) because deep creatures are far larger, and by up to 30% more in a band the
 player has overstayed — see `spendWater` in `progression.md`. `rollSpecies` takes that
 band's `world.spent` too, read at the spawn point rather than at the player. The shallow figure went up when groups
 went in: the same budget spread evenly reads as crowded, and spent on a handful of big

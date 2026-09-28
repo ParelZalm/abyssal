@@ -21,7 +21,7 @@ browser pane attaches to it.
 
 ## Design mode
 
-`/design.html` (`src/game/design/`) lays out every drawing the game makes — the fish form
+`/design.html` (`src/design/`) lays out every drawing the game makes — the fish form
 and its parameters, every body plan, every mutation taken once on the hatchling, all the
 species, the background props, and the water and biome palettes — each over the real water
 colour at its own depth. It imports the shipping drawing code and is never imported by it,
@@ -33,7 +33,7 @@ off the hatchling, phrased the way the cards phrase it). A cell that draws a gen
 `genome` on its `DesignItem` and gets the last two for free.
 
 It is a development tool: `design.html` is not a build entry, so it is dev-served only, and
-both pages carry a corner link to the other (`import.meta.env.DEV` in `main.ts`).
+both pages carry a corner link to the other (`import.meta.env.DEV` in `src/main.ts`).
 
 Reach for it first when a change is about how something looks in isolation. Reach for the
 game itself when the question is how it reads in motion, at depth, or against the HUD.
@@ -41,32 +41,55 @@ game itself when the question is how it reads in motion, at depth, or against th
 ## Verifying visual work
 
 Almost every change here is visual, and the only real verification is looking at it. In
-dev builds `main.ts` exposes the `Game` instance as `window.game`, which is the intended
-way to drive the game from the browser console:
+dev builds `src/main.ts` exposes the `Game` instance as `window.game`, which is the
+intended way to drive the game from the browser console:
 
 ```js
 const g = window.game;
-g.phase = 'play';                     // skip the title screen (or click Hatch)
-g.levelUp = () => { g.xp = 0; };      // stop drafts interrupting a look
-g.checkTiers = () => {}; g.digest = () => {}; g.metabolise = () => {};
-g.player.genome.size = 120;           // size drives zoom and which tiers are open
+g.phase = 'play';                                // skip the title screen (or click Hatch)
+g.evolution.levelUp = () => { g.run.xp = 0; };   // stop drafts interrupting a look
+g.bands.check = () => {}; g.digest = () => {}; g.metabolism.update = () => {};
+g.player.genome.size = 120;                      // size drives zoom and which bands are open
 g.player.view.rebuild(g.player.genome);
 setInterval(() => { g.player.y = 6300; g.player.vy = 0; g.player.vx = 0; }, 16);
 ```
 
-Pinning `player.y` in an interval is the only reliable way to hold a depth — the camera
-eases and the simulation will otherwise drag you off. Overriding `zoomFor` to a constant
-is how to inspect creature art up close. Depths worth checking: ~500, 2400, 4200, 6300,
-8400, one per tier. Size gates (`tiers.ts`) will block a small fish from deep water, so
-raise `size` first.
+`run`, `player`, `world` and the run systems (`evolution`, `bands`, `metabolism`,
+`controller`) are rebuilt on every reset, so patch them after the run has started, and
+again after a restart. Pinning `player.y` in an interval is the only reliable way to hold
+a depth — the camera eases and the simulation will otherwise drag you off. Overriding
+`g.camera.zoomFor` to a constant is how to inspect creature art up close. Depths worth
+checking: ~500, 2400, 4200, 6300, 8400, one per zone. Size gates (`content/zones.ts`)
+will block a small fish from deep water, so raise `size` first.
 
 ## Architecture
 
-`src/main.ts` holds a `Game` class that owns the Pixi application, the loop, the camera,
-input and all run state. Everything else is a module it drives. The simulation
-(`game/world.ts`) never reaches back into `main` — it publishes what happened as plain
-fields (`bites`, `playerGain`, `playerHeal`, `blocked`, `leviathanKilled`) that
-`Game.digest()` drains and turns into particles, growth and phase changes.
+`src/main.ts` only boots. `src/Game.ts` owns the Pixi application, the loop and the
+page-lifetime pieces (input, camera, water, particles, codex), and on every reset builds a
+fresh `Run` plus one instance of each run system over it. The folders are layers, and
+imports only point down them:
+
+- `core/` — util and noise; no pixi, no game knowledge.
+- `content/` — the tables and pure queries over them: genome, species, zones, traits,
+  forms, the body form.
+- `sim/` — the simulation. `World` holds the state and the outbox and runs three passes:
+  `Behaviour.think`, `integrate`, `Combat.resolveContacts`; `Spawner`, `Patterns` and
+  `sim/organs/` hang off it. It never reaches up into `run/` or `Game`.
+- `run/` — one run's record (`Run`) and the systems that move it: `Evolution` (level-up,
+  draft, traits, transformation), `Metabolism`, `Bands` (gates, forcing, the shallows
+  clock, stocking the water), `Ending`.
+- `input/` — `Input` (raw state) and `PlayerController` (steering, boost, active organ).
+- `render/` — `Camera`, `Scene` (visibility, the gate, the water pass), `Impacts` (the
+  outbox made felt), `Dread`, the water shader, and `creature/` for the fish art.
+- `ui/` — the DOM HUD and screens behind the `UI` facade. `design/` — the design board.
+
+The simulation publishes what happened as plain fields on `World` (`bites`, `spilled`,
+`pulses`, `playerGain`, `playerHeal`, `devoured`, `synergies`, `noticedBy`,
+`killedGuardian`, `blocked`), and `Game.digest()` routes each to the system it concerns.
+A run system gets only what it needs in its constructor — never `Game`; the phase is the
+one thing it may set, through `Flow` (`run/phase.ts`). Keep new code in that shape: a
+class that owns its own state, in the folder of the layer it belongs to, rather than
+another field on `Game`.
 
 Two display roots: a static screen-sized sprite carrying the GLSL water filter, and a
 `camera` container holding the ocean particulate, the creature views and the effects.
@@ -85,20 +108,22 @@ Read `docs/decisions.md` before rebuilding anything that looks missing.
 ## Conventions that matter
 
 - **Creature art is baked into a texture once per `rebuild(genome)`; swimming moves mesh
-  vertices, never geometry.** Never issue paths per frame. The shape lives in `form.ts`
-  (a spine and one width curve), the painting in `fishbake.ts`, the skinned mesh in
-  `fishview.ts`.
+  vertices, never geometry.** Never issue paths per frame. The shape lives in
+  `content/form.ts` (a spine and one width curve), the painting in
+  `render/creature/fishbake.ts` (`paint()` is the order; the painters are in `bake/`), the
+  skinned mesh in `render/creature/fishview.ts`.
 - **Nothing on a creature is stroked.** A contour has a position of its own, so it draws
   twice wherever parts cross and the join shows. Silhouettes are carried by value —
   noise-ragged edges, countershading, mottling. See `docs/decisions.md`.
 - **Organs carry a mechanic and a morphology together.** Adding one to `Genome` means an
-  entry in `organs.ts` (the mechanic, as hooks the simulation calls) and paint in
-  `fishbake.ts`; a stat with no visible consequence is not how this game communicates.
-  `world.ts` and `main.ts` never read an organ field by name.
-- **Use `waterColor(y)` and `lightAt(y)` from `water.ts`** for anything that needs to
-  know what the water looks like at a depth. `biomeAt(y)` blends across thermoclines;
-  `tierBiome(y)` is the unblended profile for anything discrete.
-- **New sprites should batch** against the shared textures in `textures.ts`, and
+  entry in `sim/organs/` (the mechanic, as hooks the simulation calls) and paint in
+  `render/creature/bake/`; a stat with no visible consequence is not how this game
+  communicates. Nothing outside `sim/organs/` reads an organ field by name — it asks the
+  folds in `sim/organs/query.ts`.
+- **Use `waterColor(y)` and `lightAt(y)` from `render/water.ts`** for anything that needs to
+  know what the water looks like at a depth. `waterAt(y)` (`content/zones.ts`) blends
+  across thermoclines; `bandWater(y)` is the unblended profile for anything discrete.
+- **New sprites should batch** against the shared textures in `render/textures.ts`, and
   additive things belong in their own container — an interleaved blend-mode change
   breaks the batch.
 - Comment the *why*, especially the constraint that made a value what it is. The

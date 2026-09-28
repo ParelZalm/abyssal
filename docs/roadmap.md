@@ -18,11 +18,11 @@ in `Combat.bleedOut`), which drips blood a hunter can follow.
 
 Each one is three touches, all following Toxic Lure:
 
-1. An entry in `src/game/organs.ts` with a `name` and a two-field `when`. Effect hooks
+1. An entry in `src/sim/organs/synergies.ts` with a `name` and a two-field `when`. Effect hooks
    return `true` on a frame they acted, which fires the first-time toast.
-2. A branch in the matching painter in `src/game/fishbake.ts`, guarded by
+2. A branch in the matching painter in `src/render/creature/bake/`, guarded by
    `hasSynergy(g, id)`. Fills only, no strokes.
-3. A cell in the `BUILDS` list in `src/game/design/catalog.ts`.
+3. A cell in the `BUILDS` list in `src/design/catalog.ts`.
 
 Check the `when` against the roster too: `species.ts` gives NPCs claws, glow, sense and
 translucency, and a synergy one of them qualifies for repaints it. If a pair has no organ
@@ -39,7 +39,7 @@ returns true when it pulled something; a pure modifier synergy still needs that.
 
 ## 2. ~~Transformations (Isaac's Guppy)~~
 
-Done: `game/forms.ts`, five families (armoured dropped — every plated plan is a
+Done: `content/forms.ts`, five families (armoured dropped — every plated plan is a
 guardian's), three different traits of one family, once per run. Each form is a plan the
 roster draws, with the wraith's smoke kept on it, plus a grant of existing organs (the
 Shark's `frenzy` is new). See `docs/progression.md`. Left open: a second form in a long
@@ -48,7 +48,7 @@ that other sharks treat as a rival).
 
 ## 3. ~~The draft reads synergies~~
 
-Done in `game/prospects.ts`: the completing card's second light and note, a lean of ×1.5
+Done in `run/prospects.ts`: the completing card's second light and note, a lean of ×1.5
 toward completing cards and ×1.15 toward begun families, a reroll paid in fullness at a
 climbing price, and the end screen's "one card short of". A banish was left out — the
 reroll already makes the draft a resource choice, and a banish needs a run-long exclusion
@@ -71,7 +71,7 @@ Gates are size-only, so the optimal play is to grind the shallows until the gate
 ## 5. Builds that play differently
 
 Most of the pool is multipliers, which converge on one optimal fish. New organs that
-change *what you do*, each an entry in `organs.ts` plus paint:
+change *what you do*, each an entry in `sim/organs/` plus paint:
 
 - ~~**Diet.**~~ Done: Gill Rakers (`filter`) and Crushing Pharynx (`crush`), with the
   `gulp`, `damage`, `biteRate` and `recoil` hooks they needed. Jellies do not sting in
@@ -110,7 +110,7 @@ a small puzzle with a tell. Squid arms that can be torn free are the model to co
 
 The biggest roguelite gap. There is no save beyond the best score in `localStorage`.
 
-- ~~**Codex.**~~ Done: `game/codex.ts`, a Codex screen off the title and end screens,
+- ~~**Codex.**~~ Done: `run/codex.ts`, a Codex screen off the title and end screens,
   firsts toasted and listed on the end screen, and a *new* mark on draft cards for traits
   never taken. Species show as names and counts; drawing each one there would need a
   bake to an image, which is the same work as the run summary's silhouettes (§8).
@@ -125,7 +125,7 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
   and how (bite, sting, poison) on every wound; `Game.causeOfDeath` reads it if it is under
   4 s old, and otherwise names starvation or the forced band's pressure.
 - ~~An audible, readable hunger warning.~~ Done: toasts at a quarter and at empty, the
-  fullness bar pulsing red, and a synthesised heartbeat (`game/sound.ts`, the game's first
+  fullness bar pulsing red, and a synthesised heartbeat (`audio/sound.ts`, the game's first
   sound) that quickens as the bar drains. M mutes it, remembered.
 - ~~The fish's silhouette at each stage on the run summary.~~ Done: `Game.lineage` keeps
   a genome copy at hatching, every level-up and a transformation; the end screens bake up

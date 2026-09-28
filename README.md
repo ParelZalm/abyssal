@@ -153,27 +153,20 @@ undone. [`CLAUDE.md`](CLAUDE.md) is the short version, aimed at agents.
 
 ## Code map
 
-| File | Responsibility |
+The folders are layers, and imports only point down them — see
+[`docs/architecture.md`](docs/architecture.md) for the full map.
+
+| Folder | Responsibility |
 | --- | --- |
-| `src/game/genome.ts` | The stat block every creature, player included, is built from. |
-| `src/game/traits.ts` | The mutation pool and the rarity-weighted draft. |
-| `src/game/species.ts` | Species table: 18 species — depth bands, sizes, behaviour, body plan, nutrition. |
-| `src/game/tiers.ts` | The five stacked tiers, their size gates and the descent limit. |
-| `src/game/form.ts` | The spine and width curve every body plan is a setting of. |
-| `src/game/fishbake.ts` | The painting: one creature baked into one texture per genome. |
-| `src/game/fishview.ts` | The baked texture skinned onto a mesh, posed by moving vertices. |
-| `src/game/world.ts` | Simulation — steering, perception, schooling, contacts, biting. |
-| `src/game/biomes.ts` | Per-tier visual identity: cloud, light and what drifts in the water. |
-| `src/game/scenery.ts` | Parallax soft props behind and in front of the creatures. |
-| `src/game/props.ts` | Disc / blob / mass / wisp textures for the scenery bands. |
-| `src/game/view.ts` | What the camera sees this frame — the record water, ocean and scenery read. |
-| `src/game/water.ts` | The GLSL water: fog, thermoclines and the tier below, as one full-screen filter. |
-| `src/game/ocean.ts` | Suspended particulate drifting past the camera. |
-| `src/game/fx.ts` | Pooled particles — sprites for dots, Graphics only for rings. |
-| `src/game/textures.ts` | The two shared canvas textures everything batches against. |
-| `src/main.ts` | Loop, camera, input, progression, run state. |
-| `src/ui/UI.ts` | DOM UI facade — HUD chrome + overlay screens. |
-| `src/ui/icons.ts` | The abstract glyph set mutations are shown by. |
+| `src/main.ts`, `src/Game.ts` | Boot; the loop, reset, and routing what the simulation did to the systems it concerns. |
+| `src/core/` | Seeded RNG, maths, colour and value noise — no game knowledge. |
+| `src/content/` | The tables: genome, species, zones and bands, traits, transformations, the body form. |
+| `src/sim/` | The simulation — `World`, `Creature`, spawning, behaviour, guardian patterns, combat, and every organ's mechanic in `sim/organs/`. |
+| `src/run/` | One run's record and the systems that move it: evolution and the draft, metabolism, the bands and their gates, the ending, the codex. |
+| `src/input/` | Keyboard and pointer, and the player's steering, boost and active organ. |
+| `src/render/` | Camera, scene visibility, the GLSL water, particulate, scenery, particles; `render/creature/` bakes and skins the fish. |
+| `src/ui/` | DOM UI facade — HUD chrome, overlay screens, and the glyphs mutations are shown by. |
+| `src/design/` | The design board at `/design.html`: every drawing the game makes, dev only. |
 
 ## Look
 

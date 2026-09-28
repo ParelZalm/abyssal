@@ -112,7 +112,7 @@ function formGroup(): DesignGroup {
                 extra: Record<string, string | number>,
                 spec: Partial<FormSpec>): DesignItem => ({
     id, name, note,
-    source: 'src/game/design/fishform.ts',
+    source: 'src/design/fishform.ts',
     // the drawn animal is the spine plus whatever the caudal adds behind it
     span: form.len * (1 + form.fluke) * 10,
     depth: 3200,
@@ -177,7 +177,7 @@ function planGroup(): DesignGroup {
       id: plan,
       name: plan,
       note: `PLAN_FORMS.${plan}`,
-      source: 'src/game/form.ts',
+      source: 'src/content/form.ts',
       span: 120,
       depth: 3000,
       facts: { plan },
@@ -233,7 +233,7 @@ function morphGroup(): DesignGroup {
       id: `${m.key}-${v}`,
       name: `${m.key} ${v}`,
       note: m.note,
-      source: 'src/game/fishbake.ts',
+      source: 'src/render/creature/fishbake.ts',
       span: 120,
       depth: m.depth,
       facts: { param: m.key, value: v, plan: m.plan, depth: m.depth },
@@ -292,7 +292,7 @@ function statGroup(): DesignGroup {
       id: `${m.key}-${v}`,
       name: `${m.key} ${v}`,
       note: m.note,
-      source: 'src/game/genome.ts',
+      source: 'src/content/genome.ts',
       span: 120,
       depth: m.depth,
       facts: { stat: m.key, value: v, plan: m.plan, depth: m.depth },
@@ -420,7 +420,7 @@ function buildGroup(): DesignGroup {
         id: b.id,
         name: b.name,
         note: b.note,
-        source: 'src/game/design/catalog.ts',
+        source: 'src/design/catalog.ts',
         // a build that has to be big to be itself (Whale Shark) gets a cell to match, so the
         // row is framed at one scale rather than one animal overflowing its cell
         span: 130 * (g.size / 40),
@@ -463,7 +463,7 @@ function mutationGroup(): DesignGroup {
         id: t.id,
         name: t.name,
         note: t.curse ? `${t.desc} Curse: ${t.curse}` : t.desc,
-        source: 'src/game/traits.ts',
+        source: 'src/content/traits.ts',
         span: 130,
         depth: homeDepth(t),
         facts: { rarity: t.rarity, stacks: t.maxStacks ?? 2, band: t.band ?? 'any' },
@@ -491,7 +491,7 @@ function speciesGroup(): DesignGroup {
         id: sp.id,
         name: sp.name,
         note: `${sp.zone}${sp.band ? ` · ${sp.band}` : ''} · ${sp.behavior} · ${sp.plan}`,
-        source: 'src/game/species.ts',
+        source: 'src/content/species.ts',
         span: g.size * 3,
         depth: (rangeOf(sp)[0] + rangeOf(sp)[1]) / 2,
         facts: {
@@ -531,7 +531,7 @@ function guardianGroup(): DesignGroup {
         id: sp.id,
         name: sp.name,
         note: `${sp.zone} · ${sp.plan} · ${Math.round(g.size)} cm`,
-        source: 'src/game/species.ts',
+        source: 'src/content/species.ts',
         // a common span rather than one scaled to each body: relative bulk is half of what
         // tells them apart, and per-cell framing would throw exactly that away
         span: 420,
@@ -564,7 +564,7 @@ function propGroup(): DesignGroup {
         id: `${kind}-${level}`,
         name: `${kind} · blur ${level}`,
         note: level === 2 ? 'far band and foreground' : level === 1 ? 'mid band' : 'near',
-        source: 'src/game/props.ts',
+        source: 'src/render/props.ts',
         span: 90 * PROP_SIZE[kind],
         depth: 2400,
         facts: { kind, level, relativeSize: PROP_SIZE[kind] },
@@ -616,7 +616,7 @@ function waterGroup(): DesignGroup {
         id: `band-${i}`,
         name: band.name === zone.name ? band.name : `${zone.name} · ${band.name}`,
         note: zone.tagline,
-        source: 'src/game/zones.ts',
+        source: 'src/content/zones.ts',
         span: 200,
         depth: (band.top + band.bottom) / 2,
         facts: {
@@ -654,7 +654,7 @@ function protoSceneryGroup(): DesignGroup {
         id: `proto-${i}`,
         name: band.name,
         note: props,
-        source: 'src/game/design/proto-scenery.ts',
+        source: 'src/design/proto-scenery.ts',
         // a patch is a screen of water, not an object on a stand, so it is framed to fill
         // its cell rather than sit inside one. The 0.8 is as far as that can go before the
         // cell crops the composition instead of the composition ending at the water.

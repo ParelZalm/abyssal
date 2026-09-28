@@ -1,4 +1,3 @@
-import type { PropKind } from '../render/props';
 import { clamp, lerp } from '../core/util';
 
 /** Floor of the water column, in world units. Depth runs 0 here to DEPTH_MAX. */
@@ -7,6 +6,9 @@ export const DEPTH_MAX = 9000;
 export const WORLD_HALF_W = 7000;
 
 type Rgb = [number, number, number];
+
+/** The soft shapes a band's scenery is drawn from; `render/props.ts` paints each. */
+export type PropKind = 'disc' | 'blob' | 'mass' | 'wisp';
 
 /**
  * How the water looks and behaves over one band: how it clouds, how the light

@@ -2,7 +2,7 @@
 
 ## The water
 
-`src/game/water.ts` is one full-screen `Filter` over a white `Sprite`, with a
+`src/render/water.ts` is one full-screen `Filter` over a white `Sprite`, with a
 hand-written GLSL fragment program. It draws, in order: the depth gradient, two
 domain-warped FBM fields for the drifting masses, the band below the next thermocline,
 the seal itself, god rays, the player's own bioluminescence, the dread desaturation, a
@@ -22,7 +22,7 @@ draws its wrap as a seam across the screen.
 
 ## Zones and bands
 
-`src/game/zones.ts` gives each band a visual identity (`WaterLook`) and blends it by
+`src/content/zones.ts` gives each band a visual identity (`WaterLook`) and blends it by
 depth:
 
 - `waterAt(y)` cross-fades adjacent bands over `BLEND` (620 world units) either side of
@@ -40,10 +40,11 @@ tiers are indistinguishable. Same reason `shimmer` does not scale away with `uLi
 
 ## Creatures
 
-`src/game/form.ts` (shape), `src/game/fishbake.ts` (art), `src/game/fishview.ts` (the view).
+`src/content/form.ts` (shape), `src/render/creature/fishbake.ts` and its `bake/` painters
+(art), `src/render/creature/fishview.ts` (the view).
 One `FishView extends Container` per creature, holding one `MeshSimple`. Its three additive
 Sprites (`aura`, `halo`, `core`) are **not** children of it: they live in `view.glow`, which
-`world.ts` parents into a single `world.glow` container under all the bodies. A blend-mode
+`World` parents into a single `world.glow` container under all the bodies. A blend-mode
 change between the meshes would break the sprite batch once per animal on screen, so the
 blooms are gathered instead and every one of them draws in a single batch off the shared
 glow texture. The cost is that the view has to move and dim two display objects rather than
@@ -91,7 +92,7 @@ any two of its shapes, so growth and mutation could only ever swap one drawing f
 A contour is a line with a position of its own, so the moment two parts of an animal move
 across each other it draws twice and the join shows. The old jointed view did this at every
 bend, and no draw order fixes it: two rigid pieces that rotate about different points always
-reveal their shared boundary. Every shape in `fishbake.ts` is a fill.
+reveal their shared boundary. Every shape in `fishbake.ts` and `bake/` is a fill.
 
 What the outline used to do is done by value instead, all from the same value noise the
 water shader runs on (`noise.ts`, matching the GLSL construction in `water.ts` — an animal
@@ -136,7 +137,7 @@ a plan cannot be added to the game without appearing there.
 `bakeFish` caches by a deliberately coarse key: two genomes that differ by less than a hue
 step are the same picture, so a school of forty krill is one texture. The cache is capped at
 160 entries. Baking needs a live renderer, so `setBakeRenderer` must be called before the
-first creature exists — in `main.ts` that is before `reset()`.
+first creature exists — in `Game.boot` that is before `reset()`.
 
 `menace` is read inside the view, so the same genome always produces the same animal.
 
@@ -145,5 +146,5 @@ first creature exists — in `main.ts` that is before `reset()`.
 `src/ui/` is all DOM over the canvas — `UI.ts` is the game-facing facade, `hud/`
 holds the in-play chrome, `screens/` the overlays, and `icons.ts` the stroke-glyph
 set. Nothing in the HUD is drawn on the canvas, and nothing in the game reads the DOM.
-The one coupling is `ui.gateLabel(text, screenY, screenH)`, which `main.render` feeds a
+The one coupling is `ui.gateLabel(text, screenY, screenH)`, which `Scene.draw` feeds a
 screen position computed from the seal's world depth.

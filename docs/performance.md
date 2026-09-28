@@ -38,7 +38,7 @@ These changes fixed it:
 3. **Octave counts are graded** — four for the main cloud field, three for the warp and
    wide rays, two for fine detail — and the deep-water field reuses noise already
    computed instead of paying for another FBM.
-4. **Off-screen creatures skip their art entirely.** `main.render` sets
+4. **Off-screen creatures skip their art entirely.** `Scene.draw` sets
    `view.visible = false` outside the frame; they still swim, hunt and get eaten.
 5. **No canvas MSAA at 2x and above.** Creature art is baked with its own MSAA and gets
    its edges from transparent texels, so the canvas's multisampling only reached the halo

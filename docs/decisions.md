@@ -109,7 +109,7 @@ Rejected along the way:
 
 ## Proximity is measured between bodies, not centres
 
-`main.render` computes the dread/danger term from `d - c.radius - p.radius`. A leviathan
+`Scene.draw` computes the dread/danger term from `d - c.radius - p.radius`. A leviathan
 is close long before its centre is, and that gap is exactly when it should be
 frightening. Any new "how near is it" term should do the same.
 
