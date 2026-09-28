@@ -1,5 +1,7 @@
 import { lerp, rgb } from '../core/util';
-import { speciesById, type Creature, type World } from '../sim/world';
+import type { Creature } from '../sim/creature';
+import type { World } from '../sim/world';
+import { speciesById } from '../content/species';
 import type { UI } from '../ui/UI';
 import type { Camera } from './Camera';
 import type { Dread } from './Dread';
@@ -21,7 +23,7 @@ export class Impacts {
   drain(world: World, player: Creature) {
     const { fx, camera } = this;
     // a kill leaves a cloud where it happened, and for the next few seconds that spot is
-    // something the simulation steers predators toward — see `World.smell`
+    // something the simulation steers predators toward — see `Behaviour.smell`
     for (const s of world.spilled) {
       fx.blood(s.x, s.y, bloodColour(s.y), s.size * 0.9);
     }

@@ -3,7 +3,8 @@ import type { Camera } from '../render/Camera';
 import type { Fx } from '../render/fx';
 import type { Run } from '../run/Run';
 import { activeOf, boostModsOf, POISE_MAX, PUFF_TIME } from '../sim/organs';
-import type { Creature, World } from '../sim/world';
+import type { Creature } from '../sim/creature';
+import type { World } from '../sim/world';
 import type { Input } from './Input';
 
 /**

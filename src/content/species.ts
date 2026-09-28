@@ -25,7 +25,7 @@ export interface Species {
   /** The one animal in its zone that is not prey. */
   guardian?: true;
   /**
-   * A guardian's attack, with a tell before it and an opening after (`World.patternStep`).
+   * A guardian's attack, with a tell before it and an opening after (`Patterns.patternStep`).
    * `charge`: it lines up, then rushes in a straight line it cannot steer, and a miss
    * leaves its flank open. `click`: three clicks, then a forward blast that stuns what is in
    * front of it, then the rush. The squids have their arms instead.
@@ -385,7 +385,7 @@ export function hunts(s: Species) {
  * to its first stage without meeting anything, and the things that hunt are thinned to
  * under a fifth of their weight. The deep is the same rule run backwards — predators are
  * nearly twice as likely there, which is what makes a kill in the Abyss draw a crowd
- * (`World.smell`) while a kill in the shallows mostly draws nothing.
+ * (`Behaviour.smell`) while a kill in the shallows mostly draws nothing.
  *
  * The apex is thinned with the rest: the Sunlit guardian is alive from the first minute
  * and is meant to be met, but it should not be the first thing a hatchling meets.
@@ -436,7 +436,7 @@ export function rollSpecies(rng: Rng, depth: number, spent = 0): Species | null 
  * The least, because the arrival is a tell rather than an execution — it should be the
  * thing that makes the player go down, not the thing that ends the run. Home water only
  * (`rangeOf`), since anything from further down would be steered straight back to its
- * band by `World.think`. Past the reef nothing that is not a guardian is big enough, and
+ * band by `Behaviour.think`. Past the reef nothing that is not a guardian is big enough, and
  * the thinning in `weightAt` is the whole of the clock there.
  */
 export function riserFor(depth: number, size: number): Species | null {
@@ -450,4 +450,8 @@ export function riserFor(depth: number, size: number): Species | null {
     if (!best || s.size[1] < best.size[1]) best = s;
   }
   return best;
+}
+
+export function speciesById(id: string) {
+  return SPECIES.find(s => s.id === id)!;
 }

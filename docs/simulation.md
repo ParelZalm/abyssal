@@ -22,7 +22,7 @@ the AI, and the player in mouse mode.
 
 ## Perception and behaviour
 
-`World.think(c, dt, player)` runs per creature, per frame, and is the whole AI:
+`Behaviour.think(c, dt, player)` runs per creature, per frame, and is the whole AI:
 
 - A **player lure** overrides everything for prey that the player could eat, within
   `240 + lure * 340` — checked before the behaviour switch, because that is the point of
@@ -64,7 +64,7 @@ then `strike` decides what happens:
 - `venom` leaves `poison` on the victim with `poisonByPlayer` recorded, so a kill that
   lands after the mouth has let go is still the player's.
 - Every bite pushes a `Bite` record onto `world.bites`; `main.digest` drains it.
-- Plans with `PLAN_ART.grasp > 0` (the squids) never bite on contact. `World.grasp`
+- Plans with `PLAN_ART.grasp > 0` (the squids) never bite on contact. `Combat.grasp`
   latches the feeding tentacles on prey up to `size × grasp` past the mouth, in a forward
   cone, then reels it to the crown and bites there — never whole, and only after 0.9 s
   held, so a guardian's grab is a struggle and not an instant death. The catch escapes
@@ -109,7 +109,7 @@ folding it.
 
 **Never at the origin.** `add` places the view and hides it before returning. A fresh
 `FishView` is a Container — visible, opaque, at its own origin, which is world (0, 0) — and
-`Game.render` tops the population up *after* it has decided what every creature looks like
+`Bands.stock` tops the population up *after* it has decided what every creature looks like
 this frame. Without those two lines every spawn in the game is drawn once, at full alpha,
 in the corner of the world, and then snaps to where it really is on the next frame or
 vanishes when `show` finally reaches it. The player hatches at (0, 260), so that corner is
@@ -190,7 +190,7 @@ Three animals are beaten by behaviour rather than by size:
   same point the paint hangs it at — is struck for 2.5 bites at once, whatever its size,
   and the angler lunges. From behind or beside it is prey like any other.
 
-**Guardians have patterns** (`Species.pattern`, run by `World.patternStep` ahead of the
+**Guardians have patterns** (`Species.pattern`, run by `Patterns.patternStep` ahead of the
 rest of `think`): a tell, a committed attack, and an opening. Each starts only on a
 guardian already hunting the player, within 0.7 of its sense and outside its own length,
 and comes round every 6 s.

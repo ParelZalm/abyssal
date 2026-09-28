@@ -2,7 +2,7 @@ import { heartbeat } from '../audio/sound';
 import { clamp, hsl, lerp } from '../core/util';
 import type { Fx } from '../render/fx';
 import { burnOf, swallowHealOf } from '../sim/organs';
-import type { Creature } from '../sim/world';
+import type { Creature } from '../sim/creature';
 import type { UI } from '../ui/UI';
 import { FOOD_MAX, type Run } from './Run';
 

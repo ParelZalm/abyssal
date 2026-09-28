@@ -1,11 +1,12 @@
 import { clamp, lerp } from '../core/util';
-import { riserFor } from '../content/species';
+import { riserFor, speciesById } from '../content/species';
 import { bandAt, BANDS, DEPTH_MAX, descentLimit, nextGate, type Band } from '../content/zones';
 import type { PlayerController } from '../input/PlayerController';
 import type { Camera } from '../render/Camera';
 import type { Dread } from '../render/Dread';
 import type { Fx } from '../render/fx';
-import { speciesById, type Creature, type World } from '../sim/world';
+import type { Creature } from '../sim/creature';
+import type { World } from '../sim/world';
 import type { UI } from '../ui/UI';
 import { recordDepth, saveCodex } from './codex';
 import type { Evolution } from './Evolution';
@@ -184,7 +185,7 @@ export class Bands {
     if (spent >= 0.5 && !this.risen.has(b)) {
       this.risen.add(b);
       const sp = riserFor(p.y, p.genome.size);
-      if (sp && this.world.summon(sp, p, this.camera.viewR())) {
+      if (sp && this.world.spawner.summon(sp, p, this.camera.viewR())) {
         this.dread.startle();
         this.ui.toast(`A ${sp.name} has come for you`);
       }
@@ -197,7 +198,7 @@ export class Bands {
     const pop = Math.round(lerp(POP_SHALLOW, POP_DEEP, clamp(p.y / DEPTH_MAX, 0, 1)) *
       (1 - 0.3 * this.world.spent[bandAt(p.y)]));
     this.world.cull(p.x, p.y, this.camera.viewR());
-    this.world.spawnAround(p.x, p.y, this.camera.viewR(), pop);
+    this.world.spawner.spawnAround(p.x, p.y, this.camera.viewR(), pop);
     this.tendPocket();
   }
 
@@ -213,6 +214,6 @@ export class Bands {
     if (bandAt(p.y) !== gate.index - 1) return;
     const viewR = this.camera.viewR();
     if (gate.band.top - p.y > viewR * 1.2) return;
-    this.world.pocket(speciesById(gate.band.pocket), gate.band.top, p.x, viewR, POCKET_BODIES);
+    this.world.spawner.pocket(speciesById(gate.band.pocket), gate.band.top, p.x, viewR, POCKET_BODIES);
   }
 }

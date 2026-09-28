@@ -1,6 +1,6 @@
 import { Container } from 'pixi.js';
 import { clamp } from '../core/util';
-import type { Creature } from '../sim/world';
+import type { Creature } from '../sim/creature';
 import type { View } from './view';
 
 /**

@@ -3,7 +3,7 @@ import { toggleMute } from './audio/sound';
 import { Rng } from './core/util';
 import { familyCounts } from './content/forms';
 import { baseGenome, maxHp, type Genome } from './content/genome';
-import type { Species } from './content/species';
+import { speciesById, type Species } from './content/species';
 import { FINAL_GUARDIAN, placeName } from './content/zones';
 import { Input } from './input/Input';
 import { PlayerController } from './input/PlayerController';
@@ -26,7 +26,8 @@ import type { Phase } from './run/phase';
 import { chainBiomass, COMBO_WINDOW, comboMult, FOOD_MAX, Run } from './run/Run';
 import { backfillDepth, startById } from './run/starts';
 import { SYNERGIES } from './sim/organs';
-import { Creature, speciesById, World } from './sim/world';
+import { Creature } from './sim/creature';
+import { World } from './sim/world';
 import type { RunChoice } from './ui/screens/TitleScreen';
 import { UI } from './ui/UI';
 
@@ -236,7 +237,7 @@ export class Game {
     camera.reset(p.x, p.y, camera.zoomFor(g.size));
     // the first fill is the exception to spawning off-screen: there is no frame to
     // protect yet, and an empty opening screen is worse than watching the water populate
-    world.spawnAround(p.x, p.y, camera.viewR(), POP_SHALLOW, 0.15);
+    world.spawner.spawnAround(p.x, p.y, camera.viewR(), POP_SHALLOW, 0.15);
   }
 
   private togglePause() {

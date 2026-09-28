@@ -3,7 +3,7 @@ import { FAMILY_NAMES } from '../content/forms';
 import { BANDS, depthLabel } from '../content/zones';
 import type { Fx } from '../render/fx';
 import { bakeFish, releaseFish } from '../render/creature/fishbake';
-import { Creature } from '../sim/world';
+import { Creature } from '../sim/creature';
 import type { UI } from '../ui/UI';
 import type { LineageFrame } from '../ui/screens/lineage';
 import type { Best } from './best';

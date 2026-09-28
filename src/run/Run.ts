@@ -2,7 +2,7 @@ import type { Plan } from '../content/form';
 import type { Transformation } from '../content/forms';
 import type { Genome } from '../content/genome';
 import { TRAITS, type Trait } from '../content/traits';
-import type { Creature } from '../sim/world';
+import type { Creature } from '../sim/creature';
 import type { RunChoice } from '../ui/screens/TitleScreen';
 import { saveCodex, type Codex } from './codex';
 

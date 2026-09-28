@@ -5,7 +5,7 @@ import { draftTraits, TRAITS, type Trait } from '../content/traits';
 import { bandAt } from '../content/zones';
 import type { Camera } from '../render/Camera';
 import type { Fx } from '../render/fx';
-import type { Creature } from '../sim/world';
+import type { Creature } from '../sim/creature';
 import type { UI } from '../ui/UI';
 import { recordForm, recordTrait } from './codex';
 import type { Flow } from './phase';

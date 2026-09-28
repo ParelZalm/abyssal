@@ -58,7 +58,7 @@ export class Fx {
    * Nothing like the burst above: a burst is debris, which is fast, small and gone. Blood
    * is slow, large and lingers, because it is the visible half of a mechanic — it marks a
    * spot in the water that the simulation is steering predators toward for the next few
-   * seconds (`World.smell`), and a cue that vanishes before the thing it warned about
+   * seconds (`Behaviour.smell`), and a cue that vanishes before the thing it warned about
    * arrives is not a cue. Barely any drag and barely any buoyancy: it hangs and widens.
    */
   blood(x: number, y: number, color: number, size: number) {

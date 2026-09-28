@@ -1,0 +1,262 @@
+import { FishView } from '../render/creature/fishview';
+import { maxHp, type Genome } from '../content/genome';
+import { hunts, type Species } from '../content/species';
+import { angleDelta, clamp, TAU } from '../core/util';
+import { organsOf, swimOf, type Organ, type SwimMods } from './organs';
+
+/** Forward drag coefficient: terminal speed works out to genome.speed × throttle. */
+const DRAG_FWD = 3.1;
+/** Sideways drag — a body with a keel barely slides. */
+const DRAG_LAT = 9;
+
+export type Mood = 'cruise' | 'rest' | 'dart';
+
+export class Creature {
+  x = 0; y = 0; vx = 0; vy = 0; angle = 0;
+  hp: number; hpMax: number;
+  alive = true;
+  view: FishView;
+  biteCd = 0;
+  wander = Math.random() * TAU;
+  panic = 0;
+  thrust = 0;
+  isPlayer = false;
+  /** Swim phase, shared by the tail stroke and the thrust impulse it produces. */
+  beat = Math.random() * TAU;
+  /** Smoothed turn rate in -1..1, used to lean the body into a turn. */
+  bank = 0;
+  /** Ambushers hold still until this drops to zero. */
+  lunge = 0;
+  /**
+   * What an unbothered animal is doing between threats and meals. A fish that only ever
+   * cruises at one throttle reads as a sprite on a rail; resting, drifting and the odd
+   * startled dart are most of what makes water look inhabited.
+   */
+  mood: Mood = 'cruise';
+  moodT = Math.random() * 4;
+  /** Seconds a hunter ignores prey after a kill — a fed predator lazes rather than sweeping the screen clean. */
+  sated = 0;
+  /** Seconds on the current chase; past its stamina the hunter gives up and has to recover in `tired`. */
+  chase = 0;
+  tired = 0;
+  /** Fleeing zigzag: seconds until the next cut, and which way the last one went. */
+  jinkT = 0;
+  jinkSide = 1;
+  /** Guardians only: whether this one has currently registered the player as worth eating. */
+  aware = false;
+  /**
+   * How far into existence this body is, 0 to 1.
+   *
+   * Nothing in this ocean pops. A spawn is placed past the corner of the screen and
+   * finishes its fade unseen; the ones that cannot be — the first fill of a run, and the
+   * thin water directly above you in the shallows, where there is no off-screen to hide in
+   * — resolve out of the murk instead. The player is born whole, which is why this starts
+   * full and only `World.add` clears it.
+   */
+  fade = 1;
+  /** Venom left in the wound: damage per second, and who is owed the kill. */
+  poison = 0;
+  poisonT = 0;
+  poisonByPlayer = false;
+  /** An open wound (Vivisect): damage per second, seconds left, who is owed the kill. */
+  bleed = 0;
+  bleedT = 0;
+  bleedByPlayer = false;
+  /** Seconds until the wound next drips blood into the water. */
+  drip = 0;
+  /** What this animal's tentacles are holding, and what is holding this one. */
+  holding: Creature | null = null;
+  heldBy: Creature | null = null;
+  /** How close the held animal is to tearing free, 0 to 1. */
+  strain = 0;
+  /** Seconds the current catch has been held. */
+  holdT = 0;
+  /** Seconds before tentacles that lost their catch can strike again. */
+  graspCd = 0;
+  /**
+   * Something this hunter has come for, whether or not it can see it — the arrival the
+   * shallows clock sends. Cleared when the chase runs out of stamina or the quarry is gone.
+   */
+  quarry: Creature | null = null;
+  /** The organs this body carries — see `organs.ts`. Refreshed whenever the genome is. */
+  organs: Organ[];
+  /** How this body moves, folded from its organs. Cached with them. */
+  swim: SwimMods;
+  /** Seconds until the mantle can pulse again. */
+  pulseT = 0;
+  /**
+   * The depths this body keeps to instead of its species' range, or null. Set on the pocket
+   * under a sealed thermocline (`Spawner.pocket`), which has to hang just below the seal —
+   * inside the top of its own band, where the ordinary band hold would push it down.
+   */
+  hold: [number, number] | null = null;
+  /** Seconds of stillness banked by a lurking body, spent on its next bite. */
+  poise = 0;
+  /**
+   * Seconds left in the surge of a boost kick, 0 otherwise. The boost lives in `Game`, so
+   * this is the seam that lets an organ tell a boost into a body from a swim into it.
+   */
+  boosting = 0;
+  /** Bodies this boost has already struck, so one kick is one blow per body. */
+  readonly boostHits = new Set<Creature>();
+  /** Boost kicks so far, so an organ can answer each kick exactly once. */
+  kicks = 0;
+  /** The kick Flash Sense last fired on. */
+  flashed = 0;
+  /** Seconds left dazzled: no steering, no bite. Flash Sense's, and held here for any other. */
+  stun = 0;
+  /** Seconds left inflated (the Inflation organ): too big to swallow, slow, prickly. */
+  puffT = 0;
+  /** Seconds a schooling body is scattered from its ball and can be picked off. */
+  scatter = 0;
+  /**
+   * What last hurt this body and how, for the death screen: the species, whether it was a
+   * bite (or a blow) or its spines, and the run clock when it happened (`Creature.clock`).
+   */
+  hurtBy: Species | null = null;
+  hurtHow: 'bite' | 'sting' | 'poison' = 'bite';
+  hurtAt = -1;
+  /** The world's clock, shared so `hurt` can stamp without a reference to the world. */
+  static clock = 0;
+  /** A guardian's pattern: the tell's seconds left, the rush's, the opening's, the cooldown. */
+  tellT = 0;
+  rushT = 0;
+  exposed = 0;
+  patternCd = 0;
+  /** The rush's locked heading, and whether it has already found the player. */
+  rushA = 0;
+  landed = false;
+
+  constructor(public species: Species, public genome: Genome) {
+    this.hpMax = maxHp(genome);
+    this.hp = this.hpMax;
+    this.organs = organsOf(genome);
+    this.swim = swimOf(genome, this.organs);
+    this.view = new FishView(genome, species.plan);
+  }
+
+  /** Book what just hurt this body. */
+  hurt(by: Creature, how: 'bite' | 'sting' | 'poison') {
+    this.hurtBy = by.species;
+    this.hurtHow = how;
+    this.hurtAt = Creature.clock;
+  }
+
+  /** A boost kick: open the surge window an organ can strike in. */
+  kick(window: number) {
+    this.boosting = window;
+    this.boostHits.clear();
+    this.kicks++;
+  }
+
+  /** Call after a genome change, beside `view.rebuild`: a new organ has to act as well as show. */
+  refreshOrgans() {
+    this.organs = organsOf(this.genome);
+    this.swim = swimOf(this.genome, this.organs);
+  }
+
+  /** Where the mouth actually is — bites and gulps are measured from here. */
+  get mouthX() { return this.x + Math.cos(this.angle) * this.radius * 0.8; }
+  get mouthY() { return this.y + Math.sin(this.angle) * this.radius * 0.8; }
+
+  /** Effective reach: a distensible gullet lets you swallow above your weight. */
+  get swallowSize() {
+    return this.genome.size * (1 + (this.genome.jaw - 0.3) * 0.35);
+  }
+  canEat(other: Creature) {
+    return this.swallowSize > other.genome.size * 1.02;
+  }
+
+  /**
+   * Whether this animal would actually eat that one: it has to hunt, it has to be big
+   * enough, and it does not eat its own kind.
+   *
+   * `canEat` is only the size half, and both of the others were missing at the call sites.
+   * A species is a size *range*, so the 7 cm end of a krill swarm could swallow the 4 cm
+   * end — half of every school fled its own shoal and the rest was eaten from inside. And
+   * `pair` let anything with a mouth strike, so a shoal of anchovy ate its way through
+   * every krill swarm it crossed and the shallows had no food left in them by the time the
+   * player arrived. Both rules live here rather than being remembered at four call sites.
+   */
+  preysOn(other: Creature) {
+    return hunts(this.species) && this.species.id !== other.species.id && this.canEat(other);
+  }
+  get radius() {
+    return this.genome.size * 0.62;
+  }
+  syncView() {
+    this.view.place(this.x, this.y, this.angle);
+  }
+
+  /** The fade as an alpha, eased at both ends so an arrival has no edges. */
+  get emergence() {
+    return this.fade * this.fade * (3 - 2 * this.fade);
+  }
+
+  /** Turning authority right now: a body already moving fast cannot pivot as tightly. */
+  private agility() {
+    const g = this.genome;
+    const speed = Math.hypot(this.vx, this.vy);
+    const hold = this.swim.hold;
+    return g.turn * (hold + (1 - hold) / (1 + speed / (Math.max(1, g.speed) * 0.8)));
+  }
+
+  /**
+   * One swim step from raw controls: `turnInput` is -1..1 of available turning rate and
+   * `throttle` is the propelling force along the body axis, negative to back up. Thrust
+   * surges on the tail beat, and lateral drag is far stronger than forward drag — that is
+   * what makes a turn arc and a glide coast instead of the heading snapping the velocity.
+   */
+  propel(dt: number, turnInput: number, throttle: number) {
+    const g = this.genome;
+    const top = Math.max(1, g.speed);
+    const turn = clamp(turnInput, -1, 1) * this.agility() * dt;
+    this.angle += turn;
+    this.bank += (clamp(dt > 0 ? turn / dt / Math.max(0.01, g.turn) : 0, -1, 1) - this.bank) *
+      Math.min(1, dt * 7);
+
+    const m = this.swim;
+    const speed = Math.hypot(this.vx, this.vy);
+    const fx = Math.cos(this.angle), fy = Math.sin(this.angle);
+    if (m.pulseEvery > 0) {
+      // one beat per pulse, and the kick lands on its crest, so the bell contracts as it
+      // fires rather than at whatever phase the swim rate had wandered to
+      this.beat += dt * TAU / m.pulseEvery;
+      this.pulseT -= dt;
+      if (throttle > 0.3 && this.pulseT <= 0) {
+        this.pulseT = m.pulseEvery;
+        const kick = top * m.pulseKick * Math.min(1, throttle);
+        this.vx += fx * kick;
+        this.vy += fy * kick;
+        this.beat = Math.PI * 0.5;
+      }
+    } else {
+      this.beat += dt * (3.4 + Math.abs(throttle) * 5.5 + (speed / top) * 3.5);
+    }
+    // a stroke pushes; backing up is a steady scull, not a beat
+    const stroke = (throttle > 0 ? 0.62 + 0.62 * Math.max(0, Math.sin(this.beat)) : 1) * m.stroke;
+    const accel = top * DRAG_FWD * throttle * stroke;
+    this.vx += fx * accel * dt;
+    this.vy += fy * accel * dt;
+    const idle = Math.abs(throttle) < 0.1;
+    if (idle && m.sink > 0) this.vy += m.sink * dt;
+
+    let fwd = this.vx * fx + this.vy * fy;
+    let lat = -this.vx * fy + this.vy * fx;
+    // flaring to stop bites much harder than coasting does
+    const braking = (throttle < 0 && fwd > 0 ? DRAG_FWD * 2.4 : DRAG_FWD * m.drag) *
+      (idle ? m.coast : 1);
+    fwd *= Math.exp(-braking * dt);
+    lat *= Math.exp(-DRAG_LAT * dt);
+    this.vx = fx * fwd - fy * lat;
+    this.vy = fy * fwd + fx * lat;
+    this.thrust = Math.abs(throttle);
+  }
+
+  /** Steering for anything that thinks in headings rather than in keys. */
+  drive(dt: number, desired: number, throttle: number) {
+    const rate = this.agility() * dt;
+    const want = angleDelta(this.angle, desired);
+    this.propel(dt, rate > 0 ? clamp(want / rate, -1, 1) : 0, throttle);
+  }
+}

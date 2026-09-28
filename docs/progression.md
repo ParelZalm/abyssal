@@ -46,7 +46,7 @@ Three groups of fields, and the split matters:
   its name, HUD glyph, cooldown and `fire(c, world)`, and `activeOf` takes the first; the
   cards clear the other two fields when taken, so the slot is always one. A press is
   consumed whether or not it fired. `Ink Sac` (12 s) leaves a cloud of `3 × size + 200` on
-  `world.inks` for 3.5 s, inside which `World.nearest` does not return the player, and
+  `world.inks` for 3.5 s, inside which `Behaviour.nearest` does not return the player, and
   drops the chase of every hunter already on it. `Electric Organ` (9 s) hits everything
   within `3 × size + 160` through `World.hit` for 0.7 of a bite and stuns it for 0.7 s (a
   guardian 0.25). `Inflation` (11 s) swells the body 1.4× for 3 s (`FishView.swell`): a
@@ -63,7 +63,7 @@ Three groups of fields, and the split matters:
   speed every 0.85 s, with the beat locked to the pulse so the bell contracts as it fires;
   tuned so a held throttle averages the plain cruise (122 against 119) while swinging from
   74 to 218. `lurk` (Lie in Wait) banks *poise* while not driving, up to 2 s, which adds up
-  to 0.35 stealth (through the `stealth` hook, which `World.think` and `notices` now read
+  to 0.35 stealth (through the `stealth` hook, which `Behaviour.think` and `notices` now read
   instead of the raw field) and multiplies the next bite by `1 + 0.8 × poise`; the bite
   spends it, and it sinks at 60 u/s² while idle. `Game` rings the body once when poise
   tops out, since nothing else says the strike is wound. All three bend the silhouette in
@@ -86,7 +86,7 @@ Three groups of fields, and the split matters:
   booked the same way. The claws fold forward along the head into clubs.
   `Vivisect` (claws + `serrate`): a bite that does not kill opens a bleed of
   `(0.2 + 0.05 × serrate) × bite` per second for 5 s. A bleed is status on the wounded body
-  like venom, ticked in `World.bleedOut` and kept apart from poison so Nematocyst does not
+  like venom, ticked in `Combat.bleedOut` and kept apart from poison so Nematocyst does not
   feed on it; what it adds is the trail — every 0.35 s it leaves a drop of blood (`Blood`
   at 0.6 of the body's length, 3 s) where the animal is now, so `smell` leads hunters along
   its path rather than to where it was bitten. A drop carries `from`, and a body cannot
@@ -185,7 +185,7 @@ count, lean)` picks without replacement from a rarity-weighted pool.
 - **Cursed cards** carry a `curse`, the price in red on its own line beside a *cursed*
   mark. The gift is bigger than the rarity gives (Blood Lamp +90% bite, Brittle Frame +35%
   speed and +25% turning), and the curse is an organ with paint, not a stat going down:
-  `glare` (a `glare` hook, read in `World.nearest`, which shrinks the player's distance by
+  `glare` (a `glare` hook, read in `Behaviour.nearest`, which shrinks the player's distance by
   `1 + 0.6 × glare` so hunters and prey both find it from 60% further, and in `notices`,
   which lets guardians register it smaller) paints three coals down the back; `brittle`
   (a defender-side `taken` hook, after armour, ×1.5) crazes the skin with pale slivers.
@@ -261,7 +261,7 @@ Depth unlocks the water below it, its own draft pool (see *Zone pools*) and a fr
 mutation.
 
 **The pocket under a seal.** While a gate is shut and the player is in the band above it,
-within about a view of the shear, `Game.tendPocket` has `World.pocket` keep 14 bodies of
+within about a view of the shear, `Game.tendPocket` has `Spawner.pocket` keep 14 bodies of
 the band's `pocket` species — reef fish, lanternfish, bristlemouths, dumbos, snailfish —
 in the first 70–320 units under the thermocline. They are placed in frame and fade in out
 of the shadow (an off-screen arrival swam about at the edge and was never seen), and they

@@ -1,7 +1,8 @@
 import { formFor, lureBulb, R } from '../content/form';
 import { armourOf, biteDamage, eyeOf, type Genome } from '../content/genome';
 import type { IconName } from '../content/icon';
-import type { Creature, World } from './world';
+import type { Creature } from './creature';
+import type { World } from './world';
 import { dist2 } from '../core/util';
 
 /**
@@ -337,7 +338,7 @@ export const ORGANS: Organ[] = [
 
   O({ id: 'glare', when: g => g.glare > 0,
     // a lit body in dark water is the one thing everything can find: hunters come from
-    // further and prey bolts sooner, through the same search (`World.nearest`) both use
+    // further and prey bolts sooner, through the same search (`Behaviour.nearest`) both use
     glare: (g, base) => base + g.glare * 0.6 }),
 
   O({ id: 'brittle', when: g => g.brittle > 0,
@@ -350,7 +351,7 @@ export const ORGANS: Organ[] = [
   // the pool cannot give, so the slot is a choice of how to get out of trouble.
 
   O({ id: 'ink', when: g => g.ink > 0,
-    // a cloud where you were: nothing that hunts can find a body inside it (`World.nearest`
+    // a cloud where you were: nothing that hunts can find a body inside it (`Behaviour.nearest`
     // skips the player there), and whatever was already on you loses the thread. The cloud
     // stays put, so it is somewhere to hide or a screen to break away behind, not both
     active: { name: 'Ink Sac', icon: 'ink', cd: 12, fire: (c, world) => {
@@ -436,7 +437,7 @@ export const ORGANS: Organ[] = [
     desc: 'Illicium and stealth. Prey on the lure ignores its shoal\'s alarm.',
     // the light is visible and the animal behind it is not, so nothing drawn in has a reason
     // to bolt: a shoal's alarm does not reach the ones already on the lure. Panic is what
-    // `World.think` checks before it lets the lure steer, so clearing it is the whole effect
+    // `Behaviour.think` checks before it lets the lure steer, so clearing it is the whole effect
     onTick: (c, _dt, world) => {
       const range = lureRangeOf(c);
       let fired = false;
@@ -478,7 +479,7 @@ export const ORGANS: Organ[] = [
     // the pincer holds and the saw cuts, so a wound made in the grip does not close. Worth
     // one more bite over five seconds and it does not need the mouth to stay on, but its
     // real consequence is the trail: every drip is blood in the water on the animal's own
-    // path (`World.bleedOut`), so what tears free is followed — by you, and by everything
+    // path (`Combat.bleedOut`), so what tears free is followed — by you, and by everything
     // else that hunts by smell. A kill is a crowd; a bleed is a crowd that moves
     onWound: (att, def, ctx) => {
       if (ctx.fatal || ctx.whole) return false;

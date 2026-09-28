@@ -3,6 +3,8 @@ import { clamp, lerp } from '../core/util';
 
 /** Floor of the water column, in world units. Depth runs 0 here to DEPTH_MAX. */
 export const DEPTH_MAX = 9000;
+/** Half the width of the water; x runs from -WORLD_HALF_W to WORLD_HALF_W. */
+export const WORLD_HALF_W = 7000;
 
 type Rgb = [number, number, number];
 
@@ -70,7 +72,7 @@ export interface Band {
   metres: number;
   /**
    * Species id of the food that gathers just under this band's seal while it is still
-   * shut — the view down through the thermocline (`World.pocket`). Chosen to be what a body
+   * shut — the view down through the thermocline (`Spawner.pocket`). Chosen to be what a body
    * at the gate would want to eat: small enough to catch, worth more than the water above.
    */
   pocket?: string;

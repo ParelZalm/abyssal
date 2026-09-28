@@ -14,7 +14,7 @@ Done so far: Toxic Lure, Ghost Light, Urchin, Nematocyst, Ballistic, Vivisect, D
 Bloom, Whale Shark. Ballistic brought the boost seam (`Creature.boosting`, opened by
 `kick()`) and `World.hit`, a non-bite blow, so a synergy can now act on the boost or strike
 with something other than the mouth. Vivisect brought the bleed (`Creature.bleed`, ticked
-in `World.bleedOut`), which drips blood a hunter can follow.
+in `Combat.bleedOut`), which drips blood a hunter can follow.
 
 Each one is three touches, all following Toxic Lure:
 
@@ -63,7 +63,7 @@ Gates are size-only, so the optimal play is to grind the shallows until the gate
   below is open and the player stays. The arrival is the least hunter that can eat you
   (a Mackerel in Open Water at 30 cm, not a shark), and past the Reef there is none, so
   deeper bands only thin. If that is too gentle, a band could wake its guardian instead.
-- ~~**A tempting pocket below each gate.**~~ Done: `World.pocket` holds a shoal of the
+- ~~**A tempting pocket below each gate.**~~ Done: `Spawner.pocket` holds a shoal of the
   lower band's food just under a shut seal, in view.
 - ~~**Squeezing through undersized.**~~ Done: from 70% of a gate, boost into the seal for
   a second; it costs 30% of health and 1.5% a second, with no regeneration, while too small.

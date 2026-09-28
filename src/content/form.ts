@@ -188,7 +188,7 @@ export interface PlanArt {
    * Prehensile arms: how far past the mouth the feeding tentacles strike, as a multiple of
    * body size. 0 leaves the arms painted into the texture, trailing — a jelly's do nothing.
    * Above 0 they are rigged as strips of their own at the head (`fishview.ts`), and the
-   * animal feeds by grabbing rather than by biting (`World.grasp`). The two go together:
+   * animal feeds by grabbing rather than by biting (`Combat.grasp`). The two go together:
    * a tentacle that seizes prey but cannot be seen to move reads as the prey being pulled
    * in by nothing.
    */
