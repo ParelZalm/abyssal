@@ -217,8 +217,27 @@ Shelf. A band carries the `top`, `bottom`, `gate` in centimetres, `WaterLook`, a
   12. `main` feeds it to `world` every frame.
 - `nextGate(size)` — the next sealed thermocline, for the HUD hint and the seal label.
 
-Gates are checked against **body size only**. Nothing else unlocks depth, and depth
-unlocks nothing except the water below it and a free mutation.
+Gates are checked against **body size only**, with one exception the player pays for.
+Depth unlocks the water below it, its own draft pool (see *Zone pools*) and a free
+mutation.
+
+**The pocket under a seal.** While a gate is shut and the player is in the band above it,
+within about a view of the shear, `Game.tendPocket` has `World.pocket` keep 14 bodies of
+the band's `pocket` species — reef fish, lanternfish, bristlemouths, dumbos, snailfish —
+in the first 70–320 units under the thermocline. They are placed in frame and fade in out
+of the shadow (an off-screen arrival swam about at the edge and was never seen), and they
+carry `Creature.hold`, a depth range that replaces their species' own in `think`, since
+the ordinary band hold pushes anything 220 units down from its band's top. The pocket is
+the reason to look down through a seal: the withheld water is visibly richer.
+
+**Forcing a seal.** A body at 70% of a gate or more can boost into it: `Game.squeeze`
+counts time held at the shear (`world.blocked`) with the boost down, easing off twice as
+fast as it builds, and at 1 s puts the body through for 30% of its maximum health. That
+band is `squeezed` — open to its own floor and drawn open by the shader — and until the
+body grows to the gate or climbs back out, it loses 1.5% of maximum health a second and
+regenerates nothing. A forced entry is a raid on the pocket and the new band's cards
+(its thermocline reward is drafted on arrival as usual), not a way to live there early.
+The seal label and the blocked toast both say so once the body is big enough.
 
 `checkBands` watches two things: the count of open gates (for the "thermocline parts"
 toast) and `bandAt(player.y)` exceeding `maxBand`, which plays the band card and grants

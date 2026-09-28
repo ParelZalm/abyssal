@@ -71,9 +71,10 @@ Gates are size-only, so the optimal play is to grind the shallows until the gate
   below is open and the player stays. The arrival is the least hunter that can eat you
   (a Mackerel in Open Water at 30 cm, not a shark), and past the Reef there is none, so
   deeper bands only thin. If that is too gentle, a band could wake its guardian instead.
-- **A tempting pocket below each gate**, visible through the seal: prey-rich or
-  jelly-rich water just past the thermocline.
-- Optionally, squeezing through undersized with a real cost.
+- ~~**A tempting pocket below each gate.**~~ Done: `World.pocket` holds a shoal of the
+  lower band's food just under a shut seal, in view.
+- ~~**Squeezing through undersized.**~~ Done: from 70% of a gate, boost into the seal for
+  a second; it costs 30% of health and 1.5% a second, with no regeneration, while too small.
 
 ## 5. Builds that play differently
 
@@ -135,5 +136,6 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 6. ~~Vivisect, Drifting Bloom and Whale Shark~~ — done. Flash Sense waits on §5's sense
    modes.
 7. ~~Zone pools and costs on apex cards~~ — done.
-8. Next up, by the same ranking: the tempting pocket below each gate (§4), then the
-   electroreception organ and Flash Sense.
+8. ~~The pocket below each gate, and forcing a seal~~ — done.
+9. Next up, by the same ranking: sense modes — the electroreception organ, then Flash
+   Sense on top of it (§5).

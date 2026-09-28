@@ -10,7 +10,7 @@ import type { View } from './game/view';
 import { lightAt, Water, waterColor } from './game/water';
 import { riserFor, type Species } from './game/species';
 import { bandAt, BANDS, depthLabel, descentLimit, FINAL_GUARDIAN, nextGate,
-         placeName } from './game/zones';
+         placeName, type Band } from './game/zones';
 import { boostModsOf, burnOf, POISE_MAX, swallowHealOf, SYNERGIES } from './game/organs';
 import { FAMILY_NAMES, familyCounts, formDue, type Transformation } from './game/forms';
 import { completes, leanOf, nearMisses } from './game/prospects';
@@ -41,6 +41,19 @@ const chainBiomass = (n: number) => 1 + Math.max(0, n - 10) * 0.1;
  * one in a row is a worse bet than the first.
  */
 const REROLL_COST = 15;
+/**
+ * Forcing a seal. A body within `SQUEEZE_MIN` of the gate can boost against the shear for
+ * `SQUEEZE_TIME` seconds to break through, paying `SQUEEZE_COST` of its health at once and
+ * `PRESSURE` of it every second it stays in water it is too small for. The drain is the
+ * point: the pocket below is a raid to be timed, not a shortcut to be taken and kept —
+ * at 1.5% a second a full-health body has about a minute before it has to leave.
+ */
+const SQUEEZE_MIN = 0.7;
+const SQUEEZE_TIME = 1;
+const SQUEEZE_COST = 0.3;
+const PRESSURE = 0.015;
+/** Bodies kept in the pocket under a sealed thermocline — about one shoal. */
+const POCKET_BODIES = 14;
 const BEST_KEY = 'abyssal.best';
 function loadBest() {
   try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; }
@@ -121,6 +134,10 @@ class Game {
   private overstay: number[] = [];
   /** Bands that have already sent their hunter this run. */
   private risen = new Set<number>();
+  /** Index of a band the player has forced its way into while too small for it, or -1. */
+  private squeezed = -1;
+  /** Seconds of boosting against the current seal, toward `SQUEEZE_TIME`. */
+  private squeezeT = 0;
   private wakeCd = 0;
   private sprinting = false;
   /** Seconds the boost has been held, which is what winds it up. */
@@ -266,6 +283,7 @@ class Game {
     this.dreadSpike = 0; this.dreadHold = 0;
     this.maxBand = 0; this.hintCd = 0; this.gatesOpen = 0;
     this.overstay = BANDS.map(() => 0); this.risen.clear();
+    this.squeezed = -1; this.squeezeT = 0;
     this.wakeCd = 0; this.sprinting = false; this.poised = false; this.boostHeld = 0; this.boostCd = 0; this.hitStop = 0;
     this.zoom = this.zoomFor(g.size);
     // the first fill is the exception to spawning off-screen: there is no frame to
@@ -334,7 +352,9 @@ class Game {
     if (this.phase === 'play') {
       this.elapsed += dt;
       this.steerPlayer(dt);
-      this.world.descentLimit = descentLimit(this.player.genome.size);
+      // a forced band is open to its own floor, and no further
+      this.world.descentLimit = this.squeezed < 0 ? descentLimit(this.player.genome.size)
+        : Math.max(descentLimit(this.player.genome.size), BANDS[this.squeezed].bottom - 12);
       this.world.update(dt);
       this.digest();
       this.metabolise(dt);
@@ -575,12 +595,17 @@ class Game {
       if (open > 1) this.ui.toast(`The thermocline parts — ${BANDS[open - 1].name} is open`);
     }
 
+    const gate = nextGate(p.genome.size);
+    const forcible = gate && gate.index !== this.squeezed && p.genome.size >= gate.band.gate * SQUEEZE_MIN;
     if (this.world.blocked && this.hintCd <= 0) {
       this.hintCd = 2.6;
-      const gate = nextGate(p.genome.size);
-      if (gate) this.ui.toast(`Too small — ${gate.band.gate} cm to enter ${gate.band.name}`);
+      if (gate) {
+        this.ui.toast(`Too small — ${gate.band.gate} cm to enter ${gate.band.name}` +
+          (forcible ? ' · boost into it to force a way through' : ''));
+      }
       this.fx.burst(p.x, p.y + p.radius, 0xcfe4ff, 8, 60, 2.2);
     }
+    this.squeeze(dt, gate, !!forcible);
 
     if (this.world.playerHeld && this.hintCd <= 0) {
       this.hintCd = 4;
@@ -594,6 +619,57 @@ class Game {
       this.fx.ring(p.x, p.y, 0xcfe4ff, p.radius * 4);
       this.ui.showBand(band, () => this.offerDraft(`${BANDS[band].name} — thermocline reward`));
     }
+  }
+
+  /**
+   * Boosting into a seal you are nearly big enough for forces it. Pressing counts only while
+   * the body is actually held at the shear (`world.blocked`) with the boost down, and eases
+   * off twice as fast as it builds, so it is a push and not an accident.
+   */
+  private squeeze(dt: number, gate: { band: Band; index: number } | null,
+                  forcible: boolean) {
+    const p = this.player;
+    if (this.squeezed >= 0) {
+      const b = BANDS[this.squeezed];
+      // grown into it, or gone back up: either way the water is no longer forced
+      if (p.genome.size >= b.gate || p.y < b.top - 40) this.squeezed = -1;
+      // and nothing heals in it: the drain is paid on top of whatever regeneration would
+      // have given back, or a late build's regen cancels the price outright
+      else p.hp -= (p.hpMax * PRESSURE + p.genome.regen) * dt;
+    }
+    const pushing = forcible && this.world.blocked && this.sprinting;
+    this.squeezeT = pushing ? this.squeezeT + dt : Math.max(0, this.squeezeT - dt * 2);
+    if (pushing && this.squeezeT > 0.15 && Math.random() < dt * 14) {
+      this.fx.burst(p.x, p.y + p.radius, 0xcfe4ff, 3, 70, 2);
+    }
+    if (!gate || this.squeezeT < SQUEEZE_TIME) return;
+    this.squeezeT = 0;
+    this.squeezed = gate.index;
+    p.hp = Math.max(1, p.hp - p.hpMax * SQUEEZE_COST);
+    // through, not merely allowed through: the body is put past the shear line, so the
+    // "gone back up" test above is about leaving and never about the frame of entry
+    p.y = Math.max(p.y, gate.band.top + p.radius * 0.5);
+    p.vy += p.genome.speed * 0.8;
+    this.fx.ring(p.x, p.y + p.radius, 0xcfe4ff, p.radius * 5);
+    this.fx.burst(p.x, p.y + p.radius, 0xcfe4ff, 26, 180, 3);
+    this.shake = Math.min(14, this.shake + 9);
+    this.hitStop = Math.max(this.hitStop, 0.08);
+    this.ui.toast(`You force the thermocline — ${gate.band.name} is crushing you`);
+  }
+
+  /**
+   * The food under the next seal, kept stocked while the player is in the band above it and
+   * near enough to see down into it. Not once the seal is open or forced: then it is just
+   * water, and the ordinary spawner fills it.
+   */
+  private tendPocket() {
+    const p = this.player;
+    const gate = nextGate(p.genome.size);
+    if (!gate?.band.pocket || gate.index === this.squeezed) return;
+    if (bandAt(p.y) !== gate.index - 1) return;
+    const viewR = this.viewR();
+    if (gate.band.top - p.y > viewR * 1.2) return;
+    this.world.pocket(speciesById(gate.band.pocket), gate.band.top, p.x, viewR, POCKET_BODIES);
   }
 
   private metabolise(dt: number) {
@@ -839,7 +915,8 @@ class Game {
         gateBand = BANDS[i];
       }
     }
-    const gateOpen = p.genome.size >= gateBand.gate;
+    // a forced seal is drawn open: the player is on the far side of it, or passing through
+    const gateOpen = p.genome.size >= gateBand.gate || BANDS.indexOf(gateBand) === this.squeezed;
     const dread = Math.max(danger, this.dreadSpike, this.dreadHold * 0.62);
     this.water.update(view, p.genome.glow, this.phase === 'play' ? dread : 0,
                       gateBand.top, gateOpen);
@@ -847,7 +924,8 @@ class Game {
     // the requirement floats on the barrier itself while it is sealed and in frame
     const gateScreenY = (gateBand.top - this.camY) * this.zoom + this.H / 2;
     this.ui.gateLabel(
-      !gateOpen && this.phase !== 'over' ? `${gateBand.gate} cm to enter ${gateBand.name}` : null,
+      !gateOpen && this.phase !== 'over' ? `${gateBand.gate} cm to enter ${gateBand.name}` +
+        (p.genome.size >= gateBand.gate * SQUEEZE_MIN ? ' · boost to force it' : '') : null,
       // sit just above the shear line: the seal itself is the brightest thing on screen
       gateScreenY - 34, this.H);
 
@@ -857,6 +935,7 @@ class Game {
         (1 - 0.3 * this.world.spent[bandAt(p.y)]));
       this.world.cull(p.x, p.y, this.viewR());
       this.world.spawnAround(p.x, p.y, this.viewR(), pop);
+      this.tendPocket();
     }
 
     this.ui.update({

@@ -73,6 +73,13 @@ const BLOOD_REACH = 11;
 const DRIP_EVERY = 0.35;
 const DRIP_SIZE = 0.6;
 const DRIP_LIFE = 3;
+/**
+ * Where a pocket hangs under its seal, in world units below the thermocline: deep enough
+ * that its bodies are clearly on the far side of the shear line, shallow enough that the
+ * view from the seal — the camera sits on the player, a dozen units above it — takes the
+ * whole shoal in at any zoom the run reaches.
+ */
+const POCKET_DEPTH: [number, number] = [70, 320];
 
 export type Mood = 'cruise' | 'rest' | 'dart';
 
@@ -149,6 +156,12 @@ export class Creature {
   swim: SwimMods;
   /** Seconds until the mantle can pulse again. */
   pulseT = 0;
+  /**
+   * The depths this body keeps to instead of its species' range, or null. Set on the pocket
+   * under a sealed thermocline (`World.pocket`), which has to hang just below the seal —
+   * inside the top of its own band, where the ordinary band hold would push it down.
+   */
+  hold: [number, number] | null = null;
   /** Seconds of stillness banked by a lurking body, spent on its next bite. */
   poise = 0;
   /**
@@ -422,6 +435,44 @@ export class World {
     if (down >= SPAWN_TOP && down <= DEPTH_MAX - SPAWN_FLOOR) return down;
     const up = y - dy;
     return up >= SPAWN_TOP && up <= DEPTH_MAX - SPAWN_FLOOR ? up : y;
+  }
+
+  /**
+   * Keep a pocket of food under a sealed thermocline: `want` bodies of `sp` held in the
+   * first few hundred units of the water below `top`, in view of `cx`. This is the reason to
+   * look down through a seal — the shadowed water is visibly richer than the band you are
+   * in, so the gate reads as something withheld rather than a wall.
+   *
+   * Placed in frame, not past it, and left to resolve out of the shadow on the fade-in. The
+   * off-screen ring is what every other arrival uses, but a pocket placed there swam about
+   * at the edge of the frame and counted as present while nobody could see it — and prey
+   * has no reason to swim toward a predator on the far side of a seal.
+   */
+  pocket(sp: Species, top: number, cx: number, viewR: number, want: number) {
+    const hold: [number, number] = [top + POCKET_DEPTH[0], top + POCKET_DEPTH[1]];
+    let near = 0, all = 0;
+    for (const c of this.creatures) {
+      if (!c.alive || !c.hold) continue;
+      all++;
+      if (Math.abs(c.x - cx) < viewR * 1.1) near++;
+    }
+    // the ones left behind as the player moves along the seal are culled in their own time;
+    // until they are, they cap how many more can be put in front of it
+    if (near >= want || all >= want * 2) return;
+    const x = cx + this.rng.range(-0.8, 0.8) * viewR;
+    if (Math.abs(x) > WORLD_HALF_W - 150) return;
+    const y = top + this.rng.range(POCKET_DEPTH[0] + 40, POCKET_DEPTH[1] - 60);
+    const n = Math.min(want - near, this.rng.int(Math.ceil(want * 0.5), want));
+    const heading = this.rng.chance(0.5) ? 0 : Math.PI;
+    const span = 70 + sp.size[1] * 5;
+    for (let i = 0; i < n; i++) {
+      const r = this.rng.next() ** 0.7;
+      const a = this.rng.next() * TAU;
+      const c = this.add(sp, x + Math.cos(a) * r * span, y + Math.sin(a) * r * span * 0.3);
+      c.hold = hold;
+      c.angle = heading + this.rng.range(-0.22, 0.22);
+      c.vx = Math.cos(c.angle) * c.genome.speed * 0.3;
+    }
   }
 
   /**
@@ -748,9 +799,10 @@ export class World {
     // creatures hold to their own depth band, which is what makes a tier feel like a place
     // eased in over a margin rather than snapped at a line: a hard flip at the band edge
     // turned every body near a seal into a yo-yo bouncing along it
-    const [bandTop, bandBottom] = rangeOf(c.species);
-    const up = clamp((bandTop + 220 - c.y) / 160, 0, 1);
-    const down = clamp((c.y - (bandBottom - 220)) / 160, 0, 1);
+    const [bandTop, bandBottom] = c.hold ?? rangeOf(c.species);
+    const margin = c.hold ? 30 : 220;
+    const up = clamp((bandTop + margin - c.y) / 160, 0, 1);
+    const down = clamp((c.y - (bandBottom - margin)) / 160, 0, 1);
     if (up > 0) desired += angleDelta(desired, Math.PI / 2) * up;
     else if (down > 0) desired += angleDelta(desired, -Math.PI / 2) * down;
     if (c.y < 120) desired = Math.PI / 2;

@@ -68,6 +68,12 @@ export interface Band {
   gate: number;
   /** Depth label at `top`, in metres of real ocean. See `docs/adr/0001-*`. */
   metres: number;
+  /**
+   * Species id of the food that gathers just under this band's seal while it is still
+   * shut — the view down through the thermocline (`World.pocket`). Chosen to be what a body
+   * at the gate would want to eat: small enough to catch, worth more than the water above.
+   */
+  pocket?: string;
   water: WaterLook;
 }
 
@@ -109,7 +115,7 @@ export const ZONES: Zone[] = [
       // Reef Shelf — thick, warm, sediment-heavy water pushed sideways by a steady
       // current. Big soft masses, cover everywhere, very little moving vertically.
       {
-        id: 'reef', name: 'Reef Shelf', top: 1100, bottom: 2400, gate: 26, metres: 40,
+        id: 'reef', name: 'Reef Shelf', top: 1100, bottom: 2400, gate: 26, pocket: 'reeffish', metres: 40,
         water: {
           turbid: 0.62, cloudScale: 0.85, cloudEdge: 0.8, rays: 0.7, shimmer: 0.35,
           accent: [0.86, 0.92, 0.6], ambient: 0.1,
@@ -128,7 +134,7 @@ export const ZONES: Zone[] = [
       // Thin, cold, empty water. Almost no cloud, no rays worth the name, and the first
       // marine snow falling steadily through it.
       {
-        id: 'twilight', name: 'Twilight Zone', top: 2400, bottom: 4200, gate: 52,
+        id: 'twilight', name: 'Twilight Zone', top: 2400, bottom: 4200, gate: 52, pocket: 'lanternfish',
         metres: 100,
         water: {
           turbid: 0.3, cloudScale: 0.55, cloudEdge: 0.2, rays: 0.28, shimmer: 0.18,
@@ -148,7 +154,7 @@ export const ZONES: Zone[] = [
       // Black, still, and the only light is alive. Nearly no cloud at all; sparse
       // plankton hangs there and pulses.
       {
-        id: 'midnight', name: 'Midnight Zone', top: 4200, bottom: 6000, gate: 96,
+        id: 'midnight', name: 'Midnight Zone', top: 4200, bottom: 6000, gate: 96, pocket: 'bristlemouth',
         metres: 1000,
         water: {
           turbid: 0.14, cloudScale: 0.4, cloudEdge: 0.12, rays: 0.0, shimmer: 0.85,
@@ -169,7 +175,7 @@ export const ZONES: Zone[] = [
       // nothing to light it: the only motion is marine snow falling out of the dark
       // above, slow and steady and endless. Colder in tone than anything above it.
       {
-        id: 'abyss', name: 'The Abyss', top: 6000, bottom: 7500, gate: 160,
+        id: 'abyss', name: 'The Abyss', top: 6000, bottom: 7500, gate: 160, pocket: 'dumbo',
         metres: 4000,
         water: {
           turbid: 0.08, cloudScale: 0.5, cloudEdge: 0.06, rays: 0.0, shimmer: 0.22,
@@ -189,7 +195,7 @@ export const ZONES: Zone[] = [
       // Hot vents below. Slow enormous masses, a red-violet cast, and embers rising out
       // of the dark from something underneath you.
       {
-        id: 'trenches', name: 'The Trenches', top: 7500, bottom: DEPTH_MAX, gate: 240,
+        id: 'trenches', name: 'The Trenches', top: 7500, bottom: DEPTH_MAX, gate: 240, pocket: 'snailfish',
         metres: 6000,
         water: {
           turbid: 0.5, cloudScale: 0.3, cloudEdge: 0.5, rays: 0.0, shimmer: 1.2,
