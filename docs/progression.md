@@ -26,7 +26,7 @@ Three groups of fields, and the split matters:
   the build decides what the run hunts. `filter` (Gill Rakers) multiplies the gulp reach
   on anything small enough to go down whole by `1.8 + 0.7 × filter`, and cuts every bite
   that has to tear to 40% — a sweep through a krill cloud, and a retreat from anything its
-  own size. `crush` (Crushing Pharynx, stage 3) faces no armour and takes no recoil, and
+  own size. `crush` (Crushing Pharynx, a reef card) faces no armour and takes no recoil, and
   pays with a bite cooldown of 0.72 s instead of 0.4. They act through four modifier hooks
   added for them — `gulp`, `damage`, `biteRate`, `recoil` — and recoil goes through
   `sting()` in `organs.ts`, so spines, frill and Urchin all ask the attacker's organs how
@@ -119,17 +119,39 @@ the same thresholds as anything else.
 
 ## The draft
 
-`traits.ts` holds 48 `Trait` records — id, rarity, icon, description, and an `apply`
-that mutates a `Genome`. `draftTraits(rng, reach, taken, count)` picks without
-replacement from a rarity-weighted pool.
+`traits.ts` holds 48 `Trait` records — id, rarity, icon, description, an optional home
+`band`, and an `apply` that mutates a `Genome`. `draftTraits(rng, reach, band, taken,
+count, lean)` picks without replacement from a rarity-weighted pool.
 
 - `RARITY_WEIGHT` sets the base odds; `RARITY_CLIMB` makes rare and apex more likely as
-  `reach` grows. Measured over the live pool (14 common, 23 rare, 11 apex): 70/30/0 at
-  stage 1, 39/50/10 by stage 8 — rare overtakes common, which is the intent.
+  `reach` grows.
 - **`reach` is not the stage.** `main.offerDraft` passes
-  `max(stage, maxBand * 2 + 1)`, so diving upgrades the pool as much as feeding does.
+  `max(stage, maxBand * 2 + 1)`, so diving upgrades the odds as much as feeding does.
+- **Zone pools.** A trait's `band` is the water it belongs to: it is only offered when the
+  draft happens in that band or deeper — the band the player is *in*, `bandAt(player.y)`,
+  not the deepest reached — and it leans ×1.6 in the band itself. This replaced
+  `minStage`: reef organs (beak, coral, venom, claws, siphon, frill, lure, serrate, the
+  eel and ambush bodies, the pharynx) are found on the reef, the luminous and glass cards in
+  the twilight, and the apex cards from the twilight down. Cards with no band are offered
+  anywhere. The card names its band beside its family. Measured over the live pool with
+  a typical reach for each band:
+
+  | Band (reach) | Cards | Common / rare / apex | Home cards |
+  | --- | --- | --- | --- |
+  | Open Water (1) | 19 | 76 / 24 / 0 | 19% |
+  | Reef Shelf (3) | 31 | 57 / 43 / 0 | 42% |
+  | Twilight (5) | 39 | 45 / 52 / 3 | 21% |
+  | Midnight (7) | 45 | 41 / 49 / 10 | 9% |
+  | Abyss (9) | 48 | 37 / 51 / 12 | 5% |
+
+  Since the band is where you are, levelling in the shallows keeps the pool shallow, and a
+  thermocline reward — drafted as you arrive — is the new water's own cards.
+- **Every apex card costs something**, and its text says so: the jaws turn worse (Apex
+  Predator −18%, Titan Jaws −15%), plate and toxin and fast muscle burn more (Carapace,
+  Neurotoxin, White Muscle Burst, Ampullae, Leviathan Blood), and the heavy organs swim
+  slower (Abyssal Heart, Deep Lantern, Mantis Strike). Ram's cost was already its own
+  mechanic. Without a price the draft was "take the rarest".
 - `maxStacks` defaults to 2, so a run specialises without collapsing into one stat.
-- `minStage` gates the organs out of the opening draft.
 
 - **The draft reads the build** (`game/prospects.ts`). `completes(g, owned, form, t)` takes
   the card on a copy of the genome and asks the organ registry which synergies turn live,

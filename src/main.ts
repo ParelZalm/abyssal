@@ -629,8 +629,9 @@ class Game {
   }
 
   /**
-   * Depth unlocks the rarer half of the pool just as much as biomass does. The draw leans
-   * toward the build (`leanOf`), and a reroll leaves out the hand it replaces.
+   * Depth unlocks the rarer half of the pool just as much as biomass does, and the band you
+   * are in decides which cards are in it. The draw leans toward the build (`leanOf`), and a
+   * reroll leaves out the hand it replaces.
    */
   private offerDraft(heading = `Evolution — stage ${this.stage}`, shown = new Set<string>()) {
     const reach = Math.max(this.stage, this.maxBand * 2 + 1);
@@ -639,9 +640,11 @@ class Game {
     const counts = familyCounts(owned);
     const lean = new Map(TRAITS.map(t =>
       [t.id, shown.has(t.id) ? 0 : leanOf(g, owned, this.form, counts, t)]));
-    let offer = draftTraits(this.rng, reach, this.taken, 3, t => lean.get(t.id) ?? 1);
+    // the pool is the water you are in: a reef organ is found on the reef, not in a menu
+    const here = bandAt(this.player.y);
+    let offer = draftTraits(this.rng, reach, here, this.taken, 3, t => lean.get(t.id) ?? 1);
     // late in a run the pool can be too thin to leave a whole hand out
-    if (offer.length < 3) offer = draftTraits(this.rng, reach, this.taken, 3);
+    if (offer.length < 3) offer = draftTraits(this.rng, reach, here, this.taken, 3);
     const cost = REROLL_COST * (this.rerolls + 1);
     this.phase = 'draft';
     this.ui.showMutation(heading, offer, t => { this.rerolls = 0; this.applyTrait(t); }, {

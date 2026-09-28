@@ -91,11 +91,12 @@ change *what you do*, each an entry in `organs.ts` plus paint:
   NPCs to give them to, once the player versions have been played.
 - **Sense modes.** Electroreception that sees through darkness at short range, against
   big eyes that see far but go blind below the twilight.
-- **Costs on apex cards.** Bigger jaw lowers turn, plate raises metabolism. Right now the
-  draft is "pick the rarest".
+- ~~**Costs on apex cards.**~~ Done: every apex card carries a turn, speed or metabolism
+  price in its text.
 - **Cursed cards.** +90% bite but you glow, so everything sees you.
 - **One active organ slot** on a cooldown: ink cloud, discharge, inflate.
-- **Zone pools.** Swap `minStage` for a minimum band so reef organs live on the reef.
+- ~~**Zone pools.**~~ Done: `Trait.band` replaced `minStage`. A card is offered in its band
+  or deeper — the band the player is in when the draft happens — and leans ×1.6 at home.
 
 ## 6. Enemies that ask for tactics
 
@@ -133,5 +134,6 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 5. ~~Transformations~~ and ~~the draft reading them~~ — done.
 6. ~~Vivisect, Drifting Bloom and Whale Shark~~ — done. Flash Sense waits on §5's sense
    modes.
-7. Next up, by the same ranking: zone pools and costs on apex cards (§5), then the
-   tempting pocket below each gate (§4), then the electroreception organ and Flash Sense.
+7. ~~Zone pools and costs on apex cards~~ — done.
+8. Next up, by the same ranking: the tempting pocket below each gate (§4), then the
+   electroreception organ and Flash Sense.

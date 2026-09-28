@@ -219,6 +219,7 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 }
 .card .fam { display: block; margin-top: 10px; font-size: 10px; letter-spacing: .14em;
   text-transform: uppercase; color: var(--dim); opacity: .8; }
+.card .fam em { font-style: normal; color: #8fe3d0; }
 .codex .synergies h3:not(:first-child) { margin-top: 16px; }
 
 /* a card that would finish something gets a second light, outside the rarity's own, so the

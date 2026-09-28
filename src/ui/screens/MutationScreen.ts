@@ -1,5 +1,6 @@
 import { FAMILY_NAMES } from '../../game/forms';
 import type { Trait } from '../../game/traits';
+import { BANDS } from '../../game/zones';
 import type { Component } from '../Component';
 import { actions, button, div, h1, h2, h3, p, span } from '../dom/element';
 import { createIcon } from '../icons';
@@ -37,10 +38,16 @@ export class MutationScreen implements Component {
       top.append(mark, rarity);
 
       card.append(top, h3(t.name), p(t.desc));
-      // the family is what a card is a step toward; without it a transformation is luck
-      if (t.families?.length) {
-        const fam = span(t.families.map(f => FAMILY_NAMES[f]).join(' · '));
+      // the family is what a card is a step toward; without it a transformation is luck.
+      // The band is where it lives, which is where to be when you level for it
+      if (t.families?.length || t.band) {
+        const fam = span(t.families?.map(f => FAMILY_NAMES[f]).join(' · ') ?? '');
         fam.className = 'fam';
+        if (t.band) {
+          const home = document.createElement('em');
+          home.textContent = BANDS.find(b => b.id === t.band)!.name;
+          fam.prepend(home, t.families?.length ? ' · ' : '');
+        }
         card.append(fam);
       }
       if (note) {

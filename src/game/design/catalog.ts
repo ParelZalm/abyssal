@@ -13,7 +13,7 @@ import { FAMILY_NAMES, TRANSFORMS, type Family } from '../forms';
 import { baseGenome, type Genome } from '../genome';
 import { PROP_SIZE, propTexture, type PropKind } from '../props';
 import { genomeFor, rangeOf, SPECIES } from '../species';
-import { TRAITS, type Rarity } from '../traits';
+import { TRAITS, type Rarity, type Trait } from '../traits';
 import { BANDS, depthLabel, zoneOf } from '../zones';
 import type { IconName } from '../../ui/icons';
 import { rgb, Rng } from '../util';
@@ -430,8 +430,14 @@ function buildGroup(): DesignGroup {
 
 // ------------------------------------------------------------------ mutations
 
-/** The water a rarity is usually first met in: commons open the run, apex cards are deep. */
-const RARITY_DEPTH: Record<Rarity, number> = { common: 500, rare: 2400, apex: 5200 };
+/**
+ * The water a mutation is drafted in: the middle of its own band, or the open water for a
+ * card that belongs nowhere. The same band that gates it in the draft (`traits.ts`).
+ */
+function homeDepth(t: Trait) {
+  const b = BANDS.find(x => x.id === t.band) ?? BANDS[0];
+  return t.band ? (b.top + b.bottom) / 2 : 500;
+}
 
 /**
  * Every mutation on the hatchling, once. The card's text says what a trait does; this row
@@ -453,8 +459,8 @@ function mutationGroup(): DesignGroup {
         note: t.desc,
         source: 'src/game/traits.ts',
         span: 130,
-        depth: RARITY_DEPTH[t.rarity],
-        facts: { rarity: t.rarity, stacks: t.maxStacks ?? 2, stage: t.minStage ?? 1 },
+        depth: homeDepth(t),
+        facts: { rarity: t.rarity, stacks: t.maxStacks ?? 2, band: t.band ?? 'any' },
         genome: g,
         icon: t.icon,
         rarity: t.rarity,
