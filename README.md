@@ -1,208 +1,200 @@
 # Abyssal
 
-A top-down fish-evolution roguelite for the browser — the opening act of *Spore*, played
-as a run: hatch small, eat what fits down your throat, mutate every time you grow, and
-swim nine kilometres down to whatever is waiting at the bottom.
+<p align="center">
+  <a href="docs/media/trailer.mp4">
+    <img src="docs/media/trailer-poster.jpg" alt="Abyssal trailer: a spined shark-form player chasing the Leviathan through the Trenches" width="100%">
+  </a>
+  <br>
+  <sub><a href="docs/media/trailer.mp4">▶ Watch the trailer</a> (40 s, recorded from the game itself)</sub>
+</p>
+
+**A fish-evolution roguelite for the browser.** Think of the opening act of *Spore*,
+played as a single run. You hatch small, eat whatever fits down your throat, mutate
+every time you grow, and swim nine kilometres down to whatever is waiting at the bottom.
+
+## The game
+
+The ocean is stacked into five zones, each its own ecosystem and each sealed from the
+one below by a **thermocline**. A seal opens for one thing only: a body big enough to
+pass it. Exploring does not open the deep. Growing does. Every zone down is darker,
+emptier and more dangerous, and it holds rarer mutations.
+
+### The goal
+
+Reach **the Trenches** and kill **the Leviathan**. That wins the run and adds 5,000
+to your score. Most runs end earlier. Something bigger finds you, you starve, or you
+force a seal you were not ready for and the pressure crushes you. The end screen then
+tells you what killed you, how deep you got and what you had become. It shows your
+**lineage**, a row of your body at every stage of the run, and the cards you were one
+pick short of. That list is what turns the next run's first draft into a plan.
+
+### A run, minute to minute
+
+1. **Eat.** Anything smaller than your gape is food. Small prey inside the cone ahead of
+   your mouth gets pulled in. Prey under half your gape goes down whole. Anything close
+   to your own size is a fight you can lose. Kills made back to back build a **chain**
+   that multiplies both biomass and score.
+2. **Grow.** Biomass fills a bar. When it is full you grow and pick one **mutation** from
+   a draft of three.
+3. **Stay fed.** Fullness drains all the time, and faster the bigger you get, so
+   stacking size has a price. Jellies sting, but eating one gives back a big share of
+   your health.
+4. **Go down.** Once you are big enough, the thermocline below you parts. Breaking into
+   a new zone shows its card and gives you a free draft. Stay too long in water you have
+   outgrown and it stops feeding you: food thins out and something is sent up to hunt
+   you.
+5. **Force it, if you dare.** If you are within 70% of a gate, you can boost into the
+   seal and break through early. It costs a third of your health, and the water keeps
+   crushing you until you grow into it or swim back up.
+
+### The ocean
+
+| Zone | Depth | Opens at | Guardian | What it is like |
+| --- | --- | --- | --- | --- |
+| **Sunlit Zone**: Open Water | 0 m | — | Great White | Bright and crowded, shot through with god rays. The tutorial: thick with plankton, few hunters. |
+| **Sunlit Zone**: Reef Shelf | 40 m | 26 cm | | Thick, warm, sediment-heavy water pushed sideways by a current. Where most organs are found. |
+| **Twilight Zone** | 100 m | 52 cm | Giant Squid | The last of the light. Cold, thin, nearly empty, with the first marine snow falling. |
+| **Midnight Zone** | 1,000 m | 96 cm | Sperm Whale | No light at all. The only glow is alive. You find prey by feel, or not at all. |
+| **The Abyss** | 4,000 m | 160 cm | Colossal Squid | Cold and barren. Nothing but snow falling out of the dark above. |
+| **The Trenches** | 6,000 m | 240 cm | **Leviathan** | Hot vents below, a red-violet cast, embers rising. Something enormous has been waiting. |
+
+Each zone has one **guardian**. It is not prey, and it is not a gate either. It ignores
+you while you are small. Once you have grown into its zone, it takes an interest. Every
+guardian has its own attack pattern: the Great White lines up and charges, and the Sperm
+Whale clicks to stun whatever is in front of it. Killing a guardian clears it from the
+zone for the rest of the run. Only the Leviathan ends it.
+
+Light falls off with depth. Below the twilight you see only as far as your `sense` stat
+reaches, plus whatever glows on its own. Anything that could swallow you washes red as
+it closes. The frame then darkens, desaturates and pulses: that is the *dread*, and it
+is measured between bodies, not between centres. A leviathan is close long before its
+centre is. Thirty-six species live in the column, and each one you eat goes into the
+**codex**.
+
+### Becoming something else
+
+- **53 mutations** in three rarities: common, rare and apex. Rare and apex cards get
+  likelier the deeper you are and the further the run goes. A card's edge light tells
+  you its rarity before you read it. Any one mutation can be taken twice at most, so a
+  run specialises without collapsing into a single stat.
+- **The draft is the water you are in.** A reef organ first turns up on the reef, and
+  an abyss mutation in the abyss. The draw also leans toward the build you already
+  have. A reroll costs fullness.
+- **Organs grow parts, not numbers.** Each organ comes with a mechanic and a piece of
+  morphology together. An **Illicium** hangs a lit lure that prey swims toward.
+  **Venom Barbs** keep working after you let go. **Pincer Claws** hold what they hit.
+  A **Siphon Jet** makes the boost harder and cheaper. **Ink Sac**, **Electric Organ**
+  and **Inflation** are active organs you fire by hand. Every one of them shows on your
+  body.
+- **Transformations.** Take three different mutations from one family and your whole
+  body plan changes: Predators become a **Shark**, Sprinters a **Squid**, Lurkers a
+  **Moray**, the Luminous an **Angler**, Grazers a **Bloom**. Each form swims
+  differently and earns an organ of its own.
+- **Synergies.** Nine hidden combinations of organs do something that neither organ
+  does alone. Lure plus venom poisons prey before you bite (*Toxic Lure*). Jet plus
+  claws turns a boost into a battering ram (*Ballistic*). You find them in play, not
+  on a card, and the codex keeps the ones you have found.
+- **Menace.** Jaw, spines, bite and bulk add up to how frightening an animal looks. The
+  art reads that score directly: the body darkens, the edges run hot, blades grow along
+  the flanks. You cross the same thresholds as everything else, so becoming the thing
+  other fish flee from is something you watch happen to your own body.
+
+### Between runs
+
+The codex remembers every species you have eaten, every mutation you have taken and
+every synergy you have found, across runs. Reaching a zone for the first time unlocks a
+**starting form** for later runs: the *Reef Wrasse*, *Lanternfish*, *Angler Larva* or
+*Squid Paralarva*. Each one hatches with that zone's signature mutation already taken.
+The **Daily** run is one seeded ocean shared by everyone on the same date. Any other
+run can be replayed or shared with `?seed=`.
+
+### Controls
+
+| | |
+| --- | --- |
+| Swim | `W` drive · `S` brake, then reverse · `A` / `D` swing the body. Or steer with the mouse: effort scales with how far away the cursor is. |
+| Boost | Hold `Space`, `Shift` or left-click. A hard kick, then a wind-up to about twice cruise speed. It burns fullness. |
+| Active organ | `E` or right-click, once you have one. |
+| Pause | `P`. The pause sheet is your inventory: body stats, every organ and what it does, and the full mutation list. |
+| Sound | `M` |
+
+The fish runs on swim physics, not a velocity you set. Thrust goes along the body, and
+sideways drag is about three times forward drag, so turns arc and letting go of `W`
+coasts. Each stroke is locked to the tail's sway, so you surge and glide.
 
 ## Stack
 
 | Piece | Choice | Why |
 | --- | --- | --- |
 | Renderer | **PixiJS 8**, pinned to WebGL | Fast 2D batching for hundreds of animated creatures, plus a hand-written GLSL fragment shader for the water. |
-| Build | **Vite** | Instant HMR, zero-config TS, tiny static output. |
-| Language | **TypeScript** (strict) | The genome/trait system is the whole game — it wants types. |
+| Build | **Vite** | Instant HMR, zero-config TypeScript, a tiny static output. |
+| Language | **TypeScript** (strict) | The genome and trait system is the whole game. It wants types. |
 | UI | **DOM + CSS** over the canvas | Menus, cards and bars are far cheaper and more accessible as DOM than as canvas widgets. |
-| Deps | none beyond Pixi | No engine, no physics lib — the simulation is ~700 lines. |
+| Deps | none beyond Pixi | No engine and no physics library. The swimming, the ecosystem and the fights are all in `src/sim/`. |
 
-## Run it
+## Development
 
 ```bash
-npm install && npm run dev
+npm install
+npm run dev      # the game, with HMR
+npm run design   # the design board at /design.html
+npm run build    # tsc --noEmit && vite build: the only gate
 ```
 
-`npm run build` type-checks and emits a static bundle to `dist/`.
+There is no test suite and no linter. `npm run build` type-checks in strict mode, and
+passing it is what "it works" means here. Almost every change is visual, so the real
+check is looking at it. In dev builds the `Game` instance is exposed as `window.game`,
+so you can drive a run from the console: skip the title, set the body's size, pin a
+depth. [`CLAUDE.md`](CLAUDE.md) has the recipe.
 
-## How it plays
+**The design board** (`/design.html`, dev only) lays out every drawing the game makes:
+every body plan, every mutation taken once on the hatchling, every species, the
+scenery, and the water palettes. Each one is drawn over the real water colour at its
+own depth. It imports the shipping drawing code, so it cannot drift from the game. The
+URL carries the whole state, so a link to one cell is a link to one design question.
 
-- **Move** with `W` to drive, `S` to brake and then back up, `A`/`D` to swing the body —
-  or steer with the mouse instead, which scales effort by cursor distance. The fish runs on
-  swim physics rather than a velocity you set: thrust goes along the body axis, lateral drag
-  is roughly three times forward drag, so turns arc and releasing `W` coasts. Thrust is a
-  **stroke** locked to the same phase that sways the tail, so you surge and glide; flaring to
-  stop bites much harder than coasting does. Hold **Space**, **Shift** or **click** to boost:
-  it opens with a real impulse and then winds up over about a second to roughly double cruise
-  speed for as long as you hold it, burning fullness throughout. **P** pauses.
-- **Biting** throws the body forward and squashes it — the animal compresses along its
-  length, flares across it, and snaps back, while the frame drops into a few hundredths of a
-  second of slow motion and a shock ring goes out from the wound.
-- **Jellies heal you.** A moon jelly returns 30% of your maximum health and a siphonophore
-  45%, which is the reason to take a stinging mouthful when you are hurt.
-- **Eat** anything smaller than your gape. Your mouth reaches ahead of your body, and small
-  prey inside that cone gets pulled in — chasing a speck around with a pixel-perfect hitbox
-  is not fun. Prey under half your gape goes down whole; anything closer to your own size is
-  a fight you can lose.
-- **The shallows are the tutorial.** Above 1000 m plankton spawn thicker — in blooms of six
-  to eleven rather than singly — and hunters and ambushers are thinned to about 40% of their
-  usual share, so a hatchling opens on roughly a hundred edible things and a couple of
-  threats. Both effects fade to nothing by 1000 m.
-- **Fullness** drains constantly, faster as you get bigger — metabolism is a real cost,
-  so size-stacking traits have a downside.
-- **Biomass** fills the third bar. Each stage offers three of **43 mutations** from a
-  rarity-weighted pool, and rarity carries real weight in both senses. Mechanically the
-  tiers are far apart — a common is +18% speed, an apex is +110% bite or +9 armour — and
-  the odds climb only for the good stuff, from 70/30/0 common·rare·apex at stage 1 to
-  44/45/12 by stage 8. Visually the card's edge light tells you before you read it: commons
-  are unlit, rares carry a cold blue glow, apex cards breathe amber. Any one mutation can be
-  taken at most twice, so a run specialises without collapsing into one stat.
-- **Organs.** A handful of reef mutations grow parts rather than numbers, and each carries a
-  mechanic and a piece of morphology together: an **Illicium** hangs a lit lure on a stalk
-  and prey genuinely swims toward it; **Venom Barbs** leave poison working in a wound after
-  the mouth has let go, and a kill it finishes is still credited to you; **Pincer Claws**
-  hold what they hit; a **Siphon Jet** makes the boost harder and cheaper; **Coral
-  Encrustation** and an **Anemone Frill** plate and fringe you. You can see every one of
-  them on your body.
-- **Pause is your inventory.** `P` opens a sheet with the whole animal: derived body stats
-  (health, bite, sense, gulp reach, metabolism), a breakdown of every organ with what it
-  actually does, and the full mutation list with icons, rarity and descriptions.
-- **Tiers** stack the ocean into five sealed layers, each its own ecosystem — creatures now
-  hold to their own depth band rather than roaming the whole column. A thermocline seals the
-  floor of each tier and only opens once your body reaches its entry size:
+### How it is drawn
 
-  | Tier | Depth | Entry size |
-  | --- | --- | --- |
-  | Sunlit Shallows | 0 – 1300 m | — |
-  | Reef Shelf | 1300 – 3000 m | 26 cm |
-  | Twilight Zone | 3000 – 5200 m | 52 cm |
-  | Midnight Zone | 5200 – 7400 m | 96 cm |
-  | The Abyss | 7400 – 9000 m | 160 cm |
+- **Everything is seen from directly above.** Each species uses one of the body plans:
+  microbe, darter, shark, eel, jelly, squid or angler. The wraith is the plan you hatch
+  as, and every guardian gets a body nothing else wears. A plan decides both the
+  silhouette and how the animal swims. Within a plan the genome still does the work.
+- **Creature art is baked once and skinned.** A body is painted into a texture on every
+  `rebuild(genome)`. Swimming moves mesh vertices, never geometry, so a hundred animals
+  cost a few vertex writes each.
+- **Nothing on an animal is stroked.** A contour has a position of its own, so it draws
+  twice wherever two parts cross. Silhouettes are carried by value instead:
+  noise-ragged edges, countershading and mottling.
+- **The water is a single full-screen GLSL pass.** It combines domain-warped FBM, a
+  depth-sampled palette, god rays, your own bioluminescence and the thermoclines, all
+  shaded from world coordinates. So the next zone is always visible below you, long
+  before you are big enough to go there.
+- **Performance was measured, not guessed.** The water shades at 0.4 resolution, its
+  noise hash has no `sin`, octave counts are graded per layer, and off-screen creatures
+  skip their art. At normal load that holds about 8 ms a frame. See
+  [`docs/performance.md`](docs/performance.md).
 
-  A sealed tier is rendered in shadow — you can see into it, you cannot be in it — with the
-  barrier casting a contact shadow on the water beneath, and the entry requirement written
-  on the seal itself in glowing text that rides its screen position. Push against it and it
-  holds you. Breaking through plays a tier card and grants a **free mutation**, and each
-  tier reached also widens the draft pool toward rare and apex traits — so depth upgrades
-  you, not just biomass.
-- **Every tier is its own biome.** Colour alone was too weak a cue, so each tier now has a
-  weather of its own — the cloud field, the light and the suspended matter are all driven by
-  a per-tier profile, cross-faded over 620 m either side of a thermocline so a dive never
-  steps. The shallows are busy and crisp, shot through with god rays, and fizz upward with
-  bubbles. The reef is thick warm sediment dragged sideways by a steady current. The
-  twilight is thin, cold and nearly empty, with the first marine snow falling through it.
-  The midnight zone is black and still, and the only light in it is alive — sparse plankton
-  hanging there and pulsing. The abyss has vents underneath: slow enormous masses, a
-  red-violet cast, and embers rising out of the dark. Below the twilight the water lights
-  itself in the biome's own colour, because a column tint that is nearly black cannot tell
-  two dark tiers apart.
-- **Depth** is difficulty. Light falls off with depth, and below the twilight zone you see
-  only what your `sense` stat and other creatures' bioluminescence reveal. The Leviathan
-  spawns once you reach the Abyss tier; killing it wins the run.
+### Code map
 
-## Mutations
-
-The HUD shows what you are made of as a grid of **marks rather than names** — a stroke glyph
-per mutation, tinted by rarity, with a stack badge and the full name and effect on hover.
-Two of the newer mutations reach into the simulation rather than just scaling a stat:
-`gulp` widens the cone that draws small prey into your mouth, and `lifesteal` returns a
-share of everything you swallow as health.
-
-## Fear
-
-Every animal has a **menace** score derived from its genome — jaw, spines, bite, bulk. It
-drives the art directly: the body mass darkens, the edge runs hot, the sensory arcs go from
-cold blue to ember, blades grow along the flanks, and a bruised red bloom builds around it.
-Your own fish crosses the same thresholds as you take apex mutations, so becoming the thing
-other fish flee from is something you watch happen to your body.
-
-Running the other way, anything that can swallow you washes red as it closes, and the water
-itself reacts: proximity measured **between bodies rather than between centres** — a
-leviathan is close long before its centre is — feeds a `uDread` uniform that desaturates the
-frame, crushes the edges and pulses a dark red vignette.
-
-## Performance
-
-The frame budget is spent almost entirely on the GPU, and it was measured rather than
-guessed — at 3× normal population the frame was 10.8 ms median / 25.6 ms p90, but 8.2 ms
-with the water hidden and 8.3 ms with the creatures hidden, which said the full-screen
-shader and the per-creature draws were each large enough that together they blew the
-budget. Four changes, in order of what they bought:
-
-- **The water shades at 0.4 resolution.** It is all low-frequency fog, so a quarter of the
-  fragments is indistinguishable once upscaled. This was worth roughly 5 ms on its own.
-- **The noise hash lost its `sin`.** A transcendental in the inner loop of a 4-octave FBM
-  called five times per pixel is the most expensive thing in the shader; the sin-free hash
-  looks identical.
-- **Octave counts are graded** — four for the main cloud field, three for the warp and the
-  wide rays, two for fine detail and thin rays — and the deep-water field reuses noise that
-  has already been computed instead of paying for another FBM. Two limits found the hard
-  way: the main cloud field must keep four octaves (at three it loses its high frequencies
-  and `smoothstep` turns it into hard-edged slabs), and the reuse has to be a *continuous*
-  remap — an early version used `fract()`, which is a sawtooth and drew its wrap as a seam
-  straight across the water.
-- **Off-screen creatures skip their art entirely** (they still swim, hunt and get eaten),
-  and motes and particles are sprites off one shared texture so a whole fight batches into
-  a single draw call.
-
-Result at normal load: **8.3 ms median, 9.3 ms p95** while actively hunting — pinned to a
-120 Hz display. At 3× population the median is 8.8 ms, down from 10.8.
-
-## Notes for contributors
-
-Implementation notes live in [`docs/`](docs/README.md) — architecture, simulation,
-progression, rendering, performance, and a log of what has already been tried and
-undone. [`CLAUDE.md`](CLAUDE.md) is the short version, aimed at agents.
-
-## Code map
-
-The folders are layers, and imports only point down them — see
+The folders are layers, and imports only point down them. See
 [`docs/architecture.md`](docs/architecture.md) for the full map.
 
 | Folder | Responsibility |
 | --- | --- |
-| `src/main.ts`, `src/Game.ts` | Boot; the loop, reset, and routing what the simulation did to the systems it concerns. |
-| `src/core/` | Seeded RNG, maths, colour and value noise — no game knowledge. |
+| `src/main.ts`, `src/Game.ts` | Boot; the loop, the reset, and routing what the simulation did to the systems it concerns. |
+| `src/core/` | Seeded RNG, maths, colour and value noise. No game knowledge. |
 | `src/content/` | The tables: genome, species, zones and bands, traits, transformations, the body form. |
-| `src/sim/` | The simulation — `World`, `Creature`, spawning, behaviour, guardian patterns, combat, and every organ's mechanic in `sim/organs/`. |
+| `src/sim/` | The simulation: `World`, `Creature`, spawning, behaviour, guardian patterns, combat, and every organ's mechanic in `sim/organs/`. |
 | `src/run/` | One run's record and the systems that move it: evolution and the draft, metabolism, the bands and their gates, the ending, the codex. |
-| `src/input/` | Keyboard and pointer, and the player's steering, boost and active organ. |
-| `src/render/` | Camera, scene visibility, the GLSL water, particulate, scenery, particles; `render/creature/` bakes and skins the fish. |
-| `src/ui/` | DOM UI facade — HUD chrome, overlay screens, and the glyphs mutations are shown by. |
-| `src/design/` | The design board at `/design.html`: every drawing the game makes, dev only. |
+| `src/input/` | Keyboard and pointer, plus the player's steering, boost and active organ. |
+| `src/render/` | Camera, scene visibility, the GLSL water, particulate, scenery, particles. `render/creature/` bakes and skins the fish. |
+| `src/ui/` | The DOM UI facade: HUD chrome, overlay screens, and the glyphs mutations are shown by. |
+| `src/design/` | The design board at `/design.html`. Dev only. |
 
-## Look
+### Further reading
 
-Everything is seen from directly above, and each species picks one of nine **body plans**
-— microbe, darter, shark, eel, jelly, squid, angler, leviathan, and the wraith you play as.
-A plan decides both the
-silhouette and how the thing swims: a jelly contracts its bell and trails tentacles, an eel
-runs a five-link chain down its whole body, a shark holds a stiff torpedo and barely sways,
-an angler hangs a lit lure out in front of a wall of teeth. Within a plan the genome still
-does the work, so a mutation that changes your jaw, spines or glow changes how you actually
-look in the water.
-
-**Nothing on an animal is stroked.** A contour has a position of its own, so the moment two
-parts of a body cross it draws twice and the join shows. Every shape is a fill, and the
-silhouette is carried by value instead — which is what keeps a creature legible against
-water that is nearly its own colour:
-
-- **A noise-ragged edge.** The flank is nudged by the same value noise the water shader
-  runs on, so a parametric curve stops reading as machinery — and so an animal is not
-  textured differently from the water it is in.
-- **Countershading.** A dark back narrowing to the tail, in two passes each bounded by its
-  own noise curve. Seen from above this is what makes a shape read as a fish, and it is
-  what carries the silhouette now that no outline does.
-- **Mottling.** Speckle on a body-space grid, dark over the spine and pale toward the
-  belly, so one pass reads as scale on top and as counter-lighting at the edge.
-- **Grown parts are seated, not stuck on.** A claw arm, a venom barb and an illicium each
-  start from a socket, and the working end — the claw tip, the barb's wet point, the bait
-  — is the brightest thing on it, so a build reads by its parts at a glance.
-
-The body is painted once into a texture and then skinned onto a mesh: swimming moves
-vertices, never geometry, so a hundred animals cost a few vertex writes each.
-
-The water itself is a single full-screen GLSL pass: domain-warped FBM for the drifting
-organic masses, a depth-sampled palette, **god rays** cut from noise along a slanted axis so
-they lean the way light refracts and thin out as the column swallows them, your own
-bioluminescence, and the thermoclines. Because the seal and the tier beneath it are shaded from world coordinates,
-**the next depth level is visible below you at all times** — you look down into a darkening
-trench, a luminous shear surface, and the colder water and larger silhouettes waiting past
-it, long before you are big enough to go there.
+Implementation notes live in [`docs/`](docs/README.md): architecture, simulation,
+progression, rendering, performance, a roadmap, and a log of what has already been tried
+and undone. Read [`docs/decisions.md`](docs/decisions.md) before rebuilding anything that
+looks missing. [`CONTEXT.md`](CONTEXT.md) is the glossary, and [`CLAUDE.md`](CLAUDE.md)
+is the short version, aimed at agents.
