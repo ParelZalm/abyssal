@@ -1,12 +1,6 @@
 # Abyssal
 
-<p align="center">
-  <a href="docs/media/trailer.mp4">
-    <img src="docs/media/trailer-poster.jpg" alt="Abyssal trailer: a spined shark-form player chasing the Leviathan through the Trenches" width="100%">
-  </a>
-  <br>
-  <sub><a href="docs/media/trailer.mp4">▶ Watch the trailer</a> (40 s, recorded from the game itself)</sub>
-</p>
+https://github.com/user-attachments/assets/211267d9-5ab7-45c0-9060-ae5d542e15cc
 
 **A fish-evolution roguelite for the browser.** Think of the opening act of *Spore*,
 played as a single run. You hatch small, eat whatever fits down your throat, mutate
