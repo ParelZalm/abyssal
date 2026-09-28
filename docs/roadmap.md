@@ -114,9 +114,10 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
   firsts toasted and listed on the end screen, and a *new* mark on draft cards for traits
   never taken. Species show as names and counts; drawing each one there would need a
   bake to an image, which is the same work as the run summary's silhouettes (§8).
-- **Starting forms.** Reach the twilight once and you can hatch as a lanternfish-like
-  body. Varies the opening ten minutes.
-- **Daily seed.** Runs already seed a `Rng`; expose the seed and share it.
+- ~~**Starting forms.**~~ Done: four, one per zone reached, from the title.
+- ~~**Daily seed.**~~ Done: a Daily button, the seed on the end screen, `?seed=` to share,
+  and a draft stream of its own so a seed deals the same hands. A daily best, apart from
+  the all-time best, is the obvious next step.
 
 ## 8. Small feel wins
 
@@ -141,5 +142,5 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 9. ~~Sense modes and Flash Sense~~ — done.
 10. ~~Cursed cards and the active organ slot~~ — done.
 11. ~~Enemies that ask for tactics~~ — done.
-12. Next up, by the same ranking: starting forms and a daily seed (§7), then the small
-    feel wins (§8).
+12. ~~Starting forms and a daily seed~~ — done.
+13. Next up: the small feel wins (§8).

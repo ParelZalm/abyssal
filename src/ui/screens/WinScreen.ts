@@ -4,13 +4,14 @@ import { actions, button, div, h1, h2, p } from '../dom/element';
 export class WinScreen implements Component {
   readonly element = div('overlay');
 
-  constructor(stats: string[], onRestart: () => void, onCodex: () => void) {
+  constructor(stats: string[], onRestart: () => void, onCodex: () => void, onTitle: () => void) {
     this.element.append(
       h2('The Leviathan is dead'),
       h1('Apex'),
       p('Nothing in this ocean is larger than you now. The water goes very quiet.'),
       p(stats.join(' \u00a0·\u00a0 ')),
-      actions(button('Begin a new lineage', onRestart), button('Codex', onCodex, 'btn ghost')),
+      actions(button('Begin a new lineage', onRestart), button('Choose a body', onTitle, 'btn ghost'),
+              button('Codex', onCodex, 'btn ghost')),
     );
   }
 

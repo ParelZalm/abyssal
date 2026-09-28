@@ -8,7 +8,7 @@ import { DeathScreen } from './screens/DeathScreen';
 import { MutationScreen, type DraftOptions } from './screens/MutationScreen';
 import { PauseScreen } from './screens/PauseScreen';
 import { BandScreen } from './screens/BandScreen';
-import { TitleScreen } from './screens/TitleScreen';
+import { TitleScreen, type RunChoice } from './screens/TitleScreen';
 import { TransformScreen } from './screens/TransformScreen';
 import { WinScreen } from './screens/WinScreen';
 import type { HudState, PauseInfo } from './types';
@@ -41,12 +41,12 @@ export class UI {
     this.hud.showToast(text);
   }
 
-  showTitle(onStart: () => void, codex: Codex) {
-    this.show(new TitleScreen(() => {
+  showTitle(onStart: (choice: RunChoice) => void, codex: Codex) {
+    this.show(new TitleScreen(choice => {
       this.hide();
       this.hud.setChrome(true);
-      onStart();
-    }, () => this.showCodex(codex, () => this.showTitle(onStart, codex))));
+      onStart(choice);
+    }, () => this.showCodex(codex, () => this.showTitle(onStart, codex)), codex));
   }
 
   showMutation(heading: string, traits: Trait[], pick: (t: Trait) => void, opts: DraftOptions) {
@@ -56,18 +56,18 @@ export class UI {
     }, opts));
   }
 
-  showDeath(cause: string, stats: string[], codex: Codex, onRestart: () => void) {
+  showDeath(cause: string, stats: string[], codex: Codex, onRestart: () => void, onTitle: () => void) {
     this.show(new DeathScreen(cause, stats, () => {
       this.hide();
       onRestart();
-    }, () => this.showCodex(codex, () => this.showDeath(cause, stats, codex, onRestart))));
+    }, () => this.showCodex(codex, () => this.showDeath(cause, stats, codex, onRestart, onTitle)), onTitle));
   }
 
-  showWin(stats: string[], codex: Codex, onRestart: () => void) {
+  showWin(stats: string[], codex: Codex, onRestart: () => void, onTitle: () => void) {
     this.show(new WinScreen(stats, () => {
       this.hide();
       onRestart();
-    }, () => this.showCodex(codex, () => this.showWin(stats, codex, onRestart))));
+    }, () => this.showCodex(codex, () => this.showWin(stats, codex, onRestart, onTitle)), onTitle));
   }
 
   /** The codex over whatever screen opened it; `onBack` puts that screen back. */

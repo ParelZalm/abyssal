@@ -299,8 +299,27 @@ the thinning only. Spent water stays spent for the run.
 Held on `Game`: `stage`, `xp`, `food`, `taken` (id → stacks), `form`, `takenNames` (for the HUD
 and pause sheet), `eaten`, `deepest`, `elapsed`, `maxBand`, `gatesOpen`, `overstay` and `risen` (the
 shallows clock). `reset()`
-rebuilds all of it plus the world and the player. A run is seeded from `Math.random()`
-into a `Rng`, so a seed would reproduce it if one were ever exposed.
+rebuilds all of it plus the world and the player, from a `RunChoice` — a starting form
+and, optionally, a seed.
+
+**Seeds.** Every run has one: `Game.seed`, random unless given, shown on the end screen as
+`Seed n` (or `Daily yyyy-mm-dd`), and a `?seed=n` in the address starts that ocean from
+Hatch. The world and the ocean draw from `rng`; the draft draws from its own `draftRng`
+(the seed xor a constant), so the same seed and the same picks deal the same hands however
+differently the two runs swam — the world stream is spent on every spawn and would not.
+Much of the motion still runs on `Math.random`, so a seed is the same ocean and the same
+draft, not a replay. **The daily** (`dailySeed`, FNV-1a of the UTC date) is always the
+hatchling, so it is one run for everyone; *Spawn again* after a daily retries the same
+ocean, after any other run it rolls a new one with the same body.
+
+**Starting forms** (`game/starts.ts`). One per zone some run has reached —
+`Codex.deepest`, written the moment a band is first entered and backfilled from the kill
+counts of codices older than it: the Reef Wrasse hatches with Parrot Beak, the
+Lanternfish with Photophores (smaller and quicker), the Angler Larva with Illicium
+(slower), the Squid Paralarva with Mantle Pump and Ink Sac. The traits go through the
+ordinary taken path, quietly, so they count toward families and synergies. The title
+shows the unlocked forms as cards and the rest as what unlocks them, and remembers the
+last pick; the end screens offer *Choose a body* to go back to it.
 
 ## The codex
 

@@ -1,6 +1,9 @@
 import { Application, Container, Graphics } from 'pixi.js';
 import './style.css';
-import { loadCodex, recordForm, recordSpecies, recordSynergy, recordTrait, saveCodex } from './game/codex';
+import { loadCodex, recordDepth, recordForm, recordSpecies, recordSynergy, recordTrait,
+         saveCodex } from './game/codex';
+import { backfillDepth, startById, STARTS, type Start } from './game/starts';
+import type { RunChoice } from './ui/screens/TitleScreen';
 import { baseGenome, maxHp, sightOf, type Genome } from './game/genome';
 import { setBakeRenderer } from './game/fishbake';
 import { Fx } from './game/fx';
@@ -80,6 +83,15 @@ class Game {
   /** The membrane of awareness around your own body, so you never lose yourself. */
   private focus = new Graphics();
   private rng!: Rng;
+  /**
+   * The draft's own stream, seeded off the run's seed. Kept apart from the world's, which is
+   * drawn from by every spawn, so the same seed and the same picks deal the same hands
+   * however differently the two runs swam — the daily run is one draft sequence for all.
+   */
+  private draftRng!: Rng;
+  /** How this run was started: its body, its seed, and the date if it is the daily. */
+  private choice: RunChoice = { start: 'hatchling' };
+  private seed = 0;
   private ocean!: Ocean;
   private scenery!: Scenery;
   private water = new Water();
@@ -98,7 +110,7 @@ class Game {
   /** Named synergies discovered this run, in the order they first fired. */
   private synergies: string[] = [];
   /** What every run has found, kept across runs. See `game/codex.ts`. */
-  private codex = loadCodex();
+  private codex = backfillDepth(loadCodex());
   /** Names this run added to the codex for the first time, for the end screen. */
   private found: string[] = [];
   /** The run's one metamorphosis, once it has happened. See `game/forms.ts`. */
@@ -202,7 +214,7 @@ class Game {
     addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') saveCodex(this.codex);
     });
-    this.ui.showTitle(() => { this.phase = 'play'; }, this.codex);
+    this.showTitle();
   }
 
   private snapshot() {
@@ -252,11 +264,28 @@ class Game {
     }
   }
 
-  private reset() {
+  /**
+   * The title, and what its buttons start. A `?seed=` in the address starts that ocean from
+   * Hatch, which is how a seed off an end screen is shared.
+   */
+  private showTitle() {
+    this.phase = 'title';
+    this.ui.showTitle(choice => {
+      const shared = Number(new URLSearchParams(location.search).get('seed'));
+      if (choice.seed === undefined && Number.isFinite(shared) && shared > 0) choice.seed = shared;
+      this.reset(choice);
+      this.phase = 'play';
+    }, this.codex);
+  }
+
+  private reset(choice: RunChoice = this.choice) {
     this.app.stage.removeChildren();
     this.camera.removeChildren();
 
-    this.rng = new Rng((Math.random() * 2 ** 32) >>> 0);
+    this.choice = choice;
+    this.seed = choice.seed ?? ((Math.random() * 2 ** 32) >>> 0);
+    this.rng = new Rng(this.seed);
+    this.draftRng = new Rng(this.seed ^ 0x9e3779b9);
     this.ocean = new Ocean(this.rng);
     this.scenery = new Scenery();
 
@@ -293,6 +322,7 @@ class Game {
     this.overstay = BANDS.map(() => 0); this.risen.clear(); this.toldBy.clear();
     this.squeezed = -1; this.squeezeT = 0; this.activeCd = 0; this.wantActive = false;
     this.wakeCd = 0; this.sprinting = false; this.poised = false; this.boostHeld = 0; this.boostCd = 0; this.hitStop = 0;
+    this.hatch(startById(choice.start));
     this.zoom = this.zoomFor(g.size);
     // the first fill is the exception to spawning off-screen: there is no frame to
     // protect yet, and an empty opening screen is worse than watching the water populate
@@ -683,6 +713,12 @@ class Game {
     const band = bandAt(p.y);
     if (band > this.maxBand && this.phase === 'play') {
       this.maxBand = band;
+      // the deepest any run has reached unlocks the starting forms, so it is written at once
+      if (recordDepth(this.codex, band)) {
+        saveCodex(this.codex);
+        const opened = STARTS.find(s => s.unlock === band);
+        if (opened) this.ui.toast(`New starting form — ${opened.name}`);
+      }
       this.phase = 'draft';
       this.fx.ring(p.x, p.y, 0xcfe4ff, p.radius * 4);
       this.ui.showBand(band, () => this.offerDraft(`${BANDS[band].name} — thermocline reward`));
@@ -804,9 +840,9 @@ class Game {
       [t.id, shown.has(t.id) ? 0 : leanOf(g, owned, this.form, counts, t)]));
     // the pool is the water you are in: a reef organ is found on the reef, not in a menu
     const here = bandAt(this.player.y);
-    let offer = draftTraits(this.rng, reach, here, this.taken, 3, t => lean.get(t.id) ?? 1);
+    let offer = draftTraits(this.draftRng, reach, here, this.taken, 3, t => lean.get(t.id) ?? 1);
     // late in a run the pool can be too thin to leave a whole hand out
-    if (offer.length < 3) offer = draftTraits(this.rng, reach, here, this.taken, 3);
+    if (offer.length < 3) offer = draftTraits(this.draftRng, reach, here, this.taken, 3);
     const cost = REROLL_COST * (this.rerolls + 1);
     this.phase = 'draft';
     this.ui.showMutation(heading, offer, t => { this.rerolls = 0; this.applyTrait(t); }, {
@@ -835,6 +871,25 @@ class Game {
     return found.map(p => p.kind === 'form' ? `Transforms you — ${p.form.name}`
       : this.codex.synergies.includes(p.id) ? `Completes ${p.name}`
       : 'Completes an undiscovered synergy').join(' · ');
+  }
+
+  /**
+   * A starting form: its traits taken the ordinary way, quietly — no toast, no ring, no
+   * draft phase — and then the body's own tweaks.
+   */
+  private hatch(s: Start) {
+    const g = this.player.genome;
+    for (const id of s.traits) {
+      const t = TRAITS.find(x => x.id === id)!;
+      t.apply(g);
+      this.taken.set(t.id, (this.taken.get(t.id) ?? 0) + 1);
+      this.takenNames.push({ name: t.name, desc: t.desc, icon: t.icon, rarity: t.rarity, stacks: 1 });
+    }
+    s.tweak?.(g);
+    this.player.view.rebuild(g);
+    this.player.refreshOrgans();
+    this.player.hpMax = maxHp(g);
+    this.player.hp = this.player.hpMax;
   }
 
   private applyTrait(t: Trait) {
@@ -911,11 +966,18 @@ class Game {
       `${Math.floor(this.elapsed / 60)}m ${Math.floor(this.elapsed % 60)}s survived`,
       ...(this.found.length ? [`New in the codex: ${this.found.join(', ')}`] : []),
       ...(misses.length ? [`One card short of ${misses.join(', ')}`] : []),
+      // the seed is the run: the daily names its date, any other can be shared as ?seed=
+      this.choice.daily ? `Daily ${this.choice.daily}` : `Seed ${this.seed}`,
     ];
-    const restart = () => { this.reset(); this.phase = 'play'; };
-    if (won) this.ui.showWin(stats, this.codex, restart);
+    // again means the same body; a daily again means the same ocean, to try it better
+    const restart = () => {
+      this.reset(this.choice.daily ? this.choice : { start: this.choice.start });
+      this.phase = 'play';
+    };
+    const title = () => this.showTitle();
+    if (won) this.ui.showWin(stats, this.codex, restart, title);
     else this.ui.showDeath(this.food <= 0 ? 'You starved' : 'Something bigger found you', stats,
-      this.codex, restart);
+      this.codex, restart, title);
   }
 
   private render(dt: number) {

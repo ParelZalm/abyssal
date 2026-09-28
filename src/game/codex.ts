@@ -15,11 +15,13 @@ export interface Codex {
   /** Families whose transformation the player has undergone. */
   forms: string[];
   runs: number;
+  /** The deepest band index any run has reached — what unlocks the starting forms. */
+  deepest: number;
 }
 
 const KEY = 'abyssal.codex';
 
-const empty = (): Codex => ({ species: {}, traits: {}, synergies: [], forms: [], runs: 0 });
+const empty = (): Codex => ({ species: {}, traits: {}, synergies: [], forms: [], runs: 0, deepest: 0 });
 
 /** A missing, private-mode or hand-edited store all read as a codex with nothing in it. */
 export function loadCodex(): Codex {
@@ -41,6 +43,7 @@ export function loadCodex(): Codex {
       synergies: strings(raw.synergies),
       forms: strings(raw.forms),
       runs: Number.isFinite(raw.runs) ? Number(raw.runs) : 0,
+      deepest: Number.isFinite(raw.deepest) ? Number(raw.deepest) : 0,
     };
   } catch { return empty(); }
 }
@@ -67,6 +70,13 @@ export function recordTrait(c: Codex, id: string) {
 export function recordForm(c: Codex, family: string) {
   if (c.forms.includes(family)) return false;
   c.forms.push(family);
+  return true;
+}
+
+/** Book a band reached. True when no run has been this deep before. */
+export function recordDepth(c: Codex, band: number) {
+  if (band <= c.deepest) return false;
+  c.deepest = band;
   return true;
 }
 
