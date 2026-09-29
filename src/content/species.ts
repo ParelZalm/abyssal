@@ -50,8 +50,8 @@ export interface Species {
    * outright: a boss is fought in hearts and strikes, not on its body's scale. Its armour is
    * flat off every shot, so a boss's is kept to two or three: at the Great White's old five a
    * larva's spit did a fifth of itself, and the fight was over three hundred shots. Tuned to
-   * about 40, 75 and 115 shots of a larva that found no damage, and a third of that for one
-   * that doubled it — under half, since the armour comes off a bigger shot too.
+   * about 40, 75 and 115 shots of a larva that found no damage, and under half that for one
+   * that doubled it, since the armour comes off a bigger shot too.
    */
   boss?: 'punch' | 'charge' | 'grab';
   bossHp?: number;
