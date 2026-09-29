@@ -213,9 +213,17 @@ refills health and returns to `play`.
 
 `content/forms.ts`. Every trait carries one or two `families` — predator, sprinter, lurker,
 luminous, grazer; plate and the plain stat cards carry none. Three *different* traits of
-one family (stacks do not count) transform the player, once per run, in `Evolution.transform`
-off `Evolution.take`: the plan changes to that family's, and the family's grant is applied to
+one family (stacks do not count) transform the player in `Evolution.transform` off
+`Evolution.take`: the plan changes to that family's, and the family's grant is applied to
 the genome.
+
+A long run gets a **second metamorphosis** (`MAX_FORMS` 2): a family the run has not become,
+at `formAt(1)` = four different traits of it, one more than the first took. The plan is
+replaced and the grants stack — what the first form earned it keeps — so a Shark that goes
+on to be an Angler fishes with a lure and still frenzies. The screen says which form it
+remade; the pause sheet lists every form and counts the open families toward the next one;
+the draft stops leaning toward a family already become; the end screen reads "Became a
+Shark, then an Angler". `Run.forms` holds them, and `Run.form` is the latest, the body's.
 
 | Family | Form | Plan | Grant |
 | --- | --- | --- | --- |

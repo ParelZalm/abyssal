@@ -67,7 +67,7 @@ export class Evolution {
     const owned = run.takenTraits();
     const counts = familyCounts(owned);
     const lean = new Map(TRAITS.map(t =>
-      [t.id, shown.has(t.id) ? 0 : leanOf(g, owned, run.form, counts, t)]));
+      [t.id, shown.has(t.id) ? 0 : leanOf(g, owned, run.forms, counts, t)]));
     // the pool is the water you are in: a reef organ is found on the reef, not in a menu
     const here = bandAt(this.p.y);
     let offer = draftTraits(this.rng, reach, here, run.taken, 3, t => lean.get(t.id) ?? 1);
@@ -97,7 +97,7 @@ export class Evolution {
    */
   private prospectNote(t: Trait): string | null {
     const run = this.run;
-    const found = completes(this.p.genome, run.takenTraits(), run.form, t);
+    const found = completes(this.p.genome, run.takenTraits(), run.forms, t);
     if (!found.length) return null;
     return found.map(p => p.kind === 'form' ? `Transforms you — ${p.form.name}`
       : run.codex.synergies.includes(p.id) ? `Completes ${p.name}`
@@ -144,15 +144,18 @@ export class Evolution {
     this.flow.phase = 'play';
     // the card just taken goes last, so a trait of two families that completes both
     // transforms into the one it lists first
-    const due = run.form ? null
-      : formDue([...run.takenTraits().filter(x => x.id !== t.id), t]);
+    const due = formDue([...run.takenTraits().filter(x => x.id !== t.id), t], run.forms);
     if (due) this.transform(due);
   }
 
-  /** The metamorphosis: a new plan, the organ it earns, and a screen to mark it. */
+  /**
+   * The metamorphosis: a new plan, the organ it earns, and a screen to mark it. A second one
+   * keeps the first's grant — the organs were earned, only the silhouette is replaced.
+   */
   private transform(to: Transformation) {
     const { run, p } = this;
-    run.form = to;
+    const was = run.form;
+    run.forms.push(to);
     to.apply(p.genome);
     p.species.plan = to.plan;
     p.view.setPlan(to.plan, p.genome);
@@ -165,6 +168,6 @@ export class Evolution {
     this.fx.burst(p.x, p.y, 0xd8c8ff, 30, 200, p.radius * 0.3);
     this.camera.jolt(6, 10);
     this.flow.phase = 'draft';
-    this.ui.showTransform(to, () => { this.flow.phase = 'play'; });
+    this.ui.showTransform(to, was, run.forms.length, () => { this.flow.phase = 'play'; });
   }
 }

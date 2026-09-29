@@ -1,4 +1,4 @@
-import { FAMILY_NAMES, FORM_AT, type Family } from '../../content/forms';
+import { FAMILY_NAMES, formAt, MAX_FORMS, type Family } from '../../content/forms';
 import { armourOf, biteDamage, maxHp } from '../../content/genome';
 import type { Component } from '../Component';
 import { div, h1, h2, h3, h4, kbd, keysLine, li, p, span, ul } from '../dom/element';
@@ -109,14 +109,16 @@ export class PauseScreen implements Component {
     invSec.className = 'inv';
     invSec.append(mutHeading, inv);
 
-    // how close each kind of animal is; once one has happened the rest are moot for the run
+    // the forms the body has been, then how close each other kind of animal is to the next
     const lineage = ul('stats');
-    if (info.form) {
-      lineage.append(statRow('Form', info.form.name, info.form.desc));
-    } else {
+    for (const f of info.forms) lineage.append(statRow('Form', f.name, f.desc));
+    if (info.forms.length < MAX_FORMS) {
+      const need = formAt(info.forms.length);
       for (const f of Object.keys(FAMILY_NAMES) as Family[]) {
         const n = info.families[f];
-        if (n > 0) lineage.append(statRow(FAMILY_NAMES[f], `${Math.min(n, FORM_AT)} / ${FORM_AT}`));
+        if (n > 0 && !info.forms.some(h => h.family === f)) {
+          lineage.append(statRow(FAMILY_NAMES[f], `${Math.min(n, need)} / ${need}`));
+        }
       }
     }
     if (lineage.childElementCount) bodySec.append(h3('Lineage'), lineage);

@@ -40,11 +40,12 @@ returns true when it pulled something; a pure modifier synergy still needs that.
 ## 2. ~~Transformations (Isaac's Guppy)~~
 
 Done: `content/forms.ts`, five families (armoured dropped — every plated plan is a
-guardian's), three different traits of one family, once per run. Each form is a plan the
-roster draws, with the wraith's smoke kept on it, plus a grant of existing organs (the
-Shark's `frenzy` is new). See `docs/progression.md`. Left open: a second form in a long
-run. ~~How the ocean reads a transformed player~~: done — hunters of the form's plan take it
-for kin and leave it be above half health, then turn on it (`Creature.spares`).
+guardian's), three different traits of one family. Each form is a plan the roster draws,
+with the wraith's smoke kept on it, plus a grant of existing organs (the Shark's `frenzy` is
+new). See `docs/progression.md`. Since done: how the ocean reads a transformed player —
+hunters of the form's plan take it for kin and leave it be above half health, then turn on
+it (`Creature.spares`) — and a second form in a long run, a new family at four traits, with
+the grants stacked.
 
 ## 3. ~~The draft reads synergies~~
 
@@ -190,6 +191,6 @@ palettes side-on, small animals at their real size, and scenery with real struct
 11. ~~Enemies that ask for tactics~~ — done.
 12. ~~Starting forms and a daily seed~~ — done.
 13. ~~The small feel wins~~ — done. What is left is marked as left open in each section:
-    a second form in a long run (§2), and more synergies and curses as the pool grows
-    (§1, §5). ~~How the ocean reads a transformed player (§2)~~ — done. ~~A daily best (§7)~~ and ~~a Leviathan
+    more synergies and curses as the pool grows (§1, §5). ~~How the ocean reads a
+    transformed player and a second form (§2)~~ — done. ~~A daily best (§7)~~ and ~~a Leviathan
     pattern of its own (§6)~~ — done.

@@ -32,8 +32,10 @@ export class Run {
   readonly synergies: string[] = [];
   /** Names this run added to the codex for the first time, for the end screen. */
   readonly found: string[] = [];
-  /** The run's one metamorphosis, once it has happened. See `content/forms.ts`. */
-  form: Transformation | null = null;
+  /** The run's metamorphoses, first first; at most `MAX_FORMS`. See `content/forms.ts`. */
+  readonly forms: Transformation[] = [];
+  /** What the body is now: the last metamorphosis, or null before the first. */
+  get form(): Transformation | null { return this.forms[this.forms.length - 1] ?? null; }
   eaten = 0;
   deepest = 0;
   elapsed = 0;

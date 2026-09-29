@@ -247,7 +247,7 @@ export class Game {
         genome: p.genome,
         traits: run.takenNames,
         families: familyCounts(run.takenTraits()),
-        form: run.form,
+        forms: run.forms,
         stage: run.stage,
         zone: placeName(p.y),
         depth: p.y,

@@ -7,8 +7,10 @@ import type { Genome } from './genome';
  *
  * Every trait carries one or two families. Three *different* traits of one family — stacks
  * do not count, or doubling a favourite would be a shortcut past the build — rebuild the
- * player onto that family's plan, once per run. The first family to get there wins; the
- * run has one metamorphosis and it is a moment, not a menu.
+ * player onto that family's plan. The first family to get there wins, and a metamorphosis is
+ * a moment, not a menu. A long run gets one more (`MAX_FORMS`): a family it has not become,
+ * at one trait more than the last took, onto that family's plan with the grants stacked —
+ * a Shark that goes on to be an Angler fishes with a lure and still frenzies.
  *
  * The plan is only ever one the roster already draws, and never a guardian's: a guardian's
  * silhouette is the thing the player is meant to recognise on sight, and wearing it would
@@ -31,8 +33,15 @@ export interface Transformation {
   apply: (g: Genome) => void;
 }
 
-/** Different traits of one family it takes. */
+/** Different traits of one family the first metamorphosis takes; each after it, one more. */
 export const FORM_AT = 3;
+/** Metamorphoses a run can go through. A third would be a costume change, not a moment. */
+export const MAX_FORMS = 2;
+
+/** Different traits of a family the next metamorphosis needs, after the `had` ones. */
+export function formAt(had: number) {
+  return FORM_AT + had;
+}
 
 export const TRANSFORMS: Record<Family, Transformation> = {
   predator: { family: 'predator', name: 'Shark', plan: 'shark',
@@ -65,12 +74,17 @@ export function familyCounts(traits: { families?: Family[] }[]): Record<Family, 
 }
 
 /**
- * The transformation these traits have earned, or null. Ties go to the family listed first
- * on the trait that got there, which `Game` passes last — the card just picked decides.
+ * The transformation these traits have earned after the forms the run `had`, or null. Only a
+ * family not yet become counts, and it needs `formAt` of them. Ties go to the family listed
+ * first on the trait that got there, which is passed last — the card just picked decides.
  */
-export function formDue(traits: { families?: Family[] }[]): Transformation | null {
+export function formDue(traits: { families?: Family[] }[],
+                        had: readonly Transformation[]): Transformation | null {
+  if (had.length >= MAX_FORMS) return null;
   const n = familyCounts(traits);
   const last = traits[traits.length - 1];
-  for (const f of last?.families ?? []) if (n[f] >= FORM_AT) return TRANSFORMS[f];
+  for (const f of last?.families ?? []) {
+    if (n[f] >= formAt(had.length) && !had.some(h => h.family === f)) return TRANSFORMS[f];
+  }
   return null;
 }

@@ -10,9 +10,9 @@ export interface TraitEntry {
 export interface PauseInfo {
   genome: Genome;
   traits: TraitEntry[];
-  /** Different traits taken of each family, and the form they became if any. */
+  /** Different traits taken of each family, and the forms they became, first first. */
   families: Record<Family, number>;
-  form: Transformation | null;
+  forms: readonly Transformation[];
   stage: number;
   zone: string;
   depth: number;

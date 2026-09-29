@@ -36,7 +36,7 @@ export class Ending {
     saveCodex(run.codex);
     // what the run was one card short of, which is what makes the next run's first draft
     // a plan rather than a lottery
-    const misses = nearMisses(p.genome, run.takenTraits(), run.form, run.taken)
+    const misses = nearMisses(p.genome, run.takenTraits(), run.forms, run.taken)
       .slice(0, 3).map(m => m.prospect.kind === 'form'
         ? `the ${m.prospect.form.name} (one more ${FAMILY_NAMES[m.prospect.form.family].toLowerCase()} mutation)`
         : `${run.codex.synergies.includes(m.prospect.id) ? m.prospect.name : 'an undiscovered synergy'} (${m.via.name})`);
@@ -51,7 +51,7 @@ export class Ending {
       `${BANDS[run.maxBand].name}`,
       `${p.genome.size.toFixed(0)} cm long`,
       `${run.eaten} creatures eaten`,
-      ...(run.form ? [`Became a ${run.form.name}`] : []),
+      ...(run.forms.length ? [`Became a ${run.forms.map(f => f.name).join(', then a ')}`] : []),
       ...(run.synergies.length ? [`Synergies: ${run.synergies.join(', ')}`] : []),
       `${depthLabel(run.deepest).toLocaleString()} m deep`,
       `${Math.floor(run.elapsed / 60)}m ${Math.floor(run.elapsed % 60)}s survived`,

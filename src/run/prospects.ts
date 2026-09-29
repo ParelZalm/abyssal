@@ -1,4 +1,4 @@
-import { formDue, type Family, type Transformation } from '../content/forms';
+import { formDue, MAX_FORMS, type Family, type Transformation } from '../content/forms';
 import type { Genome } from '../content/genome';
 import { SYNERGIES, synergiesOf } from '../sim/organs';
 import { TRAITS, type Trait } from '../content/traits';
@@ -17,9 +17,9 @@ export type Prospect =
 
 /**
  * What taking `t` now would complete. `owned` is every distinct trait already taken;
- * `form` is the run's transformation, if it has happened, since there is only one.
+ * `forms` the run's transformations so far, which decide whether another is still open.
  */
-export function completes(g: Genome, owned: Trait[], form: Transformation | null,
+export function completes(g: Genome, owned: Trait[], forms: readonly Transformation[],
                           t: Trait): Prospect[] {
   const out: Prospect[] = [];
   const live = new Set(synergiesOf(g));
@@ -30,8 +30,8 @@ export function completes(g: Genome, owned: Trait[], form: Transformation | null
     out.push({ kind: 'synergy', id, name: SYNERGIES.find(o => o.id === id)!.name! });
   }
   // a second stack is not a new trait, so it cannot be the third of a family
-  if (!form && !owned.some(o => o.id === t.id)) {
-    const due = formDue([...owned, t]);
+  if (!owned.some(o => o.id === t.id)) {
+    const due = formDue([...owned, t], forms);
     if (due) out.push({ kind: 'form', form: due });
   }
   return out;
@@ -42,10 +42,14 @@ export function completes(g: Genome, owned: Trait[], form: Transformation | null
  * to finish, not enough that it is guaranteed: a card that completes something is half
  * again as likely, one that advances a family already begun a sixth more.
  */
-export function leanOf(g: Genome, owned: Trait[], form: Transformation | null,
+export function leanOf(g: Genome, owned: Trait[], forms: readonly Transformation[],
                        counts: Record<Family, number>, t: Trait) {
-  if (completes(g, owned, form, t).length) return 1.5;
-  if (!form && !owned.some(o => o.id === t.id) && t.families?.some(f => counts[f] > 0)) return 1.15;
+  if (completes(g, owned, forms, t).length) return 1.5;
+  // a family already become is finished with, so it no longer pulls the draft its way
+  const open = (f: Family) => counts[f] > 0 && !forms.some(h => h.family === f);
+  if (forms.length < MAX_FORMS && !owned.some(o => o.id === t.id) && t.families?.some(open)) {
+    return 1.15;
+  }
   return 1;
 }
 
@@ -56,13 +60,13 @@ export interface NearMiss { prospect: Prospect; via: Trait }
  * For the end screen: synergies one card from live and a form one trait from due. Only
  * cards the run could still have been offered count, so a maxed-out trait is no near miss.
  */
-export function nearMisses(g: Genome, owned: Trait[], form: Transformation | null,
+export function nearMisses(g: Genome, owned: Trait[], forms: readonly Transformation[],
                            taken: Map<string, number>): NearMiss[] {
   const out: NearMiss[] = [];
   const seen = new Set<string>();
   for (const t of TRAITS) {
     if ((taken.get(t.id) ?? 0) >= (t.maxStacks ?? 2)) continue;
-    for (const p of completes(g, owned, form, t)) {
+    for (const p of completes(g, owned, forms, t)) {
       const key = p.kind === 'synergy' ? p.id : `form:${p.form.family}`;
       if (seen.has(key)) continue;
       seen.add(key);

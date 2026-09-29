@@ -92,8 +92,9 @@ export class UI {
     }));
   }
 
-  showTransform(to: Transformation, onContinue: () => void) {
-    this.show(new TransformScreen(to, () => {
+  showTransform(to: Transformation, was: Transformation | null, nth: number,
+                onContinue: () => void) {
+    this.show(new TransformScreen(to, was, nth, () => {
       this.hide();
       onContinue();
     }));
