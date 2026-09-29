@@ -1,5 +1,7 @@
 # Depth labels are decoupled from world depth
 
+**Superseded by [0003](0003-tanks-of-rooms-replace-the-column.md)** — the column is gone.
+
 The five ocean zones are named after the real thing, so the HUD should read 0 m at the
 surface and 11,034 m at the floor of the trenches. The simulation cannot use those
 figures: `y` is a tuned axis that fish body lengths are measured on, and placing the

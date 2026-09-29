@@ -1,7 +1,11 @@
 # Decisions and dead ends
 
 Read this before rebuilding anything here. Most of it is failure, which is the useful
-part. Two decisions large enough to have their own files live in [adr/](adr/):
+part. Decisions large enough to have their own files live in [adr/](adr/):
+
+- [0003](adr/0003-tanks-of-rooms-replace-the-column.md) — the open column became a chain
+  of tanks made of rooms (September 2026). Much of what follows is about the column and
+  stays as the record of why it was built the way it was; 0001 and 0002 are superseded.
 
 - [0001](adr/0001-depth-labels-decoupled-from-world-depth.md) — the column is 9000 tuned
   world units while the HUD reads real metres, 0 to 11,034. Literal boundaries make the
