@@ -26,6 +26,13 @@ drop-in lands; a **Fight** room locks its exits until its hostiles are dead; a
 **Deal** room, which may open after a boss, offers deal mutations; the
 **Boss** room holds the tank's boss, and beating it opens the descent.
 
+**Door** — an opening in the middle of a room's edge into the room beside it. A fight room
+shuts its doors on the player until its hostiles are dead; the room is then **cleared**,
+and stays so.
+
+**Map** — how a tank's rooms connect, dealt from the run's seed, and what the minimap
+shows of it: the rooms seen, the rooms visited, and the one the player is in.
+
 **Obstacle** — a part of a room that blocks: a boulder, a rock pillar, a wreck's hull.
 
 **Decoration** — what grows on a room's rock or has sunk onto it: sponges, anemones, weed,

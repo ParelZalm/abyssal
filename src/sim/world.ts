@@ -246,6 +246,27 @@ export class World {
     this.settle(dt);
   }
 
+  /**
+   * Empty the room for the player to leave it: every body but the player's, the carcasses,
+   * the deaths still playing, the blood and ink. Returns the pickups, which stay with the
+   * room they were dropped in, as Isaac's do.
+   */
+  vacate(): Pickup[] {
+    for (const c of this.creatures) {
+      if (c.holding) this.combat.letGo(c, 0);
+      if (c.heldBy) this.combat.letGo(c.heldBy, 0);
+      c.view.destroy({ children: true });
+    }
+    this.creatures.length = 0;
+    for (const c of this.carcasses) c.view.destroy({ children: true });
+    this.carcasses.length = 0;
+    for (const d of this.dying) d.view.destroy({ children: true });
+    this.dying.length = 0;
+    this.blood.length = 0;
+    this.inks.length = 0;
+    return this.pickups.splice(0);
+  }
+
   /** Put a pickup in the water, thrown gently the way it came. */
   drop(kind: PickupKind, x: number, y: number, vx = 0, vy = 0) {
     this.pickups.push({ kind, x, y, vx, vy, t: 0 });

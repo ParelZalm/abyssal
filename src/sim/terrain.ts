@@ -1,3 +1,4 @@
+import type { Side } from '../content/map';
 import { SOLID, tilesOf, type RoomTemplate, type Tank, type Tile } from '../content/tanks';
 import { cells, fbmSigned } from '../core/noise';
 import { clamp, type Rng } from '../core/util';
@@ -28,6 +29,14 @@ const KNOB = 0.44;
 const KNOB_SIZE = 0.7;
 
 /**
+ * Where a door goes through each side, in template tiles: rows 8–10 on the left and right,
+ * columns 15–17 on the top and bottom — the middle of a 32 × 18 room, three tiles wide,
+ * which the smoothing narrows to a gap a body swims through without catching.
+ */
+const DOOR_ROWS: [number, number] = [8, 10];
+const DOOR_COLS: [number, number] = [15, 17];
+
+/**
  * One room's solid ground, in world space: which parts block, and pushing a body back out
  * of them. The simulation had no terrain before rooms — the column only clamped x — so this
  * is the whole of what a wall is to a creature.
@@ -55,18 +64,44 @@ export class Terrain {
   private readonly fineRows: number;
   /** Seed for the rock's noise, so two rooms from one template are not one rock. */
   private readonly seed: number;
+  /** The sides a door goes through. */
+  readonly doors: readonly Side[];
+  /**
+   * Whether the doors are shut. A shut door is the band of collision cells at its edge made
+   * solid; the opening is still drawn, and the view draws the gate across it.
+   */
+  locked = false;
+  /** Each door's gate band, in collision cells, running out past the room's edge. */
+  private readonly gates: { i0: number; i1: number; j0: number; j1: number }[];
 
-  constructor(template: RoomTemplate, tank: Tank, seed = 0, cx = 0) {
+  /**
+   * `cx`, `cy` place the room's middle in the world: rooms of one tank sit edge to edge, so
+   * a door on one side opens straight into the next room's.
+   */
+  constructor(template: RoomTemplate, tank: Tank, seed = 0, cx = 0, cy = tank.depth,
+              doors: readonly Side[] = []) {
     this.tiles = tilesOf(template);
+    this.doors = doors;
     this.rows = template.rows.length;
     this.cols = template.rows[0].length;
     this.tile = tank.tile;
     this.cell = tank.tile / SUB;
     this.seed = seed;
     this.x0 = cx - (this.cols * this.tile) / 2;
-    this.y0 = tank.depth - (this.rows * this.tile) / 2;
+    this.y0 = cy - (this.rows * this.tile) / 2;
     this.fineCols = this.cols * SUB;
     this.fineRows = this.rows * SUB;
+    for (const side of doors) this.carve(side);
+    this.gates = doors.map(side => {
+      const [r0, r1] = DOOR_ROWS, [c0, c1] = DOOR_COLS;
+      // a tile's depth of cells at the edge and a tile past it, a tile wider than the door
+      if (side === 'left') return { i0: -SUB, i1: SUB - 1, j0: (r0 - 1) * SUB, j1: (r1 + 2) * SUB - 1 };
+      if (side === 'right') return { i0: this.fineCols - SUB, i1: this.fineCols + SUB - 1,
+        j0: (r0 - 1) * SUB, j1: (r1 + 2) * SUB - 1 };
+      if (side === 'up') return { i0: (c0 - 1) * SUB, i1: (c1 + 2) * SUB - 1, j0: -SUB, j1: SUB - 1 };
+      return { i0: (c0 - 1) * SUB, i1: (c1 + 2) * SUB - 1, j0: this.fineRows - SUB,
+        j1: this.fineRows + SUB - 1 };
+    });
     this.fine = new Uint8Array(this.fineCols * this.fineRows);
     for (let j = 0; j < this.fineRows; j++) {
       for (let i = 0; i < this.fineCols; i++) {
@@ -81,10 +116,62 @@ export class Terrain {
   get cx() { return this.x0 + this.width / 2; }
   get cy() { return this.y0 + this.height / 2; }
 
-  /** The template tile at a grid position. Off the grid is rock: a room is closed. */
+  /**
+   * The template tile at a grid position. Off the grid is rock — a room is closed — except
+   * straight out through a door, where the water carries on into the next room.
+   */
   at(i: number, j: number): Tile {
-    if (i < 0 || j < 0 || i >= this.cols || j >= this.rows) return 'rock';
+    if (i < 0 || j < 0 || i >= this.cols || j >= this.rows) return this.beyond(i, j) ? 'water' : 'rock';
     return this.tiles[j * this.cols + i];
+  }
+
+  /** Whether a tile off the grid is the water outside one of this room's doors. */
+  private beyond(i: number, j: number) {
+    const [r0, r1] = DOOR_ROWS, [c0, c1] = DOOR_COLS;
+    const rows = j >= r0 && j <= r1, cols = i >= c0 && i <= c1;
+    return (i < 0 && rows && this.doors.includes('left')) ||
+      (i >= this.cols && rows && this.doors.includes('right')) ||
+      (j < 0 && cols && this.doors.includes('up')) ||
+      (j >= this.rows && cols && this.doors.includes('down'));
+  }
+
+  /**
+   * Open a door: tiles turned to water from the edge inward along the door's band until
+   * its middle reaches the room's own water, so a template need not have drawn the tunnel.
+   */
+  private carve(side: Side) {
+    const [r0, r1] = DOOR_ROWS, [c0, c1] = DOOR_COLS;
+    const set = (i: number, j: number) => { this.tiles[j * this.cols + i] = 'water'; };
+    const horizontal = side === 'left' || side === 'right';
+    const reach = horizontal ? this.cols / 2 : this.rows / 2;
+    for (let k = 0; k < reach; k++) {
+      const i = side === 'left' ? k : side === 'right' ? this.cols - 1 - k : 0;
+      const j = side === 'up' ? k : side === 'down' ? this.rows - 1 - k : 0;
+      const mid = horizontal ? this.at(i, (r0 + r1) >> 1) : this.at((c0 + c1) >> 1, j);
+      if (k > 0 && !SOLID[mid]) break;
+      if (horizontal) for (let jj = r0; jj <= r1; jj++) set(i, jj);
+      else for (let ii = c0; ii <= c1; ii++) set(ii, j);
+    }
+  }
+
+  /** The world rectangle of a door's opening at the room's edge, for its gate to be drawn on. */
+  doorRect(side: Side) {
+    const t = this.tile;
+    const [r0, r1] = DOOR_ROWS, [c0, c1] = DOOR_COLS;
+    if (side === 'left') return { x: this.x0 - t * 0.5, y: this.y0 + r0 * t, w: t, h: (r1 - r0 + 1) * t };
+    if (side === 'right') return { x: this.x0 + this.width - t * 0.5, y: this.y0 + r0 * t, w: t,
+      h: (r1 - r0 + 1) * t };
+    if (side === 'up') return { x: this.x0 + c0 * t, y: this.y0 - t * 0.5, w: (c1 - c0 + 1) * t, h: t };
+    return { x: this.x0 + c0 * t, y: this.y0 + this.height - t * 0.5, w: (c1 - c0 + 1) * t, h: t };
+  }
+
+  /** The side a point has left the room through, or null while it is inside. */
+  exited(x: number, y: number): Side | null {
+    if (x < this.x0) return 'left';
+    if (x > this.x0 + this.width) return 'right';
+    if (y < this.y0) return 'up';
+    if (y > this.y0 + this.height) return 'down';
+    return null;
   }
 
   private sample(i: number, j: number) {
@@ -130,9 +217,17 @@ export class Terrain {
     return best;
   }
 
-  /** Whether a collision cell blocks. Off the grid is rock. */
+  /**
+   * Whether a collision cell blocks. Off the grid it is worked out from the field, which is
+   * rock there but for the water through a door; a shut door's band blocks whatever it is.
+   */
   private solid(i: number, j: number) {
-    if (i < 0 || j < 0 || i >= this.fineCols || j >= this.fineRows) return true;
+    if (this.locked) {
+      for (const g of this.gates) if (i >= g.i0 && i <= g.i1 && j >= g.j0 && j <= g.j1) return true;
+    }
+    if (i < 0 || j < 0 || i >= this.fineCols || j >= this.fineRows) {
+      return this.field(this.x0 + (i + 0.5) * this.cell, this.y0 + (j + 0.5) * this.cell) > 0.5;
+    }
     return this.fine[j * this.fineCols + i] === 1;
   }
 

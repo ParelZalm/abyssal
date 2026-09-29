@@ -18,6 +18,7 @@ src/
 │   ├── genome.ts        the stat block, and the derived stats read off it
 │   ├── species.ts       the roster: what lives in each zone, the guardians, speciesById
 │   ├── tanks.ts         the tanks of a run and the room templates they are built from
+│   ├── map.ts           dealing a tank's map: rooms grown from the start, types on dead ends
 │   ├── zones.ts         the column's strata, kept as water looks and species homes, and
 │   │                    the size at which each guardian takes notice; DEPTH_MAX
 │   ├── form.ts          the spine + width curve every body is made of, and PLAN_ART
@@ -37,6 +38,7 @@ src/
 ├── run/             one run's progress, and the systems that move it
 │   ├── Run.ts           the shared record: stage, xp, food, taken, score, combo, lineage
 │   ├── Evolution.ts     level-up, the draft and rerolls, taking a trait, transformation
+│   ├── TankMap.ts       the tank as a run meets it: rooms, doors, clearing, the slide
 │   ├── Belly.ts         swallowing, what a full belly passes, pickups, the last-heart warning
 │   ├── Ending.ts        the banked score, the cause of death, the lineage silhouettes
 │   ├── codex.ts  best.ts  starts.ts  prospects.ts  phase.ts
@@ -68,7 +70,7 @@ are not in play since the tank rework (roadmap stage 1) and are kept for the des
 until stage 8 decides what a room's decoration reuses of them.
 
 The run is being rebuilt as tanks of rooms — [adr/0003](adr/0003-tanks-of-rooms-replace-the-column.md)
-and [roadmap.md](roadmap.md). Until it is finished, a run is one room of the nursery tank.
+and [roadmap.md](roadmap.md). Until it is finished, a run is the nursery tank's map.
 
 ## Dependency direction
 
@@ -99,10 +101,11 @@ read world state.
 1. **Hit-stop.** `camera.slow(dt)`: a landed bite holds a few frames at 0.3 speed.
 2. **`fx.update`** always runs, so particles keep moving while paused or drafting.
 3. **If `phase === 'play'`:** `controller.steer` → `world.update(dt)` → `digest()` →
-   `belly.update` → the camera's shake, the combo and the dread decay →
-   `impacts.hints`.
-4. **`render(dt)`** always runs: `camera.follow`, the ocean, the room's view (re-baked on
-   a new art tier), `scene.draw` (per-creature visibility and tint, the water uniforms),
+   `tank.update` (a room clearing, the player leaving through a door) → `belly.update` →
+   the camera's shake, the combo and the dread decay → `impacts.hints`. During a slide
+   between rooms only `tank.update` runs: the world holds still while the camera pans.
+4. **`render(dt)`** always runs: `camera.follow`, the ocean, `tank.draw` (the room's view,
+   re-baked on a new art tier, and the next one's during a slide), `scene.draw` (per-creature visibility and tint, the water uniforms),
    culling the dead and topping the room up (`Spawner.stock`), and the HUD.
 
 Phase is one of `title | play | draft | paused | over`. Only `play` advances the

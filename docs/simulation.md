@@ -283,5 +283,12 @@ body's radius (`WALL_R`): the radius is half a body length, and side-on a fish i
 thin, so a full-radius circle held it a head's length off every floor. The nose goes a
 little into the rock, which the room draws over the bodies to hide.
 
+**Doors.** A room is built with the sides that have a neighbour (`Terrain.doors`): each is
+carved, tiles turned to water from the edge inward along its band until the middle reaches
+the room's own water, and off the grid the field is water straight out through it, so the
+opening runs on into the room beside. A shut door (`Terrain.locked`) is its gate band — a
+tile of collision cells at the edge and a tile past it — made solid; the opening is still
+drawn, and `RoomView` draws a grate across it. Off the grid, collision reads the field.
+
 Nothing steers around a wall yet: a shoal that heads for one presses against it until its
 wander turns it. The hostile roles (roadmap stage 4) are where avoidance belongs.

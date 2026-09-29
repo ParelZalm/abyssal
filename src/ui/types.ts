@@ -2,6 +2,7 @@ import type { Family, Transformation } from '../content/forms';
 import type { Genome } from '../content/genome';
 import type { Rarity } from '../content/traits';
 import type { IconName } from './icons';
+import type { MapCell } from '../run/TankMap';
 
 export interface TraitEntry {
   name: string; desc: string; icon: IconName; rarity: Rarity; stacks: number;
@@ -35,6 +36,9 @@ export interface HudState {
   daily: boolean;
   combo: number; comboMult: number; comboLeft: number;
   danger: number;
+  /** The rooms of the tank seen so far, and a number that changes whenever they draw differently. */
+  map: MapCell[];
+  mapVersion: number;
   /** The one active organ, if the body has one: its mark, and how ready it is, 0..1. */
   active: { name: string; icon: IconName; ready: number } | null;
 }

@@ -20,6 +20,8 @@ import { PIXEL } from '../render/pixel';
 import { RoomView } from '../render/room';
 import { DECOR_KINDS, DecorView, placeDecor, type DecorKind, type Piece } from '../render/decor';
 import { Terrain } from '../sim/terrain';
+import { generateMap } from '../content/map';
+import { Minimap } from '../ui/hud/Minimap';
 import { spriteCanvas } from '../render/pickups';
 import { Texture } from 'pixi.js';
 import { speciesById } from '../content/species';
@@ -711,9 +713,11 @@ function roomGroup(): DesignGroup {
     id: 'rooms',
     name: 'Rooms',
     note: 'Every room template, as the fixed camera frames it. Rock, sand and boulders block; water is swum.',
-    items: ROOMS.map(t => {
+    items: [...ROOMS.map(t => {
       const tank = tankById(t.tank);
-      const terrain = new Terrain(t, tank);
+      // every side doored and shut, so the carving and the gates show on every template
+      const terrain = new Terrain(t, tank, 1, 0, tank.depth, ['left', 'right', 'up', 'down']);
+      terrain.locked = true;
       const zoom = Math.min(REF_SCREEN.w / terrain.width, REF_SCREEN.h / terrain.height);
       return {
         id: `room-${t.id}`,
@@ -725,7 +729,7 @@ function roomGroup(): DesignGroup {
         span: terrain.width * 0.55,
         depth: tank.depth,
         facts: { tank: tank.name, tiles: `${terrain.cols} × ${terrain.rows}`,
-          tile: `${tank.tile} cm`, fauna: tank.fauna.join(' ') },
+          tile: `${tank.tile} cm`, types: t.types.join(' '), fauna: tank.fauna.join(' ') },
         make: () => {
           const view = new RoomView(terrain, zoom / PIXEL);
           view.update();
@@ -745,7 +749,23 @@ function roomGroup(): DesignGroup {
           v.decor.update(v.t);
         },
       };
-    }),
+    }), mapItem()],
+  };
+}
+
+/** A whole tank's minimap, every room revealed, from the generator the run deals maps with. */
+function mapItem(): DesignItem {
+  const tank = tankById('nursery');
+  return {
+    id: 'minimap', name: 'minimap', note: 'a tank dealt from seed 1, every room seen',
+    source: 'src/ui/hud/Minimap.ts', span: 60, depth: tank.depth,
+    make: () => {
+      const map = new Minimap();
+      const cells = generateMap(new Rng(1)).map((m, i) => ({ gx: m.gx, gy: m.gy, type: m.type,
+        visited: true, current: i === 0 }));
+      map.update(cells, 1);
+      return spriteCell(map.element.querySelector('canvas')!, 0.5);
+    },
   };
 }
 
@@ -790,6 +810,7 @@ function decorGroup(): DesignGroup {
     }),
   };
 }
+
 
 /** A pixel sprite as a board cell, `px` world units to its pixel. */
 function spriteCell(canvas: HTMLCanvasElement, px: number): Container {

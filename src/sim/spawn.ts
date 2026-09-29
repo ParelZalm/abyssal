@@ -16,13 +16,12 @@ export class Spawner {
   constructor(private readonly world: World, private readonly rng: Rng) {}
 
   /**
-   * Keep a room's hostiles at the tank's count, arriving away from the player so the first
-   * the player knows of one is it coming.
+   * A fight room's hostiles, `count` of them, placed as the player comes in and away from
+   * the door they came through, so the first the player knows of one is it coming.
    */
-  hostiles(room: Terrain, tank: Tank, player: { x: number; y: number }) {
+  hostiles(room: Terrain, tank: Tank, player: { x: number; y: number }, count: number) {
     let n = 0;
-    for (const c of this.world.creatures) if (c.hostile && c.alive) n++;
-    for (let guard = 0; n < tank.hostileCount && guard < 10; guard++) {
+    for (let guard = 0; n < count && guard < 30; guard++) {
       const sp = speciesById(this.rng.pick(tank.hostiles));
       const at = room.openSpot(this.rng, sp.size[1] * 0.6);
       if (!at || Math.hypot(at.x - player.x, at.y - player.y) < room.width * 0.3) continue;

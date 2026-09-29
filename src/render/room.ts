@@ -56,6 +56,39 @@ const LIGHT = (() => {
   return v.map(x => x / n);
 })();
 
+/**
+ * An iron grate across a door, bars running across the opening: dark, lit on the edge the
+ * light comes from, painted once at a fixed small size and scaled to the door — it is a few
+ * art pixels of bars whatever the tank's zoom.
+ */
+const gateCache: Partial<Record<'v' | 'h', Texture>> = {};
+function gateTexture(vertical: boolean): Texture {
+  const key = vertical ? 'v' : 'h';
+  const hit = gateCache[key];
+  if (hit) return hit;
+  // painted for a vertical door (bars upright), then turned for a horizontal one
+  const w = 10, h = 30;
+  const c = document.createElement('canvas');
+  c.width = vertical ? w : h; c.height = vertical ? h : w;
+  const ctx = c.getContext('2d')!;
+  const put = (x: number, y: number, col: string) => {
+    ctx.fillStyle = col;
+    if (vertical) ctx.fillRect(x, y, 1, 1); else ctx.fillRect(y, x, 1, 1);
+  };
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const bar = x % 3 === 1;
+      const rail = y === 2 || y === h - 3 || y === Math.floor(h / 2);
+      if (bar) put(x, y, x === 1 ? '#8b93a8' : '#5a6276');
+      else if (rail) put(x, y, '#4a5064');
+      else if (x % 3 === 2 && (bar || rail)) put(x, y, '#1c2030');
+    }
+  }
+  const tex = Texture.from(c);
+  tex.source.scaleMode = 'nearest';
+  return (gateCache[key] = tex);
+}
+
 /** The 4×4 Bayer matrix, 0..1 — the one ordered dither every painted gradient here uses. */
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) / 16);
 
@@ -131,6 +164,8 @@ function dome(dx: number, dy: number, r: number) {
 export class RoomView {
   readonly root = new Container();
   private readonly sprite = new Sprite();
+  /** A grate across each door, shown while the room holds the player in. */
+  private readonly gates: Sprite[] = [];
   private baked = -1;
 
   /**
@@ -140,15 +175,58 @@ export class RoomView {
    */
   constructor(private readonly terrain: Terrain, private readonly density?: number) {
     this.root.addChild(this.sprite);
+    for (const side of terrain.doors) {
+      const r = terrain.doorRect(side);
+      const g = new Sprite(gateTexture(side === 'left' || side === 'right'));
+      g.position.set(r.x, r.y);
+      g.width = r.w;
+      g.height = r.h;
+      g.visible = false;
+      this.root.addChild(g);
+      this.gates.push(g);
+    }
   }
 
-  /** Re-bake if the art density has moved a tier since the last bake. */
+  /** A bake under way, a few rows at a time, and the art version it is baking for. */
+  private job: Generator<void> | null = null;
+  private jobVersion = -1;
+
+  private get stale() {
+    return this.baked !== artVersion || this.sprite.texture === Texture.EMPTY;
+  }
+
+  /** Whether the room is baked for the current art density and can be shown. */
+  get ready() {
+    return !this.stale && !this.job;
+  }
+
+  /** Bake now, to the end, if the room is not baked for the current art density; show the gates. */
   update() {
-    if (this.baked === artVersion && this.sprite.texture !== Texture.EMPTY) return;
-    this.baked = artVersion;
-    const old = this.sprite.texture;
-    this.bake();
-    if (old !== Texture.EMPTY) old.destroy(true);
+    if (this.stale || this.job) this.work(Infinity);
+    for (const g of this.gates) g.visible = this.terrain.locked;
+  }
+
+  /**
+   * Bake a little, until `deadline` (a `performance.now()` time). A room takes about half a
+   * second to bake, so the rooms beside the one the player is in are baked this way across
+   * frames, and are ready by the time the player swims into one.
+   */
+  prepare(deadline: number) {
+    if (this.stale || this.job) this.work(deadline);
+  }
+
+  private work(deadline: number) {
+    if (!this.job || this.jobVersion !== artVersion) {
+      this.job = this.bake();
+      this.jobVersion = artVersion;
+    }
+    while (performance.now() < deadline) {
+      if (this.job.next().done) {
+        this.job = null;
+        this.baked = this.jobVersion;
+        return;
+      }
+    }
   }
 
   destroy() {
@@ -156,7 +234,7 @@ export class RoomView {
     this.root.destroy({ children: true });
   }
 
-  private bake() {
+  private *bake(): Generator<void> {
     const t = this.terrain;
     const d = this.density ?? artDensity();
     const worldW = (t.cols + MARGIN * 2) * t.tile, worldH = (t.rows + MARGIN * 2) * t.tile;
@@ -174,12 +252,15 @@ export class RoomView {
         const tile = t.kindAt(wx, wy);
         kind[py * w + px] = tile === 'sand' ? 2 : tile === 'boulder' ? 3 : 1;
       }
+      if ((py & 7) === 7) yield;
     }
     const at = (x: number, y: number) =>
       x < 0 || y < 0 || x >= w || y >= h ? 1 : kind[y * w + x];
     // how deep into the rock each solid pixel is, and how far from the rock each water one
     const intoRock = distance(i => kind[i] === 0, w, h);
+    yield;
     const fromRock = distance(i => kind[i] !== 0, w, h);
+    yield;
 
     const [wr, wg, wb] = waterColor(this.terrain.cy);
     const light = lightAt(this.terrain.cy);
@@ -268,6 +349,7 @@ export class RoomView {
         out[o + 2] = Math.round(clamp(lerp(base[2] * v * lit, wb, fog), 0, 1) * 255);
         out[o + 3] = 255;
       }
+      if ((py & 7) === 7) yield;
     }
 
     const canvas = document.createElement('canvas');
@@ -275,7 +357,9 @@ export class RoomView {
     canvas.getContext('2d')!.putImageData(img, 0, 0);
     const tex = Texture.from(canvas);
     tex.source.scaleMode = 'nearest';
+    const old = this.sprite.texture;
     this.sprite.texture = tex;
+    if (old !== Texture.EMPTY) old.destroy(true);
     this.sprite.position.set(ox, oy);
     this.sprite.width = worldW;
     this.sprite.height = worldH;

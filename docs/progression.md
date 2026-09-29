@@ -309,19 +309,43 @@ Shark, then an Angler". `Run.forms` holds them, and `Run.form` is the latest, th
 
 A run is a chain of **tanks**, each a grid of one-screen **rooms** (`content/tanks.ts`; the
 words are in `CONTEXT.md`, the decision in `docs/adr/0003-*`). A `Tank` has a name, the
-world depth whose water it borrows, a tile size in world units, its loose fauna and how
-many bodies a room holds. A `RoomTemplate` is rows of characters — `#` rock, `=` sand, `o`
-boulder, `.` water — authored by hand, as Isaac's are. The roadmap builds the rest in
-stages: today a run is one room of the nursery tank, chosen from its templates by the seed.
+world depth whose water it borrows, a tile size in world units, its loose fauna, its
+hostiles, and how many bodies a room holds. A `RoomTemplate` is 32 × 18 rows of characters —
+`#` rock, `=` sand, `o` boulder, `.` water — authored by hand, as Isaac's are, and tagged
+with the room types it may be dealt as. The nursery has eight.
+
+**The map** (`content/map.ts`) is dealt from the run's seed: 7–8 rooms grown out from the
+start one neighbour at a time, a room added only where it touches exactly one other so the
+map branches, and sideways preferred over up and down. The boss goes on the dead end
+furthest from the start, the treasure room and the shop on the next two, and the rest are
+fights. A map without three dead ends is thrown away and grown again.
+
+**The tank in play** (`run/TankMap.ts`). Each room keeps whether it has been seen,
+visited and cleared, and the pickups left in it. Rooms sit edge to edge in the world, a
+room's size apart, so a door opens straight into the next room's. Entering a room puts its
+terrain in the world and its views in the display slots, gives it back its pickups and its
+fauna, and — the first time for a fight room (2–3 hostiles) or the boss room (4, until the
+boss of stage 7) — deals its hostiles and shuts its doors. A room clears when its last
+hostile is dead, and stays clear. Leaving through a door empties the room (`World.vacate`;
+carcasses do not keep), and the camera slides to the next room over 0.35 s while the world
+holds still, carrying the player to just inside the facing door.
+
+**Baking ahead.** A room takes about half a second to bake, so the rooms next door bake a
+few milliseconds a frame (`RoomView.prepare`, a generator run to a deadline), the one behind
+the nearest door first, and whatever is left bakes under the slide. A crossing's worst
+frame is about 20 ms. Starting a run bakes the start room at once.
+
+**The minimap** (`ui/hud/Minimap.ts`) draws the rooms seen so far inside the tank's outline —
+visited ones solid, the ones seen through a door dim, the current one lit — with a glyph on
+the boss, treasure and shop rooms. It redraws when `TankMap.version` moves, which is counted
+across every tank the page makes.
 
 The column's systems are gone with it: size gates, the descent limit, the pocket under a
 seal, forcing a seal and the shallows clock. They all existed to pace one open column in
 which the easiest water was the best place to grow, and a tank of rooms with a boss as its
 only exit paces itself. `git show 2bed3f0:docs/progression.md` has how they worked.
 
-`zones.ts` stays, as the water looks and the species' home ranges. Evolution's draft still
-offers the cards of the band whose water the player is in, which is the nursery's Open
-Water until the pool is ported to tanks (stage 5).
+`zones.ts` stays, as the water looks and the species' home ranges.
 
 ## Run state
 

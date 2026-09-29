@@ -99,14 +99,28 @@ What it found, and what it leaves:
   and the Veins curse have little to act on with hearts; stage 5 rewrites those cards.
 - Heart drops are random (`Math.random`), not the seed — fine until rooms clear (stage 3).
 
-## 3. The tank and its map
+## 3. ~~The tank and its map~~
 
-- Seeded grid generation of 6–8 rooms from a tank's templates, with the room types
-  placed; the daily seed seeds it.
-- Exits that lock while a fight room has hostiles; the camera slide between rooms, with
-  the next room held still until arrival.
-- The minimap, inside the tank's outline, with Isaac's room-type icons.
-- Board: every fight template of the nursery; the minimap.
+Done: `content/map.ts` deals a 7–8 room map from the seed with the types on dead ends;
+`run/TankMap.ts` runs it — rooms edge to edge in the world, entered with their fauna and, the
+first time, their hostiles behind shut doors, cleared when those are dead, and a 0.35 s slide
+between rooms with the world held still. Doors are carved through the middle of each side
+with a neighbour and shut as a solid gate band with a grate drawn across. The minimap sits
+top right, in the tank's outline. Six more nursery templates, eight in all, each tagged with
+the room types it may be. The board draws every template doored and gated, and a minimap.
+
+What it found, and what it leaves:
+
+- **A room bake is the cost of a door.** Half a second, so the rooms next door bake a few
+  milliseconds a frame, nearest door first, and the rest under the slide; a crossing's
+  worst frame is ~20 ms. Starting a run still bakes its first room at once.
+- **The HUD outlives a run**, so the minimap's version has to be counted across tanks, or a
+  new run's first map matched the last run's and never drew.
+- Treasure, shop and boss rooms are rooms of their type with nothing of it in them yet
+  (stages 5, 6 and 7); the boss room holds four mackerels. A cleared room drops nothing
+  until the economy (stage 6).
+- Fauna is topped up in every room, cleared or not, which keeps the tank alive between
+  fights.
 
 ## 4. Hostile roles
 

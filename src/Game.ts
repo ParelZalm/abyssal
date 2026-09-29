@@ -1,10 +1,9 @@
-import { Application } from 'pixi.js';
+import { Application, Container } from 'pixi.js';
 import { toggleMute } from './audio/sound';
 import { Rng } from './core/util';
 import { familyCounts } from './content/forms';
 import { baseGenome, type Genome } from './content/genome';
 import { speciesById, type Species } from './content/species';
-import { ROOMS } from './content/tanks';
 import { FINAL_GUARDIAN } from './content/zones';
 import { Input } from './input/Input';
 import { PlayerController } from './input/PlayerController';
@@ -14,10 +13,8 @@ import { Fx } from './render/fx';
 import { Impacts } from './render/Impacts';
 import { Ocean } from './render/ocean';
 import { followZoom, FramePass, PIXEL } from './render/pixel';
-import { DecorView, placeDecor } from './render/decor';
 import { PickupView } from './render/pickups';
 import { Lighting, lightTexture } from './render/lighting';
-import { RoomView } from './render/room';
 import { Scene } from './render/Scene';
 import { Water } from './render/water';
 import { Best } from './run/best';
@@ -27,10 +24,10 @@ import { Evolution } from './run/Evolution';
 import { Belly, BELLY_FULL } from './run/Belly';
 import type { Phase } from './run/phase';
 import { COMBO_WINDOW, comboMult, Run } from './run/Run';
+import { TankMap } from './run/TankMap';
 import { backfillDepth, startById } from './run/starts';
 import { SYNERGIES } from './sim/organs';
 import { Creature } from './sim/creature';
-import { Terrain } from './sim/terrain';
 import { World } from './sim/world';
 import type { RunChoice } from './ui/screens/TitleScreen';
 import { UI } from './ui/UI';
@@ -66,9 +63,8 @@ export class Game {
   private rng!: Rng;
   private ocean!: Ocean;
   private dread!: Dread;
-  room!: Terrain;
-  private roomView!: RoomView;
-  private decor!: DecorView;
+  /** The tank the run is in: its map, the room the player is in, the doors, the slide. */
+  tank!: TankMap;
   private pickups!: PickupView;
   run!: Run;
   world!: World;
@@ -197,19 +193,13 @@ export class Game {
     this.app.stage.removeChildren();
     this.camera.root.removeChildren();
     this.camera.over.removeChildren();
-    this.roomView?.destroy();
-    this.decor?.destroy();
+    this.tank?.destroy();
     this.pickups?.destroy();
 
     const seed = choice.seed ?? ((Math.random() * 2 ** 32) >>> 0);
     this.run = new Run(choice, seed, this.codex);
     this.rng = new Rng(seed);
     this.ocean = new Ocean(this.rng);
-    const tank = this.run.tank;
-    const templates = ROOMS.filter(r => r.tank === tank.id);
-    const room = this.room = new Terrain(this.rng.pick(templates), tank, this.rng.int(0, 999));
-    this.roomView = new RoomView(room);
-    this.decor = new DecorView(placeDecor(room, this.rng.int(0, 1e6)), room.cy);
     this.pickups = new PickupView();
 
     const g: Genome = baseGenome();
@@ -223,23 +213,19 @@ export class Game {
     // a copy, because a transformation changes the plan and the next run must not inherit it
     const p = this.player = new Creature({ ...PLAYER_SPECIES }, g);
     p.isPlayer = true;
-    const start = room.clearAt(room.cx, room.cy, g.size) ? { x: room.cx, y: room.cy }
-      : room.openSpot(this.rng, g.size)!;
-    p.x = start.x;
-    p.y = start.y;
 
     const world = this.world = new World(this.rng, p);
-    world.terrain = room;
+    const layers = { rock: new Container(), decor: new Container(), glow: new Container() };
     this.camera.root.addChild(
       // what grows on the rock stands behind the bodies; the rock itself is drawn over them
-      this.ocean.world, this.decor.root, this.scene.focus,
+      this.ocean.world, layers.decor, this.scene.focus,
       world.fog, world.layer, this.pickups.root, this.fx.layer,
       // the rock over the bodies, so a nose pressed into a wall goes into it
-      this.roomView.root,
+      layers.rock,
     );
     // the blooms go above the lighting, in one additive layer of their own that batches as
     // one draw: they are the light, and the dark must not fall on them
-    this.camera.over.addChild(this.decor.glow, this.pickups.glow, world.glow);
+    this.camera.over.addChild(layers.glow, this.pickups.glow, world.glow);
     this.app.stage.addChild(this.water.layer, this.camera.root, this.lighting.sprite,
       this.camera.over);
 
@@ -259,15 +245,14 @@ export class Game {
       title: () => this.showTitle(),
     });
     this.impacts = new Impacts(fx, camera, this.dread, ui);
+    this.tank = new TankMap(run, world, p, camera, layers, fx, ui);
 
     this.evolution.hatch(startById(choice.start));
     p.hpMax = run.containers * 2;
     p.hp = p.hpMax;
     run.remember(p);
     camera.reset(p.x, p.y, 1);
-    camera.hold(room.x0, room.y0, room.width, room.height);
-    world.spawner.stock(room, tank, tank.population);
-    world.spawner.hostiles(room, tank, p);
+    this.tank.begin();
   }
 
   private togglePause() {
@@ -292,7 +277,10 @@ export class Game {
     // a couple of frames of slow motion on a landed bite, so the hit registers
     dt = this.camera.slow(dt);
     this.fx.update(dt);
-    if (this.phase === 'play') {
+    if (this.phase === 'play' && this.tank.sliding) {
+      // between rooms the world holds still while the camera pans across
+      this.tank.update(dt);
+    } else if (this.phase === 'play') {
       const p = this.player;
       this.run.elapsed += dt;
       this.world.clearOutbox();
@@ -301,6 +289,7 @@ export class Game {
       p.hp = Math.min(p.hp, p.hpMax);
       this.world.update(dt);
       this.digest();
+      this.tank.update(dt);
       this.belly.update(dt);
       this.camera.settle(dt);
       this.run.tick(dt);
@@ -349,15 +338,13 @@ export class Game {
     followZoom(view.zoom);
     this.water.resize(camera.W, camera.H);
     this.ocean.update(dt, view);
-    this.roomView.update();
-    this.decor.update(view.t);
+    this.tank.draw(view.t);
     this.pickups.update(this.world.pickups, view.zoom, view.t);
-    const dread = this.scene.draw(view, this.world, p, this.phase, this.dread, this.decor.lights);
+    const dread = this.scene.draw(view, this.world, p, this.phase, this.dread, this.tank.lights);
     this.lighting.render(this.camera);
-    if (this.phase === 'play' || this.phase === 'draft') {
+    if ((this.phase === 'play' || this.phase === 'draft') && !this.tank.sliding) {
       this.world.cull(camera.x, camera.y, camera.viewR());
-      this.world.spawner.stock(this.room, this.run.tank, this.run.tank.population);
-      this.world.spawner.hostiles(this.room, this.run.tank, this.player);
+      this.world.spawner.stock(this.tank.room, this.run.tank, this.run.tank.population);
     }
 
     this.ui.update({
@@ -373,6 +360,7 @@ export class Game {
       comboLeft: run.comboT / COMBO_WINDOW,
       danger: dread,
       active: this.controller.active(),
+      map: this.tank.minimap(), mapVersion: this.tank.version,
     });
   }
 }
