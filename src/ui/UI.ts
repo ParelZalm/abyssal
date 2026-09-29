@@ -46,12 +46,13 @@ export class UI {
     this.hud.showDiscovery(name, desc, first);
   }
 
-  showTitle(onStart: (choice: RunChoice) => void, codex: Codex) {
+  showTitle(onStart: (choice: RunChoice) => void, codex: Codex, dailyBest: (date: string) => number) {
     this.show(new TitleScreen(choice => {
       this.hide();
       this.hud.setChrome(true);
       onStart(choice);
-    }, () => this.showCodex(codex, () => this.showTitle(onStart, codex)), codex));
+    }, () => this.showCodex(codex, () => this.showTitle(onStart, codex, dailyBest)), codex,
+    dailyBest));
   }
 
   showMutation(heading: string, traits: Trait[], pick: (t: Trait) => void, opts: DraftOptions) {

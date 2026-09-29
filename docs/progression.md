@@ -310,7 +310,12 @@ differently the two runs swam — the world stream is spent on every spawn and w
 Much of the motion still runs on `Math.random`, so a seed is the same ocean and the same
 draft, not a replay. **The daily** (`dailySeed`, FNV-1a of the UTC date) is always the
 hatchling, so it is one run for everyone; *Spawn again* after a daily retries the same
-ocean, after any other run it rolls a new one with the same body.
+ocean, after any other run it rolls a new one with the same body. **The daily best**
+(`Best.daily`, `abyssal.daily` in `localStorage`) is that date's record and only that
+date's — the next day is another ocean, so it replaces rather than accumulates. On a daily
+the run strip races it (*today*) instead of the all-time best, the end screen says whether
+the day was beaten, and the title's Daily button carries it. A daily still counts toward
+the all-time best.
 
 **Starting forms** (`run/starts.ts`). One per zone some run has reached —
 `Codex.deepest`, written the moment a band is first entered and backfilled from the kill
@@ -323,7 +328,7 @@ last pick; the end screens offer *Choose a body* to go back to it.
 
 ## The codex
 
-The only thing besides the best score that outlives a run. `run/codex.ts` keeps kills
+The only thing besides the best scores that outlives a run. `run/codex.ts` keeps kills
 per species id, stacks per trait id, the synergy ids that have fired, the families whose
 form has been reached and a run count, in
 `localStorage` under `abyssal.codex`. Ids rather than names, so a rename does not orphan

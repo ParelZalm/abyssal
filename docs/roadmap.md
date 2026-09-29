@@ -116,8 +116,9 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
   bake to an image, which is the same work as the run summary's silhouettes (§8).
 - ~~**Starting forms.**~~ Done: four, one per zone reached, from the title.
 - ~~**Daily seed.**~~ Done: a Daily button, the seed on the end screen, `?seed=` to share,
-  and a draft stream of its own so a seed deals the same hands. A daily best, apart from
-  the all-time best, is the obvious next step.
+  and a draft stream of its own so a seed deals the same hands.
+- ~~**Daily best.**~~ Done: the day's record apart from the all-time best, raced on the run
+  strip during a daily, reported on the end screen and shown on the Daily button.
 
 ## 8. Small feel wins
 
@@ -192,5 +193,5 @@ structure.
 12. ~~Starting forms and a daily seed~~ — done.
 13. ~~The small feel wins~~ — done. What is left is marked as left open in each section:
     a second form in a long run and how the ocean reads a transformed player (§2), a
-    Leviathan pattern of its own (§6), a daily best (§7), and more synergies and curses as
-    the pool grows (§1, §5).
+    Leviathan pattern of its own (§6), and more synergies and curses as the pool grows
+    (§1, §5). ~~A daily best (§7)~~ — done.

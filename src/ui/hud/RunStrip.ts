@@ -12,7 +12,7 @@ export class RunStrip {
   private lastScore = 0;
   // every field is cached: the strip is updated each frame and a DOM write is not free
   private lastT = -1;
-  private lastBest = -1;
+  private lastBest = '';
   private lastBeaten = false;
   private lastOn = false;
   private lastLabel = '';
@@ -41,9 +41,10 @@ export class RunStrip {
       this.lastT = t;
       this.time.textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
     }
-    if (s.best !== this.lastBest) {
-      this.lastBest = s.best;
-      this.best.textContent = s.best ? `best ${s.best.toLocaleString()}` : '';
+    const best = s.best ? `${s.daily ? 'today' : 'best'} ${s.best.toLocaleString()}` : '';
+    if (best !== this.lastBest) {
+      this.lastBest = best;
+      this.best.textContent = best;
     }
     const beaten = s.best > 0 && s.score > s.best;
     if (beaten !== this.lastBeaten) { this.lastBeaten = beaten; this.best.classList.toggle('beaten', beaten); }

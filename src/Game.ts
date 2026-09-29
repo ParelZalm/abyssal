@@ -182,7 +182,7 @@ export class Game {
       if (choice.seed === undefined && Number.isFinite(shared) && shared > 0) choice.seed = shared;
       this.reset(choice);
       this.phase = 'play';
-    }, this.codex);
+    }, this.codex, date => this.best.daily(date));
   }
 
   private reset(choice: RunChoice = this.run?.choice ?? { start: 'hatchling' }) {
@@ -331,7 +331,10 @@ export class Game {
       xp: run.xp, xpNeed: run.xpNeed,
       stage: run.stage, size: p.genome.size, depth: p.y,
       traits: run.takenNames,
-      score: Math.round(run.score), best: this.best.value, elapsed: run.elapsed,
+      score: Math.round(run.score), elapsed: run.elapsed,
+      // on the daily the race is against the day, which everyone swims the same ocean for
+      best: run.choice.daily ? this.best.daily(run.choice.daily) : this.best.value,
+      daily: run.choice.daily !== undefined,
       combo: run.combo, comboMult: comboMult(run.combo), comboBiomass: chainBiomass(run.combo),
       comboLeft: run.comboT / COMBO_WINDOW,
       danger: dread,

@@ -26,7 +26,10 @@ export interface HudState {
   xp: number; xpNeed: number;
   stage: number; size: number; depth: number;
   traits: TraitEntry[];
-  score: number; best: number; elapsed: number;
+  score: number; elapsed: number;
+  /** The score to beat: the all-time best, or on the daily the day's best. */
+  best: number;
+  daily: boolean;
   combo: number; comboMult: number; comboBiomass: number; comboLeft: number;
   danger: number;
   /** The one active organ, if the body has one: its mark, and how ready it is, 0..1. */

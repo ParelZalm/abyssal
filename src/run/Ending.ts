@@ -28,6 +28,10 @@ export class Ending {
     if (won) run.score += 5000;
     const final = Math.round(run.score);
     const record = this.best.submit(final);
+    const date = run.choice.daily;
+    // read before submitting, so a beaten day can say what it beat
+    const dayBefore = date ? this.best.daily(date) : 0;
+    const dayRecord = date ? this.best.submitDaily(date, final) : false;
     run.codex.runs++;
     saveCodex(run.codex);
     // what the run was one card short of, which is what makes the next run's first draft
@@ -38,6 +42,11 @@ export class Ending {
         : `${run.codex.synergies.includes(m.prospect.id) ? m.prospect.name : 'an undiscovered synergy'} (${m.via.name})`);
     const stats = [
       record ? `${final.toLocaleString()} points — new best` : `${final.toLocaleString()} points (best ${this.best.value.toLocaleString()})`,
+      // the daily's own race, when it is one: the all-time line above can say nothing new
+      // on a day the ocean was hard
+      ...(date ? [dayRecord
+        ? `New best for ${date}${dayBefore ? ` (was ${dayBefore.toLocaleString()})` : ''}`
+        : `Today's best ${this.best.daily(date).toLocaleString()}`] : []),
       `Stage ${run.stage}`,
       `${BANDS[run.maxBand].name}`,
       `${p.genome.size.toFixed(0)} cm long`,

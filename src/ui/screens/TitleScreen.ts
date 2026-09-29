@@ -16,7 +16,8 @@ function remembered() {
 export class TitleScreen implements Component {
   readonly element = div('overlay');
 
-  constructor(onStart: (choice: RunChoice) => void, onCodex: () => void, codex: Codex) {
+  constructor(onStart: (choice: RunChoice) => void, onCodex: () => void, codex: Codex,
+              dailyBest: (date: string) => number) {
     const open = (s: Start) => codex.deepest >= s.unlock;
     let pick = STARTS.find(s => s.id === remembered() && open(s))?.id ?? 'hatchling';
 
@@ -44,6 +45,7 @@ export class TitleScreen implements Component {
     mark();
 
     const today = dailySeed();
+    const todayBest = dailyBest(today.key);
     this.element.append(
       h2('A fish evolution roguelite'),
       h1('Abyssal'),
@@ -62,7 +64,8 @@ export class TitleScreen implements Component {
       actions(
         button('Hatch', () => onStart({ start: pick })),
         // the daily is one ocean for everyone, so it is always the hatchling in it
-        button(`Daily \u00b7 ${today.key}`, () => onStart({ start: 'hatchling', seed: today.seed, daily: today.key }), 'btn ghost'),
+        button(`Daily \u00b7 ${today.key}${todayBest ? ` \u00b7 best ${todayBest.toLocaleString()}` : ''}`,
+          () => onStart({ start: 'hatchling', seed: today.seed, daily: today.key }), 'btn ghost'),
         button('Codex', onCodex, 'btn ghost'),
       ),
     );
