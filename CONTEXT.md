@@ -55,7 +55,9 @@ beat, a **drifter** crosses slowly and hurts to touch.
 _Avoid_: archetype, enemy type
 
 **Hit** — one blow landed on the player, whatever landed it. A hit costs half a heart, a
-boss's a whole one; armour is the chance of shrugging one off.
+boss's a whole one; armour is the chance of shrugging one off. After a hit comes a moment of
+**grace** in which nothing lands.
+_Avoid_: damage (for the player), i-frames
 
 **Boss** — the one animal a tank is built around, and the only way out of it.
 _Avoid_: guardian

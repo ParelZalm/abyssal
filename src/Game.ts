@@ -2,7 +2,7 @@ import { Application } from 'pixi.js';
 import { toggleMute } from './audio/sound';
 import { Rng } from './core/util';
 import { familyCounts } from './content/forms';
-import { baseGenome, maxHp, type Genome } from './content/genome';
+import { baseGenome, type Genome } from './content/genome';
 import { speciesById, type Species } from './content/species';
 import { ROOMS } from './content/tanks';
 import { FINAL_GUARDIAN } from './content/zones';
@@ -15,6 +15,7 @@ import { Impacts } from './render/Impacts';
 import { Ocean } from './render/ocean';
 import { followZoom, FramePass, PIXEL } from './render/pixel';
 import { DecorView, placeDecor } from './render/decor';
+import { PickupView } from './render/pickups';
 import { Lighting, lightTexture } from './render/lighting';
 import { RoomView } from './render/room';
 import { Scene } from './render/Scene';
@@ -23,9 +24,9 @@ import { Best } from './run/best';
 import { loadCodex, recordSpecies, recordSynergy, saveCodex } from './run/codex';
 import { Ending } from './run/Ending';
 import { Evolution } from './run/Evolution';
-import { Metabolism } from './run/Metabolism';
+import { Belly, BELLY_FULL } from './run/Belly';
 import type { Phase } from './run/phase';
-import { chainBiomass, COMBO_WINDOW, comboMult, FOOD_MAX, Run } from './run/Run';
+import { COMBO_WINDOW, comboMult, Run } from './run/Run';
 import { backfillDepth, startById } from './run/starts';
 import { SYNERGIES } from './sim/organs';
 import { Creature } from './sim/creature';
@@ -68,11 +69,12 @@ export class Game {
   room!: Terrain;
   private roomView!: RoomView;
   private decor!: DecorView;
+  private pickups!: PickupView;
   run!: Run;
   world!: World;
   player!: Creature;
   controller!: PlayerController;
-  metabolism!: Metabolism;
+  belly!: Belly;
   evolution!: Evolution;
   private ending!: Ending;
   private impacts!: Impacts;
@@ -197,6 +199,7 @@ export class Game {
     this.camera.over.removeChildren();
     this.roomView?.destroy();
     this.decor?.destroy();
+    this.pickups?.destroy();
 
     const seed = choice.seed ?? ((Math.random() * 2 ** 32) >>> 0);
     this.run = new Run(choice, seed, this.codex);
@@ -207,6 +210,7 @@ export class Game {
     const room = this.room = new Terrain(this.rng.pick(templates), tank, this.rng.int(0, 999));
     this.roomView = new RoomView(room);
     this.decor = new DecorView(placeDecor(room, this.rng.int(0, 1e6)), room.cy);
+    this.pickups = new PickupView();
 
     const g: Genome = baseGenome();
     // a larva: see-through, spine and gut showing, near white with a lavender cast, and
@@ -229,13 +233,13 @@ export class Game {
     this.camera.root.addChild(
       // what grows on the rock stands behind the bodies; the rock itself is drawn over them
       this.ocean.world, this.decor.root, this.scene.focus,
-      world.fog, world.layer, this.fx.layer,
+      world.fog, world.layer, this.pickups.root, this.fx.layer,
       // the rock over the bodies, so a nose pressed into a wall goes into it
       this.roomView.root,
     );
     // the blooms go above the lighting, in one additive layer of their own that batches as
     // one draw: they are the light, and the dark must not fall on them
-    this.camera.over.addChild(this.decor.glow, world.glow);
+    this.camera.over.addChild(this.decor.glow, this.pickups.glow, world.glow);
     this.app.stage.addChild(this.water.layer, this.camera.root, this.lighting.sprite,
       this.camera.over);
 
@@ -244,7 +248,7 @@ export class Game {
     this.input.wantActive = false;
     this.input.wantItem = false;
     this.controller = new PlayerController(this.input, p, world, fx);
-    this.metabolism = new Metabolism(run, p, fx, ui);
+    this.belly = new Belly(run, p, world, fx, ui);
     this.evolution = new Evolution(run, p, this, camera, fx, ui);
     this.ending = new Ending(run, p, this.best, this, fx, ui, {
       // again means the same body; a daily again means the same ocean, to try it better
@@ -257,10 +261,13 @@ export class Game {
     this.impacts = new Impacts(fx, camera, this.dread, ui);
 
     this.evolution.hatch(startById(choice.start));
+    p.hpMax = run.containers * 2;
+    p.hp = p.hpMax;
     run.remember(p);
     camera.reset(p.x, p.y, 1);
     camera.hold(room.x0, room.y0, room.width, room.height);
     world.spawner.stock(room, tank, tank.population);
+    world.spawner.hostiles(room, tank, p);
   }
 
   private togglePause() {
@@ -290,11 +297,11 @@ export class Game {
       this.run.elapsed += dt;
       this.world.clearOutbox();
       this.controller.steer(dt);
-      p.hpMax = maxHp(p.genome);
+      p.hpMax = this.run.containers * 2;
       p.hp = Math.min(p.hp, p.hpMax);
       this.world.update(dt);
       this.digest();
-      this.metabolism.update(dt);
+      this.belly.update(dt);
       this.camera.settle(dt);
       this.run.tick(dt);
       this.dread.update(dt, this.world.hunted);
@@ -307,8 +314,8 @@ export class Game {
   private digest() {
     const { world, run } = this;
     this.impacts.drain(world, this.player);
-    if (world.playerGain > 0) this.metabolism.eat(world.playerGain);
-    if (world.playerHeal > 0) this.metabolism.heal(world.playerHeal);
+    if (world.playerGain > 0) this.belly.swallow(world.playerGain);
+    for (const k of world.collected) this.belly.collect(k);
     for (const id of world.devoured) {
       if (!recordSpecies(run.codex, id)) continue;
       const name = speciesById(id).name;
@@ -331,8 +338,8 @@ export class Game {
       if (killed === FINAL_GUARDIAN) { this.ending.finish(true); return; }
       this.ui.toast(`${speciesById(killed).name} falls — the zone is yours`);
     }
-    if (run.xp >= run.xpNeed) this.evolution.levelUp();
-    if (this.player.hp <= 0) this.ending.finish(false);
+    // health is whole halves: a fraction left over from a heal is not a half heart
+    if (this.player.hp < 1) this.ending.finish(false);
   }
 
   private render(dt: number) {
@@ -344,24 +351,25 @@ export class Game {
     this.ocean.update(dt, view);
     this.roomView.update();
     this.decor.update(view.t);
+    this.pickups.update(this.world.pickups, view.zoom, view.t);
     const dread = this.scene.draw(view, this.world, p, this.phase, this.dread, this.decor.lights);
     this.lighting.render(this.camera);
     if (this.phase === 'play' || this.phase === 'draft') {
       this.world.cull(camera.x, camera.y, camera.viewR());
       this.world.spawner.stock(this.room, this.run.tank, this.run.tank.population);
+      this.world.spawner.hostiles(this.room, this.run.tank, this.player);
     }
 
     this.ui.update({
       hp: Math.max(0, p.hp), hpMax: p.hpMax,
-      food: run.food, foodMax: FOOD_MAX,
-      xp: run.xp, xpNeed: run.xpNeed,
+      belly: run.belly / BELLY_FULL, shells: run.shells,
       stage: run.stage, size: p.genome.size, place: this.run.tank.name,
       traits: run.takenNames,
       score: Math.round(run.score), elapsed: run.elapsed,
       // on the daily the race is against the day, which everyone swims the same ocean for
       best: run.choice.daily ? this.best.daily(run.choice.daily) : this.best.value,
       daily: run.choice.daily !== undefined,
-      combo: run.combo, comboMult: comboMult(run.combo), comboBiomass: chainBiomass(run.combo),
+      combo: run.combo, comboMult: comboMult(run.combo),
       comboLeft: run.comboT / COMBO_WINDOW,
       danger: dread,
       active: this.controller.active(),

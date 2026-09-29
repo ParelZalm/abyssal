@@ -114,6 +114,12 @@ export class Scene {
     }
 
     const level = dread.level(danger);
+    // the player blinks through the grace after a hit, the way Isaac does: it says both that
+    // the hit landed and that the next one cannot yet
+    if (phase !== 'over') {
+      const blink = p.invuln > 0.35 && Math.floor(view.t * 16) % 2 === 0 ? 0.3 : 1;
+      p.view.show(true, blink, 0xffffff);
+    }
     // the lights the frame is made of: the larva's pool first, then every lamp in the room
     const lit = this.lighting;
     lit.begin();

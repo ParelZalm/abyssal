@@ -30,6 +30,9 @@ export interface Tank {
   fauna: string[];
   /** Bodies a room is kept stocked with. */
   population: number;
+  /** What hunts the player in its rooms, by species id, and how many at once. */
+  hostiles: string[];
+  hostileCount: number;
 }
 
 export interface RoomTemplate {
@@ -49,7 +52,10 @@ export const TANKS: Tank[] = [
   // the Twilight's water: dark and cool, the look of the references, with the light pooled
   // around what glows in it
   { id: 'nursery', name: 'Nursery Tank', depth: 3200, tile: 23,
-    fauna: ['bloom', 'krill', 'fry', 'anchovy'], population: 26 },
+    fauna: ['bloom', 'krill', 'fry', 'anchovy'], population: 26,
+    // the mackerel is a stand-in until the roles (roadmap stage 4): something that hunts the
+    // larva, so hearts and the swallow rule have an opponent to be tried on
+    hostiles: ['mackerel'], hostileCount: 2 },
 ];
 
 export const ROOMS: RoomTemplate[] = [

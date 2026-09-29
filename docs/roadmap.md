@@ -75,13 +75,29 @@ Left for later: the tank frame of the first reference (rooms stay cave for now),
 hanging from ceilings and on walls, a crate that turns up more often, and tuning the dark
 by eye.
 
-## 2. Hearts and swallowing
+## 2. ~~Hearts and swallowing~~
 
-- Hearts in halves, hits and invulnerability, armour as a shrug chance.
-- The swallow rule, carcasses that sink and stay, gulp as swallow reach.
-- The belly, and the pickup it passes (half heart or shell for now).
-- Out: hunger, metabolism's starvation, XP and the level-up draft, the reroll.
-- Board: hearts, the belly, pickups, a carcass at rest.
+Done: heart containers in halves, every hit on the player through `Creature.takeHit` (half a
+heart, a guardian's a whole one, 0.8 s of grace it blinks through, armour a shrug chance),
+venom and bleeding in half hearts on a clock; the swallow rule (the bite that would kill,
+any size, never a guardian); carcasses that sink, settle and are swallowed from `gulp`
+reach; the belly (`run/Belly.ts`) passing a half heart or a shell; pickups taken by touch;
+the HUD's pixel hearts, belly bar and shell count. Out: hunger, `Metabolism`, XP, the
+level-up draft and the reroll. The board has a Health & pickups group.
+
+What it found, and what it leaves:
+
+- **The player has to be able to bite anything.** `preysOn` is a size rule, and the combat
+  used it for the player too — a larva could not touch a mackerel. `Creature.attacks` is
+  the combat's question now; `preysOn` stays what the ocean flees by.
+- **A hunter goes for the nearest meal**, so a mackerel in the room ignored the larva.
+  `Creature.hostile` takes the player as quarry whenever it is not tired; two mackerels
+  stand in as the room's hostiles until stage 4. Idle, a larva lasts about six seconds
+  against them; six strikes swallow one.
+- **Nothing gives mutations now** until the pedestals (stage 5), so a run is a fight in
+  one room: the draft, `prospects.ts` and `MutationScreen` wait for it. `regen`, `lifesteal`
+  and the Veins curse have little to act on with hearts; stage 5 rewrites those cards.
+- Heart drops are random (`Math.random`), not the seed — fine until rooms clear (stage 3).
 
 ## 3. The tank and its map
 

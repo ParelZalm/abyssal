@@ -145,6 +145,7 @@ export class Behaviour {
             break;
           }
         }
+        if (c.hostile && !c.quarry && c.tired <= 0 && p.alive) c.quarry = p;
         if (c.quarry && (!c.quarry.alive || !c.preysOn(c.quarry))) c.quarry = null;
         const prey = c.quarry ?? this.nearest(c, sense * (c.species.behavior === 'apex' ? 3 : 1),
           o => o !== c && c.preysOn(o) && this.notices(c, o));

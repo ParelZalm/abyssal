@@ -20,6 +20,9 @@ import { PIXEL } from '../render/pixel';
 import { RoomView } from '../render/room';
 import { DECOR_KINDS, DecorView, placeDecor, type DecorKind, type Piece } from '../render/decor';
 import { Terrain } from '../sim/terrain';
+import { spriteCanvas } from '../render/pickups';
+import { Texture } from 'pixi.js';
+import { speciesById } from '../content/species';
 import type { IconName } from '../ui/icons';
 import { rgb, Rng } from '../core/util';
 import { waterColor } from '../render/water';
@@ -788,7 +791,62 @@ function decorGroup(): DesignGroup {
   };
 }
 
+/** A pixel sprite as a board cell, `px` world units to its pixel. */
+function spriteCell(canvas: HTMLCanvasElement, px: number): Container {
+  const tex = Texture.from(canvas);
+  tex.source.scaleMode = 'nearest';
+  const s = new Sprite(tex);
+  s.anchor.set(0.5);
+  s.scale.set(px);
+  const c = new Container();
+  c.addChild(s);
+  return c;
+}
+
+/**
+ * Health and what the belly passes: the pickups as they lie in the water, the HUD's row of
+ * containers in each state, and a carcass at rest — each from the code that draws it in play.
+ */
+function healthGroup(): DesignGroup {
+  const tank = tankById('nursery');
+  const heartRow = () => {
+    const c = new Container();
+    [1, 1, 0.5, 0].forEach((fill, i) => {
+      const cell = spriteCell(spriteCanvas('heart', 1, fill), 1);
+      cell.x = (i - 1.5) * 11;
+      c.addChild(cell);
+    });
+    return c;
+  };
+  return {
+    id: 'health',
+    name: 'Health & pickups',
+    note: 'Hearts in halves, what a full belly passes, and what a kill leaves when it is not swallowed.',
+    items: [
+      { id: 'pickup-heart', name: 'half heart', note: 'a pickup: heals one half', source: 'src/render/pickups.ts',
+        span: 14, depth: tank.depth, make: () => spriteCell(spriteCanvas('heart'), 1) },
+      { id: 'pickup-shell', name: 'shell', note: 'a pickup: the currency', source: 'src/render/pickups.ts',
+        span: 14, depth: tank.depth, make: () => spriteCell(spriteCanvas('shell'), 1) },
+      { id: 'hearts', name: 'heart containers', note: 'the HUD row: full, full, half, empty', source: 'src/ui/hud/Hearts.ts',
+        span: 40, depth: tank.depth, make: heartRow },
+      {
+        id: 'carcass', name: 'carcass', note: 'a kill not swallowed: belly-up, lying where it sank',
+        source: 'src/render/creature/fishview.ts', span: 26, depth: tank.depth,
+        make: () => {
+          const fish = boardFish(genomeFor(speciesById('anchovy'), new Rng(3)), 'darter');
+          fish.fish.die(0, 0, false);
+          return fish;
+        },
+        animate: (view: Container, dt: number) => {
+          const f = view as BoardFish;
+          f.fish.lie(dt, 0, 0);
+        },
+      },
+    ],
+  };
+}
+
 export function catalog(): DesignGroup[] {
-  return [roomGroup(), decorGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(),
+  return [roomGroup(), decorGroup(), healthGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(),
           speciesGroup(), guardianGroup(), motionGroup(), propGroup(), fieldGroup(), waterGroup()];
 }

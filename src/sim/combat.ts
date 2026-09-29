@@ -55,7 +55,8 @@ export class Combat {
    */
   bleedOut(c: Creature, dt: number) {
     c.bleedT -= dt;
-    c.hp -= c.bleed * dt;
+    if (c.isPlayer) c.ail(dt);
+    else c.hp -= c.bleed * dt;
     if ((c.drip -= dt) <= 0) {
       c.drip = DRIP_EVERY;
       const drop: Blood = { x: c.x, y: c.y, size: c.genome.size * DRIP_SIZE, t: DRIP_LIFE, from: c,
@@ -63,7 +64,7 @@ export class Combat {
       this.world.blood.push(drop);
       this.world.spilled.push(drop);
     }
-    if (c.hp <= 0) {
+    if (c.hp <= 0 && !c.isPlayer) {
       this.slay(c, c.bleedByPlayer);
       this.world.bites.push({ x: c.x, y: c.y, amount: c.bleed, fatal: true,
         onPlayer: c.isPlayer, byPlayer: c.bleedByPlayer, size: c.genome.size });
@@ -88,8 +89,8 @@ export class Combat {
 
   private pair(a: Creature, b: Creature) {
     if (!a.alive || !b.alive) return;
-    if (a.preysOn(b)) this.strike(a, b);
-    if (b.alive && b.preysOn(a)) this.strike(b, a);
+    if (a.attacks(b)) this.strike(a, b);
+    if (b.alive && b.attacks(a)) this.strike(b, a);
   }
 
   /**
@@ -143,11 +144,7 @@ export class Combat {
       att.vx += Math.cos(att.angle) * surge;
       att.vy += Math.sin(att.angle) * surge;
     }
-    // anything less than half your gape goes down whole, the way a real gulp works
-    // — but not from tentacles: a beak tears, and a whole swallow at the crown would make
-    // every guardian's grab a death with nothing to struggle against
-    // an inflated body is two and a half times too wide for a mouth that would have taken it
-    const whole = !att.holding && att.swallowSize > def.genome.size * 2 * (def.puffT > 0 ? 2.5 : 1);
+    const whole = this.swallows(att, def);
     // a bite into a bait ball glances off the wall of bodies: the mouth that could have
     // gulped one goes on gulping, but one that has to tear cannot pick a target out of it
     if (!whole && this.balled(def)) {
@@ -176,13 +173,35 @@ export class Combat {
     this.land(att, def, false, mult);
   }
 
-  /** The damage, the organs, and the death, for a bite or a blow. */
-  private land(att: Creature, def: Creature, whole: boolean, mult: number) {
+  /**
+   * Whether this bite takes the body whole.
+   *
+   * The player swallows on the bite that would have killed, whatever the size — size alone
+   * decides nothing for it — and never a guardian, which leaves a carcass. Nothing swallows
+   * the player: it is hit, in hearts (`Creature.takeHit`). Between the animals the old rule
+   * holds, since it is what their ecology runs on: anything under half a gape goes down
+   * whole, but not from tentacles — a beak tears, and a whole swallow at the crown would make
+   * every grab a death with nothing to struggle against — and an inflated body is two and a
+   * half times too wide for the mouth that would have taken it.
+   */
+  private swallows(att: Creature, def: Creature) {
+    if (def.isPlayer) return false;
+    if (att.isPlayer) return !def.species.guardian && this.damage(att, def, 1) >= def.hp;
+    return !att.holding && att.swallowSize > def.genome.size * 2 * (def.puffT > 0 ? 2.5 : 1);
+  }
+
+  /** What a bite or a blow would take off a body, before any swallowing. */
+  private damage(att: Creature, def: Creature, mult: number) {
     const armour = Math.max(0, armourAgainst(att, armourOf(def.genome)));
     // a guardian spent by a missed rush is open: everything lands half again as hard
     const open = def.exposed > 0 ? EXPOSED_TAKEN : 1;
-    const dmg = whole ? def.hp
-      : takenOf(def, Math.max(1, damageOf(att, biteDamage(att.genome), def) * mult - armour)) * open;
+    return takenOf(def, Math.max(1, damageOf(att, biteDamage(att.genome), def) * mult - armour)) * open;
+  }
+
+  /** The damage, the organs, and the death, for a bite or a blow. */
+  private land(att: Creature, def: Creature, whole: boolean, mult: number) {
+    if (def.isPlayer) { this.hitPlayer(att, def); return; }
+    const dmg = whole ? def.hp : this.damage(att, def, mult);
     def.hp -= dmg;
     def.hurt(att, 'bite');
     const fatal = def.hp <= 0;
@@ -204,6 +223,7 @@ export class Combat {
     }
     if (fatal) {
       this.slay(def, att.isPlayer);
+      if (whole && att.isPlayer) this.world.playerGain += def.genome.size;
       // a meal worth the name buys a longer lull; a krill barely registers
       if (!att.isPlayer) {
         att.sated = clamp(4 + (def.genome.size / att.genome.size) * 20, 4, 14);
@@ -212,6 +232,20 @@ export class Combat {
     }
     this.world.bites.push({ x: def.x, y: def.y, amount: dmg, fatal,
       onPlayer: def.isPlayer, byPlayer: att.isPlayer, size: def.genome.size });
+  }
+
+  /**
+   * A blow on the player: half a heart whatever landed it, a guardian's a whole one, and
+   * nothing at all while the last hit's invulnerability runs or when armour shrugs it off
+   * (`Creature.takeHit`). The organs still answer a hit that landed — spines on the player
+   * prick what bit it.
+   */
+  private hitPlayer(att: Creature, p: Creature) {
+    const got = p.takeHit(att, att.species.guardian ? 2 : 1, 'bite');
+    if (!got) return;
+    wound(this.world, att, p, { dmg: got, fatal: p.hp < 1, whole: false });
+    this.world.bites.push({ x: p.x, y: p.y, amount: got, fatal: p.hp < 1,
+      onPlayer: true, byPlayer: false, size: p.genome.size });
   }
 
   /**
@@ -301,8 +335,6 @@ export class Combat {
     this.world.spilled.push(spill);
     if (!byPlayer) return;
     this.world.devoured.push(def.species.id);
-    this.world.playerGain += def.genome.size * def.species.nutrition;
-    this.world.playerHeal += def.species.heal ?? 0;
     if (def.species.guardian) {
       this.world.hunted = false;
       this.world.deadGuardians.add(def.species.id);

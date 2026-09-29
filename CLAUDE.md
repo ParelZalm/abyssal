@@ -54,13 +54,13 @@ intended way to drive the game from the browser console:
 ```js
 const g = window.game;
 [...document.querySelectorAll('button')].find(b => b.textContent === 'Hatch').click();
-g.evolution.levelUp = () => { g.run.xp = 0; };   // stop drafts interrupting a look
-g.metabolism.update = () => {};                  // and hunger
+g.player.invuln = 1e9;                           // nothing lands on the player
+g.world.spawner.hostiles = () => {};             // and no more hostiles arrive
 const key = (k, down = true) => dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { key: k }));
 key('ArrowRight'); for (let i = 0; i < 12; i++) g.frame(1 / 60); key('ArrowRight', false);
 ```
 
-`run`, `player`, `world`, `room` and the run systems (`evolution`, `metabolism`,
+`run`, `player`, `world`, `room` and the run systems (`evolution`, `belly`,
 `controller`) are rebuilt on every reset, so patch them after the run has started, and
 again after a restart. The camera holds the room whole, so there is nothing to pin: move
 `g.player.x`/`y` to put the body where you want to look.
@@ -86,7 +86,7 @@ imports only point down them:
   `Behaviour.think`, `integrate`, `Combat.resolveContacts`; `Spawner`, `Patterns` and
   `sim/organs/` hang off it. It never reaches up into `run/` or `Game`.
 - `run/` — one run's record (`Run`) and the systems that move it: `Evolution` (level-up,
-  draft, traits, transformation), `Metabolism`, `Ending`.
+  traits, transformation), `Belly` (swallowing, pickups, the last heart), `Ending`.
 - `input/` — `Input` (the keyboard, Isaac's layout) and `PlayerController` (the swim, the
   strike on the arrows, the active mutation on Space).
 - `render/` — `Camera` (a room held whole), `Scene` (visibility, the water pass), `RoomView`
@@ -95,7 +95,7 @@ imports only point down them:
 - `ui/` — the DOM HUD and screens behind the `UI` facade. `design/` — the design board.
 
 The simulation publishes what happened as plain fields on `World` (`bites`, `spilled`,
-`pulses`, `playerGain`, `playerHeal`, `devoured`, `synergies`, `noticedBy`,
+`pulses`, `playerGain`, `collected`, `devoured`, `synergies`, `noticedBy`,
 `killedGuardian`, `glanced`, `playerHeld`), and `Game.digest()` routes each to the system it concerns.
 A run system gets only what it needs in its constructor — never `Game`; the phase is the
 one thing it may set, through `Flow` (`run/phase.ts`). Keep new code in that shape: a

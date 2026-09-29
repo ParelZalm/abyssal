@@ -15,11 +15,29 @@ import type { World } from './world';
 export class Spawner {
   constructor(private readonly world: World, private readonly rng: Rng) {}
 
+  /**
+   * Keep a room's hostiles at the tank's count, arriving away from the player so the first
+   * the player knows of one is it coming.
+   */
+  hostiles(room: Terrain, tank: Tank, player: { x: number; y: number }) {
+    let n = 0;
+    for (const c of this.world.creatures) if (c.hostile && c.alive) n++;
+    for (let guard = 0; n < tank.hostileCount && guard < 10; guard++) {
+      const sp = speciesById(this.rng.pick(tank.hostiles));
+      const at = room.openSpot(this.rng, sp.size[1] * 0.6);
+      if (!at || Math.hypot(at.x - player.x, at.y - player.y) < room.width * 0.3) continue;
+      const c = this.place(room, sp, at.x, at.y);
+      if (!c) continue;
+      c.hostile = true;
+      n++;
+    }
+  }
+
   /** Top a room up to `want` bodies of its tank's fauna. */
   stock(room: Terrain, tank: Tank, want: number) {
     const pool = tank.fauna.map(speciesById);
     let guard = 0;
-    while (this.world.creatures.length < want && guard++ < 20) {
+    while (this.world.creatures.filter(c => !c.hostile).length < want && guard++ < 20) {
       const sp = this.roll(pool);
       const at = room.openSpot(this.rng, sp.size[1] * 0.6);
       if (!at) continue;

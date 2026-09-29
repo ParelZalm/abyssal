@@ -7,11 +7,10 @@ import type { Creature } from '../sim/creature';
 import type { RunChoice } from '../ui/screens/TitleScreen';
 import { saveCodex, type Codex } from './codex';
 
-export const FOOD_MAX = 100;
 export const COMBO_WINDOW = 3.5;
 export const comboMult = (n: number) => Math.min(3, 1 + Math.max(0, n - 1) * 0.25);
-/** Past a 10-kill chain every further kill adds +10% biomass, uncapped: the reward for a long run. */
-export const chainBiomass = (n: number) => 1 + Math.max(0, n - 10) * 0.1;
+/** Heart containers a run starts with, Isaac's three. */
+export const START_CONTAINERS = 3;
 
 export interface TakenName {
   name: string; desc: string; icon: Trait['icon']; rarity: Trait['rarity']; stacks: number;
@@ -20,13 +19,16 @@ export interface TakenName {
 /**
  * One run's record: what it has taken, eaten, scored and become. A new one is made on every
  * reset, so nothing here has to remember to clear itself. The systems that change these
- * numbers (`Evolution`, `Metabolism`) hold their own working state; this is only
+ * numbers (`Evolution`, `Belly`) hold their own working state; this is only
  * what more than one of them, the HUD or the end screen needs to read.
  */
 export class Run {
   stage = 1;
-  xp = 0;
-  food = FOOD_MAX;
+  /** Heart containers: health is twice this in halves. Deals are paid in them. */
+  containers = START_CONTAINERS;
+  /** What the belly holds toward its next pickup (`run/Belly.ts`). */
+  belly = 0;
+  shells = 0;
   readonly taken = new Map<string, number>();
   readonly takenNames: TakenName[] = [];
   /** Named synergies discovered this run, in the order they first fired. */
@@ -59,21 +61,16 @@ export class Run {
     readonly codex: Codex,
   ) {}
 
-  get xpNeed() {
-    return Math.round(45 * 1.5 ** (this.stage - 1));
-  }
-
   takenTraits() {
     return TRAITS.filter(t => this.taken.has(t.id));
   }
 
-  /** A kill: chained kills multiply, capped so a school is not a jackpot. */
+  /** A swallow: chained ones multiply the score, capped so a school is not a jackpot. */
   kill(gain: number) {
     this.eaten++;
     this.combo = this.comboT > 0 ? this.combo + 1 : 1;
     this.comboT = COMBO_WINDOW;
     this.score += Math.round(gain * 10 * comboMult(this.combo));
-    this.xp += gain * chainBiomass(this.combo);
   }
 
   tick(dt: number) {

@@ -20,7 +20,7 @@ Three groups of fields, and the split matters:
   organs too, so a trait list would lose the crab's spines), with *modifier* hooks
   (armour faced, lure range, boost, burn, swallow heal) and *effect* hooks (`onWound`,
   `onWounded`, `onTick`, and `onFire`, run by `fire(world, c)` after the active organ goes
-  off, with the active's id — how a synergy acts on the active without owning it). `Combat.bite`, the `PlayerController` boost and `Metabolism`
+  off, with the active's id — how a synergy acts on the active without owning it). `Combat.bite`, the `PlayerController` strike and `Belly`
   call the folds in `sim/organs/query.ts` and never read an organ field by name.
   Every `Creature` caches its active organs and `refreshOrgans()` beside `view.rebuild`.
   The one exception is `coral`: it is plate, so `armourOf(g)` adds it as a derived stat.
@@ -184,6 +184,9 @@ darker mass, hotter edge, blades along the flanks, the bruised aura. The player 
 the same thresholds as anything else.
 
 ## The draft
+
+Gone from play with XP in roadmap stage 2; the pool and its rules below are what the
+pedestals (stage 5) are built from.
 
 `traits.ts` holds 53 `Trait` records — id, rarity, icon, description, an optional home
 `band`, and an `apply` that mutates a `Genome`. `draftTraits(rng, reach, band, taken,
@@ -371,10 +374,36 @@ a find; a load keeps ids the game no longer has, and a corrupt store reads as em
   unfound keeps its slot as `???`, since what is left to find is the point. A draft card
   for a trait never taken carries a *new* mark beside its rarity.
 
-**Hunger is said before it kills** (`Metabolism.warn`): a toast under a quarter and at
-empty, the bar pulsing red, and a heartbeat every 1.15 s quickening to 0.5 s as fullness
-runs out — `audio/sound.ts`, two synthesised sine thumps, woken on the first key or press
-since a browser will not start audio before one, and muted with M.
+## Hearts and the belly
 
-Fullness (`food`) drains at `metabolism * (1.2 + size * 0.014)` and hits health at zero
-— the cost that stops size-stacking from being free.
+Since roadmap stage 2 the player's health is **heart containers** in halves (`Run.containers`,
+three to start; `Game` sets `hpMax` to twice it every frame), and hunger, XP and the level-up
+draft are gone.
+
+- **A hit is half a heart**, a guardian's a whole one, whatever landed it
+  (`Creature.takeHit`). Every blow on the player goes through it — a bite or a blow
+  (`Combat.hitPlayer`), recoil off spines (`sting`) — and it lands nothing during the grace of
+  the last hit (`INVULN`, 0.8 s), which the body blinks through (`Scene`). Armour is a chance
+  of shrugging a hit off, 5% a point to at most 40%, with a shorter grace. Venom and bleeding
+  take half a heart every 1.5 s they run (`Creature.ail`), through no grace. The player's
+  hearts come back from pickups, never from `regen`.
+- **The swallow rule.** The player's bite swallows on the bite that would have killed
+  (`Combat.swallows`), whatever the size, never a guardian; the player itself is never
+  swallowed. Between the animals the old size rule holds, since their ecology runs on it.
+  The player strikes at anything (`Creature.attacks`); what the ocean flees still goes by
+  `preysOn`, so a larva is not what a mackerel runs from.
+- **Carcasses.** A death that is not a swallow leaves one (`World.carcasses`): the body rolls
+  belly-up (`FishView.lie`), sinks and settles on what is under it, and stays until the
+  player swims into it — within the `gulp` reach, which is what the stat means now — or the
+  room holds more than `CARCASS_MAX`.
+- **The belly** (`run/Belly.ts`) fills with the centimetres swallowed (`World.playerGain`); at
+  `BELLY_FULL` (45, about half a dozen nursery fish) it passes a pickup out behind the body —
+  a half heart while there is health to fill, 60% of the time, else a shell. Pickups
+  (`World.pickups`) sink, settle, and are taken by touch after half a second; a heart is left
+  lying at full health. The heartbeat that warned of hunger now warns of the last heart.
+- **Hostiles.** `Creature.hostile` animals take the player as their quarry whenever they are
+  not tired, whatever else is in the water, and a tank keeps `hostileCount` of them in a room
+  (`Spawner.hostiles`). The mackerel stands in until the roles of stage 4.
+
+The heartbeat is `audio/sound.ts`, two synthesised sine thumps, woken on the first key or
+press since a browser will not start audio before one, and muted with M.

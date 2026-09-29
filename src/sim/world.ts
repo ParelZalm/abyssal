@@ -21,6 +21,23 @@ const FADE_IN = 0.9;
  * room draws over it.
  */
 const WALL_R = 0.5;
+/** How fast a carcass or a pickup settles, and how much of its drift the water takes a second. */
+const SINK = 70;
+const SETTLE = 2.2;
+/** Carcasses kept at once; past it the oldest goes, so a long fight cannot fill a room with dead. */
+const CARCASS_MAX = 24;
+
+/** A body that died without being swallowed, lying where it sank until something eats it. */
+export interface Carcass {
+  x: number; y: number; vx: number; vy: number;
+  size: number;
+  species: Creature['species'];
+  view: Creature['view'];
+}
+
+/** Something loose in a room that the player collects by swimming into it. */
+export type PickupKind = 'heart' | 'shell';
+export interface Pickup { kind: PickupKind; x: number; y: number; vx: number; vy: number; t: number }
 
 /**
  * The simulation: every body, the blood and ink in the water, and the outbox of what
@@ -40,12 +57,10 @@ export class World {
   blood: Blood[] = [];
   /** Clouds opened this frame, for `Game.digest` to draw. An event, not the list above. */
   spilled: Blood[] = [];
-  /** Biomass the player earned this frame. */
+  /** Centimetres of prey the player swallowed this frame, for the belly. */
   playerGain = 0;
   /** Species ids of the bodies the player killed this frame, for the codex. An event. */
   readonly devoured: string[] = [];
-  /** Health, as a fraction of max, the player absorbed this frame. */
-  playerHeal = 0;
   /** Whether the player is in something's tentacles this frame, for the HUD to act on. */
   playerHeld = false;
   /** The room's rock, which every body is kept out of. Null in open water. */
@@ -88,6 +103,13 @@ export class World {
     this.synergiesSeen.add(o.id);
     this.synergies.push(o.id);
   }
+
+  /** The dead the room has not eaten yet. See `Carcass`. */
+  readonly carcasses: Carcass[] = [];
+  /** What lies loose in the room: dropped, passed, waiting to be collected. */
+  readonly pickups: Pickup[] = [];
+  /** Kinds the player collected this frame, for `Game.digest`. An event. */
+  readonly collected: PickupKind[] = [];
 
   readonly spawner: Spawner;
   private readonly combat: Combat;
@@ -141,10 +163,16 @@ export class World {
     if (c.heldBy) this.combat.letGo(c.heldBy, 0);
     this.creatures.splice(i, 1);
     // a death on screen is played out rather than popped: the body is gone from the
-    // simulation this frame, and its view stays behind for its last second
-    if (!c.alive && c.view.visible) {
-      c.view.die(c.vx, c.vy, c.eatenBy !== null);
+    // simulation this frame, and its view stays behind. Swallowed, it goes down the throat;
+    // otherwise it is a carcass, and lies in the room until it is eaten
+    if (!c.alive && c.view.visible && c.eatenBy) {
+      c.view.die(c.vx, c.vy, true);
       this.dying.push({ view: c.view, eater: c.eatenBy });
+    } else if (!c.alive && c.view.visible) {
+      c.view.die(c.vx, c.vy, false);
+      this.carcasses.push({ x: c.x, y: c.y, vx: c.vx * 0.3, vy: c.vy * 0.3, size: c.genome.size,
+        species: c.species, view: c.view });
+      if (this.carcasses.length > CARCASS_MAX) this.carcasses.shift()!.view.destroy({ children: true });
     } else {
       c.view.destroy({ children: true });
     }
@@ -188,7 +216,8 @@ export class World {
     this.pulses.length = 0;
     this.devoured.length = 0;
     this.playerGain = 0;
-    this.playerHeal = 0;
+    this.collected.length = 0;
+    this.player.shrugged = false;
     this.glanced = false;
     this.tellBy = null;
     this.hunted = false;
@@ -214,6 +243,57 @@ export class World {
 
     this.combat.resolveContacts(dt, p);
     this.playDeaths(dt);
+    this.settle(dt);
+  }
+
+  /** Put a pickup in the water, thrown gently the way it came. */
+  drop(kind: PickupKind, x: number, y: number, vx = 0, vy = 0) {
+    this.pickups.push({ kind, x, y, vx, vy, t: 0 });
+  }
+
+  /**
+   * The carcasses and pickups: each sinks and settles on whatever is under it, and the player
+   * takes what it swims into. A carcass is swallowed from `gulp` reach — the stat is how far
+   * the mouth takes things in now, not how wide it opens — and a heart is left lying while
+   * the player's health is full, as Isaac leaves one.
+   */
+  private settle(dt: number) {
+    const p = this.player;
+    const drift = Math.exp(-SETTLE * dt);
+    const fall = (o: { x: number; y: number; vx: number; vy: number }, r: number) => {
+      o.vx *= drift;
+      o.vy = o.vy * drift + SINK * dt;
+      o.x += o.vx * dt;
+      o.y += o.vy * dt;
+      this.terrain?.collide(o, r);
+    };
+    const reach = p.radius * (0.9 + 0.5 * p.genome.gulp);
+    for (let i = this.carcasses.length - 1; i >= 0; i--) {
+      const c = this.carcasses[i];
+      const r = c.size * 0.62;
+      fall(c, r * WALL_R);
+      c.view.lie(dt, c.x, c.y);
+      const d = reach + r * 0.5;
+      if (p.alive && dist2(p.mouthX, p.mouthY, c.x, c.y) < d * d) {
+        this.carcasses.splice(i, 1);
+        c.view.die(0, 0, true);
+        this.dying.push({ view: c.view, eater: p });
+        this.playerGain += c.size;
+        p.view.chomp();
+      }
+    }
+    for (let i = this.pickups.length - 1; i >= 0; i--) {
+      const k = this.pickups[i];
+      k.t += dt;
+      fall(k, 3);
+      // a moment before it can be taken, so a pickup passed by the belly is seen leaving it
+      if (k.t < 0.5 || (k.kind === 'heart' && p.hp >= p.hpMax)) continue;
+      const d = p.radius + 6;
+      if (dist2(p.x, p.y, k.x, k.y) < d * d) {
+        this.pickups.splice(i, 1);
+        this.collected.push(k.kind);
+      }
+    }
   }
 
   /**
@@ -230,6 +310,7 @@ export class World {
     c.y = clamp(c.y + c.vy * dt, 30, DEPTH_MAX);
     this.terrain?.collide(c, c.radius * WALL_R);
     c.biteCd = Math.max(0, c.biteCd - dt);
+    c.invuln = Math.max(0, c.invuln - dt);
     c.boosting = Math.max(0, c.boosting - dt);
     if (c.puffT > 0) {
       // a balloon does not swim: the swell bleeds speed off whatever the body tries to do
@@ -244,15 +325,17 @@ export class World {
     const wounded = c.poisonT > 0 || c.bleedT > 0;
     if (c.poisonT > 0) {
       c.poisonT -= dt;
-      c.hp -= c.poison * dt;
-      if (c.hp <= 0 && c.alive) {
+      if (c.isPlayer) c.ail(dt);
+      else c.hp -= c.poison * dt;
+      if (c.hp <= 0 && c.alive && !c.isPlayer) {
         this.combat.slay(c, c.poisonByPlayer);
         this.bites.push({ x: c.x, y: c.y, amount: c.poison, fatal: true,
           onPlayer: c.isPlayer, byPlayer: c.poisonByPlayer, size: c.genome.size });
       }
     }
     if (c.bleedT > 0 && c.alive) this.combat.bleedOut(c, dt);
-    if (!wounded && c.hp < c.hpMax) c.hp = Math.min(c.hpMax, c.hp + c.genome.regen * dt);
+    // the player's hearts come back from what it eats, never by themselves
+    if (!wounded && !c.isPlayer && c.hp < c.hpMax) c.hp = Math.min(c.hpMax, c.hp + c.genome.regen * dt);
     tickOrgans(this, c, dt);
     // creatures the camera cannot see still swim and hunt, they just skip their art
     if (!c.view.visible) return;

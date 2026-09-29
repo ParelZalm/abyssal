@@ -1,5 +1,5 @@
 import { FishView, type Pose } from '../render/creature/fishview';
-import { maxHp, type Genome } from '../content/genome';
+import { armourOf, maxHp, type Genome } from '../content/genome';
 import { hunts, type Species } from '../content/species';
 import { angleDelta, clamp, TAU } from '../core/util';
 import { organsOf, swimOf, type Organ, type SwimMods } from './organs';
@@ -22,6 +22,21 @@ const FLIP_KEEP = 0.45;
  * the kiting that makes a room a fight, and this is what it costs.
  */
 const BACKPEDAL = 0.6;
+/**
+ * Seconds of invulnerability after a hit on the player, Isaac's grace: long enough that one
+ * contact is one hit rather than a hit a frame, short enough that standing in a crowd still
+ * costs. A shrug is the same grace, shorter, so armour is not also a shield.
+ */
+export const INVULN = 0.8;
+const SHRUG_GRACE = 0.3;
+/** Armour's chance of shrugging a hit off, per point, and the most it can ever be. */
+const SHRUG_PER = 0.05;
+const SHRUG_MAX = 0.4;
+/**
+ * How often venom or an open wound working in the player takes half a heart. Health is in
+ * halves, so a wound cannot drain it smoothly the way it drains an animal's.
+ */
+const AIL_EVERY = 1.5;
 
 export type Mood = 'cruise' | 'rest' | 'dart';
 
@@ -48,6 +63,18 @@ export class Creature {
    * pointing the body there (`biteX`, `biteY`). Zero for everything else.
    */
   aimY = 0;
+  /**
+   * Whether this animal hunts the player on sight, whatever else is in the water — a room's
+   * hostile rather than its fauna (`CONTEXT.md`). It takes the player as its quarry whenever
+   * it is not tired.
+   */
+  hostile = false;
+  /** Seconds the player cannot be hit for; see `takeHit`. */
+  invuln = 0;
+  /** Whether the last blow on the player was shrugged off, for the view to say so. An event. */
+  shrugged = false;
+  /** Seconds of venom or bleeding the player has taken since its last half heart to them. */
+  ailT = 0;
   /** Set on a body swallowed whole, to what swallowed it — the view follows it down. */
   eatenBy: Creature | null = null;
   hp: number; hpMax: number;
@@ -176,6 +203,37 @@ export class Creature {
     this.view = new FishView(genome, species.plan);
   }
 
+  /**
+   * A hit on the player, in half hearts. Nothing lands during the grace of the last one, and
+   * armour may shrug it off; otherwise it costs `halves`, starts the grace and flinches.
+   * Returns what landed.
+   */
+  takeHit(by: Creature, halves: number, how: 'bite' | 'sting' | 'poison'): number {
+    if (this.invuln > 0) return 0;
+    if (Math.random() < Math.min(SHRUG_MAX, armourOf(this.genome) * SHRUG_PER)) {
+      this.invuln = SHRUG_GRACE;
+      this.shrugged = true;
+      return 0;
+    }
+    this.hp -= halves;
+    this.invuln = INVULN;
+    this.hurt(by, how);
+    this.view.hurt();
+    return halves;
+  }
+
+  /**
+   * Venom or a bleed working on the player: half a heart every `AIL_EVERY` seconds of it,
+   * through no grace — a wound is not a blow, and dodging does not stop it.
+   */
+  ail(dt: number) {
+    this.ailT += dt;
+    if (this.ailT < AIL_EVERY) return;
+    this.ailT -= AIL_EVERY;
+    this.hp -= 1;
+    this.view.hurt();
+  }
+
   /** Book what just hurt this body. */
   hurt(by: Creature, how: 'bite' | 'sting' | 'poison') {
     this.hurtBy = by.species;
@@ -226,6 +284,17 @@ export class Creature {
   preysOn(other: Creature) {
     return hunts(this.species) && this.species.id !== other.species.id && this.canEat(other) &&
       !this.spares(other);
+  }
+
+  /**
+   * Whether this body's mouth goes for that one when they meet. For the animals it is
+   * `preysOn`; the player strikes at anything its strike reaches, whatever the size, since
+   * the kill that swallows is the bite that would have killed and not a question of gape.
+   * Kept apart from `preysOn`, which is also what the ocean flees and fears by, and a larva
+   * is not something a mackerel runs from.
+   */
+  attacks(other: Creature) {
+    return this.isPlayer ? other !== this : this.preysOn(other);
   }
 
   /**

@@ -434,6 +434,27 @@ export class FishView extends Container {
   }
 
   /**
+   * A carcass: rolled belly-up over the first third of a second, then lying dim wherever
+   * the world has it (`World` sinks it onto the floor). Unlike `dying` it never fades — a
+   * carcass stays in the room until it is swallowed or the room is left.
+   */
+  lie(dt: number, x: number, y: number) {
+    this.deathT += dt;
+    const unit = this.g.size / R;
+    const roll = Math.min(1, this.deathT / 0.35);
+    this.scale.y = unit * Math.max(0.12, Math.abs(Math.cos(roll * Math.PI))) * (roll < 0.5 ? 1 : -1);
+    this.x = x; this.y = y;
+    this.rotation += (Math.round(this.rotation / Math.PI) * Math.PI - this.rotation) * Math.min(1, dt * 3);
+    this.alpha = 1;
+    this.tint = 0x8f96a4;
+    if (roll >= 1 && this.mesh && this.baked) this.skinWith(this.baked.texture);
+    this.glow.alpha = Math.max(0, 1 - this.deathT * 3);
+    this.glow.x = this.fog.x = x;
+    this.glow.y = this.fog.y = y;
+    this.fog.alpha = 0;
+  }
+
+  /**
    * One frame of the death; true once it has finished and the view can go. `mouth` is where
    * the swallower's mouth is now, for a body taken whole.
    */

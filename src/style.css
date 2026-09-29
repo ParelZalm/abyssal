@@ -31,6 +31,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #01060d; col
 .food > i { background: #9fe07c; }
 .xp > i { background: #6f9dff; }
 
+.hearts { display: flex; gap: 3px; flex-wrap: wrap; }
+.hearts canvas, .counter canvas { image-rendering: pixelated; display: block; }
+.counter { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); }
 .stat-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim);
   letter-spacing: .04em; }
 .stat-row b { color: var(--ink); font-weight: 600; }

@@ -1,15 +1,19 @@
 import { div, span } from '../dom/element';
 import type { HudState } from '../types';
+import { Counter, Hearts } from './Hearts';
 import { StatusBar } from './StatusBar';
 
+/**
+ * Top left, Isaac's corner: where you are, the hearts, the belly, and what you carry.
+ */
 export class StatusPanel {
   readonly element = div('hud');
   private readonly stage = document.createElement('b');
   private readonly zone = span();
   private readonly size = document.createElement('b');
-  private readonly hp = new StatusBar('hp');
-  private readonly food = new StatusBar('food', 'Fullness');
-  private readonly xp = new StatusBar('xp', 'Biomass');
+  private readonly hearts = new Hearts();
+  private readonly belly = new StatusBar('food', 'Belly');
+  private readonly shells = new Counter('shell');
 
   constructor() {
     this.stage.textContent = '1';
@@ -25,11 +29,7 @@ export class StatusPanel {
     sizeWrap.append('Length ', this.size);
     row3.append(sizeWrap);
 
-    this.element.append(
-      row1,
-      this.hp.element, this.food.element, this.xp.element,
-      row3,
-    );
+    this.element.append(row1, this.hearts.element, this.belly.element, this.shells.element, row3);
   }
 
   private last: Record<string, string> = {};
@@ -41,10 +41,9 @@ export class StatusPanel {
   }
 
   update(s: HudState) {
-    this.hp.update(s.hp / s.hpMax, `${Math.ceil(s.hp)} / ${s.hpMax}`);
-    this.food.update(s.food / s.foodMax);
-    this.food.setLow(s.food < s.foodMax * 0.25);
-    this.xp.update(s.xp / s.xpNeed);
+    this.hearts.update(s.hp, s.hpMax);
+    this.belly.update(s.belly);
+    this.shells.update(s.shells);
     this.set('stage', this.stage, String(s.stage));
     this.set('size', this.size, `${s.size.toFixed(0)} cm`);
     this.set('zone', this.zone, s.place);

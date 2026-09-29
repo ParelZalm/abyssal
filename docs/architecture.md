@@ -37,7 +37,7 @@ src/
 ├── run/             one run's progress, and the systems that move it
 │   ├── Run.ts           the shared record: stage, xp, food, taken, score, combo, lineage
 │   ├── Evolution.ts     level-up, the draft and rerolls, taking a trait, transformation
-│   ├── Metabolism.ts    eating, healing, burn, and the hunger warning
+│   ├── Belly.ts         swallowing, what a full belly passes, pickups, the last-heart warning
 │   ├── Ending.ts        the banked score, the cause of death, the lineage silhouettes
 │   ├── codex.ts  best.ts  starts.ts  prospects.ts  phase.ts
 ├── input/
@@ -50,6 +50,9 @@ src/
 │   ├── Impacts.ts       the world's outbox made felt: blood, pulses, hits, a guardian's turn
 │   ├── Dread.ts         the spike and the hold behind uDread
 │   ├── water.ts         full-screen GLSL pass; also owns the depth→colour palette
+│   ├── lighting.ts      the light map the world is multiplied by; `Camera.over` above it
+│   ├── decor.ts         what grows on the rock: placement, painters, swaying ropes
+│   ├── pickups.ts       hearts and shells, in the water and as the HUD's pixel maps
 │   ├── ocean.ts  scenery.ts  fields.ts  props.ts  fx.ts  textures.ts  view.ts
 │   └── creature/
 │       ├── fishview.ts      one deforming mesh per creature; swims it
@@ -76,9 +79,10 @@ every spawn bought nothing.
 
 `sim` never reaches up into `run` or `Game`. It exposes what happened last frame as plain
 fields on `World` — `bites`, `spilled`, `pulses`, `playerGain`, `playerHeal`, `devoured`,
-`synergies`, `noticedBy`, `tellBy`, `killedGuardian`, `glanced`, `playerHeld` — and `Game.digest()`
+`synergies`, `noticedBy`, `tellBy`, `killedGuardian`, `glanced`, `playerHeld`, `collected` —
+and `Game.digest()`
 routes each to the system it concerns: the visual ones to `Impacts`, food to
-`Metabolism`, discoveries to the codex, a guardian's death to `Ending`. Keep it that way:
+`Belly`, discoveries to the codex, a guardian's death to `Ending`. Keep it that way:
 the simulation should stay runnable without the presentation.
 
 The run systems see only what they are handed in their constructor — never `Game`
@@ -95,7 +99,7 @@ read world state.
 1. **Hit-stop.** `camera.slow(dt)`: a landed bite holds a few frames at 0.3 speed.
 2. **`fx.update`** always runs, so particles keep moving while paused or drafting.
 3. **If `phase === 'play'`:** `controller.steer` → `world.update(dt)` → `digest()` →
-   `metabolism.update` → the camera's shake, the combo and the dread decay →
+   `belly.update` → the camera's shake, the combo and the dread decay →
    `impacts.hints`.
 4. **`render(dt)`** always runs: `camera.follow`, the ocean, the room's view (re-baked on
    a new art tier), `scene.draw` (per-creature visibility and tint, the water uniforms),

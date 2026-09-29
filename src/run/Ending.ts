@@ -69,7 +69,6 @@ export class Ending {
    */
   private causeOfDeath() {
     const p = this.p;
-    if (this.run.food <= 0) return 'You starved';
     const by = p.hurtBy;
     if (by && Creature.clock - p.hurtAt < 4) {
       const a = by.guardian ? 'The' : /^[aeiou]/i.test(by.name) ? 'An' : 'A';

@@ -26,6 +26,8 @@ export function cut(def: Creature, att: Creature, dps: number) {
 export function sting(att: Creature, amount: number, from: Creature) {
   let a = amount;
   for (const o of att.organs) if (o.recoil) a = o.recoil(att.genome, a);
+  // the player takes recoil as it takes any blow: half a heart, if it lands at all
+  if (att.isPlayer) return a > 0 ? att.takeHit(from, 1, 'sting') : 0;
   att.hp -= a;
   if (a > 0) att.hurt(from, 'sting');
   return a;

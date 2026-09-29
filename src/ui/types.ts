@@ -20,9 +20,11 @@ export interface PauseInfo {
 }
 
 export interface HudState {
+  /** Health in half hearts, and the most it can hold. */
   hp: number; hpMax: number;
-  food: number; foodMax: number;
-  xp: number; xpNeed: number;
+  /** How full the belly is toward its next pickup, 0..1. */
+  belly: number;
+  shells: number;
   stage: number; size: number;
   /** The tank the player is in, by name. */
   place: string;
@@ -31,7 +33,7 @@ export interface HudState {
   /** The score to beat: the all-time best, or on the daily the day's best. */
   best: number;
   daily: boolean;
-  combo: number; comboMult: number; comboBiomass: number; comboLeft: number;
+  combo: number; comboMult: number; comboLeft: number;
   danger: number;
   /** The one active organ, if the body has one: its mark, and how ready it is, 0..1. */
   active: { name: string; icon: IconName; ready: number } | null;
