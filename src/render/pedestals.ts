@@ -154,3 +154,63 @@ export class PedestalsView {
     this.glow.destroy({ children: true });
   }
 }
+
+/**
+ * The drain a boss room opens in its floor, Isaac's trapdoor in an aquarium's terms: a round
+ * grate seen side-on, its bars dark over a lit depth, the way down to the next tank.
+ */
+export const DRAIN = [
+  '...###########...',
+  '.##hhhhhhhhhhh##.',
+  '#hx#x#x#x#x#x#xh#',
+  '#x#x#x#x#x#x#x#x#',
+  '.##ddddddddddd##.',
+  '...###########...',
+];
+const DRAIN_COLOURS: Palette = { x: '#0a1a2a', h: '#6fb6e0', d: '#123a5a', o: '#050a12' };
+
+let drainTex: Texture | null = null;
+
+/** The drain, set in the floor with a cold light rising out of it, pulsing, once the boss is dead. */
+export class DrainView {
+  readonly root = new Container();
+  readonly glow = new Container();
+  readonly lights: Light[] = [];
+  private readonly grate: Sprite;
+  private readonly bloom = new Sprite(glowTexture());
+
+  constructor() {
+    if (!drainTex) {
+      drainTex = Texture.from(paintMap(DRAIN, DRAIN_COLOURS));
+      drainTex.source.scaleMode = 'nearest';
+    }
+    this.grate = new Sprite(drainTex);
+    this.grate.anchor.set(0.5, 0.5);
+    this.bloom.anchor.set(0.5);
+    this.bloom.blendMode = 'add';
+    this.bloom.tint = 0x8fd8ff;
+    this.root.addChild(this.grate);
+    this.glow.addChild(this.bloom);
+    this.root.visible = this.glow.visible = false;
+  }
+
+  update(at: { x: number; y: number } | null, zoom: number, t: number) {
+    this.lights.length = 0;
+    this.root.visible = this.glow.visible = !!at;
+    if (!at) return;
+    const px = 2 / zoom;
+    this.grate.position.set(at.x, at.y);
+    this.grate.scale.set(px);
+    const pulse = 0.75 + Math.sin(t * 3) * 0.25;
+    this.bloom.position.set(at.x, at.y - px * 4);
+    this.bloom.width = px * 50;
+    this.bloom.height = px * 36;
+    this.bloom.alpha = 0.6 * pulse;
+    this.lights.push({ x: at.x, y: at.y - px * 10, r: px * 60, color: 0x8fd8ff, a: 0.8 * pulse });
+  }
+
+  destroy() {
+    this.root.destroy({ children: true });
+    this.glow.destroy({ children: true });
+  }
+}

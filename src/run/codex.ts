@@ -15,13 +15,16 @@ export interface Codex {
   /** Families whose transformation the player has undergone. */
   forms: string[];
   runs: number;
-  /** The deepest band index any run has reached — what unlocks the starting forms. */
+  /** The deepest band index any run of the column reached. Kept, unread since the tanks. */
   deepest: number;
+  /** The deepest tank any run has reached, by `TANK_ORDER` index — what unlocks the starting forms. */
+  tanks: number;
 }
 
 const KEY = 'abyssal.codex';
 
-const empty = (): Codex => ({ species: {}, traits: {}, synergies: [], forms: [], runs: 0, deepest: 0 });
+const empty = (): Codex => ({ species: {}, traits: {}, synergies: [], forms: [], runs: 0, deepest: 0,
+  tanks: 0 });
 
 /** A missing, private-mode or hand-edited store all read as a codex with nothing in it. */
 export function loadCodex(): Codex {
@@ -44,6 +47,7 @@ export function loadCodex(): Codex {
       forms: strings(raw.forms),
       runs: Number.isFinite(raw.runs) ? Number(raw.runs) : 0,
       deepest: Number.isFinite(raw.deepest) ? Number(raw.deepest) : 0,
+      tanks: Number.isFinite(raw.tanks) ? Number(raw.tanks) : 0,
     };
   } catch { return empty(); }
 }
@@ -81,6 +85,13 @@ export function recordDepth(c: Codex, band: number) {
 }
 
 /** Book a synergy firing. True the first time it has ever fired. */
+/** A tank reached, by index. True the first time any run gets this deep: a starting form unlocks. */
+export function recordTank(c: Codex, index: number) {
+  if (index <= c.tanks) return false;
+  c.tanks = index;
+  return true;
+}
+
 export function recordSynergy(c: Codex, id: string) {
   if (c.synergies.includes(id)) return false;
   c.synergies.push(id);

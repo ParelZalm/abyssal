@@ -1,4 +1,4 @@
-export type Phase = 'title' | 'play' | 'draft' | 'paused' | 'over';
+export type Phase = 'title' | 'play' | 'draft' | 'paused' | 'over' | 'dropin';
 
 /**
  * The one piece of `Game` a run system may touch: which phase the loop is in. Only `play`

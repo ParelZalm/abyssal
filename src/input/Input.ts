@@ -21,6 +21,8 @@ export class Input {
   wantActive = false;
   /** A press of the held item, the same way. */
   wantItem = false;
+  /** Any key or click at all, for skipping a cutscene. Cleared by whoever reads it. */
+  anyPress = false;
 
   constructor(on: { pause(): void; mute(): void }) {
     addEventListener('keydown', e => {
@@ -32,6 +34,7 @@ export class Input {
       if ((k === ' ' || k === 'spacebar') && !e.repeat) this.wantActive = true;
       if (k === 'e' && !e.repeat) this.wantItem = true;
       if (k === 'm' && !e.repeat) on.mute();
+      if (!e.repeat) this.anyPress = true;
       wakeAudio();
     });
     addEventListener('keyup', e => {
@@ -41,7 +44,7 @@ export class Input {
       if (i >= 0) this.aims.splice(i, 1);
     });
     // any press may be the gesture a browser wants before it will play a sound
-    addEventListener('pointerdown', () => wakeAudio());
+    addEventListener('pointerdown', () => { this.anyPress = true; wakeAudio(); });
     addEventListener('blur', () => { this.keys.clear(); this.aims.length = 0; });
   }
 

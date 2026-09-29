@@ -10,7 +10,7 @@ export class DeathScreen implements Component {
               lineage: LineageFrame[] = []) {
     this.element.append(
       h2(cause),
-      h1('Eaten'),
+      h1('Belly-up'),
       ...(lineage.length > 1 ? [lineageRow(lineage)] : []),
       p(stats.join(' \u00a0·\u00a0 ')),
       actions(button('Spawn again', onRestart), button('Choose a body', onTitle, 'btn ghost'),

@@ -141,6 +141,20 @@ is smooth, and `FramePass` steps and dithers it onto the grid with everything el
   the body's world position rather than the screen's centre, since the camera holds the
   room and no longer follows.
 
+## The drop-in and the drain
+
+The drop-in (`render/dropin.ts`) is the one view of a tank from outside the glass, drawn in
+screen space over everything and on the pixel grid with the frame: a near-black gallery, the
+tank as the room's proportions lit in bands from a lamp over it (the water its `Tank.depth`
+holds, lifted toward the lamp), a cone of the lamp's light, rock mounds in gravel along the
+floor, the frame and the lit rim. The animal is its own `FishView`, falling nose down under a
+gravity in tank widths, splashing (a spray of square drops and an ellipse on the surface),
+slowing and levelling as it sinks. Fades in from black and out into the room.
+
+The drain (`DrainView` in `render/pedestals.ts`) is a pixel-map grate in the boss room's
+floor with a pulsing cold light rising out of it: once the boss is dead it is the brightest
+thing in the room, which is how it is found.
+
 ## Decoration
 
 `render/decor.ts`: what grows on the rock and what has sunk onto it, where a room's colour

@@ -85,8 +85,8 @@ export class Terrain {
    * a door on one side opens straight into the next room's.
    */
   constructor(template: RoomTemplate, tank: Tank, seed = 0, cx = 0, cy = tank.depth,
-              doors: readonly Side[] = []) {
-    this.tiles = tilesOf(template);
+              doors: readonly Side[] = [], mirror = false) {
+    this.tiles = tilesOf(template, mirror);
     this.doors = doors;
     this.rows = template.rows.length;
     this.cols = template.rows[0].length;

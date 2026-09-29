@@ -84,8 +84,8 @@ imports only point down them:
   forms, the body form.
 - `sim/` — the simulation. `World` holds the state and the outbox and runs three passes:
   `Behaviour.think`, `integrate`, `Combat.resolveContacts`; `Spawner`, `Patterns`,
-  `Roles` (a hostile's brain, with `Flow` for the way round the rock) and `sim/organs/`
-  hang off it. It never reaches up into `run/` or `Game`.
+  `Roles` (a hostile's brain, with `Flow` for the way round the rock), `Bosses` (each
+  tank's boss fight) and `sim/organs/` hang off it. It never reaches up into `run/` or `Game`.
 - `run/` — one run's record (`Run`) and the systems that move it: `TankMap` (the rooms, the
   doors, the pedestal), `Evolution` (dealing and taking mutations, transformation), `Belly`
   (swallowing, pickups, the last heart), `Ending`.

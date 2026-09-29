@@ -92,6 +92,12 @@ export class Creature {
    */
   roleCd = 0;
   aimA = 0;
+  /**
+   * A boss squid's arms torn free by what it held, and how many of those its brain has
+   * answered (`Bosses.torn`). Counted by `Combat.grasp`, which is where a catch breaks loose.
+   */
+  tornArms = 0;
+  tornSeen = 0;
   anchor: { x: number; y: number } | null = null;
   volley = 0;
   /** Seconds the player cannot be hit for; see `takeHit`. */
@@ -334,8 +340,11 @@ export class Creature {
    */
   attacks(other: Creature) {
     if (this.isPlayer) return other !== this;
-    // a hostile is set on the player whatever the sizes; everything else goes by its diet
-    return (this.hostile && other.isPlayer) || this.preysOn(other);
+    // a hostile is set on the player whatever the sizes, and on nothing else: a bite on a
+    // passing fish ends a strike (`Combat.bite`), and a boss that ate its way out of its own
+    // tell had no tell. The fauna still flee it, by `preysOn`. Everything else goes by its diet
+    if (this.hostile) return other.isPlayer;
+    return this.preysOn(other);
   }
 
   /**

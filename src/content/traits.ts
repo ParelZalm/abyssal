@@ -246,7 +246,7 @@ export const TRAITS: Trait[] = [
   // ---------------------------------------------------------------- cursed
   T({ id: 'bloodlamp', tank: 'deep', name: 'Blood Lamp', rarity: 'rare', icon: 'glow', families: ['predator'],
     desc: '+90% bite. A furnace of a body.',
-    curse: 'You shine: everything finds you from 60% further, and guardians notice you sooner.',
+    curse: 'You shine: everything finds you from 60% further, and no hostile is ever slow to find you.',
     maxStacks: 1,
     apply: g => { g.bite *= 1.9; g.glare += 1; g.glow += 0.8; } }),
 

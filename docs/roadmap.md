@@ -201,14 +201,33 @@ What it found, and what it leaves:
   speak of guardians, and the deal is paid in containers only.
 - Rolling the deal room moved the map's stream: a seed deals a different tank than it did.
 
-## 7. Bosses and the descent
+## 7. ~~Bosses and the descent~~
 
-- The mantis shrimp (new, its punch the tell), the Great White (its charge), the Giant
-  Squid (its grab, its arms torn free), each fitted to one screen.
-- The descent: growth, the next tank at its scale, the drop-in cutscene.
-- The win screen, with the lineage and the codex. Starting forms become one per tank
-  reached.
-- Board: each boss and its tell; the drop-in.
+Done: `sim/bosses.ts` — the mantis shrimp's punch (a new plan, `mantis`, its club folded
+under the head), the Great White's charge and the Giant Squid's grab, its arms torn free
+one at a time — each fitted to one screen, with a boss bar. The reef and deep tanks, at 1.8
+and 3.24 times the nursery's scale, with their fauna and hostiles, their animals' speed and
+health scaled to it; every layout dealt in every tank, mirrored half the time. The drain in
+the boss room's floor, the descent (growth ×1.8, the next tank dealt) and the drop-in at the
+start and at every descent. The *Released* screen, with the lineage. Starting forms one per
+tank reached. The board has a Bosses & the descent group: each boss's tell on a loop, and
+the drop-in into each tank.
+
+What it found, and what it leaves:
+
+- **The cull measured from the camera**, which is still on the last room just after a slide:
+  a boss put at the far side of its room was dropped, alive, on its first frame, and the room
+  cleared empty. It is round the room now. Fight rooms lost far hostiles the same way.
+- **A hostile ate its way out of its own tell**: a bite on passing fauna ends a strike, so the
+  Great White's charge was cut short by fry. Hostiles fight the player and nothing else, and
+  no longer regenerate.
+- **Bosses need their own pace.** The tank's full pace put the Great White's rush past what a
+  tell can answer; none left the Giant Squid a quarter minute to cross its room. They take
+  its root.
+- An idle larva lasts about eight seconds against the mantis shrimp: three whole hearts.
+- The mantis shrimp is a plain body so far — a green armoured trunk and its club; stalked
+  eyes, banding and legs are for the liveliness pass. The reef and deep tanks have no rooms or
+  decoration of their own yet (stage 8), and the deal room's seal still shows before the boss.
 
 ## 8. Liveliness
 

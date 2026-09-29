@@ -48,6 +48,8 @@ export interface HudState {
   mapVersion: number;
   /** The one active organ, if the body has one: its mark, its charges, and how many are full. */
   active: { name: string; icon: IconName; charge: number; need: number } | null;
+  /** The boss in the room, by name, and its health, 0..1; null with none. */
+  boss: { name: string; hp: number } | null;
   /** The stat column. */
   stats: Stats;
   /**

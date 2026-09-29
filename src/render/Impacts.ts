@@ -90,11 +90,15 @@ export class Impacts {
     if (tell && !this.toldBy.has(tell)) {
       this.toldBy.add(tell);
       const who = speciesById(tell);
-      this.ui.toast(who.pattern === 'click'
-        ? `The ${who.name} is clicking — get out from in front of it`
-        : who.pattern === 'suck'
-          ? `The ${who.name} is drawing water in — boost straight out, or cut across it`
-          : `The ${who.name} is lining up — get out of its line, then bite its flank`);
+      this.ui.toast(who.boss === 'punch'
+        ? `The ${who.name} is cocking its club — get out of its line; after three it tires`
+        : who.boss === 'grab'
+          ? `The ${who.name} is spreading its arms — keep out of reach, or swim hard to tear free`
+          : who.pattern === 'click'
+            ? `The ${who.name} is clicking — get out from in front of it`
+            : who.pattern === 'suck'
+              ? `The ${who.name} is drawing water in — boost straight out, or cut across it`
+              : `The ${who.name} is lining up — get out of its line, then strike it while it is spent`);
     }
     for (const b of world.bites) {
       const col = b.onPlayer ? 0xff5a4a : 0xff9a7a;

@@ -31,6 +31,11 @@ export class UI {
     this.hud.update(s);
   }
 
+  /** A title over the whole screen, or none. */
+  caption(text: string | null) {
+    this.hud.caption(text);
+  }
+
   toast(text: string) {
     this.hud.showToast(text);
   }

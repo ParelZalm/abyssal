@@ -343,3 +343,20 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 .lineage-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .lineage-cell > canvas { filter: drop-shadow(0 2px 0 rgba(170,235,255,.45)); image-rendering: pixelated; }
 .lineage-cell > span { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+
+/* the boss's health along the bottom, Isaac's bar */
+.boss-bar { position: absolute; left: 50%; bottom: 70px; transform: translateX(-50%);
+  width: min(420px, 60vw); display: grid; gap: 4px; justify-items: center; pointer-events: none;
+  font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: #ffb8a8;
+  text-shadow: 0 2px 0 rgba(0,0,0,.8); }
+.boss-bar[hidden] { display: none; }
+.boss-bar .bar { width: 100%; }
+.boss-bar .bar > i { background: #d8384a; transition: width .1s steps(4); }
+
+/* the tank's name over the drop-in */
+.caption { position: absolute; left: 0; right: 0; top: 14%; text-align: center; pointer-events: none;
+  font-size: 30px; letter-spacing: .24em; text-transform: uppercase; color: var(--ink);
+  text-shadow: 0 3px 0 rgba(0,0,0,.85); animation: caption-in .6s steps(6) both; }
+.caption[hidden] { display: none; }
+@keyframes caption-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .caption { animation: none; } }

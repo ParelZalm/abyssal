@@ -7,6 +7,7 @@ import type { Creature } from './creature';
 import type { Blood } from './events';
 import { glareOf, lureRangeOf, stealthOf } from './organs';
 import type { Patterns } from './patterns';
+import { Bosses } from './bosses';
 import { clearHeading, Roles } from './roles';
 import type { World } from './world';
 
@@ -54,10 +55,12 @@ const STRIKE_KICK = 0.95;
  */
 export class Behaviour {
   private readonly roles: Roles;
+  private readonly bosses: Bosses;
 
   constructor(private readonly world: World, private readonly combat: Combat,
               private readonly patterns: Patterns) {
     this.roles = new Roles(world);
+    this.bosses = new Bosses(world);
   }
 
   think(c: Creature, dt: number, p: Creature) {
@@ -78,7 +81,8 @@ export class Behaviour {
     // a role runs its own attack's clock (`Roles.tick`); run this one on it too and every
     // step goes by twice as fast, and the recovery ends without its cooldown
     const role = c.hostile ? c.species.role : undefined;
-    if (!role) this.tickStrike(c, dt);
+    const boss = c.hostile ? c.species.boss : undefined;
+    if (!role && !boss) this.tickStrike(c, dt);
 
     // dazzled: the body hangs where the flash caught it and drifts on what it was doing
     if (c.stun > 0) {
@@ -87,6 +91,8 @@ export class Behaviour {
       c.drive(dt, c.angle, 0);
       return;
     }
+    // a boss has its fight, fitted to its room, before any of the column's patterns
+    if (boss) { this.bosses.step(c, dt, p, boss); return; }
     if (c.species.pattern && this.patterns.patternStep(c, dt, p)) return;
     // a room's hostile has one job, and its role is how it goes about it
     if (role) { this.roles.step(c, dt, p, role); return; }

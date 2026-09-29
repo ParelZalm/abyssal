@@ -70,6 +70,8 @@ const MOTION: Record<Plan, Motion> = {
   whale:      { cols: 30, waves: 0.5, amp: 0.24, pulse: 0 },
   longsquid:  { cols: 26, waves: 0.6, amp: 0.26, pulse: 0.26 },
   broadsquid: { cols: 24, waves: 0.65, amp: 0.28, pulse: 0.32 },
+  // an armoured trunk barely bends; the tail fan does the swimming
+  mantis:     { cols: 26, waves: 0.55, amp: 0.2, pulse: 0 },
   // more columns than its length asks for: a veil shows every kink a coarse strip has
   wraith:    { cols: 34, waves: 1.15, amp: 0.55, pulse: 0 },
 };
@@ -144,7 +146,7 @@ export class FishView extends Container {
   /** Counts down from 1 through a bite, driving the squash-and-snap. */
   private chompT = 0;
   /** Rigged arms, one strip each, under the body. Empty for anything without `grasp`. */
-  private arms: { mesh: MeshSimple; verts: Float32Array; feeding: boolean }[] = [];
+  private arms: { mesh: MeshSimple; verts: Float32Array; feeding: boolean; torn?: boolean }[] = [];
   /** The arms' own clock: `beat` jumps on a boost, and a jump reads as a twitch in an arm. */
   private armT = Math.random() * 10;
   /** How far the feeding pair is out toward `grip`, 0 coiled to 1 fastened. */
@@ -495,6 +497,17 @@ export class FishView extends Container {
   }
 
   /** Fasten the feeding tentacles on something in the world, followed live; null lets go. */
+  /**
+   * One of the feeding arms is gone: torn free by what it held. It stops being drawn, and a
+   * rebuild — a new plan, a new genome — grows it back, which only the player's body does.
+   */
+  tear() {
+    const arm = this.arms.find(a => a.feeding && !a.torn);
+    if (!arm) return;
+    arm.torn = true;
+    arm.mesh.visible = false;
+  }
+
   grab(target: { x: number; y: number } | null) {
     this.grip = target;
   }

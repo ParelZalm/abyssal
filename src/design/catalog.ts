@@ -24,6 +24,7 @@ import { generateMap } from '../content/map';
 import { Minimap } from '../ui/hud/Minimap';
 import { spriteCanvas } from '../render/pickups';
 import { PedestalsView } from '../render/pedestals';
+import { DropIn } from '../render/dropin';
 import type { Pedestal } from '../run/TankMap';
 import { ITEM_IDS, ITEMS } from '../content/items';
 import { priceCanvas } from '../render/pickups';
@@ -1186,7 +1187,90 @@ function economyGroup(): DesignGroup {
   };
 }
 
+// ------------------------------------------------------------------ bosses and the descent
+
+/** The drop-in in a cell: drawn at a 320 × 200 screen, centred on the cell. */
+class DropInCell extends Container {
+  readonly drop = new DropIn();
+  constructor() {
+    super();
+    this.addChild(this.drop.root);
+    this.drop.root.position.set(-160, -100);
+  }
+}
+
+const BOSS_NOTES: Record<'punch' | 'charge' | 'grab', string> = {
+  punch: 'Cocks its club — the tell — then a punch it cannot steer; the water boils where it lands. Three, and it rests.',
+  charge: 'Turns square on and holds — the tell — then rushes the line; a miss leaves it spent.',
+  grab: 'Spreads its arms — the tell — then lashes the feeding pair; torn free, it loses one.',
+};
+
+/**
+ * Each tank's boss on a loop of its fight's tell and strike, on the tell's own timings; and
+ * the drop-in, played over and over at a small screen's size.
+ */
+function bossGroup(): DesignGroup {
+  const items: DesignItem[] = TANKS.map(tank => {
+    const sp = speciesById(tank.boss);
+    const i = SPECIES.indexOf(sp);
+    const g = genomeFor(sp, new Rng(1000 + i * 77));
+    const fight = sp.boss!;
+    const tell = fight === 'punch' ? 0.6 : fight === 'charge' ? 1.0 : 0.9;
+    const strike = fight === 'punch' ? 0.16 : fight === 'charge' ? 0.6 : 0.5;
+    let t = 0;
+    return {
+      id: `boss-${sp.id}`, name: `${sp.name} · ${tank.name}`, note: BOSS_NOTES[fight],
+      source: 'src/sim/bosses.ts', span: g.size * 5, depth: tank.depth, genome: g,
+      facts: { fight, health: sp.bossHp ?? 0, size: Math.round(g.size), tank: tank.name },
+      make: () => boardFish(g, sp.plan),
+      animate: (view: Container, dt: number, beat: number) => {
+        const fish = (view as BoardFish).fish;
+        t += dt;
+        const cycle = tell + strike + 1.4;
+        if (t > cycle) t = 0;
+        let pose: Pose = REST, thrust = 0.2, x = 0;
+        if (t < tell) {
+          pose = { windup: t / tell, strike: 0, open: t / tell > 0.35 };
+          thrust = 0.1;
+        } else if (t < tell + strike) {
+          pose = { windup: 0, strike: 1 - (t - tell) / strike, open: true };
+          thrust = 1.6;
+          if (fight !== 'grab') x = g.size * 1.2 * ((t - tell) / strike);
+        } else if (fight !== 'grab') {
+          x = g.size * 1.2 * Math.max(0, 1 - (t - tell - strike) / 1.4);
+        }
+        // the lash: the feeding pair thrown at a point ahead through the strike, and let go
+        fish.grab(fight === 'grab' && t >= tell && t < tell + strike ? { x: g.size * 2.2, y: 0 } : null);
+        fish.animate(dt, thrust, beat, 0, pose);
+        fish.place(x - g.size * 0.6, 0, 0, 1);
+        fish.show(true, 1, 0xffffff);
+      },
+    } satisfies DesignItem;
+  });
+  const drop = (tank: typeof TANKS[number]): DesignItem => {
+    const g = larva();
+    g.size *= 1.8 ** TANKS.indexOf(tank);
+    return {
+      id: `dropin-${tank.id}`, name: `drop-in · ${tank.name}`,
+      note: 'The one view from outside the glass: the gallery, the lit tank, the fall, the splash, the sink.',
+      source: 'src/render/dropin.ts', span: 330, depth: tank.depth,
+      make: () => new DropInCell(),
+      animate: (view: Container, dt: number) => {
+        const d = (view as DropInCell).drop;
+        if (!d.running) d.play(tank, g, 'wraith');
+        d.update(dt, 320, 200);
+      },
+    };
+  };
+  items.push(...TANKS.map(drop));
+  return {
+    id: 'bosses', name: 'Bosses & the descent',
+    note: 'Each tank\'s boss on a loop of its tell and its strike, and the drop-in into each tank.',
+    items,
+  };
+}
+
 export function catalog(): DesignGroup[] {
-  return [roomGroup(), decorGroup(), healthGroup(), roleGroup(), powerGroup(), economyGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(),
+  return [roomGroup(), decorGroup(), healthGroup(), roleGroup(), powerGroup(), economyGroup(), bossGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(),
           speciesGroup(), guardianGroup(), motionGroup(), propGroup(), fieldGroup(), waterGroup()];
 }

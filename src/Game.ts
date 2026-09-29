@@ -4,7 +4,7 @@ import { Rng } from './core/util';
 import { familyCounts } from './content/forms';
 import { baseGenome, type Genome } from './content/genome';
 import { speciesById, type Species } from './content/species';
-import { FINAL_GUARDIAN } from './content/zones';
+import { TANK_ORDER, tankById, tankIndex } from './content/tanks';
 import { Input } from './input/Input';
 import { PlayerController } from './input/PlayerController';
 import { Camera } from './render/Camera';
@@ -15,20 +15,21 @@ import { Ocean } from './render/ocean';
 import { followZoom, FramePass, PIXEL } from './render/pixel';
 import { PickupView } from './render/pickups';
 import { ShotView } from './render/shots';
-import { PedestalsView } from './render/pedestals';
+import { DrainView, PedestalsView } from './render/pedestals';
+import { DropIn } from './render/dropin';
 import { Lighting, lightTexture } from './render/lighting';
 import { Scene } from './render/Scene';
 import { Water } from './render/water';
 import { Best } from './run/best';
-import { loadCodex, recordSpecies, recordSynergy, saveCodex } from './run/codex';
+import { loadCodex, recordSpecies, recordSynergy, recordTank, saveCodex } from './run/codex';
 import { Ending } from './run/Ending';
 import { Evolution } from './run/Evolution';
 import { Belly } from './run/Belly';
 import type { Phase } from './run/phase';
 import { COMBO_WINDOW, comboMult, Run } from './run/Run';
-import { HOVER, TankMap } from './run/TankMap';
+import { HOVER, TankMap, type RoomLayers } from './run/TankMap';
 import { Pockets } from './run/Pockets';
-import { backfillDepth, startById } from './run/starts';
+import { startById } from './run/starts';
 import { SYNERGIES } from './sim/organs';
 import { Creature } from './sim/creature';
 import { World, type PickupKind } from './sim/world';
@@ -45,6 +46,12 @@ const PLAYER_SPECIES: Species = {
  * half heart, a key, an item, and now and then a chest.
  */
 const CLEAR_DROP = 0.4;
+/**
+ * The growth at each descent, in body length and in swim: the next tank is authored at 1.8
+ * times the last one's scale (`Tank.tile`), so the body is the same size on the screen and
+ * crosses a room in the same time.
+ */
+const GROWTH = 1.8;
 const CLEAR_DROPS: [PickupKind | 'item', number][] = [
   ['shell', 45], ['heart', 22], ['key', 15], ['item', 12], ['chest', 6],
 ];
@@ -63,7 +70,7 @@ export class Game {
   private readonly fx = new Fx();
   private readonly best = new Best();
   /** What every run has found, kept across runs. See `run/codex.ts`. */
-  private readonly codex = backfillDepth(loadCodex());
+  private readonly codex = loadCodex();
   private water!: Water;
   private lighting!: Lighting;
   private scene!: Scene;
@@ -80,6 +87,11 @@ export class Game {
   private pickups!: PickupView;
   private shots!: ShotView;
   private pedestals!: PedestalsView;
+  private drain!: DrainView;
+  /** The drop-in: the tank from outside the glass, at every descent and every run's start. */
+  private readonly dropIn = new DropIn();
+  /** The rooms' display slots, made once a run and handed to each tank's map in turn. */
+  private layers!: RoomLayers;
   run!: Run;
   world!: World;
   player!: Creature;
@@ -200,7 +212,7 @@ export class Game {
       const shared = Number(new URLSearchParams(location.search).get('seed'));
       if (choice.seed === undefined && Number.isFinite(shared) && shared > 0) choice.seed = shared;
       this.reset(choice);
-      this.phase = 'play';
+      this.dropInto();
     }, this.codex, date => this.best.daily(date));
   }
 
@@ -212,6 +224,7 @@ export class Game {
     this.pickups?.destroy();
     this.shots?.destroy();
     this.pedestals?.destroy();
+    this.drain?.destroy();
 
     const seed = choice.seed ?? ((Math.random() * 2 ** 32) >>> 0);
     this.run = new Run(choice, seed, this.codex);
@@ -220,6 +233,7 @@ export class Game {
     this.pickups = new PickupView();
     this.shots = new ShotView();
     this.pedestals = new PedestalsView();
+    this.drain = new DrainView();
 
     const g: Genome = baseGenome();
     // a larva: see-through, spine and gut showing, near white with a lavender cast, and
@@ -234,20 +248,20 @@ export class Game {
     p.isPlayer = true;
 
     const world = this.world = new World(this.rng, p);
-    const layers = { rock: new Container(), decor: new Container(), glow: new Container() };
+    const layers = this.layers = { rock: new Container(), decor: new Container(), glow: new Container() };
     this.camera.root.addChild(
       // what grows on the rock stands behind the bodies; the rock itself is drawn over them
       this.ocean.world, layers.decor, this.scene.focus,
-      this.pedestals.root, world.fog, world.layer, this.pickups.root, this.shots.root, this.fx.layer,
+      this.drain.root, this.pedestals.root, world.fog, world.layer, this.pickups.root, this.shots.root, this.fx.layer,
       // the rock over the bodies, so a nose pressed into a wall goes into it
       layers.rock,
     );
     // the blooms go above the lighting, in one additive layer of their own that batches as
     // one draw: they are the light, and the dark must not fall on them
-    this.camera.over.addChild(layers.glow, this.pedestals.glow, this.pickups.glow, this.shots.glow,
-      world.glow);
+    this.camera.over.addChild(layers.glow, this.drain.glow, this.pedestals.glow, this.pickups.glow,
+      this.shots.glow, world.glow);
     this.app.stage.addChild(this.water.layer, this.camera.root, this.lighting.sprite,
-      this.camera.over);
+      this.camera.over, this.dropIn.root);
 
     const { run, camera, fx, ui } = this;
     this.dread = new Dread();
@@ -262,13 +276,25 @@ export class Game {
       // again means the same body; a daily again means the same ocean, to try it better
       restart: () => {
         this.reset(run.choice.daily ? run.choice : { start: run.choice.start });
-        this.phase = 'play';
+        this.dropInto();
       },
       title: () => this.showTitle(),
     });
     this.impacts = new Impacts(fx, camera, this.dread, ui);
-    const evolution = this.evolution, controller = this.controller, belly = this.belly;
-    this.tank = new TankMap(run, world, p, camera, layers, fx, ui, {
+    this.tank = this.makeTank();
+
+    this.evolution.hatch(startById(choice.start));
+    p.hpMax = run.containers * 2;
+    p.hp = p.hpMax;
+    run.remember(p);
+    camera.reset(p.x, p.y, 1);
+    this.tank.begin();
+  }
+
+  /** The tank the run is in now, as a map of rooms wired to the run's systems. */
+  private makeTank() {
+    const { run, world, player: p, camera, fx, ui, pockets, evolution, controller, belly } = this;
+    return new TankMap(run, world, p, camera, this.layers, fx, ui, {
       offer: rng => evolution.offer(rng),
       deals: rng => evolution.deals(rng),
       // pay, then hand over: a mutation is taken, anything else goes where a pickup would
@@ -282,14 +308,44 @@ export class Game {
       reward: rng => rng.chance(CLEAR_DROP) ? pockets.roll(CLEAR_DROPS, rng) : null,
       // a room won is what charges the active and what regeneration is paid on
       cleared: () => { controller.recharge(); belly.cleared(); },
+      descend: () => this.descend(),
     });
+  }
 
-    this.evolution.hatch(startById(choice.start));
-    p.hpMax = run.containers * 2;
-    p.hp = p.hpMax;
-    run.remember(p);
-    camera.reset(p.x, p.y, 1);
+  /**
+   * Down the drain: the next tank, and the growth that goes with it — the body ×`GROWTH`,
+   * its swim with it, so the new tank, authored at that scale, reads as the world widening.
+   * Past the last tank there is no next: the animal is released.
+   */
+  private descend() {
+    const { run, player: p } = this;
+    const next = TANK_ORDER[tankIndex(run.tank.id) + 1];
+    if (!next) { this.ending.finish(true); return; }
+    run.tank = tankById(next);
+    run.stage = tankIndex(next) + 1;
+    recordTank(this.codex, tankIndex(next));
+    p.genome.size *= GROWTH;
+    p.genome.speed *= GROWTH;
+    p.view.rebuild(p.genome);
+    p.refreshOrgans();
+    p.holding = null;
+    p.heldBy = null;
+    run.remember(p, `Into the ${run.tank.name}`);
+    this.world.vacate();
+    this.world.pickups.length = 0;
+    this.tank.destroy();
+    this.tank = this.makeTank();
     this.tank.begin();
+    this.dropInto();
+  }
+
+  /** Play the drop-in into the run's tank; play resumes when it ends. */
+  private dropInto() {
+    this.phase = 'dropin';
+    this.ui.hud.setChrome(false);
+    this.ui.caption(this.run.tank.name);
+    this.input.anyPress = false;
+    this.dropIn.play(this.run.tank, this.player.genome, this.player.species.plan);
   }
 
   private togglePause() {
@@ -314,6 +370,14 @@ export class Game {
     // a couple of frames of slow motion on a landed bite, so the hit registers
     dt = this.camera.slow(dt);
     this.fx.update(dt);
+    if (this.phase === 'dropin') {
+      if (this.input.anyPress) { this.input.anyPress = false; this.dropIn.skip(); }
+      if (!this.dropIn.update(dt, this.camera.W, this.camera.H)) {
+        this.phase = 'play';
+        this.ui.hud.setChrome(true);
+        this.ui.caption(null);
+      }
+    }
     if (this.phase === 'play' && this.tank.sliding) {
       // between rooms the world holds still while the camera pans across
       this.tank.update(dt);
@@ -364,8 +428,8 @@ export class Game {
     if (world.killedGuardian) {
       const killed = world.killedGuardian;
       world.killedGuardian = null;
-      if (killed === FINAL_GUARDIAN) { this.ending.finish(true); return; }
-      this.ui.toast(`${speciesById(killed).name} falls — the zone is yours`);
+      this.camera.jolt(10, 16);
+      this.ui.toast(`The ${speciesById(killed).name} is dead`);
     }
     // health is whole halves: a fraction left over from a heal is not a half heart
     if (this.player.hp < 1) this.ending.finish(false);
@@ -382,11 +446,16 @@ export class Game {
     this.pickups.update(this.world.pickups, view.zoom, view.t);
     this.shots.update(this.world.shots, view.zoom);
     this.pedestals.update(this.tank.pedestals, this.tank.room.tile * HOVER, view.zoom, view.t);
+    this.drain.update(this.tank.drain, view.zoom, view.t);
     const dread = this.scene.draw(view, this.world, p, this.phase, this.dread,
-      [...this.tank.lights, ...this.shots.lights, ...this.pedestals.lights]);
+      [...this.tank.lights, ...this.shots.lights, ...this.pedestals.lights, ...this.drain.lights]);
     this.lighting.render(this.camera);
     if ((this.phase === 'play' || this.phase === 'draft') && !this.tank.sliding) {
-      this.world.cull(camera.x, camera.y, camera.viewR());
+      // round the room, not the camera: just after a slide the camera is still panning off
+      // the last room, and measured from there a boss put at the far side of its room was
+      // culled on the frame it arrived
+      const room = this.tank.room;
+      this.world.cull(room.cx, room.cy, Math.hypot(room.width, room.height) / 2);
       this.world.spawner.stock(this.tank.room, this.run.tank, this.run.tank.population);
     }
 
@@ -404,9 +473,16 @@ export class Game {
       danger: dread,
       active: this.controller.active(),
       stats: this.controller.stats(this.tank.room.tile),
+      boss: this.bossState(),
       offer: this.offer(),
       map: this.tank.minimap(), mapVersion: this.tank.version,
     });
+  }
+
+  /** The boss in the room, for its bar. */
+  private bossState() {
+    const b = this.world.creatures.find(c => c.hostile && c.species.boss && c.alive);
+    return b ? { name: b.species.name, hp: Math.max(0, b.hp / b.hpMax) } : null;
   }
 
   /** The pedestal the player is beside, for the HUD's card. */

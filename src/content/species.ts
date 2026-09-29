@@ -44,6 +44,13 @@ export interface Species {
   role?: Role;
   /** What it fires, for the roles that fire. */
   shot?: ShotKind;
+  /**
+   * A boss's fight, when a tank is built around this animal (`sim/bosses.ts`): the mantis
+   * shrimp's punch, the Great White's charge, the Giant Squid's grab. And its health, set
+   * outright: a boss is fought in hearts and strikes, not on its body's scale.
+   */
+  boss?: 'punch' | 'charge' | 'grab';
+  bossHp?: number;
 
   size: [number, number];
   hue: [number, number];
@@ -118,6 +125,13 @@ export const SPECIES: Species[] = [
     size: [20, 34], hue: [168, 192], accent: 205, speed: 210, bite: 8,
     nutrition: 2.0, weight: 11, jaw: 0.4, sense: 480 },
 
+  // the nursery's boss: a mantis shrimp in the rock, the animal whose club breaks aquarium
+  // glass. Its punch is the fastest strike in the sea, and the water it leaves boils
+  { id: 'mantisshrimp', name: 'Mantis Shrimp', behavior: 'apex', plan: 'mantis',
+    zone: 'sunlit', band: 'reef', guardian: true, boss: 'punch', bossHp: 220,
+    size: [36, 44], hue: [132, 150], accent: 18, speed: 170, bite: 20,
+    nutrition: 3, weight: 1, armor: 3, claws: 2, segments: 4, finSize: 0.8, sense: 600 },
+
   // the nursery's other hostiles. Each is the animal that already does what its role does:
   // an archerfish shoots water at what it wants, a puffer bristles, a nettle stings by being
   // brushed against
@@ -179,6 +193,7 @@ export const SPECIES: Species[] = [
   // `formFor` turns jaw into cheek, and cheek is a wider head. A great white bites like
   // this and is still a cone all the way back to the gills.
   { id: 'greatwhite', name: 'Great White', behavior: 'apex', plan: 'greatshark', pattern: 'charge',
+    boss: 'charge', bossHp: 380,
     zone: 'sunlit', guardian: true, bleed: 200,
     size: [115, 155], hue: [208, 220], accent: 200, speed: 260, bite: 52,
     nutrition: 4, weight: 1.4, jaw: 0.5, armor: 5, finSize: 1.3,
@@ -221,6 +236,7 @@ export const SPECIES: Species[] = [
     nutrition: 2.2, weight: 8, jaw: 0.7, finSize: 0.7, sense: 560 },
 
   { id: 'giantsquid', name: 'Giant Squid', behavior: 'apex', plan: 'longsquid',
+    boss: 'grab', bossHp: 520,
     zone: 'twilight', guardian: true, bleed: 300,
     size: [160, 210], hue: [340, 356], accent: 20, speed: 200, bite: 58,
     nutrition: 4.5, weight: 1.4, jaw: 1.0, armor: 4, segments: 3, finSize: 1.5,

@@ -3,6 +3,7 @@ import { ActiveSlot } from './ActiveSlot';
 import { DangerIndicator } from './DangerIndicator';
 import { DiscoveryCard } from './DiscoveryCard';
 import { Minimap } from './Minimap';
+import { BossBar } from './BossBar';
 import { ItemSlot } from './ItemSlot';
 import { OfferCard } from './OfferCard';
 import { StatColumn } from './StatColumn';
@@ -26,6 +27,9 @@ export class Hud {
   private readonly stats = new StatColumn();
   private readonly offer = new OfferCard();
   private readonly item = new ItemSlot();
+  private readonly boss = new BossBar();
+  /** A title over the whole screen — the tank's name through the drop-in. Not chrome. */
+  private readonly captionEl = document.createElement('div');
 
   constructor() {
     // wrapper stays layout-neutral; children keep their absolute positions under #ui
@@ -42,7 +46,11 @@ export class Hud {
       this.stats.element,
       this.offer.element,
       this.item.element,
+      this.boss.element,
+      this.captionEl,
     );
+    this.captionEl.className = 'caption';
+    this.captionEl.hidden = true;
     this.setChrome(false);
   }
 
@@ -55,6 +63,12 @@ export class Hud {
     this.stats.setVisible(on);
     this.offer.setVisible(on);
     this.item.setVisible(on);
+    this.boss.setVisible(on);
+  }
+
+  caption(text: string | null) {
+    this.captionEl.hidden = !text;
+    this.captionEl.textContent = text ?? '';
   }
 
   update(s: HudState) {
@@ -67,6 +81,7 @@ export class Hud {
     this.stats.update(s.stats);
     this.offer.update(s.offer);
     this.item.update(s.item);
+    this.boss.update(s.boss);
   }
 
   showToast(text: string) {

@@ -28,7 +28,7 @@ export function spines(s: Sheet, f: Form, g: Genome, men: number) {
 }
 
 /** Organs grown by mutation — the parts that make a build legible at a glance. */
-export function organs(s: Sheet, f: Form, pal: Palette, g: Genome) {
+export function organs(s: Sheet, f: Form, pal: Palette, g: Genome, club = false) {
   const reef: RGB = rgbOf(348, 0.45, 0.52);
 
   // coral: knobbed plates crusting the back, breaking the top of the outline
@@ -60,7 +60,7 @@ export function organs(s: Sheet, f: Form, pal: Palette, g: Genome) {
 
   // claws: pincers under the head reaching forward — or, with the siphon behind them, the
   // mantis shrimp's club folded under the jaw, which is the Ballistic body
-  if (hasSynergy(g, 'ballistic')) raptorials(s, f, pal, g);
+  if (club || hasSynergy(g, 'ballistic')) raptorials(s, f, pal, g);
   const vivisect = hasSynergy(g, 'vivisect');
   for (let i = 0; !hasSynergy(g, 'ballistic') && i < g.claws; i++) {
     const t = shoulderAt(f) * (0.75 - i * 0.12);

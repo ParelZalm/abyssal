@@ -172,7 +172,7 @@ function paint(g: Genome, plan: Plan): Baked {
   const reachUp = Math.max(widest * 3.2, L ? -L.y + L.r * 3 : 0,
                            widest * (1 + 0.7 * urchinReach(g)) * 1.6) + R * 0.4;
   const front = spineAt(0, f) + Math.max(R * 0.4, L ? L.x - spineAt(0, f) + L.r * 3 : 0,
-    hasSynergy(g, 'ballistic') ? ballisticReach(g) + R * 0.2 : 0, widest * 0.5);
+    A.club || hasSynergy(g, 'ballistic') ? ballisticReach(g) + R * 0.2 : 0, widest * 0.5);
   const back = spineAt(1, f) - f.len * R * (f.fluke * 1.5 + g.veil * 0.7 + (bloom ? BLOOM_TRAIL * 1.1 : 0))
     - (rigged ? 0 : A.armLen * R * (1 + g.segments * 0.1) * 1.8) - R * 0.6;
   const halfH = Math.ceil(reachUp * res) / res;
@@ -259,7 +259,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   if (g.volley > 0) volleyQuills(s, f);
   if (hasSynergy(g, 'urchin')) urchinSpines(s, f, g, seed);
   fins(s, f, g, A);
-  organs(s, f, pal, g);
+  organs(s, f, pal, g, A.club);
   head(s, f, pal, g, A, men, gape);
   if (g.barbels > 0) barbels(s, f, pal, g);
   if (g.lure > 0) lure(s, f, pal, g);

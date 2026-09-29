@@ -22,9 +22,10 @@ const SLIDE = 0.35;
  */
 const PREBAKE_MS = 6;
 const SLIDE_BAKE_MS = 11;
-/** Hostiles a fight room is dealt, and a boss room before its boss arrives (stage 7). */
+/** Hostiles a fight room is dealt. */
 const FIGHT_HOSTILES: [number, number] = [3, 4];
-const BOSS_HOSTILES = 4;
+/** How near the drain the player has to swim to go down it, in tiles past the body. */
+const DRAIN_REACH = 0.6;
 /**
  * A pedestal — the treasure room's, a shop's goods, a deal: how high over its plinth what it offers
  * hangs, and how near the player has to swim to read it and to take it, in tiles. Stands
@@ -69,12 +70,16 @@ export interface TankHooks {
   reward: (rng: Rng) => PickupKind | null;
   /** A room won, for what charges and mends on it. */
   cleared: () => void;
+  /** Down the drain the boss room opens: the next tank, or out of the Aquarium. */
+  descend: () => void;
 }
 
 /** One room of the tank as the run has met it. */
 interface Cell {
   map: MapRoom;
   template: RoomTemplate;
+  /** Whether the layout is flipped left to right. */
+  mirror: boolean;
   seed: number;
   terrain: Terrain | null;
   view: RoomView | null;
@@ -88,6 +93,8 @@ interface Cell {
   pedestals: Pedestal[] | null;
   /** Its doors shut on their own: taking a key, or the deal room's seal. */
   shut: Map<Side, 'key' | 'seal'>;
+  /** The drain a boss room opens in its floor when the boss is dead. */
+  drain: { x: number; y: number } | null;
 }
 
 /** The rooms' display slots, which the current room's views are put into. */
@@ -122,12 +129,15 @@ export class TankMap {
               private readonly ui: UI, private readonly hooks: TankHooks) {
     const rng = new Rng(run.seed ^ 0x51ed270b);
     const tank = run.tank;
-    const templates = ROOMS.filter(r => r.tank === tank.id);
+    // a tank's own layouts first, and every layout until it has some
+    const own = ROOMS.filter(r => r.tank === tank.id);
+    const templates = own.length ? own : ROOMS;
     this.cells = generateMap(rng).map(map => {
       const fits = templates.filter(t => t.types.includes(map.type));
-      return { map, template: rng.pick(fits.length ? fits : templates), seed: rng.int(0, 1e6),
+      return { map, template: rng.pick(fits.length ? fits : templates), mirror: rng.chance(0.5),
+        seed: rng.int(0, 1e6),
         terrain: null, view: null, decor: null, seen: false, visited: false, cleared: false,
-        pickups: [], pedestals: null, shut: new Map() };
+        pickups: [], pedestals: null, shut: new Map(), drain: null };
     });
     this.current = this.cells.findIndex(c => c.map.type === 'start');
     // a shop's door takes a key, and past the nursery a treasure room's does too; the deal
@@ -156,7 +166,7 @@ export class TankMap {
       const tank = this.run.tank;
       const w = c.template.rows[0].length * tank.tile, h = c.template.rows.length * tank.tile;
       c.terrain = new Terrain(c.template, tank, c.seed, c.map.gx * w, tank.depth + c.map.gy * h,
-        c.map.doors);
+        c.map.doors, c.mirror);
       for (const [side, why] of c.shut) c.terrain.shut.set(side, why);
     }
     return c.terrain;
@@ -223,9 +233,9 @@ export class TankMap {
     this.world.spawner.stock(t, tank, tank.population);
     const fight = c.map.type === 'fight' || c.map.type === 'boss';
     if (fight && !c.cleared) {
-      const n = c.map.type === 'boss' ? BOSS_HOSTILES
-        : new Rng(c.seed).int(FIGHT_HOSTILES[0], FIGHT_HOSTILES[1]);
-      this.world.spawner.hostiles(t, tank, this.p, n);
+      // the boss room holds the tank's boss and nothing else of the fight
+      if (c.map.type === 'boss') this.world.spawner.boss(t, tank, this.p);
+      else this.world.spawner.hostiles(t, tank, this.p, new Rng(c.seed).int(FIGHT_HOSTILES[0], FIGHT_HOSTILES[1]));
       t.locked = true;
     } else {
       c.cleared = true;
@@ -249,6 +259,12 @@ export class TankMap {
       if (Math.hypot(this.p.x - s.x, this.p.y - (s.y - t.tile * HOVER)) < r && this.hooks.buy(s)) {
         s.good = null;
       }
+    }
+    const drain = c.drain;
+    if (drain && Math.hypot(this.p.x - drain.x, this.p.y - drain.y) < this.p.radius + t.tile * DRAIN_REACH) {
+      c.drain = null;
+      this.hooks.descend();
+      return false;
     }
     // a locked door opens to a key pressed against it
     for (const [side, why] of t.shut) {
@@ -284,9 +300,12 @@ export class TankMap {
       this.world.drop(drop, at.x, at.y - t.tile * 2, 0, -30);
     }
     const seal = [...c.shut].find(([, why]) => why === 'seal');
-    if (seal) {
-      this.open(this.current, seal[0]);
-      this.ui.toast('A red door opens — a deal waits beyond it');
+    if (seal) this.open(this.current, seal[0]);
+    if (c.map.type === 'boss') {
+      // Isaac's trapdoor: a drain in the floor where the boss was, down to the next tank
+      c.drain = t.standAt(t.cx, t.cy, t.tile * 2, t.tile * 2) ?? { x: t.cx, y: t.cy };
+      this.ui.toast(seal ? 'The drain is open — and a red door, a deal beyond it'
+        : 'The drain is open — swim down into it');
     } else {
       this.ui.toast('The room is clear — the doors open');
     }
@@ -425,6 +444,9 @@ export class TankMap {
       decor.update(t);
     }
   }
+
+  /** The current room's drain, if its boss is dead. */
+  get drain() { return this.slide ? null : this.cell.drain; }
 
   /** The current room's pedestals, if it has any. */
   get pedestals(): readonly Pedestal[] { return this.slide ? [] : this.cell.pedestals ?? []; }

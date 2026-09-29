@@ -105,7 +105,12 @@ export class Combat {
     // a room's hostile hurts by touch, as Isaac's monsters do: a charger's dash is how it
     // gets its body onto the player, and a drifter has nothing else. No reach past the body
     // and no gulp, or a spitter would pull the player onto itself
-    if (att.hostile && def.isPlayer) { this.touch(att, def); return; }
+    // A squid boss holding the player is holding it: the grip is the grasp's, not a touch
+    if (att.hostile && def.isPlayer) {
+      if (att.holding === def) this.grasp(att, def);
+      else this.touch(att, def);
+      return;
+    }
     if (PLAN_ART[att.species.plan].grasp > 0 && !att.isPlayer) { this.grasp(att, def); return; }
     // the player bites on the arrows, not on contact: only a strike that is out lands, from
     // wherever it reaches, and nothing is pulled in — swimming into prey is not eating it
@@ -248,6 +253,7 @@ export class Combat {
     if (got && att.attack === 'strike') {
       att.attack = 'recover';
       att.attackT = att.attackLen = 0.7;
+      att.landed = true;
       att.view.chomp();
     }
   }
@@ -258,7 +264,7 @@ export class Combat {
    * (`Creature.takeHit`). The organs still answer a hit that landed — spines on the player
    * prick what bit it.
    */
-  private hitPlayer(att: Creature, p: Creature, how: Hurt = 'bite') {
+  hitPlayer(att: Creature, p: Creature, how: Hurt = 'bite') {
     const got = p.takeHit(att, att.species.guardian ? 2 : 1, how);
     if (!got) return 0;
     wound(this.world, att, p, { dmg: got, fatal: p.hp < 1, whole: false });
@@ -312,6 +318,8 @@ export class Combat {
     if (pull > hold) att.strain += ((pull - hold) / hold) * dt * 1.4;
     else att.strain = Math.max(0, att.strain - dt * 0.5);
     if (att.strain >= 1) {
+      // a boss loses the arm that held on (`Bosses.torn`)
+      if (att.species.guardian) att.tornArms++;
       // torn free: throw the escapee clear so the next frame does not re-grab it
       def.vx += ox * def.genome.speed * 0.6;
       def.vy += oy * def.genome.speed * 0.6;

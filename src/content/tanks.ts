@@ -35,6 +35,20 @@ export interface Tank {
    * (`Species.role`), and a room is a mix of them.
    */
   hostiles: Record<string, number>;
+  /**
+   * How a hostile's health is scaled here. Health rides a body's size by a power over one,
+   * and each tank's animals are bigger than the last's by more than the larva's bite grows,
+   * so without it the deep tank's fights would take twice the strikes the nursery's do.
+   */
+  hostileHp: number;
+  /**
+   * How fast this tank's animals swim, as a multiple of their species' speed: the tile's
+   * ratio to the nursery's, so a room takes as long to cross in every tank. Not the boss,
+   * whose speed is authored for its fight.
+   */
+  pace: number;
+  /** The boss the tank is built around, by species id. */
+  boss: string;
 }
 
 /** What a room is for; see *Room type* in `CONTEXT.md`. */
@@ -42,6 +56,11 @@ export type RoomType = 'start' | 'fight' | 'treasure' | 'shop' | 'deal' | 'boss'
 
 export interface RoomTemplate {
   id: string;
+  /**
+   * The tank this layout was drawn for. Every tank deals from every layout until its own are
+   * drawn (roadmap stage 8), each room mirrored half the time, since a layout is tiles and a
+   * tank is authored at its own scale anyway.
+   */
   tank: string;
   /** The room types this layout can be dealt as. */
   types: RoomType[];
@@ -75,7 +94,19 @@ export const TANKS: Tank[] = [
   // around what glows in it
   { id: 'nursery', name: 'Nursery Tank', depth: 3200, tile: 23,
     fauna: ['bloom', 'krill', 'fry', 'anchovy'], population: 26,
-    hostiles: { mackerel: 3, archerfish: 3, pufferfish: 2, nettle: 2 } },
+    hostiles: { mackerel: 3, archerfish: 3, pufferfish: 2, nettle: 2 },
+    hostileHp: 1, pace: 1, boss: 'mantisshrimp' },
+  // at 1.8 times the nursery's scale, the larva's growth at the descent: the Reef Shelf's
+  // water, a shade less dark, and its animals
+  { id: 'reef', name: 'Reef Tank', depth: 2600, tile: 41,
+    fauna: ['krill', 'fry', 'anchovy', 'reeffish'], population: 26,
+    hostiles: { ribbon: 3, triggerfish: 3, lionfish: 2, moonjelly: 2 },
+    hostileHp: 0.8, pace: 1.8, boss: 'greatwhite' },
+  // and 1.8 times that again: the twilight-to-midnight water and what glows in it
+  { id: 'deep', name: 'Deep Tank', depth: 5200, tile: 74,
+    fauna: ['driftsnow', 'lanternfish', 'hatchetfish', 'bristlemouth'], population: 24,
+    hostiles: { barracuda: 2, gulper: 1, vampiresquid: 3, anglerfish: 2, siphon: 2 },
+    hostileHp: 0.6, pace: 3.2, boss: 'giantsquid' },
 ];
 
 export const ROOMS: RoomTemplate[] = [
@@ -268,6 +299,7 @@ export const ROOMS: RoomTemplate[] = [
 export const tankById = (id: string) => TANKS.find(t => t.id === id)!;
 
 /** A template's tiles, row-major. */
-export function tilesOf(t: RoomTemplate): Tile[] {
-  return t.rows.flatMap(r => [...r].map(ch => LEGEND[ch] ?? 'rock'));
+/** A template's tiles, row-major; `mirror` flips each row left to right. */
+export function tilesOf(t: RoomTemplate, mirror = false): Tile[] {
+  return t.rows.flatMap(r => (mirror ? [...r].reverse() : [...r]).map(ch => LEGEND[ch] ?? 'rock'));
 }

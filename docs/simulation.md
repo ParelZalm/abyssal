@@ -348,7 +348,8 @@ attacks (`STEALTH_DELAY`, in `Spawner.hostiles`) and throws a spitter's aim wide
 **Touch.** Any hostile's body against the player's is a hit (`Combat.touch`), Isaac's rule —
 a circle of seven tenths of its radius, no reach past the body and no gulp, or a spitter
 would pull the player onto itself. `Creature.attacks` is true for a hostile against the
-player whatever the sizes.
+player whatever the sizes, and false against anything else: a bite on a passing fish ends a
+strike, and a boss that ate its way out of its own tell had none. Hostiles do not regenerate.
 
 **Shots** are `World.shots`: straight, one speed (`SHOT_SPEED`, in tiles a second — the
 player swims about five), a reach of 0.16 tiles, spent on rock, on the player — landed or
@@ -356,3 +357,32 @@ not; a shot breaks on a body in its grace rather than passing through — or aft
 seconds. A hit is half a heart through `takeHit` like any other. Firing and breaking are
 published as `shot` and `splash` pulses for `Impacts`. A shot's flight is its range over its
 speed (`Shot.life`); a hostile's is five seconds.
+
+## Bosses
+
+A tank is built around one (`Tank.boss`), fought in its boss room and fitted to it
+(`sim/bosses.ts`). `Behaviour.think` hands a hostile with a `Species.boss` to `Bosses.step`
+before anything else. Each fight is the roles' state machine on `Creature.attack` — so the
+tell is the wind-up pose and `Scene`'s warm light — and a boss that has missed is `exposed`
+for a moment and takes blows half again as hard (`EXPOSED_TAKEN`), as the column's guardians
+did. A boss's hit is a whole heart. The first tell of each names its answer (`World.tellBy`).
+
+- **The mantis shrimp's punch** (nursery). It sidles 2.5–4.5 tiles off, then cocks its club
+  for 0.6 s and throws itself 3.5 tiles down that line in 0.16 s. Where the club lands the
+  water boils: a burst 1.5 tiles across that is the hit, touch or not. Three punches and it
+  rests, spent, for 2.2 s. Under half health each burst throws a ring of spray.
+- **The Great White's charge** (reef). It circles six tiles off, turns square on and holds
+  for a second, and rushes the line at 2.4× its speed for up to a second — rock ends it, the
+  snout meeting the wall. A miss leaves it spent for 2 s. Under half health a miss is
+  followed by a second rush on a shorter tell.
+- **The Giant Squid's grab** (deep). It drifts in to three tiles, spreads its arms for 0.9 s
+  and lashes the feeding pair for half a second: anything in reach is held, and
+  `Combat.grasp` reels it in, bites it and lets it pull, as the column's squids did. Torn
+  free (`Creature.tornArms`, counted where the grip breaks), it loses an arm — drawn gone,
+  `FishView.tear` — its reach falls by three tenths, it takes a tenth of its health, jets away
+  in ink and is spent. Swimming hard away tears free in about a second.
+
+**Culling is round the room.** `World.cull` drops anything more than twice the room's half
+diagonal from its middle. It was the camera's centre, and just after a slide the camera is
+still panning off the last room: a boss put at the far side of its room was culled, alive,
+on the frame it arrived, and the room cleared with nothing in it.

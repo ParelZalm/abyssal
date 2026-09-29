@@ -358,7 +358,33 @@ words are in `CONTEXT.md`, the decision in `docs/adr/0003-*`). A `Tank` has a na
 world depth whose water it borrows, a tile size in world units, its loose fauna, its
 hostiles, and how many bodies a room holds. A `RoomTemplate` is 32 × 18 rows of characters —
 `#` rock, `=` sand, `o` boulder, `.` water — authored by hand, as Isaac's are, and tagged
-with the room types it may be dealt as. The nursery has eight.
+with the room types it may be dealt as. The nursery has eight; the reef and the deep tank
+deal from every layout until they have their own (stage 8), and every room is mirrored half
+the time.
+
+**Three tanks** (`TANKS`, `TANK_ORDER`): the Nursery at a 23-unit tile, its boss the mantis
+shrimp; the Reef at 41, the Great White; the Deep at 74, the Giant Squid. Each tile is the
+last times the descent's growth, 1.8, so a room is the same number of body lengths across in
+every tank. What swims in a tank takes its `pace` — the tile's ratio to the nursery's — on its
+species' speed, so a room takes as long to cross; its hostiles take `hostileHp` on their
+health, since health rides size by a power over one and the larva's bite does not; a boss
+takes the root of the pace and its own health (`Species.bossHp`).
+
+**The descent** (`Game.descend`). The boss room's clear opens a drain in its floor
+(`TankMap.clear`, drawn by `DrainView`); swimming into it takes the next tank: the body and
+its swim ×`GROWTH` (1.8), the view rebuilt, a new map dealt, the lineage given a frame, the
+codex's `tanks` raised, and the drop-in played. Past the last tank there is no next: the run
+is won, on the *Released* screen, with the lineage.
+
+**The drop-in** (`render/dropin.ts`) plays at the start of every run and at every descent,
+3.6 s, any key skipping to its end: a dark gallery, the tank lit from a lamp in the water it
+holds, gravel and rock heaped along its floor, the animal falling from above into a splash,
+sinking and swimming down, and the view going into the glass. The phase is `dropin` while
+it runs; the HUD is hidden and the tank's name is captioned over it.
+
+**Starting forms** (`run/starts.ts`) are one per tank reached (`Codex.tanks`): the Hatchling,
+the Reef Wrasse once a run has reached the reef, the Squid Paralarva once one has reached the
+deep.
 
 **The map** (`content/map.ts`) is dealt from the run's seed: 7–8 rooms grown out from the
 start one neighbour at a time, a room added only where it touches exactly one other so the
@@ -371,8 +397,8 @@ room is hung off the boss room (*The economy*).
 visited and cleared, and the pickups left in it. Rooms sit edge to edge in the world, a
 room's size apart, so a door opens straight into the next room's. Entering a room puts its
 terrain in the world and its views in the display slots, gives it back its pickups and its
-fauna, and — the first time for a fight room (2–3 hostiles) or the boss room (4, until the
-boss of stage 7) — deals its hostiles and shuts its doors. A room clears when its last
+fauna, and — the first time for a fight room (3–4 hostiles) or the boss room (its boss,
+`Spawner.boss`, at the far side of the room) — deals its hostiles and shuts its doors. A room clears when its last
 hostile is dead, and stays clear. Leaving through a door empties the room (`World.vacate`;
 carcasses do not keep), and the camera slides to the next room over 0.35 s while the world
 holds still, carrying the player to just inside the facing door.

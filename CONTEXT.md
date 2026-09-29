@@ -48,16 +48,22 @@ room's mutation, and each of a shop's or a deal room's goods, at its price.
 half heart, a shell, a key, an item, or a chest, which takes a key and spills pickups.
 Pickups drop from cleared rooms, from chests and from the belly.
 
-**Descent** — moving from one tank to the next, bigger one. It is where the animal
-grows: because the new tank is bigger in proportion, growth reads as the world widening
-rather than the body swelling on screen.
-_Avoid_: ascend, level-up
+**Descent** — moving from one tank to the next, bigger one, down the **drain** the boss room
+opens in its floor when the boss is dead. It is where the animal grows: because the new tank
+is bigger in proportion, growth reads as the world widening rather than the body swelling
+on screen. The last tank's drain leads out of the Aquarium, and the animal is **released**:
+the run is won.
+_Avoid_: ascend, level-up, trapdoor
 
-**Drop-in** — the cutscene of the animal being released into a new tank, the one moment
-a tank is seen from outside.
+**Drop-in** — the cutscene of the animal being dropped into a tank, the one moment a tank is
+seen from outside: at the start of a run and at every descent.
 
-**Hostile** — an animal that counts toward clearing a room. Everything else in a room is
-fauna: it can be eaten, and the exits do not wait for it.
+**Starting form** — a body a run can hatch as instead of the hatchling, one for each tank
+some earlier run has reached.
+
+**Hostile** — an animal that counts toward clearing a room. It fights the player and
+nothing else. Everything else in a room is fauna: it can be eaten, and the exits do not wait
+for it.
 _Avoid_: enemy, mob
 
 **Role** — how a hostile fights, shared across species: a **charger** winds up and

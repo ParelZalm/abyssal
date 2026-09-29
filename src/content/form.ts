@@ -31,7 +31,7 @@ export type Plan =
    * own: a guardian sharing a body with its prey is the one place the roster cannot afford
    * to look generic, because it is the thing the player is supposed to recognise on sight.
    */
-  | 'greatshark' | 'whale' | 'longsquid' | 'broadsquid'
+  | 'greatshark' | 'whale' | 'longsquid' | 'broadsquid' | 'mantis'
   /** Player only. The thing the ocean should be worried about. */
   | 'wraith';
 
@@ -139,6 +139,11 @@ export const PLAN_FORMS: Record<Plan, Form> = {
   // the same animal built short and heavy instead: stubbier mantle, far broader fins
   broadsquid:  { len: 2.3, width: 0.74, fore: 1.6, aft: 0.9, peduncle: 0.34, trunk: 0, shoulder: 0, nose: 0, cheek: 0.06,
                  fluke: 0.42, fork: 0.25 },
+ // the mantis shrimp: a long, even, armoured trunk, blunt at the eyes and fanned at the
+  // tail — nothing in the nursery is shaped like it. `trunk` holds its depth nearly the
+  // length of it, and the peduncle stays broad for the tail fan
+  mantis:      { len: 3.0, width: 0.4, fore: 0.6, aft: 0.9, peduncle: 0.55, trunk: 0.55, shoulder: 0.14,
+                 nose: 0.9, cheek: 0, fluke: 0.2, fork: 0, up: 0.56, arch: 0.18 },
   // long, narrow, and trailing half its length in veil: nothing that schools looks like this
   wraith:    { len: 2.7, width: 0.48, fore: 0.72, aft: 1.15, peduncle: 0.26, trunk: 0, shoulder: 0, nose: 0, cheek: 0.06,
                fluke: 0.52, fork: 0.22 },
@@ -283,11 +288,13 @@ export interface PlanArt {
   samples: number;
   /** Drawn see-through with its viscera showing. The player only. */
   smoke: boolean;
+  /** A mantis shrimp's raptorial club, folded under the head, whatever the genome. */
+  club: boolean;
 }
 
 const art = (o: Partial<PlanArt> = {}): PlanArt => ({
   arms: 0, armCount: 0, armLen: 0, armWidth: 0, armPair: 1, armReach: 0, grasp: 0, spines: true,
-  gills: true, cilia: false, paleEyes: false, caudal: 1, samples: 90, smoke: false,
+  gills: true, cilia: false, paleEyes: false, caudal: 1, samples: 90, smoke: false, club: false,
   tail: 'caudal', blunt: 0, dorsalFin: 0, fins: FISH_FINS, eye: 1, eyeAt: 0.16, mottle: 1, tone: 1, shade: 1, finRays: true, mouth: 1, eyeGlow: 0, fog: 0, ...o,
 });
 
@@ -339,6 +346,12 @@ export const PLAN_ART: Record<Plan, PlanArt> = {
   broadsquid: art({ eyeGlow: 1, fog: 1, spines: false, arms: 1.35, armCount: 8, armLen: 1.5, armWidth: 0.17, armReach: 1.2,
                     armPair: 1.7, grasp: 1.05,
                     paleEyes: true, caudal: 1.5, tail: 'mantle', fins: [] }),
+  // the club folded under the head is the animal (`club`); four pairs of little swimmerets
+  // under the trunk and no fins above it, and eyes on the front of a blunt face
+  mantis:     art({ eyeGlow: 0.8, fog: 0.6, spines: false, gills: false, caudal: 1.2, blunt: 0.4,
+                    eye: 0.7, eyeAt: 0.06, mouth: 0.4, finRays: false, club: true, samples: 110,
+                    fins: [{ at: 0.45, len: 0.32, rake: 1.1, chord: 0.35, taper: 0.5 },
+                           { at: 0.62, len: 0.28, rake: 1.1, chord: 0.35, taper: 0.5 }] }),
   wraith:     art({ smoke: true }),
 };
 

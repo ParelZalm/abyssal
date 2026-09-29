@@ -6,7 +6,7 @@ import { DEPTH_MAX } from '../content/zones';
 import { clamp, dist2, type Rng, TAU } from '../core/util';
 import { Behaviour } from './behaviour';
 import { Combat } from './combat';
-import { Creature } from './creature';
+import { Creature, type Hurt } from './creature';
 import type { Bite, Blood, Pulse } from './events';
 import { tick as tickOrgans, type Organ } from './organs';
 import { Patterns } from './patterns';
@@ -179,8 +179,12 @@ export class World {
     return c;
   }
 
-  cull(cx: number, cy: number, viewR: number) {
-    const far = (viewR * 2.1) ** 2;
+  /**
+   * Drop the dead, and anything that has got more than twice `reach` from (`cx`, `cy`) — the
+   * room's middle and its half diagonal, so what is culled is what has left the room.
+   */
+  cull(cx: number, cy: number, reach: number) {
+    const far = (reach * 2.1) ** 2;
     for (let i = this.creatures.length - 1; i >= 0; i--) {
       const c = this.creatures[i];
       if (!c.alive || dist2(c.x, c.y, cx, cy) > far) this.remove(i);
@@ -448,6 +452,11 @@ export class World {
     this.combat.hit(att, def, mult);
   }
 
+  /** A blow on the player from something that is not a body's touch: a boss's burst. */
+  hitPlayer(att: Creature, how: Hurt) {
+    this.combat.hitPlayer(att, this.player, how);
+  }
+
   private integrate(c: Creature, dt: number) {
     c.x += c.vx * dt;
     c.y = clamp(c.y + c.vy * dt, 30, DEPTH_MAX);
@@ -478,7 +487,10 @@ export class World {
     }
     if (c.bleedT > 0 && c.alive) this.combat.bleedOut(c, dt);
     // the player's hearts come back from what it eats, never by themselves
-    if (!wounded && !c.isPlayer && c.hp < c.hpMax) c.hp = Math.min(c.hpMax, c.hp + c.genome.regen * dt);
+    // nor do a room's hostiles: a wound on one stays, or a fight could be waited out backwards
+    if (!wounded && !c.isPlayer && !c.hostile && c.hp < c.hpMax) {
+      c.hp = Math.min(c.hpMax, c.hp + c.genome.regen * dt);
+    }
     tickOrgans(this, c, dt);
     // creatures the camera cannot see still swim and hunt, they just skip their art
     if (!c.view.visible) return;

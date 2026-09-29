@@ -1,6 +1,6 @@
 import type { Codex } from '../../run/codex';
 import { dailySeed, STARTS, type Start } from '../../run/starts';
-import { BANDS } from '../../content/zones';
+import { TANK_NAMES, TANK_ORDER } from '../../content/tanks';
 import type { Component } from '../Component';
 import { actions, button, div, h1, h2, kbd, keysLine, p, span } from '../dom/element';
 
@@ -18,7 +18,7 @@ export class TitleScreen implements Component {
 
   constructor(onStart: (choice: RunChoice) => void, onCodex: () => void, codex: Codex,
               dailyBest: (date: string) => number) {
-    const open = (s: Start) => codex.deepest >= s.unlock;
+    const open = (s: Start) => codex.tanks >= s.unlock;
     let pick = STARTS.find(s => s.id === remembered() && open(s))?.id ?? 'hatchling';
 
     // the starting forms: one per zone reached, the rest shown as what unlocks them
@@ -37,7 +37,7 @@ export class TitleScreen implements Component {
         });
       } else {
         b.disabled = true;
-        b.append(span('???'), p(`Reach ${BANDS[s.unlock].name} once to hatch as this.`));
+        b.append(span('???'), p(`Reach the ${TANK_NAMES[TANK_ORDER[s.unlock]]} once to hatch as this.`));
       }
       cards.push([s, b]);
       forms.append(b);
@@ -57,7 +57,7 @@ export class TitleScreen implements Component {
         kbd('Space'), ' active mutation  ·  ', kbd('E'), ' item  ·  ',
         kbd('P'), ' pause  ·  ', kbd('M'), ' sound',
       ]),
-      ...(codex.deepest > 0 ? [forms] : []),
+      ...(codex.tanks > 0 ? [forms] : []),
       actions(
         button('Hatch', () => onStart({ start: pick })),
         // the daily is one ocean for everyone, so it is always the hatchling in it
