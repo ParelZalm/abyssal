@@ -9,7 +9,8 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #01060d; color: var(--ink); }
-#stage canvas { display: block; }
+/* the canvas is drawn at a third of this size and scaled up — see render/pixel.ts */
+#stage canvas { display: block; image-rendering: pixelated; }
 #ui { position: fixed; inset: 0; pointer-events: none; }
 
 .hud { position: absolute; left: 18px; top: 16px; width: 270px; display: grid; gap: 8px;

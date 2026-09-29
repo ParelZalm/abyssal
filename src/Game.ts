@@ -13,6 +13,7 @@ import { Dread } from './render/Dread';
 import { Fx } from './render/fx';
 import { Impacts } from './render/Impacts';
 import { Ocean } from './render/ocean';
+import { FramePass, PIXEL } from './render/pixel';
 import { Scene } from './render/Scene';
 import { Scenery } from './render/scenery';
 import { Water } from './render/water';
@@ -76,13 +77,15 @@ export class Game {
     await this.app.init({
       // one GLSL program for the water, so pin the renderer to WebGL
       preference: 'webgl',
-      // Creature art is baked with its own MSAA and gets its edges from transparent texels,
-      // so the canvas's MSAA only touches the halo and burst rings. On a Retina canvas it
-      // was a third of the remaining GPU frame and a 4x-sample buffer the size of the
-      // screen, for stair-steps too small to see; below 2x they show, and the canvas is small
-      background: 0x02101f, antialias: devicePixelRatio < 2, resizeTo: window,
-      resolution: Math.min(devicePixelRatio, 2), autoDensity: true,
+      // The canvas is the pixel grid: a third of the CSS size, scaled back up by the
+      // browser with hard edges (`render/pixel.ts`). No MSAA — a smoothed edge on a grid
+      // this coarse is a smear, and every edge is supposed to be a stair-step — and
+      // positions rounded to whole pixels, or a slow animal shimmers as it crosses them.
+      background: 0x02101f, antialias: false, resizeTo: window,
+      resolution: 1 / PIXEL, autoDensity: true, roundPixels: true,
     });
+    this.app.stage.filters = [new FramePass()];
+    this.app.stage.filterArea = this.app.screen;
     document.getElementById('stage')!.append(this.app.canvas);
     // creature art is baked into textures, which needs a live renderer before the first
     // creature exists — so this has to come before reset()

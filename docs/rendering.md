@@ -1,5 +1,24 @@
 # Rendering
 
+## The pixel grid
+
+`src/render/pixel.ts`. The whole game is drawn on one coarse grid: the canvas is created
+at `1 / PIXEL` resolution (a third of the CSS size) and the browser scales it back up with
+`image-rendering: pixelated`. Everything in a frame shares that grid — scaling each
+animal's art by itself would put every animal on a grid of its own, and a skinned or
+rotated one would resample its pixels at every bend. There is no MSAA and positions round
+to whole pixels (`roundPixels`), or a slow animal shimmers as it crosses them.
+
+`FramePass`, a filter on the stage, then quantises the finished frame to `uLevels` steps
+per channel with a 4×4 Bayer dither. It works in square-root space, because the ocean is
+nearly all dark and even linear steps would leave the midnight water two colours. Without
+it, smooth gradients stay smooth on big pixels and the frame reads as a blurry image
+scaled up rather than as pixel art. Anything that dithers on its own (creature art) should
+use the same Bayer matrix, so the two agree.
+
+The water is shaded at one texel per art pixel (`SHADE_SCALE = 1 / PIXEL`) into a
+nearest-sampled target.
+
 ## The water
 
 `src/render/water.ts` is one full-screen `Filter` over a white `Sprite`, with a

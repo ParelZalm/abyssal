@@ -3,6 +3,7 @@ import { waterAt } from '../content/zones';
 import { clamp, lerp } from '../core/util';
 import type { View } from './view';
 import { DEPTH_MAX } from '../content/zones';
+import { PIXEL } from './pixel';
 
 const vertex = `
 attribute vec2 aPosition;
@@ -214,18 +215,19 @@ export function lightAt(y: number) {
 }
 
 /**
- * Texels of water shaded per CSS pixel. The water is low-frequency fog, and upscaled it
- * only softens the thinnest rays. Shaded per device pixel on a Retina canvas it was
- * ~11 ms of GPU, more than a whole 120 Hz frame, which is what heated the laptop.
+ * Texels of water shaded per CSS pixel: one per art pixel, so the water sits on the same
+ * grid as everything in it. Shaded per device pixel on a Retina canvas it was ~11 ms of
+ * GPU, more than a whole 120 Hz frame, which is what heated the laptop.
  */
-const SHADE_SCALE = 0.4;
+const SHADE_SCALE = 1 / PIXEL;
 
 /** Full-screen procedural water: fog, thermoclines and the tier below. */
 export class Water {
   layer = new Container();
   /** Carries the filter; drawn off-stage into `target`, never into the scene. */
   private sprite = new Sprite(Texture.WHITE);
-  private target = RenderTexture.create({ width: 1, height: 1, resolution: 1, antialias: false });
+  private target = RenderTexture.create({ width: 1, height: 1, resolution: 1, antialias: false,
+                                          scaleMode: 'nearest' });
   private shown = new Sprite(this.target);
   /** The live uniform store Pixi builds from the definitions below. */
   private u!: {

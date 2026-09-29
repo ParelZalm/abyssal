@@ -133,6 +133,27 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 - ~~A card of its own for a discovery.~~ Done: `DiscoveryCard`, under the run strip for
   four seconds with the synergy's codex line, never pausing play.
 
+## 9. Pixel art, side-on
+
+Decided September 2026: the game is drawn as pixel art on one coarse grid, and every
+creature is seen side-on instead of from above — Terraria, Isaac, Core Keeper for the
+density, and a reference frame of a midnight scene for the look. The prototype that made
+the case is `design/proto-pixel.ts`, on the board at `/design.html?g=pixel`. Everything
+follows, in stages, each committed on its own:
+
+1. ~~**The grid.**~~ Done: `render/pixel.ts`. The canvas is created at `1 / PIXEL`
+   resolution and scaled up with hard pixels, and `FramePass` quantises the finished frame
+   onto a stepped palette with a Bayer dither, so every gradient bands the same way.
+2. **Creatures side-on.** A pixel painter in profile replacing the smooth top-down bake:
+   ramps, dither, a pixel outline, a lit rim, every plan and every organ's morphology. The
+   view mirrors instead of rolling when an animal turns back, and the art is baked at the
+   grid's own density, re-baked when the camera's zoom moves a tier.
+3. **Light.** Blooms, halos and the lure drawn as stepped pixel light rather than soft
+   discs.
+4. **The water and the background.** Props, fields and particulate redrawn for the grid.
+5. **The HUD.** A pixel face and hard-edged chrome, so the DOM layer agrees with the
+   canvas under it.
+
 ## Suggested order
 
 1. ~~Two or three more synergies~~ — done, Ballistic included.
