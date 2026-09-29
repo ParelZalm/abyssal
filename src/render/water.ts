@@ -189,13 +189,15 @@ void main() {
 // Deliberately dim: the creatures are the only bright thing in the frame, and every
 // step of this ramp was pulled down until a mid-tier fish reads as a light source
 // against it rather than as a shape cut out of it.
+// Below the surface the ramp is navy, not teal: the tanks are dark, cool water with the
+// light pooled around what glows in it (`docs/media/reference/`).
 const TINTS: [number, [number, number, number]][] = [
   [0, [0.10, 0.42, 0.40]],
-  [1300, [0.055, 0.30, 0.31]],
-  [3000, [0.030, 0.18, 0.21]],
-  [5200, [0.017, 0.10, 0.135]],
-  [7400, [0.011, 0.05, 0.077]],
-  [DEPTH_MAX, [0.006, 0.022, 0.042]],
+  [1300, [0.05, 0.22, 0.30]],
+  [3000, [0.028, 0.095, 0.2]],
+  [5200, [0.016, 0.055, 0.135]],
+  [7400, [0.01, 0.035, 0.085]],
+  [DEPTH_MAX, [0.006, 0.02, 0.045]],
 ];
 
 export function waterColor(y: number): [number, number, number] {

@@ -46,8 +46,9 @@ export interface RoomTemplate {
 }
 
 export const TANKS: Tank[] = [
-  // the Open Water's profile: the brightest water there is, for the first room of a run
-  { id: 'nursery', name: 'Nursery Tank', depth: 520, tile: 23,
+  // the Twilight's water: dark and cool, the look of the references, with the light pooled
+  // around what glows in it
+  { id: 'nursery', name: 'Nursery Tank', depth: 3200, tile: 23,
     fauna: ['bloom', 'krill', 'fry', 'anchovy'], population: 26 },
 ];
 

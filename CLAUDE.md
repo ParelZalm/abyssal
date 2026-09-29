@@ -38,6 +38,13 @@ both pages carry a corner link to the other (`import.meta.env.DEV` in `src/main.
 Reach for it first when a change is about how something looks in isolation. Reach for the
 game itself when the question is how it reads in motion, at depth, or against the HUD.
 
+## Art direction
+
+The look of the rework is set by two reference frames in `docs/media/reference/`, and
+summarised under *Art direction* in `docs/rendering.md`: dark navy water and dark stone,
+colour living on the rock as decoration, light pooled around what glows, Isaac's HUD.
+Check new drawing against them.
+
 ## Verifying visual work
 
 Almost every change here is visual, and the only real verification is looking at it. In

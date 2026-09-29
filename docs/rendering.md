@@ -1,5 +1,23 @@
 # Rendering
 
+## Art direction
+
+Two reference frames set the look of the tank rework: `docs/media/reference/tank-room.webp`
+(an Isaac room in a tank, framed and doored) and `docs/media/reference/cave-room.webp` (the
+same room as a cave). What they agree on, and what every stage should build toward:
+
+- **Dark, cool water and dark stone.** Navy water; rock a desaturated blue-grey, pebbled,
+  with a lighter cap on every face that looks up. Very little is bright.
+- **Colour lives on the rock, not in it.** Red tube sponges, violet anemones, dark kelp,
+  coral heads, bioluminescent tips — decoration growing off the surfaces is where a room's
+  colour comes from.
+- **Light pools around what glows.** The pale larval player is the brightest thing on
+  screen, with a pool of light around it; lures, jellies and photophores are the rest.
+- **Rooms are furnished.** Crates, cages, pipes, a grate in the floor, a lit hatch: the
+  aquarium shows through the reef.
+- **Isaac's HUD.** Hearts, then currency, bombs and keys under them at top left; the
+  minimap at top right.
+
 ## The pixel grid
 
 `src/render/pixel.ts`. The whole game is drawn on one coarse grid: the canvas is created
@@ -71,20 +89,20 @@ grid, and re-baked only when the art density changes tier. Nothing about the ter
   drawn to the pixel and is the edge a body meets. `Terrain.kindAt` says what it is made
   of, through a small warp, so the seam between sand and rock wanders like the edge does.
   The first cut drew the template's squares with a noise warp on top and read as blocks.
-- **It is reef rock**, and the shading is read off the mask as a creature's is off its
-  silhouette. The rock is heaped from lumps (`LUMP`, 1.2 tiles; boulders 1.6): cellular
-  noise, warped before it is looked up so the seams curve, each cell a dome lit from
-  above-left with a highlight on its crown and a soft crevice to the next. It is riddled with
-  pores of varied size, light catching their lower lips. Coralline crust covers whole lumps
-  near the water, pink or violet; every face that looks up carries turf, and tufts of it
-  stand a few pixels off the top into the water. Light reaches `REACH` (1.8 tiles) into a
-  wall, measured by a chamfer distance field from the water, and the rest falls to shadow.
-  Sand is grained, lighter at its top and shadowed less deep. Everything steps through the
-  Bayer screen and is lit by `lightAt`.
+- **The rock is dark stone**, shaded off the mask as a creature is off its silhouette. It
+  is textured at two scales — masses (`MASS`, 1.4 tiles) that give a wall its volume, and
+  pebbles (`PEBBLE`, 0.32) over them — both cellular noise warped before it is looked up so
+  the seams curve, each cell a dome lit from above-left with a soft crevice to the next and a
+  highlight on a pebble's crown. Every face that looks up at open water has a cap
+  (`CAP_DEPTH`, 0.22 tiles) of lighter slate over the darker front, which is what makes a
+  ledge read as a slab. Light reaches `REACH` (1.8 tiles) into a wall, measured by a chamfer
+  distance field from the water, and the rest falls to shadow. Sand is cool and dim, grained
+  and lighter at its top. Everything steps through the Bayer screen and is lit by `lightAt`.
 
-  What was tried before it: strata and a flat mottle, which read as a flat cut-out; then
-  unwarped cells with hard cracks, which read as a cobbled wall. Crust scattered in patches
-  across lumps read as stains, where a reef's crust covers a head.
+  What was tried before it: strata and a flat mottle, which read as a flat cut-out; unwarped
+  cells with hard cracks, a cobbled wall; then warm reef limestone crusted pink and violet
+  with turf on its tops, which put the colour in the rock. The references put it on the
+  rock, as decoration, and keep the stone itself dark.
 - **Walls cast into the water.** Water within `SHADOW` (0.7 tiles) of rock is darkened in
   stepped bands, which is what sits the rock in the tank. It is in the room's texture, so
   it falls on a fish swimming along a wall too.
