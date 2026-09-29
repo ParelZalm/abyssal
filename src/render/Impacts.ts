@@ -58,6 +58,10 @@ export class Impacts {
       } else if (f.kind === 'snap') {
         fx.ring(f.x, f.y, 0xff5a4a, f.r);
         camera.jolt(9, 14);
+      } else if (f.kind === 'venom') {
+        // Stonefish: a hunter that touched the barbs, marked in the venom sacs' green
+        fx.ring(f.x, f.y, 0xa8e05a, f.r);
+        fx.burst(f.x, f.y, 0xa8e05a, 8, f.r, 2);
       } else if (f.kind === 'exposed') {
         fx.ring(f.x, f.y, 0xffe28a, f.r);
       } else {

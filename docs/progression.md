@@ -12,14 +12,15 @@ Three groups of fields, and the split matters:
 - **Stats** — `size`, `speed`, `turn`, `bite`, `sense`, `armor`, `regen`, `metabolism`,
   `stealth`, `gulp`, `lifesteal`, `pen`, `ram`. Read by the simulation.
 - **Organs** — `venom`, `lure`, `claws`, `jet`, `coral`, `frill`, `filter`, `crush`, `eel`,
-  `mantle`, `lurk`, `electro`, the curses `glare` and `brittle`, the actives `ink`,
+  `mantle`, `lurk`, `electro`, the curses `glare`, `brittle`, `veins` and `lead`, the actives `ink`,
   `discharge` and `inflate`, plus `pen`, `ram`,
   `lifesteal` and `spikes`, which act like organs even though they sit in the other
   groups. Each carries a mechanic *and* a piece of morphology. The mechanic lives in
   `sim/organs/`: one `Organ` record per field, keyed off the genome (NPC species carry
   organs too, so a trait list would lose the crab's spines), with *modifier* hooks
   (armour faced, lure range, boost, burn, swallow heal) and *effect* hooks (`onWound`,
-  `onWounded`, `onTick`). `Combat.bite`, the `PlayerController` boost and `Metabolism`
+  `onWounded`, `onTick`, and `onFire`, run by `fire(world, c)` after the active organ goes
+  off, with the active's id — how a synergy acts on the active without owning it). `Combat.bite`, the `PlayerController` boost and `Metabolism`
   call the folds in `sim/organs/query.ts` and never read an organ field by name.
   Every `Creature` caches its active organs and `refreshOrgans()` beside `view.rebuild`.
   The one exception is `coral`: it is plate, so `armourOf(g)` adds it as a derived stat.
@@ -53,7 +54,11 @@ Three groups of fields, and the split matters:
   mouth needs 2.5 times its usual gape to swallow it (a reef shark that took a 30 cm body
   whole tore 22 instead), bites land at 0.35 through the `taken` hook, biters are pricked
   for `3 + 0.12 × size`, and the swim bleeds speed. Everything organs throw into the water
-  is published on `world.pulses` with a kind, for `Impacts.drain` to draw. The slot sits
+  is published on `world.pulses` with a kind, for `Impacts.drain` to draw. The active fires
+  from `PlayerController.steer`, before `World.update`, so the outbox is emptied by
+  `World.clearOutbox()` at the top of `Game.frame` and not by the update: emptied there, an
+  active's pulses and a synergy's first firing were wiped before `digest` read them, and no
+  ink cloud, shock ring or swell ever drew. The slot sits
   bottom centre with a fill that climbs back as it recovers.
   The three **locomotion** organs are parameter shapes on the one swim model, through a
   `swim` hook that folds into `SwimMods` — cached on the creature beside its organs and
@@ -77,7 +82,7 @@ Three groups of fields, and the split matters:
   A synergy is an `Organ` whose `when` tests two fields and that carries a `name`; its
   effect hooks return true on a frame they did something, `World.fired` publishes its id
   once per run on `world.synergies`, and `Game.digest` turns it into the discovery card, so the
-  combination is discovered in play rather than read off a card. Nine so far:
+  combination is discovered in play rather than read off a card. Fourteen so far:
   `Toxic Lure` (lure + venom: prey that reaches the light is poisoned before the bite),
   `Ghost Light` (lure + stealth ≥ 0.4: lured prey is not panicked by its shoal's alarm),
   `Urchin` (spikes + armour ≥ 11: recoil of 0.8 × armour on every bite taken — 11 sits
@@ -124,7 +129,22 @@ Three groups of fields, and the split matters:
   bigger than you holds it — stunned, its bite held, carried at your speed — for 0.7 s,
   about the crusher's slow second snap, so what was bitten stays at the mouth. Hooked
   teeth are raked back in the throat, a pale ridge at the jaw's corner when it is shut.
-  Recoil can kill:
+  `Stonefish` (lie in wait + venom): with poise at half its wind or more (a second held
+  still), any hunter whose mouth reaches the body, or that bites it from further, is
+  envenomed at three times the barbs' strength (`7.5 × venom` a second), thrown back off
+  the body at 0.9 of its cruise and off the hunt for 1.5 s, bite included. Once per
+  poisoning, and a green ring marks it (the `venom` pulse). A mackerel nosing a poised 30 cm
+  body was stung and thrown from 40 to 90 units. Warts along the back, green-tipped.
+  `Porcupine` (inflation + spines): the swell is a blow — everything touching the swollen
+  body is hit for `0.4 + 0.3 × spikes` of a bite and shoved off at 1.2 of its cruise, prey
+  and hunter alike — and while swollen a biter takes `6 × spikes` on top of the puff's own
+  prick. The prickles become quills, three times as long and raked back.
+  `Electric Eel` (eel + electric organ): everything inside the shock that the eel could
+  swallow is twitched for 1.4 s and pulled to the mouth, turned to face it so the pull runs
+  against the forward drag (`3.2 ×` the distance over a drag of 3.1 lands it at the jaw;
+  sideways the lateral drag stopped it 60 units short). The shock's own blow and stun on
+  everything else are unchanged. The electrocytes run from behind the head to the tail.
+  Both act through `onFire`. Recoil can kill:
   `Combat.land` books an attacker whose health the defender's organs took below zero. The
   paint asks `hasSynergy(g, id)` from the same file, so a combination shows on the body
   through the predicate that makes it act, and `synergiesOf(g)` is in the bake cache key
@@ -207,7 +227,11 @@ count, lean)` picks without replacement from a rarity-weighted pool.
   `veins` (Open Veins, +3 regeneration: an `onWounded` hook that opens a bleed worth a
   tenth of every wound a second for five, half the bite again) runs dark red veins back
   along the flank. The bleed is a trail hunters follow, and it stops the very regeneration
-  the card pays in, since nothing heals while a wound is working. One stack each.
+  the card pays in, since nothing heals while a wound is working; `lead` (Leaden Bones, +6
+  armour: a `swim` hook adding `SwimMods.weight`, a pull that never lets up, of 1.2 × cruise,
+  and 1.5 × cruise more `sink` with nothing driving) sinks a still body at about 40 u/s at
+  the hatchling's speed, drifts a level swim down at 20 and halves a climb — no hovering and
+  no ambush that stays where it was set. A keel of grey plates down the belly. One stack each.
 - `maxStacks` defaults to 2, so a run specialises without collapsing into one stat.
 
 - **The draft reads the build** (`run/prospects.ts`). `completes(g, owned, form, t)` takes

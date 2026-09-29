@@ -2,6 +2,8 @@ import { formFor } from '../../content/form';
 import { armourOf, biteDamage, eyeOf } from '../../content/genome';
 import { dist2 } from '../../core/util';
 import type { Creature } from '../creature';
+import { shockReach } from './actives';
+import { POISE_MAX } from './adaptations';
 import { cut, envenom, sting } from './effects';
 import { feelOf, lureRangeOf } from './query';
 import { O, type Organ } from './types';
@@ -50,6 +52,33 @@ const PUFF_LOSE = 1.6;
 
 /** Seconds Moray Jaws holds a bitten body at the mouth — about a crusher's slow second snap. */
 const HELD = 0.7;
+
+/**
+ * Stonefish's threshold: half a full wind, about a second held still. Below it the body is
+ * only a fish that stopped; past it, it is a stone that happens to be poisonous.
+ */
+const SET = POISE_MAX * 0.5;
+/** Stonefish's venom, as a multiple of what the barbs leave in a bite. */
+const STONE_VENOM = 3;
+
+/** Seconds an Electric Eel's shock holds what it could swallow — the twitch it pulls in. */
+const TWITCH = 1.4;
+
+/**
+ * Stepped on: poisoned hard, thrown back off the body and off the hunt. The chase is dropped
+ * as well as the bite, or a hunter already in contact is still in contact the frame after.
+ */
+function stoneSting(o: Creature, c: Creature) {
+  envenom(o, c, c.genome.venom * 2.5 * STONE_VENOM);
+  const dx = o.x - c.x, dy = o.y - c.y, d = Math.hypot(dx, dy) || 1;
+  const shove = Math.max(1, o.genome.speed) * 0.9;
+  o.vx = (dx / d) * shove;
+  o.vy = (dy / d) * shove;
+  o.biteCd = Math.max(o.biteCd, 1.5);
+  o.tired = Math.max(o.tired, 1.5);
+  o.chase = 0;
+  o.quarry = null;
+}
 
 /** Swimming fast enough that the flow alone ventilates the gills and fills the mouth. */
 const cruising = (c: Creature) => Math.hypot(c.vx, c.vy) >= c.genome.speed * 0.6;
@@ -268,6 +297,90 @@ export const SYNERGY_ORGANS: Organ[] = [
       def.vx = att.vx;
       def.vy = att.vy;
       return true;
+    } }),
+
+  O({ id: 'stonefish', name: 'Stonefish', when: g => g.lurk > 0 && g.venom > 0,
+    desc: 'Lie in Wait and venom barbs. Held still, you are a stone: whatever bites or brushes you is poisoned three times over and thrown off.',
+    // the barbs stand up along the back of a body that has stopped moving, so the animal
+    // that finds it by touch is the one that pays. Nothing the ambush does changes — the
+    // wind-up still spends on your own bite — but a hunter that comes for a poised body
+    // meets the venom before the teeth, which makes waiting safe as well as strong. Keyed on
+    // the defender only: a lurker's first bite from poise is still Lie in Wait's
+    onTick: (c, _dt, world) => {
+      if (c.poise < SET) return false;
+      let fired = false;
+      for (const o of world.creatures) {
+        if (!o.alive || o === c || o.poisonT > 0 || !o.preysOn(c)) continue;
+        const touch = c.radius + o.radius * 0.6;
+        if (dist2(o.mouthX, o.mouthY, c.x, c.y) > touch * touch) continue;
+        stoneSting(o, c);
+        world.pulses.push({ x: o.x, y: o.y, r: o.radius * 1.6, kind: 'venom' });
+        fired = true;
+      }
+      return fired;
+    },
+    // a strike from further than touch — a big hunter's lunge — lands, and is paid for
+    onWounded: (def, att, ctx) => {
+      if (ctx.whole || def.poise < SET || !att.alive || att.poisonT > 0) return false;
+      stoneSting(att, def);
+      return true;
+    } }),
+
+  O({ id: 'porcupine', name: 'Porcupine', when: g => g.inflate > 0 && g.spikes > 0,
+    desc: 'Inflation and dorsal spines. Swelling drives your spines into everything touching you, and while swollen a biter is impaled.',
+    // the porcupinefish's spines lie flat until the body fills, and then they stand: the
+    // swell is a blow on whatever was close enough to be pressed against, prey or hunter,
+    // and a shove off the body. After that the ordinary puff answers biters, with the
+    // spines' recoil doubled on top of it
+    onFire: (c, world, active) => {
+      if (active !== 'inflate') return false;
+      const swollen = c.radius * 1.4;
+      let fired = false;
+      for (const o of [...world.creatures]) {
+        if (!o.alive || o === c) continue;
+        const reach = swollen + o.radius;
+        const d2 = dist2(o.x, o.y, c.x, c.y);
+        if (d2 > reach * reach) continue;
+        world.hit(c, o, 0.4 + 0.3 * c.genome.spikes);
+        const d = Math.sqrt(d2) || 1;
+        const shove = Math.max(1, o.genome.speed) * 1.2;
+        o.vx = ((o.x - c.x) / d) * shove;
+        o.vy = ((o.y - c.y) / d) * shove;
+        fired = true;
+      }
+      return fired;
+    },
+    onWounded: (def, att, ctx) => {
+      if (def.puffT <= 0 || ctx.whole) return false;
+      return sting(att, def.genome.spikes * 6, def) > 0;
+    } }),
+
+  O({ id: 'electriceel', name: 'Electric Eel', when: g => g.eel > 0 && g.discharge > 0,
+    desc: 'Eel body and electric organ. The shock twitches what you could swallow and pulls it to your mouth.',
+    // the electric eel's volley is a feeding move, not an escape: it locks every muscle in
+    // the prey at once, and the eel is on it before it lets go. Here the stunned small are
+    // drawn to the mouth and held for longer, and the eel's own turning is what lets it take
+    // them. Each is turned to face the mouth so the pull runs along its axis: sideways, the
+    // lateral drag of 9 stopped it well short. Along it, 3.2 × the distance against the
+    // forward drag of 3.1 lands it at the jaw. The shock still hits everything the same
+    onFire: (c, world, active) => {
+      if (active !== 'discharge') return false;
+      const r = shockReach(c);
+      let fired = false;
+      for (const o of world.creatures) {
+        if (!o.alive || o === c || !c.canEat(o)) continue;
+        const dx = c.mouthX - o.x, dy = c.mouthY - o.y;
+        if (dx * dx + dy * dy > (r + o.radius) ** 2) continue;
+        o.stun = Math.max(o.stun, TWITCH);
+        o.biteCd = Math.max(o.biteCd, TWITCH);
+        o.angle = Math.atan2(dy, dx);
+        o.vx = dx * 3.2;
+        o.vy = dy * 3.2;
+        o.panic = 0;
+        world.pulses.push({ x: o.x, y: o.y, r: o.radius, kind: 'draw', vx: dx * 1.5, vy: dy * 1.5 });
+        fired = true;
+      }
+      return fired;
     } }),
 
   O({ id: 'nematocyst', name: 'Nematocyst', when: g => g.venom > 0 && g.lifesteal > 0,

@@ -74,7 +74,7 @@ export function stealthOf(c: Creature) {
 }
 
 export function swimOf(g: Genome, organs: Organ[]): SwimMods {
-  const m = { hold: 0.55, drag: 1, coast: 1, stroke: 1, pulseEvery: 0, pulseKick: 0, sink: 0 };
+  const m = { hold: 0.55, drag: 1, coast: 1, stroke: 1, pulseEvery: 0, pulseKick: 0, sink: 0, weight: 0 };
   for (const o of organs) o.swim?.(g, m);
   return m;
 }

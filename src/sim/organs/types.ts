@@ -30,6 +30,8 @@ export interface SwimMods {
   pulseKick: number;
   /** Downward drift while not driving, world units per second squared. */
   sink: number;
+  /** Downward pull always, driving or not, the same units: a body denser than the water. */
+  weight: number;
 }
 
 /** The boost as three multipliers on the player's own numbers, all 1 with no organ. */
@@ -102,6 +104,11 @@ export interface Organ {
   /** The defender's organs, after a bite has landed on it. */
   onWounded?: (def: Creature, att: Creature, ctx: WoundCtx) => void | boolean;
   onTick?: (c: Creature, dt: number, world: World) => void | boolean;
+  /**
+   * The body has just fired its active organ, whose id is `active`: the seam a synergy acts
+   * on the active through, since the cooldown and the press are the controller's.
+   */
+  onFire?: (c: Creature, world: World, active: string) => void | boolean;
 }
 
 /** Identity, for the type check: an entry reads as an organ, not as a loose object literal. */

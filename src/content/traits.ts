@@ -243,6 +243,12 @@ export const TRAITS: Trait[] = [
     maxStacks: 1,
     apply: g => { g.regen += 3; g.veins += 1; } }),
 
+  T({ id: 'leaden', band: 'reef', name: 'Leaden Bones', rarity: 'rare', icon: 'shield',
+    desc: '+6 armour. A skeleton like ballast, and bites break on it.',
+    curse: 'You are heavier than the water: you sink the moment you stop swimming, and every climb is against it.',
+    maxStacks: 1,
+    apply: g => { g.armor += 6; g.lead += 1; } }),
+
   // ------------------------------------------------------------------ apex
   // Every apex card costs something, and says so. Without a price the draft was "take the
   // rarest", which is no choice at all; the costs are chosen to fight the card's own build —

@@ -2,7 +2,7 @@ import { angleDelta, clamp } from '../core/util';
 import type { Camera } from '../render/Camera';
 import type { Fx } from '../render/fx';
 import type { Run } from '../run/Run';
-import { activeOf, boostModsOf, POISE_MAX, PUFF_TIME } from '../sim/organs';
+import { activeOf, boostModsOf, fire, POISE_MAX, PUFF_TIME } from '../sim/organs';
 import type { Creature } from '../sim/creature';
 import type { World } from '../sim/world';
 import type { Input } from './Input';
@@ -151,7 +151,7 @@ export class PlayerController {
     this.activeCd = Math.max(0, this.activeCd - dt);
     const a = activeOf(p);
     if (this.input.wantActive && a && this.activeCd <= 0) {
-      a.fire(p, this.world);
+      fire(this.world, p);
       this.activeCd = a.cd;
     }
     this.input.wantActive = false;

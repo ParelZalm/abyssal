@@ -402,6 +402,15 @@ const BUILDS: { id: string; name: string; note: string; plan: Plan; depth: numbe
   { id: 'morayjaws', name: 'Moray Jaws', plan: 'eel', depth: 1500,
     note: 'Synergy: eel body + crushing pharynx. Hooked teeth raked back in the throat — a mouth behind the mouth.',
     edit: g => { g.eel = 1; g.crush = 1; g.jaw = 0.9; g.gape = 0.4; g.segments = 2; g.hue = 90; g.accentHue = 52; } },
+  { id: 'stonefish', name: 'Stonefish', plan: 'darter', depth: 1500,
+    note: 'Synergy: lie in wait + venom barbs. Warts along the back, each tipped in the sacs\' green, over the ambusher\'s blotches.',
+    edit: g => { g.lurk = 1; g.venom = 1; g.speed = 120; g.hue = 28; g.accentHue = 12; } },
+  { id: 'porcupine', name: 'Porcupine', plan: 'darter', depth: 1500,
+    note: 'Synergy: inflation + dorsal spines. The prickles are quills — long, raked back, standing off the whole outline.',
+    edit: g => { g.inflate = 1; g.spikes = 1; g.armor = 2; g.hue = 48; g.accentHue = 30; } },
+  { id: 'electriceel', name: 'Electric Eel', plan: 'eel', depth: 5200,
+    note: 'Synergy: eel body + electric organ. The electrocytes run from behind the head to the tail, the length of the battery.',
+    edit: g => { g.eel = 1; g.discharge = 1; g.segments = 2; g.hue = 30; g.accentHue = 200; } },
 ];
 
 /** The water each form is likeliest to happen in: families ripen at different depths. */

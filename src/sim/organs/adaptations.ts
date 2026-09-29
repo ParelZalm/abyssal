@@ -92,4 +92,16 @@ export const CURSES: Organ[] = [
       if (ctx.whole || ctx.dmg <= 0) return;
       cut(def, att, ctx.dmg * 0.1 * def.genome.veins);
     } }),
+
+  O({ id: 'lead', when: g => g.lead > 0,
+    // bone too dense to float: a pull that never lets up, heavier still with nothing
+    // driving. Both ride cruise speed, so the curse weighs as much on a late body as on the
+    // one that took it. Swimming level drifts about an eighth of cruise downward (the pull
+    // over the lateral drag of 9), a climb from rest covers about half the water it would
+    // (six tenths at the forward drag's terminal, less the pitch up), and letting go sinks
+    // at over a quarter of cruise — no hovering, no still ambush that stays where it was set
+    swim: (g, m) => {
+      m.weight += g.speed * 1.2 * g.lead;
+      m.sink += g.speed * 1.5 * g.lead;
+    } }),
 ];

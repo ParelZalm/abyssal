@@ -27,7 +27,7 @@ import type { Organ, WoundCtx } from './types';
 
 export type { BoostMods, Organ, SwimMods, WoundCtx } from './types';
 export { POISE_MAX } from './adaptations';
-export { PUFF_TIME } from './actives';
+export { PUFF_TIME, shockReach } from './actives';
 export { BLOOM_TRAIL } from './synergies';
 export * from './query';
 
@@ -66,6 +66,18 @@ export function organsOf(g: Genome): Organ[] {
 export function wound(world: World, att: Creature, def: Creature, ctx: WoundCtx) {
   for (const o of att.organs) if (o.onWound?.(att, def, ctx) === true) world.fired(o, att);
   for (const o of def.organs) if (o.onWounded?.(def, att, ctx) === true) world.fired(o, def);
+}
+
+/**
+ * Fire the body's active organ, then let every organ it carries answer the firing. Returns
+ * the active, or null when there is none; the cooldown is the caller's.
+ */
+export function fire(world: World, c: Creature) {
+  const o = c.organs.find(x => x.active);
+  if (!o?.active) return null;
+  o.active.fire(c, world);
+  for (const s of c.organs) if (s.onFire?.(c, world, o.id) === true) world.fired(s, c);
+  return o.active;
 }
 
 export function tick(world: World, c: Creature, dt: number) {

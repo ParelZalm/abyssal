@@ -265,6 +265,7 @@ export class Game {
     if (this.phase === 'play') {
       const p = this.player;
       this.run.elapsed += dt;
+      this.world.clearOutbox();
       this.controller.steer(dt);
       p.hpMax = maxHp(p.genome);
       p.hp = Math.min(p.hp, p.hpMax);

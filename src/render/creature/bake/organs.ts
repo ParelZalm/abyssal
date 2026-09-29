@@ -165,12 +165,14 @@ export function urchinSpines(s: Sheet, f: Form, g: Genome, seed: number) {
 
 /**
  * Electric Organ: the electrocytes stacked in columns down the flank behind the head, as the
- * torpedo ray's are — pale cells in a field the shock comes out of.
+ * torpedo ray's are — pale cells in a field the shock comes out of. On an Electric Eel the
+ * field runs back to the tail, as the eel's organ fills four fifths of its length.
  */
-export function electroplates(s: Sheet, f: Form) {
+export function electroplates(s: Sheet, f: Form, g: Genome) {
   const pale: RGB = [200, 232, 255];
   const step = Math.max(s.texel * 2, R * 0.08);
-  for (let x = spineAt(0.42, f); x < spineAt(0.18, f); x += step) {
+  const tail = hasSynergy(g, 'electriceel') ? 0.9 : 0.42;
+  for (let x = spineAt(tail, f); x < spineAt(0.18, f); x += step) {
     const t = tAt(x, f);
     for (let k = -0.5; k <= 0.55; k += 0.35) {
       const off = (Math.round(x / step) % 2) * 0.17;
@@ -181,15 +183,37 @@ export function electroplates(s: Sheet, f: Form) {
 
 /**
  * Inflation: the puffer's skin, stubbled with prickles that lie flat until it swells —
- * short pale thorns off the whole outline.
+ * short pale thorns off the whole outline. With spines behind them they are the
+ * porcupinefish's quills instead: three times as long, raked back, and spaced wider so each
+ * stays one quill — at the prickles' spacing they merged into a dithered fringe.
  */
-export function prickles(s: Sheet, f: Form, seed: number) {
-  for (let t = 0.1; t < 0.9; t += 0.045) {
+export function prickles(s: Sheet, f: Form, g: Genome, seed: number) {
+  const quills = hasSynergy(g, 'porcupine');
+  for (let t = 0.1; t < 0.9; t += quills ? 0.075 : 0.045) {
     for (const k of [-1, 1] as const) {
-      if (fbm(t * 41, k, seed + 181, 1) < 0.4) continue;
+      if (fbm(t * 41, k, seed + 181, 1) < (quills ? 0.15 : 0.4)) continue;
       const x = spineAt(t, f), y = edgeAt(t, f, k);
-      s.line([[x, y], [x - s.texel, y + k * Math.max(s.texel * 1.5, halfWidth(t, f) * 0.2)]], M.TOOTH);
+      const len = Math.max(s.texel * 1.5, halfWidth(t, f) * (quills ? 0.6 : 0.2));
+      const tip: Pt = [x - (quills ? len * 0.55 : s.texel), y + k * len];
+      s.line([[x, y], tip], M.TOOTH);
     }
+  }
+}
+
+/**
+ * Stonefish: warts along the back, each tipped in the venom sacs' green where a barb comes
+ * through it. Knobs rather than spines, so the ridge reads as rock and the colour as a
+ * warning; the camouflage blotches under them are already Lie in Wait's.
+ */
+export function stoneWarts(s: Sheet, f: Form, seed: number) {
+  for (let t = 0.18; t < 0.82; t += 0.07) {
+    const w = halfWidth(t, f);
+    const n = fbm(t * 17, 5, seed + 331, 1);
+    const r = Math.max(s.texel * 1.5, w * (0.18 + n * 0.12));
+    const x = spineAt(t, f), y = edgeAt(t, f, -0.9);
+    s.ellipse(x, y - r * 0.5, r, r * 0.9, M.BODY);
+    s.dot(x, y - r * 1.3, TOXIC, 1);
+    s.dot(x + s.texel, y - r * 1.3, TOXIC, 0.8);
   }
 }
 

@@ -31,8 +31,12 @@ Teeth) rather than thresholding a stat several cards raise.
 
 Flash Sense was keyed on the `electro` field once Ampullae became the electroreception
 organ, since a threshold on `glow` and `sense` would have repainted the Leviathan. Since
-then: Smoke Screen (jet + ink sac) and Moray Jaws (eel + crushing pharynx). More pairs are
-for the next pass over the pool.
+then: Smoke Screen (jet + ink sac), Moray Jaws (eel + crushing pharynx), Stonefish (lie in
+wait + venom), Porcupine (inflation + spines) and Electric Eel (eel + electric organ). The
+last two brought `onFire`, a hook run after the active organ goes off, so a synergy can
+act on the active. The Anglerfish carries spines, a lure and `lurk`, which is why
+Stonefish is keyed on venom and not on spines. More pairs are for the next pass over the
+pool.
 
 Watch: a synergy with a `burn` or `boost` modifier needs no event and cannot return
 `true`, so it will never toast. Whale Shark toasts because its wake is an `onTick` that
@@ -90,8 +94,9 @@ change *what you do*, each an entry in `sim/organs/` plus paint:
 - ~~**Costs on apex cards.**~~ Done: every apex card carries a turn, speed or metabolism
   price in its text.
 - ~~**Cursed cards.**~~ Done: Blood Lamp (+90% bite, `glare`), Brittle Frame (speed and
-  turning, `brittle`) and Open Veins (+3 regeneration, `veins`: every wound bleeds). More
-  curses belong here as the pool grows.
+  turning, `brittle`), Open Veins (+3 regeneration, `veins`: every wound bleeds) and Leaden
+  Bones (+6 armour, `lead`: you sink, and every climb is against it). More curses belong
+  here as the pool grows.
 - ~~**One active organ slot.**~~ Done: Ink Sac, Electric Organ and Inflation, one at a
   time, on E or the right button.
 - ~~**Zone pools.**~~ Done: `Trait.band` replaced `minStage`. A card is offered in its band

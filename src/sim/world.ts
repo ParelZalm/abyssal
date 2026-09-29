@@ -179,19 +179,17 @@ export class World {
     return false;
   }
 
-  update(dt: number) {
-    Creature.clock += dt;
+  /**
+   * Empty the outbox for a new frame. Apart from `update` because the player's controller
+   * acts on the world before it steps: an active organ fires there, and what it publishes —
+   * its pulse, a synergy's first firing — was wiped by the step before `Game.digest` read it.
+   */
+  clearOutbox() {
     this.bites.length = 0;
     this.spilled.length = 0;
     this.synergies.length = 0;
     this.pulses.length = 0;
-    for (let i = this.inks.length - 1; i >= 0; i--) {
-      if ((this.inks[i].t -= dt) <= 0) this.inks.splice(i, 1);
-    }
     this.devoured.length = 0;
-    for (let i = this.blood.length - 1; i >= 0; i--) {
-      if ((this.blood[i].t -= dt) <= 0) this.blood.splice(i, 1);
-    }
     this.playerGain = 0;
     this.playerHeal = 0;
     this.blocked = false;
@@ -199,6 +197,16 @@ export class World {
     this.tellBy = null;
     this.hunted = false;
     this.playerHeld = false;
+  }
+
+  update(dt: number) {
+    Creature.clock += dt;
+    for (let i = this.inks.length - 1; i >= 0; i--) {
+      if ((this.inks[i].t -= dt) <= 0) this.inks.splice(i, 1);
+    }
+    for (let i = this.blood.length - 1; i >= 0; i--) {
+      if ((this.blood[i].t -= dt) <= 0) this.blood.splice(i, 1);
+    }
     const p = this.player;
 
     if (p.kicks !== this.seenKicks) { this.seenKicks = p.kicks; this.behaviour.scatterFrom(p); }

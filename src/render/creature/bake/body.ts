@@ -129,6 +129,22 @@ export function veins(s: Sheet, f: Form, seed: number) {
 }
 
 /**
+ * Leaden Bones: a keel of dull grey plates down the belly, the ballast showing through — the
+ * only mark on the animal that sits on its underside, because that is where the weight is.
+ * A dim highlight on each keeps them bone and not a shadow on a dark flank.
+ */
+export function ballast(s: Sheet, f: Form) {
+  const lead: RGB = [62, 66, 76], sheen: RGB = [148, 152, 164];
+  for (let t = 0.2; t < 0.8; t += 0.075) {
+    const w = halfWidth(t, f);
+    const x = spineAt(t, f), y = edgeAt(t, f, 0.78);
+    const r = Math.max(s.texel, w * 0.2);
+    s.blot(x, y, r, lead, 0.95, M.BODY);
+    s.dot(x + r * 0.3, y - r * 0.4, sheen, 0.7);
+  }
+}
+
+/**
  * What shows through a body of smoke: a hard spine, ribs off it, and one opaque gut. These
  * are the only opaque things on the animal, which is what stops it reading as a pale blob —
  * a translucent shape with nothing inside it has no scale and no direction.

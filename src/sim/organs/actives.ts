@@ -1,4 +1,5 @@
 import { dist2 } from '../../core/util';
+import type { Creature } from '../creature';
 import { sting } from './effects';
 import { O, type Organ } from './types';
 
@@ -6,6 +7,9 @@ import { O, type Organ } from './types';
 const INK_LIFE = 3.5;
 /** Seconds a body stays inflated. */
 export const PUFF_TIME = 3;
+
+/** How far the Electric Organ's shock reaches. Shared with Electric Eel, which acts on what it hit. */
+export const shockReach = (c: Creature) => c.genome.size * 3 + 160;
 
 /**
  * Fired by hand, one slot, on a cooldown. Each is an escape or an answer that the rest of
@@ -33,7 +37,7 @@ export const ACTIVES: Organ[] = [
     // stunned for a moment, guardians barely. It lands on prey and predator alike, which is
     // the point — the one move that answers a crowd
     active: { name: 'Electric Organ', icon: 'shock', cd: 9, fire: (c, world) => {
-      const r = c.genome.size * 3 + 160;
+      const r = shockReach(c);
       world.pulses.push({ x: c.x, y: c.y, r, kind: 'discharge' });
       for (const o of [...world.creatures]) {
         if (!o.alive || o === c || dist2(o.x, o.y, c.x, c.y) > (r + o.radius) ** 2) continue;

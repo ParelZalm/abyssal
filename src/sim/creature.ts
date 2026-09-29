@@ -299,6 +299,7 @@ export class Creature {
     this.vy += fy * accel * dt;
     const idle = Math.abs(throttle) < 0.1;
     if (idle && m.sink > 0) this.vy += m.sink * dt;
+    this.vy += m.weight * dt;
     // Side-on, a body with nothing to do levels out: fish hang horizontal, nose neither up
     // nor down, and one left pitched at the angle of its last turn looks broken rather than
     // at rest. A bell is the exception — it hangs whichever way its pulse left it.
