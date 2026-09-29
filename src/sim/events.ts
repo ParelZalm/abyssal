@@ -32,7 +32,7 @@ export interface Blood {
 export interface Pulse {
   x: number; y: number; r: number;
   kind: 'flash' | 'ink' | 'discharge' | 'inflate' | 'tell' | 'click' | 'blast' | 'exposed'
-    | 'draw' | 'snap' | 'venom' | 'shot' | 'splash';
+    | 'draw' | 'snap' | 'venom' | 'shot' | 'splash' | 'bubbles';
   /** For something moving through the water rather than spreading: the draw's streaks. */
   vx?: number; vy?: number;
   /** What was fired or spent, for a `shot` or a `splash`. */

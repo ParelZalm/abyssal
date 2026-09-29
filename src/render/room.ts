@@ -1,6 +1,7 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 import { cells, fbm, fbmSigned } from '../core/noise';
 import { clamp, lerp } from '../core/util';
+import type { Side } from '../content/map';
 import type { Terrain } from '../sim/terrain';
 import { artDensity, artVersion } from './pixel';
 import { lightAt, waterColor } from './water';
@@ -61,6 +62,10 @@ const LIGHT = (() => {
  * light comes from, painted once at a fixed small size and scaled to the door — it is a few
  * art pixels of bars whatever the tank's zoom.
  */
+/** A door that takes a key, and the deal room's sealed door, as tints on the iron grate. */
+const KEY_TINT = 0xffd27a;
+const SEAL_TINT = 0xff6a5a;
+
 const gateCache: Partial<Record<'v' | 'h', Texture>> = {};
 function gateTexture(vertical: boolean): Texture {
   const key = vertical ? 'v' : 'h';
@@ -164,8 +169,8 @@ function dome(dx: number, dy: number, r: number) {
 export class RoomView {
   readonly root = new Container();
   private readonly sprite = new Sprite();
-  /** A grate across each door, shown while the room holds the player in. */
-  private readonly gates: Sprite[] = [];
+  /** A grate across each door, shown while it is shut, and which door each is. */
+  private readonly gates: { side: Side; sprite: Sprite }[] = [];
   private baked = -1;
 
   /**
@@ -183,7 +188,7 @@ export class RoomView {
       g.height = r.h;
       g.visible = false;
       this.root.addChild(g);
-      this.gates.push(g);
+      this.gates.push({ side, sprite: g });
     }
   }
 
@@ -203,7 +208,13 @@ export class RoomView {
   /** Bake now, to the end, if the room is not baked for the current art density; show the gates. */
   update() {
     if (this.stale || this.job) this.work(Infinity);
-    for (const g of this.gates) g.visible = this.terrain.locked;
+    // a door shut on its own wears its reason: brass for a lock that takes a key, blood red
+    // for the deal room's seal. A fight's gates are the plain iron
+    for (const { side, sprite } of this.gates) {
+      const own = this.terrain.shut.get(side);
+      sprite.visible = this.terrain.closed(side);
+      sprite.tint = this.terrain.locked ? 0xffffff : own === 'key' ? KEY_TINT : SEAL_TINT;
+    }
   }
 
   /**

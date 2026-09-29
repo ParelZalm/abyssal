@@ -1,6 +1,9 @@
 import type { Family, Transformation } from '../content/forms';
 import type { Genome } from '../content/genome';
-import type { Rarity, Trait } from '../content/traits';
+import type { ItemId } from '../content/items';
+import type { Rarity } from '../content/traits';
+import type { Price } from '../run/Pockets';
+import type { Good } from '../run/TankMap';
 import type { Stats } from '../input/PlayerController';
 import type { IconName } from './icons';
 import type { MapCell } from '../run/TankMap';
@@ -27,6 +30,9 @@ export interface HudState {
   /** How full the belly is toward its next pickup, 0..1. */
   belly: number;
   shells: number;
+  keys: number;
+  /** The item in the pocket, used on E. */
+  item: ItemId | null;
   stage: number; size: number;
   /** The tank the player is in, by name. */
   place: string;
@@ -44,6 +50,9 @@ export interface HudState {
   active: { name: string; icon: IconName; charge: number; need: number } | null;
   /** The stat column. */
   stats: Stats;
-  /** The mutation on the pedestal the player is beside: what taking it would finish, and whether the codex has it. */
-  offer: { trait: Trait; note: string | null; isNew: boolean } | null;
+  /**
+   * What is on the pedestal the player is beside: the good and its price, what taking it would
+   * finish, and whether the codex has it.
+   */
+  offer: { good: Good; price: Price | null; note: string | null; isNew: boolean } | null;
 }

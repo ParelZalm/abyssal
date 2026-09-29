@@ -15,7 +15,7 @@ import { Ocean } from './render/ocean';
 import { followZoom, FramePass, PIXEL } from './render/pixel';
 import { PickupView } from './render/pickups';
 import { ShotView } from './render/shots';
-import { PedestalView } from './render/pedestal';
+import { PedestalsView } from './render/pedestals';
 import { Lighting, lightTexture } from './render/lighting';
 import { Scene } from './render/Scene';
 import { Water } from './render/water';
@@ -27,10 +27,11 @@ import { Belly } from './run/Belly';
 import type { Phase } from './run/phase';
 import { COMBO_WINDOW, comboMult, Run } from './run/Run';
 import { HOVER, TankMap } from './run/TankMap';
+import { Pockets } from './run/Pockets';
 import { backfillDepth, startById } from './run/starts';
 import { SYNERGIES } from './sim/organs';
 import { Creature } from './sim/creature';
-import { World } from './sim/world';
+import { World, type PickupKind } from './sim/world';
 import type { RunChoice } from './ui/screens/TitleScreen';
 import { UI } from './ui/UI';
 
@@ -38,6 +39,15 @@ const PLAYER_SPECIES: Species = {
   id: 'player', name: 'You', behavior: 'hunter', plan: 'wraith', zone: 'sunlit',
   size: [14, 14], hue: [30, 30], accent: 200, speed: 150, bite: 6, nutrition: 0, weight: 0,
 };
+
+/**
+ * A cleared room's drop, Isaac's: two rooms in five drop something, mostly shells, then a
+ * half heart, a key, an item, and now and then a chest.
+ */
+const CLEAR_DROP = 0.4;
+const CLEAR_DROPS: [PickupKind | 'item', number][] = [
+  ['shell', 45], ['heart', 22], ['key', 15], ['item', 12], ['chest', 6],
+];
 
 /**
  * The loop and what it drives. Owns the Pixi application and the page-lifetime pieces —
@@ -69,12 +79,13 @@ export class Game {
   tank!: TankMap;
   private pickups!: PickupView;
   private shots!: ShotView;
-  private pedestal!: PedestalView;
+  private pedestals!: PedestalsView;
   run!: Run;
   world!: World;
   player!: Creature;
   controller!: PlayerController;
   belly!: Belly;
+  pockets!: Pockets;
   evolution!: Evolution;
   private ending!: Ending;
   private impacts!: Impacts;
@@ -200,7 +211,7 @@ export class Game {
     this.tank?.destroy();
     this.pickups?.destroy();
     this.shots?.destroy();
-    this.pedestal?.destroy();
+    this.pedestals?.destroy();
 
     const seed = choice.seed ?? ((Math.random() * 2 ** 32) >>> 0);
     this.run = new Run(choice, seed, this.codex);
@@ -208,7 +219,7 @@ export class Game {
     this.ocean = new Ocean(this.rng);
     this.pickups = new PickupView();
     this.shots = new ShotView();
-    this.pedestal = new PedestalView();
+    this.pedestals = new PedestalsView();
 
     const g: Genome = baseGenome();
     // a larva: see-through, spine and gut showing, near white with a lavender cast, and
@@ -227,13 +238,13 @@ export class Game {
     this.camera.root.addChild(
       // what grows on the rock stands behind the bodies; the rock itself is drawn over them
       this.ocean.world, layers.decor, this.scene.focus,
-      this.pedestal.root, world.fog, world.layer, this.pickups.root, this.shots.root, this.fx.layer,
+      this.pedestals.root, world.fog, world.layer, this.pickups.root, this.shots.root, this.fx.layer,
       // the rock over the bodies, so a nose pressed into a wall goes into it
       layers.rock,
     );
     // the blooms go above the lighting, in one additive layer of their own that batches as
     // one draw: they are the light, and the dark must not fall on them
-    this.camera.over.addChild(layers.glow, this.pedestal.glow, this.pickups.glow, this.shots.glow,
+    this.camera.over.addChild(layers.glow, this.pedestals.glow, this.pickups.glow, this.shots.glow,
       world.glow);
     this.app.stage.addChild(this.water.layer, this.camera.root, this.lighting.sprite,
       this.camera.over);
@@ -244,6 +255,8 @@ export class Game {
     this.input.wantItem = false;
     this.controller = new PlayerController(this.input, p, world, fx);
     this.belly = new Belly(run, p, world, fx, ui);
+    const pockets = this.pockets = new Pockets(run, p, world, fx, ui);
+    world.takes = k => pockets.takes(k);
     this.evolution = new Evolution(run, p, this, camera, fx, ui);
     this.ending = new Ending(run, p, this.best, this, fx, ui, {
       // again means the same body; a daily again means the same ocean, to try it better
@@ -257,7 +270,16 @@ export class Game {
     const evolution = this.evolution, controller = this.controller, belly = this.belly;
     this.tank = new TankMap(run, world, p, camera, layers, fx, ui, {
       offer: rng => evolution.offer(rng),
-      take: t => evolution.take(t),
+      deals: rng => evolution.deals(rng),
+      // pay, then hand over: a mutation is taken, anything else goes where a pickup would
+      buy: s => {
+        if (!s.good || (s.price && !pockets.pay(s.price))) return false;
+        if (s.good.kind === 'mutation') evolution.take(s.good.trait);
+        else pockets.collect({ kind: s.good.pickup, x: s.x, y: s.y, vx: 0, vy: 0, t: 0 });
+        return true;
+      },
+      unlock: () => pockets.spendKey(),
+      reward: rng => rng.chance(CLEAR_DROP) ? pockets.roll(CLEAR_DROPS, rng) : null,
       // a room won is what charges the active and what regeneration is paid on
       cleared: () => { controller.recharge(); belly.cleared(); },
     });
@@ -306,6 +328,9 @@ export class Game {
       this.digest();
       this.tank.update(dt);
       this.belly.update(dt);
+      this.pockets.update(dt);
+      if (this.input.wantItem) this.pockets.use();
+      this.input.wantItem = false;
       this.camera.settle(dt);
       this.run.tick(dt);
       this.dread.update(dt, this.world.hunted);
@@ -319,7 +344,7 @@ export class Game {
     const { world, run } = this;
     this.impacts.drain(world, this.player);
     if (world.playerGain > 0) this.belly.swallow(world.playerGain);
-    for (const k of world.collected) this.belly.collect(k);
+    for (const k of world.collected) this.pockets.collect(k);
     for (const id of world.devoured) {
       if (!recordSpecies(run.codex, id)) continue;
       const name = speciesById(id).name;
@@ -356,9 +381,9 @@ export class Game {
     this.tank.draw(view.t);
     this.pickups.update(this.world.pickups, view.zoom, view.t);
     this.shots.update(this.world.shots, view.zoom);
-    this.pedestal.update(this.tank.pedestal, this.tank.room.tile * HOVER, view.zoom, view.t);
+    this.pedestals.update(this.tank.pedestals, this.tank.room.tile * HOVER, view.zoom, view.t);
     const dread = this.scene.draw(view, this.world, p, this.phase, this.dread,
-      [...this.tank.lights, ...this.shots.lights, ...this.pedestal.lights]);
+      [...this.tank.lights, ...this.shots.lights, ...this.pedestals.lights]);
     this.lighting.render(this.camera);
     if ((this.phase === 'play' || this.phase === 'draft') && !this.tank.sliding) {
       this.world.cull(camera.x, camera.y, camera.viewR());
@@ -367,7 +392,7 @@ export class Game {
 
     this.ui.update({
       hp: Math.max(0, p.hp), hpMax: p.hpMax,
-      belly: run.belly / this.belly.full, shells: run.shells,
+      belly: run.belly / this.belly.full, shells: run.shells, keys: run.keys, item: run.item,
       stage: run.stage, size: p.genome.size, place: this.run.tank.name,
       traits: run.takenNames,
       score: Math.round(run.score), elapsed: run.elapsed,
@@ -384,10 +409,12 @@ export class Game {
     });
   }
 
-  /** The pedestal's mutation for the HUD, while the player is beside it. */
+  /** The pedestal the player is beside, for the HUD's card. */
   private offer() {
-    const t = this.tank.offered;
-    if (!t || this.phase !== 'play') return null;
-    return { trait: t, note: this.evolution.finishes(t), isNew: !this.run.codex.traits[t.id] };
+    const s = this.tank.offered;
+    if (!s?.good || this.phase !== 'play') return null;
+    const trait = s.good.kind === 'mutation' ? s.good.trait : null;
+    return { good: s.good, price: s.price, note: trait && this.evolution.finishes(trait),
+      isNew: !!trait && !this.run.codex.traits[trait.id] };
   }
 }

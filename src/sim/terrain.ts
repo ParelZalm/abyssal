@@ -72,8 +72,13 @@ export class Terrain {
    * solid; the opening is still drawn, and the view draws the gate across it.
    */
   locked = false;
+  /**
+   * Doors shut on their own, whatever the fight: one that takes a key, and the deal room's,
+   * sealed until the boss room is cleared. The same gate band as `locked`, one side at a time.
+   */
+  readonly shut = new Map<Side, 'key' | 'seal'>();
   /** Each door's gate band, in collision cells, running out past the room's edge. */
-  private readonly gates: { i0: number; i1: number; j0: number; j1: number }[];
+  private readonly gates: { side: Side; i0: number; i1: number; j0: number; j1: number }[];
 
   /**
    * `cx`, `cy` place the room's middle in the world: rooms of one tank sit edge to edge, so
@@ -96,11 +101,11 @@ export class Terrain {
     this.gates = doors.map(side => {
       const [r0, r1] = DOOR_ROWS, [c0, c1] = DOOR_COLS;
       // a tile's depth of cells at the edge and a tile past it, a tile wider than the door
-      if (side === 'left') return { i0: -SUB, i1: SUB - 1, j0: (r0 - 1) * SUB, j1: (r1 + 2) * SUB - 1 };
-      if (side === 'right') return { i0: this.fineCols - SUB, i1: this.fineCols + SUB - 1,
+      if (side === 'left') return { side, i0: -SUB, i1: SUB - 1, j0: (r0 - 1) * SUB, j1: (r1 + 2) * SUB - 1 };
+      if (side === 'right') return { side, i0: this.fineCols - SUB, i1: this.fineCols + SUB - 1,
         j0: (r0 - 1) * SUB, j1: (r1 + 2) * SUB - 1 };
-      if (side === 'up') return { i0: (c0 - 1) * SUB, i1: (c1 + 2) * SUB - 1, j0: -SUB, j1: SUB - 1 };
-      return { i0: (c0 - 1) * SUB, i1: (c1 + 2) * SUB - 1, j0: this.fineRows - SUB,
+      if (side === 'up') return { side, i0: (c0 - 1) * SUB, i1: (c1 + 2) * SUB - 1, j0: -SUB, j1: SUB - 1 };
+      return { side, i0: (c0 - 1) * SUB, i1: (c1 + 2) * SUB - 1, j0: this.fineRows - SUB,
         j1: this.fineRows + SUB - 1 };
     });
     this.fine = new Uint8Array(this.fineCols * this.fineRows);
@@ -223,8 +228,10 @@ export class Terrain {
    * rock there but for the water through a door; a shut door's band blocks whatever it is.
    */
   solid(i: number, j: number) {
-    if (this.locked) {
-      for (const g of this.gates) if (i >= g.i0 && i <= g.i1 && j >= g.j0 && j <= g.j1) return true;
+    if (this.locked || this.shut.size) {
+      for (const g of this.gates) {
+        if ((this.locked || this.shut.has(g.side)) && i >= g.i0 && i <= g.i1 && j >= g.j0 && j <= g.j1) return true;
+      }
     }
     if (i < 0 || j < 0 || i >= this.fineCols || j >= this.fineRows) {
       return this.field(this.x0 + (i + 0.5) * this.cell, this.y0 + (j + 0.5) * this.cell) > 0.5;
@@ -234,6 +241,11 @@ export class Terrain {
 
   solidAt(x: number, y: number) {
     return this.solid(Math.floor((x - this.x0) / this.cell), Math.floor((y - this.y0) / this.cell));
+  }
+
+  /** Whether a side's door is closed right now, by the fight or on its own. */
+  closed(side: Side) {
+    return this.locked || this.shut.has(side);
   }
 
   /**

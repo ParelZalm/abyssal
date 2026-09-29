@@ -1,5 +1,5 @@
 import { familyCounts, formDue, type Transformation } from '../content/forms';
-import { dealMutations, TRAITS, type Trait } from '../content/traits';
+import { dealMutations, dealRoom, TRAITS, type Trait } from '../content/traits';
 import type { Rng } from '../core/util';
 import type { Camera } from '../render/Camera';
 import type { Fx } from '../render/fx';
@@ -50,6 +50,11 @@ export class Evolution {
     const counts = familyCounts(owned);
     return dealMutations(rng, run.tank.id, run.taken, 1,
       t => leanOf(p.genome, owned, run.forms, counts, t))[0] ?? null;
+  }
+
+  /** The deal room's deal and curse, from what the run has not maxed. */
+  deals(rng: Rng) {
+    return dealRoom(rng, this.run.taken);
   }
 
   /**

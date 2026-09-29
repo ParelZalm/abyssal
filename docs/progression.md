@@ -210,9 +210,9 @@ rarity, icon, description, an optional home `tank`, and an `apply` that mutates 
   takes it (`Evolution.take`). There is no screen and no pause: Isaac's pedestal is walked
   onto.
 - **Every apex card costs something**, and its text says so; **cursed cards** carry a
-  `curse`, the price in red on its own line. Both as before — see the curses in
-  `sim/organs/adaptations.ts` — and both wait for the deal room (stage 6) to be offered
-  apart. `maxStacks` defaults to 2.
+  `curse`, the price in red on its own line (the mechanics in `sim/organs/adaptations.ts`),
+  and are offered only in the deal room, beside the deal mutations (*The economy*).
+  `maxStacks` defaults to 2.
 - **Near misses**: the end screen lists up to three things the run was one card short of
   (`nearMisses`).
 
@@ -235,6 +235,42 @@ points; a card whose effect fed one of them now says what it does instead:
   `STEALTH_DELAY` a point longer — and a spitter's shot go wide by `STEALTH_AIM`. A hostile
   always knows the player is in its room.
 - **Gulp** is how far a carcass is swallowed from, and its cards say so.
+
+## The economy
+
+Roadmap stage 6: shells, keys and items, the shop and the deal room (`run/Pockets.ts`,
+`run/TankMap.ts`, `content/items.ts`).
+
+- **Pickups** are `World.pickups`: a half heart, a shell, a key, a chest, or an item. The
+  player takes one by touch, if `World.takes` lets it — `Pockets.takes`, which holds a chest
+  back until there is a key for it. `Pockets.collect` does the rest: shells and keys counted
+  on the run, a chest opened for a key and spilling two or three pickups, an item put in the
+  pocket (one already there is dropped, and lies 1.5 s before it can be taken back).
+- **A cleared room drops** two times in five (`CLEAR_DROP`, in `Game`), where the fight was:
+  shells 45, a half heart 22, a key 15, an item 12, a chest 6. The roll is the room's own
+  seed.
+- **Items** are one in the pocket, used on E (`Pockets.use`): the Food Pellet mends a heart,
+  the Air Stone bursts (`World.burst`: everything within four tiles shoved out and stunned,
+  every hostile shot inside broken), the Nerite Snail cures venom and bleeding. One that
+  would do nothing is kept, and says so.
+- **Keys.** A run starts with one. A shop's door takes one, and past the nursery a treasure
+  room's does too; a chest takes one. A locked door is its gate band shut on its own
+  (`Terrain.shut`, `'key'`), on both sides of the door, drawn as a brass grate; pressed
+  against with a key it opens (`TankMap.open`).
+- **The shop** stands three goods and a mutation on pedestals across its floor: three of a
+  half heart (3 shells), the snail (3), the pellet (4), the air stone (5) and a key (5), and
+  a mutation from the tank's pool for 15. Swimming into one pays and takes it; one that
+  cannot be paid says its price.
+- **The deal room.** Half of all tanks have one (`DEAL_CHANCE`, rolled with the map): a room
+  off the boss room in a cell that touches nothing else, its door sealed (`'seal'`, a red
+  grate) until the boss room is cleared, and not on the minimap until then. It stands a
+  **deal mutation** for heart containers — Red Muscle, Stone Hide (1), Devourer's Jaw,
+  Archer's Eye, Quill Storm (2): each an ordinary card pushed past its rarity — and a
+  **curse** for nothing (Blood Lamp, Brittle Frame, Open Veins, Leaden Bones). A deal always
+  leaves one container. Deals and curses are never dealt anywhere else.
+- **Pedestals** in general (`TankMap.stock`): flat floor from the middle of the room out,
+  3.2 tiles apart, the good hanging over each and a price tag between (`render/pedestals.ts`).
+  The HUD's card says the price and how to pay it.
 
 ## Actives and charges
 
@@ -328,7 +364,8 @@ with the room types it may be dealt as. The nursery has eight.
 start one neighbour at a time, a room added only where it touches exactly one other so the
 map branches, and sideways preferred over up and down. The boss goes on the dead end
 furthest from the start, the treasure room and the shop on the next two, and the rest are
-fights. A map without three dead ends is thrown away and grown again.
+fights. A map without three dead ends is thrown away and grown again. Half the time a deal
+room is hung off the boss room (*The economy*).
 
 **The tank in play** (`run/TankMap.ts`). Each room keeps whether it has been seen,
 visited and cleared, and the pickups left in it. Rooms sit edge to edge in the world, a

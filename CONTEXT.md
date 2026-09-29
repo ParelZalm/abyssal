@@ -22,8 +22,10 @@ _Avoid_: cavern, chamber, cell
 
 **Room type** — what a room is for, shown on the minimap. A **Start** room is where the
 drop-in lands; a **Fight** room locks its exits until its hostiles are dead; a
-**Treasure** room holds a mutation on a pedestal; a **Shop** sells items for shells; a
-**Deal** room, which may open after a boss, offers deal mutations; the
+**Treasure** room holds a mutation on a pedestal; a **Shop** sells items and a mutation for
+shells behind a door that takes a key; a **Deal** room, which some tanks have, is sealed
+beside the boss room until the boss room is cleared, and offers a deal mutation and a
+curse; the
 **Boss** room holds the tank's boss, and beating it opens the descent.
 
 **Door** — an opening in the middle of a room's edge into the room beside it. A fight room
@@ -39,10 +41,12 @@ shows of it: the rooms seen, the rooms visited, and the one the player is in.
 coral, a crate. It never blocks; it is where a room's colour and much of its light come from.
 _Avoid_: prop, scenery
 
-**Pedestal** — a place in a room where one mutation is offered, taken or left.
+**Pedestal** — a place in a room where one thing is offered, taken or left: the treasure
+room's mutation, and each of a shop's or a deal room's goods, at its price.
 
 **Pickup** — anything lying loose in a room that is collected by swimming into it: a
-half heart, a shell, an item. Pickups drop from cleared rooms and from the belly.
+half heart, a shell, a key, an item, or a chest, which takes a key and spills pickups.
+Pickups drop from cleared rooms, from chests and from the belly.
 
 **Descent** — moving from one tank to the next, bigger one. It is where the animal
 grows: because the new tank is bigger in proportion, growth reads as the world widening

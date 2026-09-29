@@ -24,6 +24,12 @@ export interface MapRoom {
 const ROOMS: [number, number] = [7, 8];
 
 /**
+ * The chance a tank has a deal room: one in two, as the roadmap's first cut has it. Rolled
+ * with the map, so a seed is a tank with or without one.
+ */
+const DEAL_CHANCE = 0.5;
+
+/**
  * A tank's map, Isaac's way: rooms grown out from the start one neighbour at a time, a room
  * only added where it touches exactly one other so the map branches rather than clotting into
  * a block, and the special rooms put on dead ends — the boss on the one furthest from the
@@ -64,8 +70,22 @@ function grow(rng: Rng, count: number): MapRoom[] | null {
     .sort((a, b) => depthOf.get(key(b.gx, b.gy))! - depthOf.get(key(a.gx, a.gy))!);
   if (ends.length < 3) return null;
   rooms.find(r => r.gx === 0 && r.gy === 0)!.type = 'start';
-  ends[0].type = 'boss';
+  const boss = ends[0];
+  boss.type = 'boss';
   ends[1].type = 'treasure';
   ends[2].type = 'shop';
+  // the deal room hangs off the boss room, in a cell that touches nothing else, so its only
+  // way in is the door the boss room opens when it is cleared
+  if (rng.chance(DEAL_CHANCE)) {
+    const side = rng.pick(SIDES);
+    const sides = [side, ...SIDES.filter(s => s !== side)];
+    for (const s of sides) {
+      const x = boss.gx + STEP[s][0], y = boss.gy + STEP[s][1];
+      if (cells.has(key(x, y)) || neighbours(x, y).length !== 1) continue;
+      boss.doors.push(s);
+      rooms.push({ gx: x, gy: y, type: 'deal', doors: [OPPOSITE[s]] });
+      break;
+    }
+  }
   return rooms;
 }

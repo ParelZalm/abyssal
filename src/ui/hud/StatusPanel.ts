@@ -14,6 +14,7 @@ export class StatusPanel {
   private readonly hearts = new Hearts();
   private readonly belly = new StatusBar('food', 'Belly');
   private readonly shells = new Counter('shell');
+  private readonly keys = new Counter('key');
 
   constructor() {
     this.stage.textContent = '1';
@@ -29,7 +30,10 @@ export class StatusPanel {
     sizeWrap.append('Length ', this.size);
     row3.append(sizeWrap);
 
-    this.element.append(row1, this.hearts.element, this.belly.element, this.shells.element, row3);
+    // shells and keys side by side under the belly, Isaac's pickups column
+    const pockets = div('stat-row counters');
+    pockets.append(this.shells.element, this.keys.element);
+    this.element.append(row1, this.hearts.element, this.belly.element, pockets, row3);
   }
 
   private last: Record<string, string> = {};
@@ -44,6 +48,7 @@ export class StatusPanel {
     this.hearts.update(s.hp, s.hpMax);
     this.belly.update(s.belly);
     this.shells.update(s.shells);
+    this.keys.update(s.keys);
     this.set('stage', this.stage, String(s.stage));
     this.set('size', this.size, `${s.size.toFixed(0)} cm`);
     this.set('zone', this.zone, s.place);

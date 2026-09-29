@@ -177,18 +177,29 @@ What it found, and what it leaves:
 - Range, shot speed and the shots' own speed are constants on the stat column until
   mutations move them — the stage 6 items and the deal mutations are where they would.
 
-## 6. The economy
+## 6. ~~The economy~~
 
-- Shells, dropped by cleared rooms (a 40% drop: shells 60, half heart 25, item 15) and
-  passed by the belly.
-- The shop: three items at 3–5, one mutation at 15.
-- Items on E: food pellet (a heart), air stone (a bubble burst that shoves), snail (cures
-  poison and bleeding).
-- Keys: dropped and found like shells; the treasure room's and shop's doors and a room's
-  chests take one. Shown under shells on the HUD, as in the reference.
-- The deal room, 50% after a boss: one deal mutation paid in heart containers, one curse
-  (Blood Lamp, Brittle Frame, Open Veins, Leaden Bones and whatever joins them).
-- Board: the shop, the deal room, every item.
+Done: pickups for keys, chests and three items (`content/items.ts`); `run/Pockets.ts` for
+shells, keys and the pocket, used on E; a cleared room's drop (two in five); doors that take
+a key (the shop's, and past the nursery the treasure room's) and the deal room's seal, both
+`Terrain.shut`; the shop — three goods at 3–5 shells and a mutation at 15; the deal room in
+half of all tanks, sealed beside the boss room until it is cleared, with a deal mutation for
+heart containers and a curse for nothing. Pedestals generalised to every room that offers
+something, each with its price in the water. The HUD counts keys beside shells and shows the
+pocket bottom right. The board has a Shop & deals group.
+
+What it found, and what it leaves:
+
+- **The deal room is known before the boss.** Isaac rolls the devil door after the boss;
+  here the room is rolled with the map, so its sealed red door stands in the boss room from
+  the first visit. A door carved later would mean rebaking the room mid-fight. Stage 7 may
+  hide the seal until the boss dies.
+- **The deal room hangs off the boss room**, so a tank's map can have eight or nine rooms;
+  a boss room with no free cell beside it simply has no deal.
+- Five deal mutations to start: Red Muscle, Stone Hide, Devourer's Jaw, Archer's Eye and
+  Quill Storm (a fan of five, the primary read off the genome now). The curse cards still
+  speak of guardians, and the deal is paid in containers only.
+- Rolling the deal room moved the map's stream: a seed deals a different tank than it did.
 
 ## 7. Bosses and the descent
 

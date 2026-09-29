@@ -102,9 +102,10 @@ export interface Organ {
   /**
    * The primary: what the strike on the arrows fires in place of the bite — a kind of shot,
    * the fan of headings it goes out on (radians off the aim), and each shot's share of a
-   * bite. One slot, like the active; `primaryOf` takes the first.
+   * bite. One slot, like the active; `primaryOf` takes the first. Read off the genome,
+   * since a deal's variant of a primary is the same organ, turned up.
    */
-  primary?: { shot: ShotKind; fan: readonly number[]; mult: number };
+  primary?: (g: Genome) => { shot: ShotKind; fan: readonly number[]; mult: number };
   /** Whether a hit on this body is turned aside entirely right now. */
   guard?: (c: Creature) => boolean;
 

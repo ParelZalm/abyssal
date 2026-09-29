@@ -70,6 +70,15 @@ export class Impacts {
         fx.burst(f.x, f.y, SHOT_GLOW[f.shot].color, 4, 50, 1.6);
       } else if (f.kind === 'splash' && f.shot) {
         fx.burst(f.x, f.y, SHOT_GLOW[f.shot].color, 6, 70, 1.8);
+      } else if (f.kind === 'bubbles') {
+        // the air stone: a ring going out and a spray of bubbles rising through it
+        fx.ring(f.x, f.y, 0xdff4ff, f.r);
+        for (let i = 0; i < 14; i++) {
+          const a = Math.random() * Math.PI * 2, d = Math.random() * f.r * 0.8;
+          fx.wake(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d, Math.cos(a) * 30, -40 - Math.random() * 60,
+            0xe8f8ff, 2 + Math.random() * 3);
+        }
+        camera.jolt(5, 10);
       } else if (f.kind === 'exposed') {
         fx.ring(f.x, f.y, 0xffe28a, f.r);
       } else {

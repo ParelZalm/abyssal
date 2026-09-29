@@ -280,6 +280,18 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 .active .pips > i.on { background: var(--accent); border-color: var(--accent);
   box-shadow: inset 0 2px 0 rgba(255,255,255,.35); }
 
+/* the pocket: one item, bottom right, and the key that uses it */
+.item-slot { position: absolute; right: 18px; bottom: 22px; display: flex; align-items: center;
+  gap: 8px; padding: 7px 12px 7px 10px; background: var(--panel); border: 2px solid var(--edge);
+  color: var(--ink); font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+  pointer-events: none; }
+.item-slot[hidden] { display: none; }
+.item-slot .mark canvas { display: block; image-rendering: pixelated; }
+.item-slot kbd { font: inherit; font-weight: 700; font-size: 10px; padding: 1px 5px;
+  border: 2px solid var(--edge); color: var(--ink); }
+.counters { justify-content: flex-start; gap: 18px; }
+.card .mark canvas { image-rendering: pixelated; }
+
 /* the stat column: Isaac's left edge, under the status panel, one mark and number a row */
 .stats-col { position: absolute; left: 18px; top: 190px; display: grid; gap: 4px;
   font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink);
@@ -294,6 +306,7 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 .offer[hidden] { display: none; }
 .offer .card { cursor: default; width: 260px; }
 .offer .card:hover { transform: none; }
+.offer .how.deal { color: #ff8f84; }
 .offer .how { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--dim);
   text-shadow: 0 2px 0 rgba(0,0,0,.8); }
 

@@ -1,5 +1,6 @@
 import { Container } from 'pixi.js';
 import { faceFor } from '../content/form';
+import type { ItemId } from '../content/items';
 import { genomeFor, type ShotKind, type Species } from '../content/species';
 import { DEPTH_MAX } from '../content/zones';
 import { clamp, dist2, type Rng, TAU } from '../core/util';
@@ -55,8 +56,11 @@ export interface Shot {
 const SHOT_R = 0.16;
 const SHOT_LIFE = 5;
 
-/** Something loose in a room that the player collects by swimming into it. */
-export type PickupKind = 'heart' | 'shell';
+/**
+ * Something loose in a room that the player collects by swimming into it: a half heart, a
+ * shell, a key, a chest (opened by touch with a key), or an item for the pocket.
+ */
+export type PickupKind = 'heart' | 'shell' | 'key' | 'chest' | ItemId;
 export interface Pickup { kind: PickupKind; x: number; y: number; vx: number; vy: number; t: number }
 
 /**
@@ -128,8 +132,13 @@ export class World {
   readonly carcasses: Carcass[] = [];
   /** What lies loose in the room: dropped, passed, waiting to be collected. */
   readonly pickups: Pickup[] = [];
-  /** Kinds the player collected this frame, for `Game.digest`. An event. */
-  readonly collected: PickupKind[] = [];
+  /** What the player collected this frame, for `Game.digest`. An event. */
+  readonly collected: Pickup[] = [];
+  /**
+   * Whether the player can take this pickup now — a chest wants a key, which is the run's
+   * and not the world's to know. Set by `Game`; everything is takeable without it.
+   */
+  takes: (k: Pickup) => boolean = () => true;
   /** What is flying across the room. */
   readonly shots: Shot[] = [];
 
@@ -349,9 +358,40 @@ export class World {
     return this.pickups.splice(0);
   }
 
-  /** Put a pickup in the water, thrown gently the way it came. */
-  drop(kind: PickupKind, x: number, y: number, vx = 0, vy = 0) {
-    this.pickups.push({ kind, x, y, vx, vy, t: 0 });
+  /**
+   * A burst of bubbles from (`x`, `y`), `r` across (the Air Stone): everything alive inside
+   * is shoved straight out, hardest at the middle, and stunned a moment; every hostile shot
+   * inside breaks. No damage — it buys room, which is what an item is for.
+   */
+  burst(x: number, y: number, r: number) {
+    for (const c of this.creatures) {
+      if (!c.alive) continue;
+      const d = Math.sqrt(dist2(x, y, c.x, c.y));
+      if (d > r + c.radius) continue;
+      const k = 1 - Math.min(1, d / r);
+      const a = d > 1 ? Math.atan2(c.y - y, c.x - x) : this.rng.next() * TAU;
+      const push = Math.max(1, c.genome.speed) * (1.2 + 1.8 * k);
+      c.vx += Math.cos(a) * push;
+      c.vy += Math.sin(a) * push;
+      c.stun = Math.max(c.stun, 0.4 + 0.5 * k);
+      if (c.attack === 'windup') c.attack = 'none';
+    }
+    for (let i = this.shots.length - 1; i >= 0; i--) {
+      const s = this.shots[i];
+      if (s.by.isPlayer || dist2(x, y, s.x, s.y) > r * r) continue;
+      this.shots.splice(i, 1);
+      this.pulses.push({ x: s.x, y: s.y, r: s.r * 3, kind: 'splash', shot: s.kind });
+    }
+    this.pulses.push({ x, y, r, kind: 'bubbles' });
+  }
+
+  /**
+   * Put a pickup in the water, thrown gently the way it came. `wait` is seconds more than
+   * the usual half second before it can be taken — an item swapped out of the pocket lies a
+   * while, or the player standing on it would take it straight back.
+   */
+  drop(kind: PickupKind, x: number, y: number, vx = 0, vy = 0, wait = 0) {
+    this.pickups.push({ kind, x, y, vx, vy, t: -wait });
   }
 
   /**
@@ -392,9 +432,9 @@ export class World {
       // a moment before it can be taken, so a pickup passed by the belly is seen leaving it
       if (k.t < 0.5 || (k.kind === 'heart' && p.hp >= p.hpMax)) continue;
       const d = p.radius + 6;
-      if (dist2(p.x, p.y, k.x, k.y) < d * d) {
+      if (dist2(p.x, p.y, k.x, k.y) < d * d && this.takes(k)) {
         this.pickups.splice(i, 1);
-        this.collected.push(k.kind);
+        this.collected.push(k);
       }
     }
   }

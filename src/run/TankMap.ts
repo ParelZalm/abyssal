@@ -1,5 +1,5 @@
 import { generateMap, OPPOSITE, STEP, type MapRoom, type Side } from '../content/map';
-import { ROOMS, type RoomTemplate } from '../content/tanks';
+import { ROOMS, tankIndex, type RoomTemplate } from '../content/tanks';
 import { clamp, Rng } from '../core/util';
 import type { Camera } from '../render/Camera';
 import { DecorView, placeDecor } from '../render/decor';
@@ -8,9 +8,10 @@ import { RoomView } from '../render/room';
 import type { Container } from 'pixi.js';
 import type { Creature } from '../sim/creature';
 import { Terrain } from '../sim/terrain';
-import type { Pickup, World } from '../sim/world';
+import type { Pickup, PickupKind, World } from '../sim/world';
 import type { UI } from '../ui/UI';
 import type { Trait } from '../content/traits';
+import type { Price } from './Pockets';
 import type { Run } from './Run';
 
 /** Seconds the camera takes to slide from one room to the next, Isaac's quick pan. */
@@ -25,20 +26,48 @@ const SLIDE_BAKE_MS = 11;
 const FIGHT_HOSTILES: [number, number] = [3, 4];
 const BOSS_HOSTILES = 4;
 /**
- * The pedestal: how high over its plinth the mutation hangs, and how near the player has to
- * swim — to see what it is, and to take it — in tiles.
+ * A pedestal — the treasure room's, a shop's goods, a deal: how high over its plinth what it offers
+ * hangs, and how near the player has to swim to read it and to take it, in tiles. Stands
+ * sit `SPACING` tiles apart at the least.
  */
 export const HOVER = 1.4;
-const READ = 4;
+const READ = 3;
 const TAKE = 0.7;
+const SPACING = 3.2;
+/** How near a locked door the player has to come for a key to go into it, in tiles past the body. */
+const LOCK_REACH = 1.2;
 
-/** A mutation offered on a pedestal: where the plinth stands, and what is on it until taken. */
-export interface Pedestal { x: number; y: number; trait: Trait | null }
+/** What a pedestal offers: a mutation, or something that would otherwise be picked up. */
+export type Good = { kind: 'mutation'; trait: Trait } | { kind: 'pickup'; pickup: PickupKind };
 
-/** What the tank asks of the run's other systems: a mutation to offer, taking one, a room won. */
+/**
+ * Something offered on a plinth: where it stands, what is on it until taken, and its price —
+ * none on a treasure room's pedestal or a deal room's curse.
+ */
+export interface Pedestal { x: number; y: number; good: Good | null; price: Price | null }
+
+/**
+ * A shop's goods beside its mutation, and their prices in shells: the cheap things are the
+ * ones a room drops anyway, the dear ones the answers. Three are dealt a shop.
+ */
+const SHOP_GOODS: [PickupKind, number][] = [
+  ['heart', 3], ['snail', 3], ['pellet', 4], ['airstone', 5], ['key', 5],
+];
+const SHOP_MUTATION = 15;
+
+/** What the tank asks of the run's other systems. */
 export interface TankHooks {
+  /** A mutation for a treasure room's pedestal or a shop. */
   offer: (rng: Rng) => Trait | null;
-  take: (t: Trait) => void;
+  /** The deal room's deal and curse. */
+  deals: (rng: Rng) => { deal: Trait | null; curse: Trait | null };
+  /** Pay for a pedestal's good and hand it over; false when it cannot be paid. */
+  buy: (s: Pedestal) => boolean;
+  /** A key into a locked door; false with none. */
+  unlock: () => boolean;
+  /** What a cleared room drops, if anything. */
+  reward: (rng: Rng) => PickupKind | null;
+  /** A room won, for what charges and mends on it. */
   cleared: () => void;
 }
 
@@ -55,8 +84,10 @@ interface Cell {
   cleared: boolean;
   /** What was left lying in it when the player last left. */
   pickups: Pickup[];
-  /** A treasure room's pedestal, dealt the first time the room is entered. */
-  pedestal: Pedestal | null;
+  /** What the room offers on plinths — pedestal, shop, deal — dealt the first time it is entered. */
+  pedestals: Pedestal[] | null;
+  /** Its doors shut on their own: taking a key, or the deal room's seal. */
+  shut: Map<Side, 'key' | 'seal'>;
 }
 
 /** The rooms' display slots, which the current room's views are put into. */
@@ -96,9 +127,22 @@ export class TankMap {
       const fits = templates.filter(t => t.types.includes(map.type));
       return { map, template: rng.pick(fits.length ? fits : templates), seed: rng.int(0, 1e6),
         terrain: null, view: null, decor: null, seen: false, visited: false, cleared: false,
-        pickups: [], pedestal: null };
+        pickups: [], pedestals: null, shut: new Map() };
     });
     this.current = this.cells.findIndex(c => c.map.type === 'start');
+    // a shop's door takes a key, and past the nursery a treasure room's does too; the deal
+    // room is sealed until the boss room is cleared. Both sides of a door, since the player
+    // meets it from the room outside
+    const keyed = (c: Cell) => c.map.type === 'shop' ||
+      (c.map.type === 'treasure' && tankIndex(tank.id) > 0);
+    this.cells.forEach((c, i) => {
+      const why = c.map.type === 'deal' ? 'seal' : keyed(c) ? 'key' : null;
+      if (!why) return;
+      for (const side of c.map.doors) {
+        c.shut.set(side, why);
+        this.cells[this.neighbour(i, side)].shut.set(OPPOSITE[side], why);
+      }
+    });
   }
 
   get sliding() { return this.slide !== null; }
@@ -113,6 +157,7 @@ export class TankMap {
       const w = c.template.rows[0].length * tank.tile, h = c.template.rows.length * tank.tile;
       c.terrain = new Terrain(c.template, tank, c.seed, c.map.gx * w, tank.depth + c.map.gy * h,
         c.map.doors);
+      for (const [side, why] of c.shut) c.terrain.shut.set(side, why);
     }
     return c.terrain;
   }
@@ -166,17 +211,15 @@ export class TankMap {
     this.current = i;
     c.visited = true;
     c.seen = true;
-    for (const side of c.map.doors) this.cells[this.neighbour(i, side)].seen = true;
+    // a sealed door is not seen through: the deal room is found when it opens
+    for (const side of c.map.doors) {
+      if (c.shut.get(side) !== 'seal') this.cells[this.neighbour(i, side)].seen = true;
+    }
     this.version = ++TankMap.versions;
 
     const tank = this.run.tank;
-    // the pedestal stands on the floor under the middle of the room, and what is on it is
-    // dealt as the room is first seen, so it reads the build as it is by then
-    if (c.map.type === 'treasure' && !c.pedestal) {
-      // flat for a tile and a half, with water over it up past where the mutation hangs
-      const at = t.standAt(t.cx, t.cy, t.tile * 1.5, t.tile * (HOVER + 1)) ?? { x: t.cx, y: t.cy };
-      c.pedestal = { x: at.x, y: at.y, trait: this.hooks.offer(new Rng(c.seed ^ 0x7ea5_17e5)) };
-    }
+    // what the room offers is dealt as it is first entered, so it reads the build as it is by then
+    c.pedestals ??= this.stock(c, t);
     this.world.spawner.stock(t, tank, tank.population);
     const fight = c.map.type === 'fight' || c.map.type === 'boss';
     if (fight && !c.cleared) {
@@ -199,28 +242,117 @@ export class TankMap {
     if (this.slide) { this.sliding_(dt); return true; }
     const c = this.cell;
     const t = this.room;
-    if (t.locked && !this.world.creatures.some(o => o.hostile && o.alive)) {
-      t.locked = false;
-      c.cleared = true;
-      this.version = ++TankMap.versions;
-      this.fx.ring(this.p.x, this.p.y, 0xcfe4ff, this.p.radius * 5);
-      this.camera.jolt(4, 8);
-      this.ui.toast('The room is clear — the doors open');
-      this.hooks.cleared();
-    }
-    const ped = c.pedestal;
-    if (ped?.trait) {
+    if (t.locked && !this.world.creatures.some(o => o.hostile && o.alive)) this.clear();
+    for (const s of c.pedestals ?? []) {
+      if (!s.good) continue;
       const r = this.p.radius + t.tile * TAKE;
-      if (Math.hypot(this.p.x - ped.x, this.p.y - (ped.y - t.tile * HOVER)) < r) {
-        const trait = ped.trait;
-        ped.trait = null;
-        this.hooks.take(trait);
+      if (Math.hypot(this.p.x - s.x, this.p.y - (s.y - t.tile * HOVER)) < r && this.hooks.buy(s)) {
+        s.good = null;
+      }
+    }
+    // a locked door opens to a key pressed against it
+    for (const [side, why] of t.shut) {
+      if (why !== 'key') continue;
+      const d = t.doorRect(side);
+      const near = Math.hypot(this.p.x - (d.x + d.w / 2), this.p.y - (d.y + d.h / 2));
+      if (near < this.p.radius + t.tile * LOCK_REACH && this.hooks.unlock()) {
+        this.open(this.current, side);
+        this.fx.ring(d.x + d.w / 2, d.y + d.h / 2, 0xffd27a, t.tile * 1.5);
       }
     }
     const side = t.exited(this.p.x, this.p.y);
     if (side && c.map.doors.includes(side)) this.leave(side);
     this.prebake();
     return false;
+  }
+
+  /**
+   * The room is won: the doors open, a drop may fall where the fight was, and the systems
+   * that answer a clear are told. A boss room opens its seal, if the tank has a deal room.
+   */
+  private clear() {
+    const c = this.cell, t = this.room;
+    t.locked = false;
+    c.cleared = true;
+    this.version = ++TankMap.versions;
+    this.fx.ring(this.p.x, this.p.y, 0xcfe4ff, this.p.radius * 5);
+    this.camera.jolt(4, 8);
+    this.hooks.cleared();
+    const drop = this.hooks.reward(new Rng(c.seed ^ 0xd809_c1ea));
+    if (drop) {
+      const at = t.standAt(t.cx, t.cy, t.tile, t.tile * 2) ?? { x: this.p.x, y: this.p.y };
+      this.world.drop(drop, at.x, at.y - t.tile * 2, 0, -30);
+    }
+    const seal = [...c.shut].find(([, why]) => why === 'seal');
+    if (seal) {
+      this.open(this.current, seal[0]);
+      this.ui.toast('A red door opens — a deal waits beyond it');
+    } else {
+      this.ui.toast('The room is clear — the doors open');
+    }
+  }
+
+  /** Open a door shut on its own, from both sides, and let what is behind it be seen. */
+  private open(i: number, side: Side) {
+    const j = this.neighbour(i, side);
+    const a = this.cells[i], b = this.cells[j];
+    a.shut.delete(side);
+    b.shut.delete(OPPOSITE[side]);
+    a.terrain?.shut.delete(side);
+    b.terrain?.shut.delete(OPPOSITE[side]);
+    b.seen = true;
+    this.version = ++TankMap.versions;
+  }
+
+  /**
+   * What a room offers on plinths, by its type: the treasure room's one mutation, free; a
+   * shop's three goods and a mutation, for shells; the deal room's deal, for containers,
+   * and its curse, for nothing. Null for a room with none.
+   */
+  private stock(c: Cell, t: Terrain): Pedestal[] | null {
+    const rng = new Rng(c.seed ^ 0x7ea5_17e5);
+    const type = c.map.type;
+    const goods: [Good | null, Price | null][] = [];
+    if (type === 'treasure') {
+      const trait = this.hooks.offer(rng);
+      goods.push([trait && { kind: 'mutation', trait }, null]);
+    } else if (type === 'shop') {
+      const pool = [...SHOP_GOODS];
+      for (let k = 0; k < 3 && pool.length; k++) {
+        const [pickup, shells] = pool.splice(rng.int(0, pool.length - 1), 1)[0];
+        goods.push([{ kind: 'pickup', pickup }, { shells }]);
+      }
+      const trait = this.hooks.offer(rng);
+      if (trait) goods.splice(rng.int(0, goods.length), 0, [{ kind: 'mutation', trait }, { shells: SHOP_MUTATION }]);
+    } else if (type === 'deal') {
+      const { deal, curse } = this.hooks.deals(rng);
+      if (deal) goods.push([{ kind: 'mutation', trait: deal }, { containers: deal.deal! }]);
+      if (curse) goods.push([{ kind: 'mutation', trait: curse }, null]);
+    } else {
+      return null;
+    }
+    const spots = this.spots(t, goods.length);
+    return spots.map((at, k) => ({ x: at.x, y: at.y, good: goods[k][0], price: goods[k][1] }));
+  }
+
+  /**
+   * Where `n` plinths stand: flat floor from the middle of the room outward, each a plinth's
+   * width and its hanging good's height clear, `SPACING` tiles from the others, left to right.
+   * Fewer when the room has no more floor to give.
+   */
+  private spots(t: Terrain, n: number) {
+    const out: { x: number; y: number }[] = [];
+    for (let d = 0; d < t.width / 2 && out.length < n; d += t.tile * 0.5) {
+      for (const x of d ? [t.cx - d, t.cx + d] : [t.cx]) {
+        const at = t.standAt(x, t.cy, t.tile * 1.5, t.tile * (HOVER + 1));
+        if (!at || Math.abs(at.x - x) > t.tile * 0.5) continue;
+        if (out.some(o => Math.abs(o.x - at.x) < t.tile * SPACING && Math.abs(o.y - at.y) < t.tile * 3)) continue;
+        out.push(at);
+        if (out.length >= n) break;
+      }
+    }
+    if (!out.length) out.push({ x: t.cx, y: t.cy });
+    return out.sort((a, b) => a.x - b.x);
   }
 
   /**
@@ -294,16 +426,19 @@ export class TankMap {
     }
   }
 
-  /** The current room's pedestal, if it has one. */
-  get pedestal(): Pedestal | null { return this.slide ? null : this.cell.pedestal; }
+  /** The current room's pedestals, if it has any. */
+  get pedestals(): readonly Pedestal[] { return this.slide ? [] : this.cell.pedestals ?? []; }
 
-  /** The mutation on the pedestal the player is close enough to read, or null. */
-  get offered(): Trait | null {
-    const ped = this.pedestal;
-    if (!ped?.trait) return null;
+  /** The pedestal the player is close enough to read, nearest first, or null. */
+  get offered(): Pedestal | null {
     const t = this.room;
-    const near = Math.hypot(this.p.x - ped.x, this.p.y - (ped.y - t.tile * HOVER)) < t.tile * READ;
-    return near ? ped.trait : null;
+    let best: Pedestal | null = null, bd = t.tile * READ;
+    for (const s of this.pedestals) {
+      if (!s.good) continue;
+      const d = Math.hypot(this.p.x - s.x, this.p.y - (s.y - t.tile * HOVER));
+      if (d < bd) { bd = d; best = s; }
+    }
+    return best;
   }
 
   /** What the current room's decoration lights it with. */

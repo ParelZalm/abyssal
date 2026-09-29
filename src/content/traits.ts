@@ -29,6 +29,12 @@ export interface Trait {
    * body — so taking one is choosing a way to be worse, not a number going down.
    */
   curse?: string;
+  /**
+   * A deal mutation's price, in heart containers. A deal is a stronger variant of an
+   * ordinary mutation, found only in a deal room (*Deal mutation* in `CONTEXT.md`); cursed
+   * cards are found there too, beside it, for nothing.
+   */
+  deal?: number;
   /** How many times one run may take this. Two by default: enough to double down on a
    *  favourite, not enough to turn one stat absurd. */
   maxStacks?: number;
@@ -262,6 +268,34 @@ export const TRAITS: Trait[] = [
     maxStacks: 1,
     apply: g => { g.armor += 6; g.lead += 1; } }),
 
+  // ------------------------------------------------------------------ deals
+  // Stronger variants of the ordinary cards, paid for in heart containers in a deal room.
+  // Each is its card pushed past what the rarities allow, so the price is the only reason
+  // not to — and a container is the one thing a run cannot find again in the nursery.
+  T({ id: 'redmuscle', name: 'Red Muscle', rarity: 'apex', icon: 'muscle', families: ['sprinter'],
+    desc: '+45% speed, +20% turning. Dense Muscle, burning hot.', deal: 1, maxStacks: 1,
+    apply: g => { g.speed *= 1.45; g.turn *= 1.2; } }),
+
+  T({ id: 'devourer', name: 'Devourer’s Jaw', rarity: 'apex', icon: 'gullet', families: ['predator'],
+    desc: '+120% bite, and carcasses are swallowed from twice as far. A Hinged Jaw with nothing held back.',
+    deal: 2, maxStacks: 1,
+    apply: g => { g.bite *= 2.2; g.jaw += 0.6; g.gulp *= 2; } }),
+
+  T({ id: 'stonehide', name: 'Stone Hide', rarity: 'apex', icon: 'shield',
+    desc: '+8 armour: two hits in five are shrugged off. Ganoid Scales grown into rock.', deal: 1,
+    maxStacks: 1,
+    apply: g => { g.armor += 8; g.speed *= 0.95; } }),
+
+  T({ id: 'archereye', name: 'Archer’s Eye', rarity: 'apex', icon: 'eye',
+    desc: 'Your strike becomes a jet of water for 140% of a bite. Archer Spit, never missing its weight. Replaces your bite.',
+    deal: 2, maxStacks: 1,
+    apply: g => { g.spit = 1; g.volley = 0; g.bite *= 1.75; g.eyeSize += 0.5; } }),
+
+  T({ id: 'quillstorm', name: 'Quill Storm', rarity: 'apex', icon: 'spike',
+    desc: 'Your strike becomes a fan of five spines, each 45% of a bite. Spine Volley, emptied all at once. Replaces your bite.',
+    deal: 2, maxStacks: 1,
+    apply: g => { g.volley = 2; g.spit = 0; } }),
+
   // ------------------------------------------------------------------ apex
   // Every apex card costs something, and says so. Without a price the draft was "take the
   // rarest", which is no choice at all; the costs are chosen to fight the card's own build —
@@ -319,24 +353,33 @@ const RARITY_CLIMB: Record<Rarity, number> = { common: 0, rare: 0.5, apex: 1 };
 const HOME_LEAN = 1.6;
 
 /**
- * Deal `count` distinct mutations, weighted by rarity and gated by the tank they are dealt
- * in: a mutation is in the pool in its own tank and every deeper one, and leans home, and
- * the rarer ones climb with each tank. `lean` multiplies a mutation's weight — the deal
- * bending toward the build (`prospects.ts`) — and 0 takes one out of this deal altogether.
+ * Deal `count` distinct mutations for a treasure room or a shop, weighted by rarity and
+ * gated by the tank they are dealt in: a mutation is in the pool in its own tank and every
+ * deeper one, and leans home, and the rarer ones climb with each tank. Deals and curses are
+ * the deal room's, and never here. `lean` multiplies a mutation's weight — the deal bending
+ * toward the build (`prospects.ts`) — and 0 takes one out of this deal altogether.
  */
 export function dealMutations(rng: Rng, tank: TankId, taken: Map<string, number>,
                               count = 1, lean: (t: Trait) => number = () => 1): Trait[] {
   const here = tankIndex(tank);
-  const pool = TRAITS.filter(t => {
-    if (t.tank && tankIndex(t.tank) > here) return false;
-    const stacks = taken.get(t.id) ?? 0;
-    return stacks < (t.maxStacks ?? 2) && lean(t) > 0;
-  });
-  const weigh = (t: Trait) => RARITY_WEIGHT[t.rarity] * (1 + here * RARITY_CLIMB[t.rarity])
-    * (t.tank === tank ? HOME_LEAN : 1) * lean(t);
+  const pool = TRAITS.filter(t => !t.deal && !t.curse && !(t.tank && tankIndex(t.tank) > here));
+  return dealFrom(rng, pool, taken, count,
+    t => (1 + here * RARITY_CLIMB[t.rarity]) * (t.tank === tank ? HOME_LEAN : 1) * lean(t));
+}
 
+/** The deal room's two: a deal mutation to pay for in containers, and a curse for nothing. */
+export function dealRoom(rng: Rng, taken: Map<string, number>): { deal: Trait | null; curse: Trait | null } {
+  const deal = dealFrom(rng, TRAITS.filter(t => t.deal), taken, 1)[0] ?? null;
+  const curse = dealFrom(rng, TRAITS.filter(t => t.curse), taken, 1)[0] ?? null;
+  return { deal, curse };
+}
+
+/** `count` distinct mutations from `pool`, by rarity times `weight`, leaving out what is maxed. */
+function dealFrom(rng: Rng, pool: Trait[], taken: Map<string, number>, count: number,
+                  weight: (t: Trait) => number = () => 1): Trait[] {
+  const weigh = (t: Trait) => RARITY_WEIGHT[t.rarity] * weight(t);
+  const avail = pool.filter(t => (taken.get(t.id) ?? 0) < (t.maxStacks ?? 2) && weigh(t) > 0);
   const out: Trait[] = [];
-  const avail = [...pool];
   while (out.length < count && avail.length) {
     let total = 0;
     for (const t of avail) total += weigh(t);

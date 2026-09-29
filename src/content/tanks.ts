@@ -38,7 +38,7 @@ export interface Tank {
 }
 
 /** What a room is for; see *Room type* in `CONTEXT.md`. */
-export type RoomType = 'start' | 'fight' | 'treasure' | 'shop' | 'boss';
+export type RoomType = 'start' | 'fight' | 'treasure' | 'shop' | 'deal' | 'boss';
 
 export interface RoomTemplate {
   id: string;
@@ -103,7 +103,7 @@ export const ROOMS: RoomTemplate[] = [
     ],
   },
   {
-    id: 'nursery-pillar', tank: 'nursery', types: ['fight', 'treasure', 'shop'],
+    id: 'nursery-pillar', tank: 'nursery', types: ['fight', 'treasure', 'shop', 'deal'],
     rows: [
       '################################',
       '################################',
@@ -172,7 +172,7 @@ export const ROOMS: RoomTemplate[] = [
     ],
   },
   {
-    id: 'nursery-overhang', tank: 'nursery', types: ['fight', 'treasure', 'shop'],
+    id: 'nursery-overhang', tank: 'nursery', types: ['fight', 'treasure', 'shop', 'deal'],
     rows: [
       '################################',
       '################################',

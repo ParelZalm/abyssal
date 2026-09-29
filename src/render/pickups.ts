@@ -5,8 +5,8 @@ import { glowTexture } from './textures';
 /**
  * Pixel maps for what the player collects, one character per art pixel: `#` outline,
  * `x` the body's colour, `h` its highlight, `d` its shade, `.` nothing. The HUD draws its
- * hearts from the same maps (`ui/hud/Hearts.ts`), so a heart in the water and a heart on
- * the HUD are one drawing.
+ * hearts, shells, keys and the held item from the same maps (`ui/hud/`), so a heart in the
+ * water and a heart on the HUD are one drawing.
  */
 export const SPRITES = {
   heart: [
@@ -29,6 +29,52 @@ export const SPRITES = {
     '..#####..',
     '...#.#...',
   ],
+  key: [
+    '.####......',
+    '#hhxx######',
+    '#h..x#hhxd#',
+    '#xxdd###dd#',
+    '.####..#dd#',
+    '.......####',
+  ],
+  chest: [
+    '.#########.',
+    '#hhhhhhhhh#',
+    '#xxxxxxxxd#',
+    '###########',
+    '#xxxx#xxxd#',
+    '#xxx#h#xxd#',
+    '#xxxx#xxxd#',
+    '#ddddddddd#',
+    '###########',
+  ],
+  pellet: [
+    '..###..',
+    '.#hxx#.',
+    '#hxxxd#',
+    '#xxxdd#',
+    '.#xdd#.',
+    '..###..',
+  ],
+  airstone: [
+    '...#.....',
+    '..#h#.#..',
+    '...#.#h#.',
+    '.#####.#.',
+    '#hx.xxx#.',
+    '#xxxd.d#.',
+    '.#######.',
+  ],
+  snail: [
+    '..####.....',
+    '.#hhxx#....',
+    '#hx##xd#...',
+    '#x#h.#d#...',
+    '#xd##dd#.#.',
+    '.#dddd#.#h#',
+    '#xxxxxxxxd#',
+    '.#########.',
+  ],
 } as const;
 
 export type SpriteName = keyof typeof SPRITES;
@@ -39,6 +85,11 @@ export interface Palette { x: string; h: string; d: string; o: string }
 export const COLOURS: Record<SpriteName, Palette> = {
   heart: { x: '#e0344a', h: '#ff9aa4', d: '#8e1c36', o: '#2a0a16' },
   shell: { x: '#e8d4b8', h: '#fff6e6', d: '#b09478', o: '#3a2a20' },
+  key: { x: '#e0b048', h: '#fff0a0', d: '#9a6a20', o: '#2e1e08' },
+  chest: { x: '#9a6a3a', h: '#d8a468', d: '#5a3a1e', o: '#1e1208' },
+  pellet: { x: '#c07a3a', h: '#f0b070', d: '#7a4418', o: '#2a1406' },
+  airstone: { x: '#8a98a8', h: '#d8e4f0', d: '#4a5868', o: '#141c26' },
+  snail: { x: '#b86a4a', h: '#f0b890', d: '#6a3020', o: '#200c06' },
 };
 
 /**
@@ -69,7 +120,7 @@ export function spriteCanvas(name: SpriteName, cell = 1, fill = 1): HTMLCanvasEl
 }
 
 const textures = new Map<SpriteName, Texture>();
-function texture(name: SpriteName) {
+export function spriteTexture(name: SpriteName) {
   let t = textures.get(name);
   if (!t) {
     t = Texture.from(spriteCanvas(name));
@@ -80,7 +131,10 @@ function texture(name: SpriteName) {
 }
 
 /** What each kind glows in the dark with, so a pickup can be found without the larva's light. */
-const GLOW: Record<PickupKind, number> = { heart: 0xff5a6a, shell: 0xffe8c8 };
+export const PICKUP_GLOW: Record<PickupKind, number> = {
+  heart: 0xff5a6a, shell: 0xffe8c8, key: 0xffd27a, chest: 0xd8a468,
+  pellet: 0xf0b070, airstone: 0xdff4ff, snail: 0xf0b890,
+};
 
 /**
  * The pickups lying in a room, drawn from `World.pickups` each frame: a sprite per pickup,
@@ -113,13 +167,13 @@ export class PickupView {
       const k = pickups[i];
       s.visible = b.visible = !!k;
       if (!k) continue;
-      s.texture = texture(k.kind);
+      s.texture = spriteTexture(k.kind);
       const bob = Math.sin(t * 2.4 + i) * px * 0.8;
       s.position.set(k.x, k.y + 3 - Math.abs(bob));
       s.scale.set(px);
       b.position.set(k.x, k.y - px * 4);
       b.width = b.height = px * 22;
-      b.tint = GLOW[k.kind];
+      b.tint = PICKUP_GLOW[k.kind];
       b.alpha = 0.45;
     }
   }
@@ -128,4 +182,40 @@ export class PickupView {
     this.root.destroy({ children: true });
     this.glow.destroy({ children: true });
   }
+}
+
+/** 3 × 5 digits for a price in the water, on the same grid as the maps above. */
+const DIGITS = [
+  ['###', '#.#', '#.#', '#.#', '###'], ['.#.', '##.', '.#.', '.#.', '###'],
+  ['###', '..#', '###', '#..', '###'], ['###', '..#', '.##', '..#', '###'],
+  ['#.#', '#.#', '###', '..#', '..#'], ['###', '#..', '###', '..#', '###'],
+  ['###', '#..', '###', '#.#', '###'], ['###', '..#', '.#.', '.#.', '.#.'],
+  ['###', '#.#', '###', '#.#', '###'], ['###', '#.#', '###', '..#', '###'],
+];
+
+/**
+ * A price as it stands under a shop's goods: the number in pale pixels, outlined, and the
+ * glyph of what it is paid in — a shell, or a heart for a deal. One pixel per art pixel.
+ */
+export function priceCanvas(n: number, currency: 'shell' | 'heart'): HTMLCanvasElement {
+  const digits = String(n).split('').map(d => DIGITS[Number(d)]);
+  const icon = spriteCanvas(currency);
+  const w = digits.length * 4 + 1 + icon.width + 2, h = Math.max(7, icon.height);
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d')!;
+  const top = Math.round((h - 7) / 2);
+  digits.forEach((rows, k) => {
+    for (let pass = 0; pass < 2; pass++) {
+      ctx.fillStyle = pass ? '#f4ecd8' : '#10141e';
+      rows.forEach((row, y) => [...row].forEach((ch, x) => {
+        if (ch !== '#') return;
+        const px = 1 + k * 4 + x, py = top + 1 + y;
+        if (pass) ctx.fillRect(px, py, 1, 1);
+        else ctx.fillRect(px - 1, py - 1, 3, 3);
+      }));
+    }
+  });
+  ctx.drawImage(icon, digits.length * 4 + 2, Math.round((h - icon.height) / 2));
+  return c;
 }

@@ -23,7 +23,10 @@ import { Terrain } from '../sim/terrain';
 import { generateMap } from '../content/map';
 import { Minimap } from '../ui/hud/Minimap';
 import { spriteCanvas } from '../render/pickups';
-import { PedestalView } from '../render/pedestal';
+import { PedestalsView } from '../render/pedestals';
+import type { Pedestal } from '../run/TankMap';
+import { ITEM_IDS, ITEMS } from '../content/items';
+import { priceCanvas } from '../render/pickups';
 import { glyphCanvas } from '../render/glyphs';
 import { HOVER } from '../run/TankMap';
 import { SHOT_RANGE, SHOT_SPEED as PLAYER_SHOT_SPEED } from '../input/PlayerController';
@@ -1038,13 +1041,30 @@ function larva(): Genome {
   return g;
 }
 
-/** A pedestal cell: the view's two layers, the plinth and glyph under their bloom. */
-class PedestalCell extends Container {
-  readonly pedestal = new PedestalView();
+/** Plinths in a row, as a room stands them: the view's two layers, stone and goods under their blooms. */
+class PedestalsCell extends Container {
+  readonly view = new PedestalsView();
   constructor() {
     super();
-    this.addChild(this.pedestal.root, this.pedestal.glow);
+    this.addChild(this.view.root, this.view.glow);
   }
+}
+
+/** A board cell of plinths, `SPACING` apart, bobbing on the board's clock. */
+function pedestalsItem(id: string, name: string, note: string, stands: Omit<Pedestal, 'x' | 'y'>[],
+                    span: number): DesignItem {
+  const tank = tankById('nursery');
+  const step = tank.tile * 3.2;
+  const laid: Pedestal[] = stands.map((s, i) => ({ ...s, x: (i - (stands.length - 1) / 2) * step, y: 20 }));
+  let clock = 0;
+  return {
+    id, name, note, source: 'src/render/pedestals.ts', span, depth: tank.depth,
+    make: () => new PedestalsCell(),
+    animate: (view: Container, dt: number) => {
+      clock += dt;
+      (view as PedestalsCell).view.update(laid, tank.tile * HOVER, 2 / SHOT_PX, clock);
+    },
+  };
 }
 
 /**
@@ -1078,26 +1098,15 @@ function powerGroup(): DesignGroup {
   const tank = tankById('nursery');
   const pedestal = (id: string) => {
     const t = TRAITS.find(x => x.id === id)!;
-    return {
-      id: `pedestal-${t.rarity}`, name: `pedestal · ${t.rarity}`,
-      note: `${t.name} on its plinth: the glyph in its rarity's colour, lit, bobbing`,
-      source: 'src/render/pedestal.ts', span: 60, depth: tank.depth,
-      make: () => new PedestalCell(),
-      animate: (() => {
-        let clock = 0;
-        return (view: Container, dt: number) => {
-          clock += dt;
-          (view as PedestalCell).pedestal.update({ x: 0, y: 20, trait: t }, tank.tile * HOVER,
-            2 / SHOT_PX, clock);
-        };
-      })(),
-    } satisfies DesignItem;
+    return pedestalsItem(`pedestal-${t.rarity}`, `pedestal · ${t.rarity}`,
+      `${t.name} on its plinth: the glyph in its rarity's colour, lit, bobbing`,
+      [{ good: { kind: 'mutation', trait: t }, price: null }], 60);
   };
   const primary = (id: string) => {
     const t = TRAITS.find(x => x.id === id)!;
     const g = larva();
     t.apply(g);
-    const prim = primaryOf({ organs: organsOf(g) } as never)!;
+    const prim = primaryOf({ organs: organsOf(g), genome: g } as never)!;
     return {
       id: `primary-${id}`, name: t.name, note: t.desc,
       source: 'src/sim/organs/body.ts', span: 110, depth: tank.depth, genome: g,
@@ -1133,7 +1142,51 @@ function powerGroup(): DesignGroup {
   };
 }
 
+// ------------------------------------------------------------------ the economy
+
+/**
+ * What a run buys and finds: a shop's shelf and a deal room as they stand, every item and
+ * the pickups that are not health — the key and the chest — and the price tags in both
+ * currencies. The shelf's mutation and the deal's pair are fixed picks, so the cells hold still.
+ */
+function economyGroup(): DesignGroup {
+  const tank = tankById('nursery');
+  const trait = (id: string) => TRAITS.find(x => x.id === id)!;
+  const sprite = (kind: Parameters<typeof spriteCanvas>[0], name: string, note: string): DesignItem => ({
+    id: `pickup-${kind}`, name, note, source: 'src/render/pickups.ts', span: 16, depth: tank.depth,
+    make: () => spriteCell(spriteCanvas(kind), 1),
+  });
+  return {
+    id: 'economy', name: 'Shop & deals',
+    note: 'A shop\'s shelf and a deal room, every item, the key and the chest, and the price tags.',
+    items: [
+      pedestalsItem('shop', 'shop', 'three goods for 3–5 shells, and a mutation for 15', [
+        { good: { kind: 'pickup', pickup: 'pellet' }, price: { shells: 4 } },
+        { good: { kind: 'mutation', trait: trait('caudal') }, price: { shells: 15 } },
+        { good: { kind: 'pickup', pickup: 'key' }, price: { shells: 5 } },
+        { good: { kind: 'pickup', pickup: 'snail' }, price: { shells: 3 } },
+      ], 300),
+      pedestalsItem('deal', 'deal room', 'a deal for heart containers, and a curse for nothing', [
+        { good: { kind: 'mutation', trait: trait('devourer') }, price: { containers: 2 } },
+        { good: { kind: 'mutation', trait: trait('brittle') }, price: null },
+      ], 160),
+      ...ITEM_IDS.map(id => sprite(id, ITEMS[id].name, ITEMS[id].desc)),
+      sprite('key', 'key', 'opens a locked door or a chest'),
+      sprite('chest', 'chest', 'takes a key; spills two or three pickups'),
+      { id: 'price-tags', name: 'price tags', note: 'in shells, and a deal in hearts',
+        source: 'src/render/pickups.ts', span: 30, depth: tank.depth,
+        make: () => {
+          const c = new Container();
+          const a = spriteCell(priceCanvas(15, 'shell'), 1), b = spriteCell(priceCanvas(2, 'heart'), 1);
+          a.y = -6; b.y = 6;
+          c.addChild(a, b);
+          return c;
+        } },
+    ],
+  };
+}
+
 export function catalog(): DesignGroup[] {
-  return [roomGroup(), decorGroup(), healthGroup(), roleGroup(), powerGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(),
+  return [roomGroup(), decorGroup(), healthGroup(), roleGroup(), powerGroup(), economyGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(),
           speciesGroup(), guardianGroup(), motionGroup(), propGroup(), fieldGroup(), waterGroup()];
 }

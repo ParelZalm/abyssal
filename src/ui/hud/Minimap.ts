@@ -13,6 +13,8 @@ const GLYPHS: Partial<Record<MapCell['type'], { rows: string[]; color: string }>
   boss: { color: '#e8e2d8', rows: ['.###.', '#.#.#', '#####', '.#.#.', '.###.'] },
   treasure: { color: '#ffd76a', rows: ['#.#.#', '#####', '#####', '.###.', '.....'] },
   shop: { color: '#f0dcc0', rows: ['..#..', '.###.', '#.#.#', '#####', '.###.'] },
+  // a heart in red: what a deal is paid in
+  deal: { color: '#ff6a5a', rows: ['.#.#.', '#####', '#####', '.###.', '..#..'] },
 };
 
 /**

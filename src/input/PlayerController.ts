@@ -152,8 +152,6 @@ export class PlayerController {
     }
 
     this.fireActive();
-    // nothing to hold yet: the item slot arrives with the economy
-    input.wantItem = false;
     // a lurking body has nothing on the HUD to say it is wound; one ring as the poise tops
     // out is the tell that the next bite is the big one
     const poised = p.poise >= POISE_MAX;

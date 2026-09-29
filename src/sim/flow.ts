@@ -24,14 +24,14 @@ export class Flow {
   private readonly queue: Int32Array;
   private ti = -1e9;
   private tj = -1e9;
-  private locked: boolean;
+  /** The doors the open cells were worked out for: the fight's lock, and how many are shut on their own. */
+  private doors = '';
 
   constructor(private readonly t: Terrain) {
     const n = t.fineCols * t.fineRows;
     this.dist = new Int32Array(n);
     this.open = new Uint8Array(n);
     this.queue = new Int32Array(n);
-    this.locked = !t.locked;
   }
 
   /**
@@ -41,7 +41,7 @@ export class Flow {
   toward(x: number, y: number, tx: number, ty: number): number | null {
     const t = this.t;
     const ti = Math.floor((tx - t.x0) / t.cell), tj = Math.floor((ty - t.y0) / t.cell);
-    if (Math.abs(ti - this.ti) > STALE || Math.abs(tj - this.tj) > STALE || t.locked !== this.locked) {
+    if (Math.abs(ti - this.ti) > STALE || Math.abs(tj - this.tj) > STALE || this.doorsOf() !== this.doors) {
       this.build(ti, tj);
     }
     const W = t.fineCols, H = t.fineRows;
@@ -69,7 +69,7 @@ export class Flow {
     this.ti = ti; this.tj = tj;
     const { dist, open, queue } = this;
     // the water only changes shape when the doors do
-    if (t.locked !== this.locked) this.clearance();
+    if (this.doorsOf() !== this.doors) this.clearance();
     dist.fill(-1);
     let head = 0, tail = 0;
     const ci = Math.max(0, Math.min(W - 1, ti)), cj = Math.max(0, Math.min(H - 1, tj));
@@ -95,11 +95,15 @@ export class Flow {
     }
   }
 
+  private doorsOf() {
+    return `${this.t.locked}|${[...this.t.shut.keys()].join()}`;
+  }
+
   /** Which cells are open: water, with water all round them. */
   private clearance() {
     const t = this.t;
     const W = t.fineCols, H = t.fineRows;
-    this.locked = t.locked;
+    this.doors = this.doorsOf();
     for (let j = 0; j < H; j++) {
       for (let i = 0; i < W; i++) {
         let clear = 1;

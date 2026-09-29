@@ -87,6 +87,10 @@ export const BODY: Organ[] = [
     swallowHeal: (g, gain) => gain * g.lifesteal }),
 ];
 
+const SPIT_FAN = [0];
+const VOLLEY_FAN = [-0.24, 0, 0.24];
+const STORM_FAN = [-0.3, -0.15, 0, 0.15, 0.3];
+
 /**
  * The primaries: the strike fired rather than bitten. The spit is one shot hard enough to be
  * most of a bite; the volley three, spread a quarter of a radian, each under half — more
@@ -95,9 +99,11 @@ export const BODY: Organ[] = [
  */
 export const PRIMARIES: Organ[] = [
   O({ id: 'spit', when: g => g.spit > 0,
-    primary: { shot: 'spit', fan: [0], mult: 0.8 } }),
+    primary: () => ({ shot: 'spit', fan: SPIT_FAN, mult: 0.8 }) }),
+  // Quill Storm (a deal) is the volley at two: five spines, the fan no wider, so the middle
+  // three still land together on one target
   O({ id: 'volley', when: g => g.volley > 0,
-    primary: { shot: 'spine', fan: [-0.24, 0, 0.24], mult: 0.45 } }),
+    primary: g => ({ shot: 'spine', fan: g.volley >= 2 ? STORM_FAN : VOLLEY_FAN, mult: 0.45 }) }),
 ];
 
 /** Organs only a transformation grants. */

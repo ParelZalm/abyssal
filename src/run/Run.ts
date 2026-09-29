@@ -1,6 +1,7 @@
 import type { Plan } from '../content/form';
 import type { Transformation } from '../content/forms';
 import type { Genome } from '../content/genome';
+import type { ItemId } from '../content/items';
 import { TANKS, type Tank } from '../content/tanks';
 import { TRAITS, type Trait } from '../content/traits';
 import type { Creature } from '../sim/creature';
@@ -11,6 +12,8 @@ export const COMBO_WINDOW = 3.5;
 export const comboMult = (n: number) => Math.min(3, 1 + Math.max(0, n - 1) * 0.25);
 /** Heart containers a run starts with, Isaac's three. */
 export const START_CONTAINERS = 3;
+/** Keys a run starts with: one, so the first shop is not a locked door. */
+export const START_KEYS = 1;
 
 export interface TakenName {
   name: string; desc: string; icon: Trait['icon']; rarity: Trait['rarity']; stacks: number;
@@ -29,6 +32,9 @@ export class Run {
   /** What the belly holds toward its next pickup (`run/Belly.ts`). */
   belly = 0;
   shells = 0;
+  /** Keys, spent one a lock (`run/Pockets.ts`), and the one item held, used on E. */
+  keys = START_KEYS;
+  item: ItemId | null = null;
   readonly taken = new Map<string, number>();
   readonly takenNames: TakenName[] = [];
   /** Named synergies discovered this run, in the order they first fired. */

@@ -75,18 +75,6 @@ export class Belly {
     }
   }
 
-  /** Something picked up off the floor. */
-  collect(kind: PickupKind) {
-    const { run, p } = this;
-    if (kind === 'heart') {
-      p.hp = Math.min(p.hpMax, p.hp + 1);
-      this.fx.ring(p.x, p.y, 0xff6a78, p.radius * 2.2);
-    } else {
-      run.shells++;
-      this.fx.ring(p.x, p.y, 0xffe8c8, p.radius * 1.8);
-    }
-  }
-
   /**
    * The last heart, said out loud: a heartbeat that quickens as it empties to its last half,
    * the one thing the game says with sound, since the hearts are easy to stop reading in a fight.
