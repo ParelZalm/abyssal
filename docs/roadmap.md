@@ -159,8 +159,14 @@ follows, in stages, each committed on its own:
    blur turned into screen-door dither, so a plane's distance reads as dither density. The
    water shader is left alone — `FramePass` bands it. Left: pixel-art scenery with real
    structure (rock, kelp, vents), which is where the field prototype should land.
-5. **The HUD.** A pixel face and hard-edged chrome, so the DOM layer agrees with the
-   canvas under it.
+5. ~~**The HUD.**~~ Done: Pixelify Sans, bundled, with font smoothing off; square corners,
+   2 px frames, hard 2 px rings for every glow, one-pixel drop shadows, flat bar fills with
+   a lit top row, bevelled buttons. Left: the mutation icons are still smooth vector
+   strokes, and the danger vignette is still a soft inset.
+
+What is left across the whole pass is tuning, not structure: per-plan proportions and
+palettes side-on, small animals at their real size, pixel icons, and scenery with real
+structure.
 
 ## Suggested order
 

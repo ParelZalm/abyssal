@@ -10,6 +10,7 @@
     "design": "vite --open /design.html"
   },
   "dependencies": {
+    "@fontsource/pixelify-sans": "^5.3.0",
     "pixi.js": "^8.20.1"
   },
   "devDependencies": {

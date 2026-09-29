@@ -1,3 +1,5 @@
+import '@fontsource/pixelify-sans/400.css';
+import '@fontsource/pixelify-sans/600.css';
 import './style.css';
 import { Game } from './Game';
 

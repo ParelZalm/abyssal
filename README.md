@@ -124,7 +124,8 @@ coasts. Each stroke is locked to the tail's sway, so you surge and glide.
 | Build | **Vite** | Instant HMR, zero-config TypeScript, a tiny static output. |
 | Language | **TypeScript** (strict) | The genome and trait system is the whole game. It wants types. |
 | UI | **DOM + CSS** over the canvas | Menus, cards and bars are far cheaper and more accessible as DOM than as canvas widgets. |
-| Deps | none beyond Pixi | No engine and no physics library. The swimming, the ecosystem and the fights are all in `src/sim/`. |
+| Type | **Pixelify Sans**, bundled via `@fontsource` | The HUD sits over a pixel-art frame, so it speaks in pixels too; bundled so nothing is fetched at runtime. |
+| Deps | none beyond Pixi and the font | No engine and no physics library. The swimming, the ecosystem and the fights are all in `src/sim/`. |
 
 ## Development
 
