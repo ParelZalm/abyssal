@@ -23,6 +23,13 @@ import { Terrain } from '../sim/terrain';
 import { generateMap } from '../content/map';
 import { Minimap } from '../ui/hud/Minimap';
 import { spriteCanvas } from '../render/pickups';
+import { shotTexture, SHOT_GLOW } from '../render/shots';
+import { glowTexture } from '../render/textures';
+import {
+  CHARGE_RECOVER, CHARGE_WIND, DASH_TIME, SHOT_SPEED, SPIT_RECOVER, SPIT_WIND, SPOKES, SWELL,
+  TURRET_RECOVER, TURRET_WIND,
+} from '../sim/roles';
+import type { Role, ShotKind, Species } from '../content/species';
 import { Texture } from 'pixi.js';
 import { speciesById } from '../content/species';
 import type { IconName } from '../ui/icons';
@@ -867,7 +874,158 @@ function healthGroup(): DesignGroup {
   };
 }
 
+// ------------------------------------------------------------------ roles
+
+/** World units per art pixel for a shot on the board: the nursery's, at a 1440-wide window. */
+const SHOT_PX = 1.1;
+/** Seconds a board shot flies before the loop brings it back. */
+const SHOT_FLIGHT = 0.35;
+
+const ROLE_NOTES: Record<Role, string> = {
+  charger: 'Closes slower than you swim; square on, a wind-up, then a straight dash it cannot steer.',
+  spitter: 'Keeps its distance, stops, opens its jaw, and fires one shot at where you are going.',
+  turret: 'Holds its spot; swells as the tell and fires a ring, each ring turned half a spoke.',
+  drifter: 'Comes on slowly by the shortest water; the touch is the attack.',
+};
+
+/** A role cell: the body, and the shots it throws, which fly out and are spent as in play. */
+class RoleCell extends Container {
+  readonly fish: BoardFish;
+  readonly shots = new Container();
+  readonly blooms = new Container();
+  constructor(g: Genome, plan: Plan) {
+    super();
+    this.fish = boardFish(g, plan);
+    this.addChild(this.blooms, this.fish, this.shots);
+  }
+  private flights: { a: number; d: number; t: number; s: Sprite; b: Sprite }[] = [];
+
+  /** Shots out along `angles`, from `r` off the centre. */
+  fire(kind: ShotKind, angles: number[], r: number) {
+    for (const a of angles) {
+      const s = new Sprite(shotTexture(kind));
+      s.anchor.set(0.5);
+      s.scale.set(SHOT_PX);
+      s.rotation = kind === 'bolt' ? 0 : a;
+      const b = new Sprite(glowTexture());
+      b.anchor.set(0.5);
+      b.blendMode = 'add';
+      b.tint = SHOT_GLOW[kind].color;
+      b.alpha = 0.6;
+      b.width = b.height = 26;
+      this.shots.addChild(s);
+      this.blooms.addChild(b);
+      this.flights.push({ a, d: r, t: 0, s, b });
+    }
+  }
+
+  /** Move every shot on, and drop the ones spent. */
+  fly(dt: number, speed: number) {
+    for (const f of this.flights) {
+      f.t += dt;
+      f.d += speed * dt;
+      f.s.position.set(Math.cos(f.a) * f.d, Math.sin(f.a) * f.d);
+      f.b.position.copyFrom(f.s.position);
+      if (f.t > SHOT_FLIGHT) { f.s.destroy(); f.b.destroy(); }
+    }
+    this.flights = this.flights.filter(f => f.t <= SHOT_FLIGHT);
+  }
+}
+
+/**
+ * A role's attack on a loop, on the simulation's own timings (`sim/roles.ts`): the wind-up
+ * that is its tell, the strike — a dash, a shot, a ring — and the recovery, then a rest.
+ */
+function roleAnimate(sp: Species, g: Genome, tile: number) {
+  const role = sp.role!;
+  const wind = role === 'charger' ? CHARGE_WIND(g.size) : role === 'turret' ? TURRET_WIND
+    : role === 'spitter' ? SPIT_WIND : 0;
+  const strike = role === 'charger' ? DASH_TIME : 0.12;
+  const recover = role === 'charger' ? CHARGE_RECOVER : role === 'turret' ? TURRET_RECOVER : SPIT_RECOVER;
+  const cycle = wind + strike + recover + 1.2;
+  let t = 0, fired = false, volley = 0;
+  return (view: Container, dt: number, beat: number) => {
+    const cell = view as RoleCell;
+    const fish = cell.fish.fish;
+    t += dt;
+    if (t > cycle) { t = 0; fired = false; }
+    let pose: Pose = REST, thrust = 0.1, x = 0;
+    if (role === 'drifter') {
+      thrust = 0.85;
+    } else if (t < wind) {
+      pose = { windup: t / wind, strike: 0, open: t / wind > 0.35 };
+    } else if (t < wind + strike) {
+      pose = { windup: 0, strike: 1 - (t - wind) / strike, open: true };
+      thrust = role === 'charger' ? 1.6 : 0.1;
+      if (!fired && sp.shot) {
+        fired = true;
+        if (role === 'turret') {
+          const turn = (volley++ % 2) * (Math.PI / SPOKES);
+          cell.fire(sp.shot, Array.from({ length: SPOKES }, (_, k) => turn + (k / SPOKES) * Math.PI * 2),
+            g.size * 0.4);
+        } else {
+          cell.fire(sp.shot, [-0.15], g.size * 0.55);
+        }
+      }
+    }
+    if (role === 'charger') {
+      // the dash carried out along the cell and eased back through the recovery and rest
+      const out = g.size * 1.6;
+      const k = t < wind ? 0 : t < wind + strike ? (t - wind) / strike : Math.max(0, 1 - (t - wind - strike) / (recover + 1.2));
+      x = out * k - out * 0.5;
+    }
+    if (role === 'turret') {
+      fish.swell = 1 + SWELL * (t < wind ? t / wind : t < wind + strike ? 1
+        : t < wind + strike + recover ? 1 - (t - wind - strike) / recover : 0);
+    }
+    if (sp.shot) cell.fly(dt, SHOT_SPEED[sp.shot] * tile);
+    fish.animate(dt, thrust, beat, 0, pose);
+    fish.place(x, 0, role === 'spitter' && pose.windup > 0 ? -0.15 : 0, 1);
+    fish.show(true, 1, 0xffffff);
+  };
+}
+
+/** Every hostile with a role, in motion, and each kind of shot on its own. */
+function roleGroup(): DesignGroup {
+  const tank = tankById('nursery');
+  const items: DesignItem[] = SPECIES.filter(sp => sp.role).map(sp => {
+    const i = SPECIES.indexOf(sp);
+    const g = genomeFor(sp, new Rng(1000 + i * 77));
+    return {
+      id: `role-${sp.id}`, name: `${sp.name} · ${sp.role}`, note: ROLE_NOTES[sp.role!],
+      source: 'src/sim/roles.ts', span: Math.max(g.size * 4, 80),
+      depth: tank.depth, genome: g,
+      facts: { role: sp.role!, shot: sp.shot ?? '—', size: Math.round(g.size), speed: sp.speed },
+      make: () => new RoleCell(g, sp.plan),
+      animate: roleAnimate(sp, g, tank.tile),
+    };
+  });
+  for (const kind of Object.keys(SHOT_SPEED) as ShotKind[]) {
+    items.push({
+      id: `shot-${kind}`, name: `shot · ${kind}`, note: `${SHOT_SPEED[kind]} tiles a second; spent on rock or a body`,
+      source: 'src/render/shots.ts', span: 16, depth: tank.depth,
+      make: () => {
+        const c = new Container();
+        const b = new Sprite(glowTexture());
+        b.anchor.set(0.5);
+        b.blendMode = 'add';
+        b.tint = SHOT_GLOW[kind].color;
+        b.width = b.height = 14;
+        const s = new Sprite(shotTexture(kind));
+        s.anchor.set(0.5);
+        c.addChild(b, s);
+        return c;
+      },
+    });
+  }
+  return {
+    id: 'roles', name: 'Hostile roles',
+    note: 'How a room fights you: each role on its own timings, its tell, and what it fires.',
+    items,
+  };
+}
+
 export function catalog(): DesignGroup[] {
-  return [roomGroup(), decorGroup(), healthGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(),
+  return [roomGroup(), decorGroup(), healthGroup(), roleGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(),
           speciesGroup(), guardianGroup(), motionGroup(), propGroup(), fieldGroup(), waterGroup()];
 }

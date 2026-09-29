@@ -1,6 +1,6 @@
 import { Container } from 'pixi.js';
 import { faceFor } from '../content/form';
-import { genomeFor, type Species } from '../content/species';
+import { genomeFor, type ShotKind, type Species } from '../content/species';
 import { DEPTH_MAX } from '../content/zones';
 import { clamp, dist2, type Rng, TAU } from '../core/util';
 import { Behaviour } from './behaviour';
@@ -34,6 +34,22 @@ export interface Carcass {
   species: Creature['species'];
   view: Creature['view'];
 }
+
+/**
+ * Something fired across a room: straight, at one speed, spent on the first rock or body it
+ * meets. Its reach is a share of the tank's tile, so a shot is the same size on the screen in
+ * every tank. `by` fired it; a hostile's shot is looking for the player.
+ */
+export interface Shot {
+  kind: ShotKind;
+  x: number; y: number; vx: number; vy: number;
+  r: number;
+  t: number;
+  by: Creature;
+}
+/** A shot's reach, in tiles, and the seconds it flies before it is spent anyway. */
+const SHOT_R = 0.16;
+const SHOT_LIFE = 5;
 
 /** Something loose in a room that the player collects by swimming into it. */
 export type PickupKind = 'heart' | 'shell';
@@ -110,6 +126,8 @@ export class World {
   readonly pickups: Pickup[] = [];
   /** Kinds the player collected this frame, for `Game.digest`. An event. */
   readonly collected: PickupKind[] = [];
+  /** What is flying across the room. */
+  readonly shots: Shot[] = [];
 
   readonly spawner: Spawner;
   private readonly combat: Combat;
@@ -242,8 +260,50 @@ export class World {
     this.integrate(p, dt);
 
     this.combat.resolveContacts(dt, p);
+    this.fly(dt);
     this.playDeaths(dt);
     this.settle(dt);
+  }
+
+  /**
+   * Put a shot in the water from (`x`, `y`), heading `a` at `speed` tiles a second. Nothing
+   * fires outside a room: a shot's size and speed are both in the room's tiles.
+   */
+  fire(by: Creature, kind: ShotKind, x: number, y: number, a: number, speed: number) {
+    const t = this.terrain;
+    if (!t) return;
+    const v = speed * t.tile;
+    this.shots.push({ kind, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: SHOT_R * t.tile,
+      t: 0, by });
+    this.pulses.push({ x, y, r: by.radius * 0.6, kind: 'shot', shot: kind });
+  }
+
+  /**
+   * Every shot a step along its line. One is spent on rock, on the end of its flight, or on
+   * the player — whether or not the hit lands: a shot does not pass through a body in its
+   * grace, it breaks on it, as Isaac's do.
+   */
+  private fly(dt: number) {
+    const p = this.player, t = this.terrain;
+    for (let i = this.shots.length - 1; i >= 0; i--) {
+      const s = this.shots[i];
+      s.t += dt;
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      let spent = s.t > SHOT_LIFE || !t || t.solidAt(s.x, s.y);
+      const reach = s.r + p.radius * 0.5;
+      if (!spent && p.alive && !s.by.isPlayer && dist2(s.x, s.y, p.x, p.y) < reach * reach) {
+        spent = true;
+        const got = p.takeHit(s.by, 1, 'shot');
+        if (got) {
+          this.bites.push({ x: p.x, y: p.y, amount: got, fatal: p.hp < 1, onPlayer: true,
+            byPlayer: false, size: p.genome.size });
+        }
+      }
+      if (!spent) continue;
+      this.shots.splice(i, 1);
+      this.pulses.push({ x: s.x, y: s.y, r: s.r * 3, kind: 'splash', shot: s.kind });
+    }
   }
 
   /**
@@ -264,6 +324,7 @@ export class World {
     this.dying.length = 0;
     this.blood.length = 0;
     this.inks.length = 0;
+    this.shots.length = 0;
     return this.pickups.splice(0);
   }
 

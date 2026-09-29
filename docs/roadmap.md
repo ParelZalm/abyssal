@@ -59,7 +59,7 @@ What it found, and what it leaves:
   every door in stage 3 it has to be baked ahead or off the frame (a worker, or a few rows a
   frame), or the slide hitches.
 - Still here from the column, for the stages that replace them: the thermocline uniforms
-  in the water shader, the level-up draft and hunger (stage 2), `Creature.quarry` (stage 4),
+  in the water shader, the level-up draft and hunger (stage 2),
   the starting forms' depth unlock (stage 7), and the parallax scenery (stage 8).
 
 ## Art pass (pulled forward)
@@ -122,12 +122,33 @@ What it found, and what it leaves:
 - Fauna is topped up in every room, cleared or not, which keeps the tank alive between
   fights.
 
-## 4. Hostile roles
+## 4. ~~Hostile roles~~
 
-- Charger (the existing strike, fitted to rooms), spitter (aimed shots), turret (fixed,
-  fires in a ring on a beat), drifter (slow, hurts to touch).
-- Spitting and turret species for each tank; the wind-up pose as every role's tell.
-- Board: each role in motion, and its shot.
+Done: `sim/roles.ts` is a hostile's brain — charger, spitter, turret and drifter, each a
+wind-up, strike and recovery on `Creature.attack`, in tiles and tiles a second so they hold
+across tanks. Shots (`World.shots`, `render/shots.ts`): a jet of water, a spine, a blob of
+light, each lit. Any hostile's touch is a hit. `Flow` takes hostiles round the rock between
+them and the player, and every body turns off rock ahead (`clearHeading`). The nursery's
+hostiles are the mackerel, the archerfish, the pufferfish and the sea nettle; the reef's
+(ribbon eel, triggerfish, lionfish, moon jelly) and the deep's (barracuda, gulper, vampire
+squid, anglerfish, siphonophore) have their roles for when those tanks arrive (stage 7). A
+fight room is three or four, two at most of a role. The board has a Hostile roles group:
+each in motion on the sim's timings, and each shot.
+
+What it found, and what it leaves:
+
+- **A pose in the dark is not a tell.** Outside the larva's pool a mackerel winding up could
+  not be seen at all. Every hostile now throws a faint light of its own, which flares warm
+  through a wind-up: the lighting is the tell, which is the art direction's own terms.
+- **The danger frame closed on everything.** It warned of what could swallow the player,
+  and a room is full of hostiles; it now closes only on a hostile's body nearly on the
+  player's, by half.
+- Idle in a room of a mackerel, an archerfish and two pufferfish, a larva lasts about eight
+  seconds, half to bites and half to shots.
+- The old hunt is still what non-hostile hunters run, and `Creature.quarry` is the fallback
+  for a hostile with no role. Knockback on a struck hostile, and a charger's dash ending on a
+  wall rather than pressing into it, are left for tuning. The death screen still says
+  EATEN (stage 7's end screens).
 
 ## 5. Pedestals and power
 

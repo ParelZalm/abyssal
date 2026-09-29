@@ -1,4 +1,5 @@
 import type { Plan } from '../content/form';
+import type { ShotKind } from '../content/species';
 import type { Creature } from './creature';
 
 export interface Bite {
@@ -31,7 +32,9 @@ export interface Blood {
 export interface Pulse {
   x: number; y: number; r: number;
   kind: 'flash' | 'ink' | 'discharge' | 'inflate' | 'tell' | 'click' | 'blast' | 'exposed'
-    | 'draw' | 'snap' | 'venom';
+    | 'draw' | 'snap' | 'venom' | 'shot' | 'splash';
   /** For something moving through the water rather than spreading: the draw's streaks. */
   vx?: number; vy?: number;
+  /** What was fired or spent, for a `shot` or a `splash`. */
+  shot?: ShotKind;
 }

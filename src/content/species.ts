@@ -5,6 +5,11 @@ import { DEPTH_MAX, ZONES, type ZoneId } from './zones';
 
 export type Behavior = 'plankton' | 'school' | 'drift' | 'hunter' | 'ambush' | 'apex';
 
+/** How a hostile fights; see *Role* in `CONTEXT.md` and `sim/roles.ts`. */
+export type Role = 'charger' | 'spitter' | 'turret' | 'drifter';
+/** What a spitter or a turret fires: a jet of water, a spine, a blob of light. */
+export type ShotKind = 'spit' | 'spine' | 'bolt';
+
 export interface Species {
   id: string;
   name: string;
@@ -32,6 +37,13 @@ export interface Species {
    * into the mouth, and snaps shut on whatever arrived. The squids have their arms instead.
    */
   pattern?: 'charge' | 'click' | 'suck';
+  /**
+   * How this animal fights when a room sets it on the player as a hostile. Its behaviour is
+   * what it does as fauna; a hostile has its role's brain instead (`sim/roles.ts`).
+   */
+  role?: Role;
+  /** What it fires, for the roles that fire. */
+  shot?: ShotKind;
 
   size: [number, number];
   hue: [number, number];
@@ -101,26 +113,60 @@ export const SPECIES: Species[] = [
     size: [9, 15], hue: [196, 216], accent: 40, speed: 165, bite: 2,
     nutrition: 1.6, weight: 15, finSize: 0.95 },
 
-  { id: 'mackerel', name: 'Mackerel', behavior: 'hunter', plan: 'darter',
+  { id: 'mackerel', name: 'Mackerel', behavior: 'hunter', plan: 'darter', role: 'charger',
     zone: 'sunlit', band: 'open', bleed: 600,
     size: [20, 34], hue: [168, 192], accent: 205, speed: 210, bite: 8,
     nutrition: 2.0, weight: 11, jaw: 0.4, sense: 480 },
+
+  // the nursery's other hostiles. Each is the animal that already does what its role does:
+  // an archerfish shoots water at what it wants, a puffer bristles, a nettle stings by being
+  // brushed against
+  { id: 'archerfish', name: 'Archerfish', behavior: 'hunter', plan: 'darter',
+    role: 'spitter', shot: 'spit',
+    zone: 'sunlit', band: 'reef',
+    size: [12, 18], hue: [46, 58], accent: 220, speed: 150, bite: 3,
+    nutrition: 1.7, weight: 6, jaw: 0.5, finSize: 1.1 },
+
+  { id: 'pufferfish', name: 'Pufferfish', behavior: 'ambush', plan: 'darter',
+    role: 'turret', shot: 'spine',
+    zone: 'sunlit', band: 'reef',
+    size: [14, 20], hue: [34, 48], accent: 28, speed: 70, bite: 4,
+    nutrition: 1.8, weight: 5, armor: 1, spikes: 1, bulk: 0.8, finSize: 0.9 },
+
+  { id: 'nettle', name: 'Sea Nettle', behavior: 'drift', plan: 'jelly', role: 'drifter',
+    zone: 'sunlit', band: 'open',
+    // quick for a jelly: a drifter has to arrive, and a bell's pulse is most of its speed
+    size: [12, 20], hue: [12, 28], accent: 8, speed: 64, bite: 5,
+    nutrition: 1.3, weight: 5, translucent: 0.6, glow: 0.6, veil: 0.5 },
 
   { id: 'reeffish', name: 'Reef Darter', behavior: 'school', plan: 'darter',
     zone: 'sunlit', band: 'reef',
     size: [14, 24], hue: [28, 48], accent: 275, speed: 140, bite: 4,
     nutrition: 1.8, weight: 12, finSize: 1.3 },
 
-  { id: 'moonjelly', name: 'Moon Jelly', behavior: 'drift', plan: 'jelly',
+  { id: 'moonjelly', name: 'Moon Jelly', behavior: 'drift', plan: 'jelly', role: 'drifter',
     zone: 'sunlit', band: 'reef', bleed: 900,
     size: [12, 26], hue: [280, 310], accent: 295, speed: 26, bite: 7,
     nutrition: 1.4, weight: 10, translucent: 0.72, glow: 0.3, veil: 0.4,
     stealth: 0.4, heal: 0.3 },
 
-  { id: 'ribbon', name: 'Ribbon Eel', behavior: 'ambush', plan: 'eel',
+  { id: 'ribbon', name: 'Ribbon Eel', behavior: 'ambush', plan: 'eel', role: 'charger',
     zone: 'sunlit', band: 'reef',
     size: [26, 44], hue: [250, 275], accent: 50, speed: 150, bite: 12,
     nutrition: 2.1, weight: 8, jaw: 0.8, segments: 3, stealth: 0.5, eel: 1, lurk: 1 },
+
+  // a triggerfish blows jets of water at the sand to turn up what is under it
+  { id: 'triggerfish', name: 'Triggerfish', behavior: 'hunter', plan: 'darter',
+    role: 'spitter', shot: 'spit',
+    zone: 'sunlit', band: 'reef',
+    size: [24, 38], hue: [196, 220], accent: 52, speed: 150, bite: 9,
+    nutrition: 2.0, weight: 6, jaw: 0.6, armor: 1, bulk: 0.4, finSize: 1.2 },
+
+  { id: 'lionfish', name: 'Lionfish', behavior: 'ambush', plan: 'darter',
+    role: 'turret', shot: 'spine',
+    zone: 'sunlit', band: 'reef',
+    size: [24, 36], hue: [4, 16], accent: 30, speed: 80, bite: 8,
+    nutrition: 2.0, weight: 5, spikes: 2, finSize: 1.9 },
 
   { id: 'reefshark', name: 'Reef Shark', behavior: 'hunter', plan: 'shark',
     zone: 'sunlit', band: 'reef', bleed: 700,
@@ -163,13 +209,13 @@ export const SPECIES: Species[] = [
     nutrition: 2.1, weight: 9, translucent: 0.7, glow: 0.3, photophores: 0.5,
     stealth: 0.9, segments: 1 },
 
-  { id: 'siphon', name: 'Siphonophore', behavior: 'drift', plan: 'jelly',
+  { id: 'siphon', name: 'Siphonophore', behavior: 'drift', plan: 'jelly', role: 'drifter',
     zone: 'twilight', bleed: 1400,
     size: [30, 58], hue: [188, 208], accent: 175, speed: 34, bite: 16,
     nutrition: 2.2, weight: 7, translucent: 0.6, glow: 0.85, veil: 0.9,
     photophores: 0.6, segments: 2, heal: 0.45 },
 
-  { id: 'barracuda', name: 'Barracuda', behavior: 'hunter', plan: 'eel',
+  { id: 'barracuda', name: 'Barracuda', behavior: 'hunter', plan: 'eel', role: 'charger',
     zone: 'twilight', bleed: 900,
     size: [34, 54], hue: [192, 212], accent: 45, speed: 250, bite: 15,
     nutrition: 2.2, weight: 8, jaw: 0.7, finSize: 0.7, sense: 560 },
@@ -192,7 +238,9 @@ export const SPECIES: Species[] = [
     nutrition: 2.5, weight: 13, photophores: 1.0, eyeAdapt: 0.4, jaw: 0.5,
     translucent: 0.2 },
 
+  // it really does throw glowing mucus at what threatens it
   { id: 'vampiresquid', name: 'Vampire Squid', behavior: 'ambush', plan: 'squid',
+    role: 'spitter', shot: 'bolt',
     zone: 'midnight',
     size: [28, 48], hue: [330, 352], accent: 22, speed: 160, bite: 18,
     nutrition: 2.4, weight: 8, finSize: 1.6, translucent: 0.2, glow: 0.4,
@@ -204,13 +252,15 @@ export const SPECIES: Species[] = [
     nutrition: 2.5, weight: 7, jaw: 1.0, glow: 0.5, photophores: 0.8,
     barbels: 0.9, eyeAdapt: 0.6, gape: 0.4 },
 
+  // its lure throws light in a ring, which is the one thing about it that is not waiting
   { id: 'anglerfish', name: 'Anglerfish', behavior: 'ambush', plan: 'angler',
+    role: 'turret', shot: 'bolt',
     zone: 'midnight', bleed: 800,
     size: [40, 66], hue: [252, 278], accent: 55, speed: 130, bite: 26,
     nutrition: 2.6, weight: 7, jaw: 1.1, glow: 0.9, armor: 2, spikes: 1, lure: 1,
     gape: 0.7, eyeAdapt: 0.3, photophores: 0.3, sense: 520, lurk: 1 },
 
-  { id: 'gulper', name: 'Gulper Eel', behavior: 'hunter', plan: 'eel',
+  { id: 'gulper', name: 'Gulper Eel', behavior: 'hunter', plan: 'eel', role: 'charger',
     zone: 'midnight', bleed: 900,
     size: [46, 78], hue: [262, 298], accent: 328, speed: 140, bite: 24,
     nutrition: 2.8, weight: 6, jaw: 1.3, segments: 3, finSize: 0.6,

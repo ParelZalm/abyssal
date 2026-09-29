@@ -1,7 +1,7 @@
 import { PLAN_ART } from '../content/form';
 import { armourOf, biteDamage } from '../content/genome';
 import { angleDelta, clamp, dist2 } from '../core/util';
-import type { Creature } from './creature';
+import type { Creature, Hurt } from './creature';
 import type { Blood } from './events';
 import { armourAgainst, biteRateOf, damageOf, gulpOf, takenOf, wound } from './organs';
 import { EXPOSED_TAKEN, PATTERN_CD, RUSH_BITE } from './patterns';
@@ -102,6 +102,10 @@ export class Combat {
     // and gulp would take a body the pull has not delivered, and cutting across the cone
     // is meant to be a way out
     if (att.drawT > 0) return;
+    // a room's hostile hurts by touch, as Isaac's monsters do: a charger's dash is how it
+    // gets its body onto the player, and a drifter has nothing else. No reach past the body
+    // and no gulp, or a spitter would pull the player onto itself
+    if (att.hostile && def.isPlayer) { this.touch(att, def); return; }
     if (PLAN_ART[att.species.plan].grasp > 0 && !att.isPlayer) { this.grasp(att, def); return; }
     // the player bites on the arrows, not on contact: only a strike that is out lands, from
     // wherever it reaches, and nothing is pulled in — swimming into prey is not eating it
@@ -234,18 +238,32 @@ export class Combat {
       onPlayer: def.isPlayer, byPlayer: att.isPlayer, size: def.genome.size });
   }
 
+  /** A hostile's body against the player's. */
+  private touch(att: Creature, p: Creature) {
+    const r = att.radius * 0.7 + p.radius * 0.5;
+    if (dist2(att.x, att.y, p.x, p.y) > r * r) return;
+    const got = this.hitPlayer(att, p, att.species.role === 'drifter' ? 'touch' : 'bite');
+    // a dash ends on what it found
+    if (got && att.attack === 'strike') {
+      att.attack = 'recover';
+      att.attackT = att.attackLen = 0.7;
+      att.view.chomp();
+    }
+  }
+
   /**
    * A blow on the player: half a heart whatever landed it, a guardian's a whole one, and
    * nothing at all while the last hit's invulnerability runs or when armour shrugs it off
    * (`Creature.takeHit`). The organs still answer a hit that landed — spines on the player
    * prick what bit it.
    */
-  private hitPlayer(att: Creature, p: Creature) {
-    const got = p.takeHit(att, att.species.guardian ? 2 : 1, 'bite');
-    if (!got) return;
+  private hitPlayer(att: Creature, p: Creature, how: Hurt = 'bite') {
+    const got = p.takeHit(att, att.species.guardian ? 2 : 1, how);
+    if (!got) return 0;
     wound(this.world, att, p, { dmg: got, fatal: p.hp < 1, whole: false });
     this.world.bites.push({ x: p.x, y: p.y, amount: got, fatal: p.hp < 1,
       onPlayer: true, byPlayer: false, size: p.genome.size });
+    return got;
   }
 
   /**

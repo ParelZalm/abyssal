@@ -14,6 +14,7 @@ import { Impacts } from './render/Impacts';
 import { Ocean } from './render/ocean';
 import { followZoom, FramePass, PIXEL } from './render/pixel';
 import { PickupView } from './render/pickups';
+import { ShotView } from './render/shots';
 import { Lighting, lightTexture } from './render/lighting';
 import { Scene } from './render/Scene';
 import { Water } from './render/water';
@@ -66,6 +67,7 @@ export class Game {
   /** The tank the run is in: its map, the room the player is in, the doors, the slide. */
   tank!: TankMap;
   private pickups!: PickupView;
+  private shots!: ShotView;
   run!: Run;
   world!: World;
   player!: Creature;
@@ -195,12 +197,14 @@ export class Game {
     this.camera.over.removeChildren();
     this.tank?.destroy();
     this.pickups?.destroy();
+    this.shots?.destroy();
 
     const seed = choice.seed ?? ((Math.random() * 2 ** 32) >>> 0);
     this.run = new Run(choice, seed, this.codex);
     this.rng = new Rng(seed);
     this.ocean = new Ocean(this.rng);
     this.pickups = new PickupView();
+    this.shots = new ShotView();
 
     const g: Genome = baseGenome();
     // a larva: see-through, spine and gut showing, near white with a lavender cast, and
@@ -219,13 +223,13 @@ export class Game {
     this.camera.root.addChild(
       // what grows on the rock stands behind the bodies; the rock itself is drawn over them
       this.ocean.world, layers.decor, this.scene.focus,
-      world.fog, world.layer, this.pickups.root, this.fx.layer,
+      world.fog, world.layer, this.pickups.root, this.shots.root, this.fx.layer,
       // the rock over the bodies, so a nose pressed into a wall goes into it
       layers.rock,
     );
     // the blooms go above the lighting, in one additive layer of their own that batches as
     // one draw: they are the light, and the dark must not fall on them
-    this.camera.over.addChild(layers.glow, this.pickups.glow, world.glow);
+    this.camera.over.addChild(layers.glow, this.pickups.glow, this.shots.glow, world.glow);
     this.app.stage.addChild(this.water.layer, this.camera.root, this.lighting.sprite,
       this.camera.over);
 
@@ -340,7 +344,9 @@ export class Game {
     this.ocean.update(dt, view);
     this.tank.draw(view.t);
     this.pickups.update(this.world.pickups, view.zoom, view.t);
-    const dread = this.scene.draw(view, this.world, p, this.phase, this.dread, this.tank.lights);
+    this.shots.update(this.world.shots, view.zoom);
+    const dread = this.scene.draw(view, this.world, p, this.phase, this.dread,
+      this.tank.lights.concat(this.shots.lights));
     this.lighting.render(this.camera);
     if ((this.phase === 'play' || this.phase === 'draft') && !this.tank.sliding) {
       this.world.cull(camera.x, camera.y, camera.viewR());

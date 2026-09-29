@@ -6,6 +6,7 @@ import type { UI } from '../ui/UI';
 import type { Camera } from './Camera';
 import type { Dread } from './Dread';
 import type { Fx } from './fx';
+import { SHOT_GLOW } from './shots';
 import { lightAt, waterColor } from './water';
 
 /**
@@ -64,6 +65,11 @@ export class Impacts {
         // Stonefish: a hunter that touched the barbs, marked in the venom sacs' green
         fx.ring(f.x, f.y, 0xa8e05a, f.r);
         fx.burst(f.x, f.y, 0xa8e05a, 8, f.r, 2);
+      } else if (f.kind === 'shot' && f.shot) {
+        // the muzzle: a puff of the shot's colour where it left the mouth
+        fx.burst(f.x, f.y, SHOT_GLOW[f.shot].color, 4, 50, 1.6);
+      } else if (f.kind === 'splash' && f.shot) {
+        fx.burst(f.x, f.y, SHOT_GLOW[f.shot].color, 6, 70, 1.8);
       } else if (f.kind === 'exposed') {
         fx.ring(f.x, f.y, 0xffe28a, f.r);
       } else {

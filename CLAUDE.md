@@ -83,8 +83,9 @@ imports only point down them:
 - `content/` — the tables and pure queries over them: genome, species, zones, traits,
   forms, the body form.
 - `sim/` — the simulation. `World` holds the state and the outbox and runs three passes:
-  `Behaviour.think`, `integrate`, `Combat.resolveContacts`; `Spawner`, `Patterns` and
-  `sim/organs/` hang off it. It never reaches up into `run/` or `Game`.
+  `Behaviour.think`, `integrate`, `Combat.resolveContacts`; `Spawner`, `Patterns`,
+  `Roles` (a hostile's brain, with `Flow` for the way round the rock) and `sim/organs/`
+  hang off it. It never reaches up into `run/` or `Game`.
 - `run/` — one run's record (`Run`) and the systems that move it: `Evolution` (level-up,
   traits, transformation), `Belly` (swallowing, pickups, the last heart), `Ending`.
 - `input/` — `Input` (the keyboard, Isaac's layout) and `PlayerController` (the swim, the

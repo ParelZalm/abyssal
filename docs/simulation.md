@@ -151,9 +151,11 @@ and `main` converts it into biomass, size and particles.
 A room is stocked from its tank (`Tank.fauna`, `Tank.population`): `Spawner.stock` rolls a
 species by `weight` and places it in open water — a school as a shoal of three to six on
 one heading, plankton as a sheet five to nine wide, anything else alone — and the room is
-topped back up as bodies die. That keeps a room alive while there is nothing else in it;
-fight rooms, hostiles and rooms that stay cleared come with stage 3 of the roadmap.
-Guardians are not rolled at all until they come back as bosses (stage 7).
+topped back up as bodies die. That keeps a room alive while there is nothing else in it.
+A fight room is also dealt its hostiles, the first time it is entered (`Spawner.hostiles`):
+three or four from the tank's table (`Tank.hostiles`, species to weight), no more than
+`ROLE_MAX` of one role, placed at least three tenths of the room from the player, with
+their first attacks staggered. Guardians are not rolled at all until they come back as bosses (stage 7).
 
 **Where a body is placed.** `Terrain.openSpot` draws points in the room and **rejects**
 anything without enough water around it, never nudges one out of the rock — a nudged point
@@ -290,5 +292,53 @@ opening runs on into the room beside. A shut door (`Terrain.locked`) is its gate
 tile of collision cells at the edge and a tile past it — made solid; the opening is still
 drawn, and `RoomView` draws a grate across it. Off the grid, collision reads the field.
 
-Nothing steers around a wall yet: a shoal that heads for one presses against it until its
-wander turns it. The hostile roles (roadmap stage 4) are where avoidance belongs.
+**Steering clear.** Every body that is not the player turns its heading through
+`clearHeading` (`sim/roles.ts`) before it swims: two feelers out along the heading, at a
+body and most of a tile and at half that, and if either finds rock the heading swings out in
+steps of 0.4 rad to each side — the side the body is already turning toward first — until
+one runs clear. A shoal meeting a ledge turns along it instead of pressing into it.
+
+**The way round.** Feelers turn a body off the rock in front of it, not round a pillar
+between it and the player. A hostile without a clear line (`Terrain.clearLine`) follows a
+`Flow` field instead: a breadth-first distance from the player's cell over every collision
+cell that is water with water all round it, rebuilt when the player has moved three cells or
+the doors have changed, and read by looking two cells each way for the lowest ground. About
+9 000 cells, and it is cheap enough not to cache further — four hostiles in a room cost the
+simulation ~0.1 ms a frame.
+
+## Hostile roles
+
+A hostile does not live in its room the way the fauna does; it has one job, and its role is
+how it goes about it (*Role* in `CONTEXT.md`). `Behaviour.think` hands any hostile with a
+`Species.role` to `Roles.step` (`sim/roles.ts`) and nothing else about it runs — no flight,
+no blood, no band to keep to. Every role is the same small state machine on
+`Creature.attack` — wind-up, strike, recovery, then a cooldown on `roleCd` — so every role's
+tell is the wind-up pose the view already draws, and `Scene` lights it (see *Lighting* in
+`rendering.md`). A body still fading in does nothing, which is Isaac's beat before a room's
+monsters move. Distances are in tiles and speeds in tiles a second, so a role reads the same
+in every tank.
+
+- **Charger** — closes at a little over half its speed, slower than the player, so it is
+  dodged rather than fled; inside six tiles with a clear line it turns square on, winds up
+  (0.4–0.8 s by size) and dashes along the line it ended on at 2.1× its speed for 0.4 s, which
+  it cannot steer. A dash ends on what it hits.
+- **Spitter** — holds four to eight tiles off: backs away when crowded, closes when out of
+  range or sight, and otherwise drifts across the player's line. With a line and inside
+  eleven tiles it stops, pitches toward the player as far as a side-on fish will, and after
+  0.55 s fires one shot a quarter second ahead of where the player is going.
+- **Turret** — holds the spot it arrived at (`Creature.anchor`) and fires a ring of eight on
+  a 2.4–3 s beat whether it can see the player or not, swelling through the 0.8 s tell. Each
+  ring is turned half a spoke from the last.
+- **Drifter** — comes on by the shortest water with its heading wobbling about it; the touch
+  is its attack.
+
+**Touch.** Any hostile's body against the player's is a hit (`Combat.touch`), Isaac's rule —
+a circle of seven tenths of its radius, no reach past the body and no gulp, or a spitter
+would pull the player onto itself. `Creature.attacks` is true for a hostile against the
+player whatever the sizes.
+
+**Shots** are `World.shots`: straight, one speed (`SHOT_SPEED`, in tiles a second — the
+player swims about five), a reach of 0.16 tiles, spent on rock, on the player — landed or
+not; a shot breaks on a body in its grace rather than passing through — or after five
+seconds. A hit is half a heart through `takeHit` like any other. Firing and breaking are
+published as `shot` and `splash` pulses for `Impacts`.

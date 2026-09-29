@@ -39,6 +39,11 @@ const SHRUG_MAX = 0.4;
 const AIL_EVERY = 1.5;
 
 export type Mood = 'cruise' | 'rest' | 'dart';
+/**
+ * How a body was last hurt, for the death screen: bitten, pricked by what it bit, poisoned,
+ * hit by a shot, or stung by brushing against something.
+ */
+export type Hurt = 'bite' | 'sting' | 'poison' | 'shot' | 'touch';
 
 export class Creature {
   x = 0; y = 0; vx = 0; vy = 0; angle = 0;
@@ -69,6 +74,15 @@ export class Creature {
    * it is not tired.
    */
   hostile = false;
+  /**
+   * A hostile's role (`sim/roles.ts`): seconds until it may attack again, the heading a
+   * charger's dash is locked to, the spot a turret holds, and how many rings it has fired —
+   * each ring turns half a spoke from the last.
+   */
+  roleCd = 0;
+  aimA = 0;
+  anchor: { x: number; y: number } | null = null;
+  volley = 0;
   /** Seconds the player cannot be hit for; see `takeHit`. */
   invuln = 0;
   /** Whether the last blow on the player was shrugged off, for the view to say so. An event. */
@@ -176,11 +190,11 @@ export class Creature {
   /** Seconds a schooling body is scattered from its ball and can be picked off. */
   scatter = 0;
   /**
-   * What last hurt this body and how, for the death screen: the species, whether it was a
-   * bite (or a blow) or its spines, and the run clock when it happened (`Creature.clock`).
+   * What last hurt this body and how, for the death screen: the species, how (`Hurt`), and
+   * the run clock when it happened (`Creature.clock`).
    */
   hurtBy: Species | null = null;
-  hurtHow: 'bite' | 'sting' | 'poison' = 'bite';
+  hurtHow: Hurt = 'bite';
   hurtAt = -1;
   /** The world's clock, shared so `hurt` can stamp without a reference to the world. */
   static clock = 0;
@@ -208,7 +222,7 @@ export class Creature {
    * armour may shrug it off; otherwise it costs `halves`, starts the grace and flinches.
    * Returns what landed.
    */
-  takeHit(by: Creature, halves: number, how: 'bite' | 'sting' | 'poison'): number {
+  takeHit(by: Creature, halves: number, how: Hurt): number {
     if (this.invuln > 0) return 0;
     if (Math.random() < Math.min(SHRUG_MAX, armourOf(this.genome) * SHRUG_PER)) {
       this.invuln = SHRUG_GRACE;
@@ -235,7 +249,7 @@ export class Creature {
   }
 
   /** Book what just hurt this body. */
-  hurt(by: Creature, how: 'bite' | 'sting' | 'poison') {
+  hurt(by: Creature, how: Hurt) {
     this.hurtBy = by.species;
     this.hurtHow = how;
     this.hurtAt = Creature.clock;
@@ -294,7 +308,9 @@ export class Creature {
    * is not something a mackerel runs from.
    */
   attacks(other: Creature) {
-    return this.isPlayer ? other !== this : this.preysOn(other);
+    if (this.isPlayer) return other !== this;
+    // a hostile is set on the player whatever the sizes; everything else goes by its diet
+    return (this.hostile && other.isPlayer) || this.preysOn(other);
   }
 
   /**

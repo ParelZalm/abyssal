@@ -7,6 +7,7 @@ import type { Creature } from './creature';
 import type { Blood } from './events';
 import { glareOf, lureRangeOf, stealthOf } from './organs';
 import type { Patterns } from './patterns';
+import { clearHeading, Roles } from './roles';
 import type { World } from './world';
 
 /**
@@ -52,8 +53,12 @@ const STRIKE_KICK = 0.95;
  * Perception lives here too: who notices whom, and what a nose can find.
  */
 export class Behaviour {
+  private readonly roles: Roles;
+
   constructor(private readonly world: World, private readonly combat: Combat,
-              private readonly patterns: Patterns) {}
+              private readonly patterns: Patterns) {
+    this.roles = new Roles(world);
+  }
 
   think(c: Creature, dt: number, p: Creature) {
     if (c.isPlayer) return; // the player is steered by input
@@ -80,6 +85,8 @@ export class Behaviour {
       return;
     }
     if (c.species.pattern && this.patterns.patternStep(c, dt, p)) return;
+    // a room's hostile has one job, and its role is how it goes about it
+    if (c.hostile && c.species.role) { this.roles.step(c, dt, p, c.species.role); return; }
 
     // a squid with something in its arms stops hunting and hangs onto it, nose to the catch
     const held = c.holding;
@@ -254,6 +261,7 @@ export class Behaviour {
     if (c.y < 120) desired = Math.PI / 2;
     else if (c.y > DEPTH_MAX - 120) desired = -Math.PI / 2;
     if (Math.abs(c.x) > WORLD_HALF_W - 200) desired = c.x > 0 ? Math.PI : 0;
+    desired = clearHeading(this.world.terrain, c, desired);
 
     c.drive(dt, desired, throttle * (1 + c.panic * 0.15));
     void p;

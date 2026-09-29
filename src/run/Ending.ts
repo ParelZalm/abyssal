@@ -64,8 +64,7 @@ export class Ending {
 
   /**
    * Why the run ended, in the words the death screen leads with: what last hurt the body if
-   * that was in the last few seconds, and how — bitten, pricked by what it bit, or poisoned —
-   * or hunger when nothing did.
+   * that was in the last few seconds, and how (`Hurt`) — or something unseen when nothing did.
    */
   private causeOfDeath() {
     const p = this.p;
@@ -74,6 +73,8 @@ export class Ending {
       const a = by.guardian ? 'The' : /^[aeiou]/i.test(by.name) ? 'An' : 'A';
       if (p.hurtHow === 'sting') return `You bit ${a.toLowerCase()} ${by.name}, and it bit back`;
       if (p.hurtHow === 'poison') return `${a} ${by.name}'s venom finished you`;
+      if (p.hurtHow === 'shot') return `${a} ${by.name} shot you down`;
+      if (p.hurtHow === 'touch') return `You brushed ${a.toLowerCase()} ${by.name} once too often`;
       return `${a} ${by.name} found you`;
     }
     return 'Something bigger found you';

@@ -27,6 +27,14 @@ const LARVA_LIGHT = 0.9;
  * across, the reference's, which is what the player sees the room by.
  */
 const POOL = 11;
+/**
+ * A hostile's own light: a faint cool presence, so a room's hostiles can be found in the dark
+ * outside the larva's pool, which flares warm and wider through a wind-up. The wind-up pose is
+ * every role's tell (`Creature.pose`), and a pose in the dark is not a tell; the light is what
+ * makes it one. Reach in body radii.
+ */
+const PRESENCE = { r: 2.4, a: 0.3, color: [0x9f, 0xb4, 0xd8] };
+const TELL = { r: 2, a: 0.95, color: [0xff, 0x7a, 0x4a] };
 
 /**
  * What the player can make out this frame: which bodies show and how clearly, the ring
@@ -66,17 +74,13 @@ export class Scene {
     for (const c of world.creatures) {
       const d = Math.sqrt(dist2(c.x, c.y, p.x, p.y));
       let tint = 0xffffff;
-      if (c.preysOn(p)) {
-        // gap between bodies, not between centres — a big animal is close long before
-        // its centre is, and that is exactly when it should be frightening
+      if (c.hostile) {
+        // nothing swallows the player now, so the frame no longer closes on whatever could:
+        // it closes on a hostile with its body nearly on the player's, gap not centres, and
+        // only by half — a room is full of them, and the edge would never open otherwise
         const gap = d - c.radius - p.radius;
-        const near = 150 + c.genome.size * 1.8;
-        const t = clamp(1 - gap / near, 0, 1) ** 1.5;
-        danger = Math.max(danger, t * 0.9);
-        // things that can swallow you go bloody as they close in
-        if (t > 0.02) {
-          tint = (0xff << 16) | (Math.round(255 - t * 110) << 8) | Math.round(255 - t * 120);
-        }
+        const near = c.radius * 2 + 40;
+        danger = Math.max(danger, clamp(1 - gap / near, 0, 1) ** 2 * 0.5);
       }
 
       // anything outside the frame skips its art entirely — it still swims and hunts
@@ -130,6 +134,13 @@ export class Scene {
     p.view.shine(this.shine);
     for (const c of world.creatures) c.view.shine(this.shine);
     for (const l of this.shine) lit.add(l);
+    for (const c of world.creatures) {
+      if (!c.hostile || !c.alive || !c.view.visible) continue;
+      const k = c.attack === 'windup' ? 1 - c.attackT / c.attackLen : 0;
+      const [r, g, b] = PRESENCE.color.map((v, i) => Math.round(v + (TELL.color[i] - v) * k));
+      lit.add({ x: c.x, y: c.y, r: c.radius * (PRESENCE.r + TELL.r * k), color: (r << 16) | (g << 8) | b,
+        a: (PRESENCE.a + TELL.a * k) * c.emergence });
+    }
     for (const l of lights) lit.add(l);
     // a tank has no thermocline: the shader's seal is put below the floor of the world, open.
     // The player carries a light of its own whatever its organs: a larva is the brightest

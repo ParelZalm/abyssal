@@ -131,6 +131,12 @@ is smooth, and `FramePass` steps and dithers it onto the grid with everything el
   `root` and drawn after the multiply; `World.glow` and the decoration's blooms live there,
   so a lamp is never darkened by its own shadow. A light that only reveals what is near it
   does not read as a light: each decoration light has a bloom in the water too.
+- **Hostiles are lit, and the tell is a light.** Each hostile throws a faint cool light of
+  its own (`PRESENCE` in `Scene`), so a room's threats can be found outside the larva's
+  pool, and it flares warm and wider through a wind-up (`TELL`). The wind-up pose is every
+  role's tell, and a pose in the dark is not a tell; the light is what makes it one.
+- **Shots light the room.** Each carries a light and a bloom (`render/shots.ts`), the bolt
+  the most since it is light; a shot has to be seen coming in a dark room.
 - The water shader still adds the player's colour to the water around it (`uPool`), now at
   the body's world position rather than the screen's centre, since the camera holds the
   room and no longer follows.

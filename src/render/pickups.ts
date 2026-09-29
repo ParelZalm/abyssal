@@ -33,8 +33,10 @@ export const SPRITES = {
 
 export type SpriteName = keyof typeof SPRITES;
 
-/** The colours a map is painted in, per kind: body, highlight, shade, outline. */
-export const COLOURS: Record<SpriteName, { x: string; h: string; d: string; o: string }> = {
+/** The colours a map is painted in: body, highlight, shade, outline. */
+export interface Palette { x: string; h: string; d: string; o: string }
+
+export const COLOURS: Record<SpriteName, Palette> = {
   heart: { x: '#e0344a', h: '#ff9aa4', d: '#8e1c36', o: '#2a0a16' },
   shell: { x: '#e8d4b8', h: '#fff6e6', d: '#b09478', o: '#3a2a20' },
 };
@@ -44,9 +46,7 @@ export const COLOURS: Record<SpriteName, { x: string; h: string; d: string; o: s
  * body is filled from the left, for a heart that is half or wholly empty; an empty part is
  * drawn in the outline's colour so the container still reads.
  */
-export function spriteCanvas(name: SpriteName, cell = 1, fill = 1): HTMLCanvasElement {
-  const rows = SPRITES[name];
-  const col = COLOURS[name];
+export function paintMap(rows: readonly string[], col: Palette, cell = 1, fill = 1): HTMLCanvasElement {
   const w = rows[0].length, h = rows.length;
   const c = document.createElement('canvas');
   c.width = w * cell; c.height = h * cell;
@@ -62,6 +62,10 @@ export function spriteCanvas(name: SpriteName, cell = 1, fill = 1): HTMLCanvasEl
     }
   }
   return c;
+}
+
+export function spriteCanvas(name: SpriteName, cell = 1, fill = 1): HTMLCanvasElement {
+  return paintMap(SPRITES[name], COLOURS[name], cell, fill);
 }
 
 const textures = new Map<SpriteName, Texture>();

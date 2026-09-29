@@ -21,7 +21,7 @@ const SLIDE = 0.35;
 const PREBAKE_MS = 6;
 const SLIDE_BAKE_MS = 11;
 /** Hostiles a fight room is dealt, and a boss room before its boss arrives (stage 7). */
-const FIGHT_HOSTILES: [number, number] = [2, 3];
+const FIGHT_HOSTILES: [number, number] = [3, 4];
 const BOSS_HOSTILES = 4;
 
 /** One room of the tank as the run has met it. */

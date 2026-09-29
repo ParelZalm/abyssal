@@ -1,8 +1,11 @@
-import { speciesById, type Species } from '../content/species';
+import { speciesById, type Role, type Species } from '../content/species';
 import type { Tank } from '../content/tanks';
 import { type Rng, TAU } from '../core/util';
 import type { Terrain } from './terrain';
 import type { World } from './world';
+
+/** The most of one role dealt into a room. */
+const ROLE_MAX: Record<Role, number> = { charger: 3, spitter: 2, turret: 2, drifter: 2 };
 
 /**
  * Where bodies come from: a room's fauna, drawn from its tank, placed in open water in the
@@ -16,20 +19,36 @@ export class Spawner {
   constructor(private readonly world: World, private readonly rng: Rng) {}
 
   /**
-   * A fight room's hostiles, `count` of them, placed as the player comes in and away from
-   * the door they came through, so the first the player knows of one is it coming.
+   * A fight room's hostiles, `count` of them, dealt from the tank's by weight and placed as
+   * the player comes in, away from the door they came through, so the first the player
+   * knows of one is it coming. A role is held to `ROLE_MAX` a room: two turrets and a
+   * spitter is a room to wait out, not one to fight.
    */
   hostiles(room: Terrain, tank: Tank, player: { x: number; y: number }, count: number) {
+    const dealt: Partial<Record<Role, number>> = {};
     let n = 0;
-    for (let guard = 0; n < count && guard < 30; guard++) {
-      const sp = speciesById(this.rng.pick(tank.hostiles));
+    for (let guard = 0; n < count && guard < 40; guard++) {
+      const sp = speciesById(this.weighted(tank.hostiles));
+      const role = sp.role ?? 'charger';
+      if ((dealt[role] ?? 0) >= ROLE_MAX[role]) continue;
       const at = room.openSpot(this.rng, sp.size[1] * 0.6);
       if (!at || Math.hypot(at.x - player.x, at.y - player.y) < room.width * 0.3) continue;
       const c = this.place(room, sp, at.x, at.y);
       if (!c) continue;
       c.hostile = true;
+      // staggered, so a room does not open fire all at once the moment it resolves
+      c.roleCd = this.rng.range(0.3, 1.4);
+      dealt[role] = (dealt[role] ?? 0) + 1;
       n++;
     }
+  }
+
+  private weighted(table: Record<string, number>) {
+    let total = 0;
+    for (const id in table) total += table[id];
+    let r = this.rng.next() * total;
+    for (const id in table) if ((r -= table[id]) <= 0) return id;
+    return Object.keys(table)[0];
   }
 
   /** Top a room up to `want` bodies of its tank's fauna. */

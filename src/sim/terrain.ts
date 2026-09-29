@@ -60,8 +60,9 @@ export class Terrain {
   readonly x0: number;
   readonly y0: number;
   private readonly fine: Uint8Array;
-  private readonly fineCols: number;
-  private readonly fineRows: number;
+  /** The collision grid's size, in cells. */
+  readonly fineCols: number;
+  readonly fineRows: number;
   /** Seed for the rock's noise, so two rooms from one template are not one rock. */
   private readonly seed: number;
   /** The sides a door goes through. */
@@ -221,7 +222,7 @@ export class Terrain {
    * Whether a collision cell blocks. Off the grid it is worked out from the field, which is
    * rock there but for the water through a door; a shut door's band blocks whatever it is.
    */
-  private solid(i: number, j: number) {
+  solid(i: number, j: number) {
     if (this.locked) {
       for (const g of this.gates) if (i >= g.i0 && i <= g.i1 && j >= g.j0 && j <= g.j1) return true;
     }
@@ -233,6 +234,20 @@ export class Terrain {
 
   solidAt(x: number, y: number) {
     return this.solid(Math.floor((x - this.x0) / this.cell), Math.floor((y - this.y0) / this.cell));
+  }
+
+  /**
+   * Whether open water runs straight from one point to the other: the line sampled every
+   * half cell, so a wall a cell thick cannot be looked through. What a spitter asks before it
+   * aims, and a charger before it commits to a line it cannot steer off.
+   */
+  clearLine(x0: number, y0: number, x1: number, y1: number) {
+    const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / (this.cell * 0.5));
+    for (let k = 1; k < n; k++) {
+      const t = k / n;
+      if (this.solidAt(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)) return false;
+    }
+    return true;
   }
 
   /** The water a room's own animals keep to, as a depth range, so they stay off the rock. */

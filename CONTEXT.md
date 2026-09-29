@@ -61,6 +61,10 @@ lunges, a **spitter** fires aimed shots, a **turret** is fixed in place and fire
 beat, a **drifter** crosses slowly and hurts to touch.
 _Avoid_: archetype, enemy type
 
+**Shot** — something a spitter or a turret fires: it flies straight at one speed and is spent
+on the first rock or body it meets. Hitting the player is a hit like any other.
+_Avoid_: bullet, projectile, tear
+
 **Hit** — one blow landed on the player, whatever landed it. A hit costs half a heart, a
 boss's a whole one; armour is the chance of shrugging one off. After a hit comes a moment of
 **grace** in which nothing lands.
