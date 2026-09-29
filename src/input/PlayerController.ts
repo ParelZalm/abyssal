@@ -34,11 +34,14 @@ const ATTACK_EVERY = 0.4;
 /**
  * The player's shots — the spit every larva hatches with, and the primaries that replace it:
  * tiles a second — faster than any hostile's, so a duel is the player's to win — and tiles of
- * reach, Isaac's six and a half, about a fifth of a room. The recoil is the kick back off
- * each, a share of top speed. What makes a lunge harder (the Siphon Jet) makes a shot faster.
+ * reach. Isaac's six and a half is half of his room but a fifth of one here, which kept the
+ * larva inside every fight it was shooting at; ten is a third of a room, and still a tile
+ * short of a spitter's eleven, so the archerfish keeps its reason to be chased. The recoil is
+ * the kick back off each, a share of top speed. What makes a lunge harder (the Siphon Jet)
+ * makes a shot faster.
  */
 export const SHOT_SPEED = 7;
-export const SHOT_RANGE = 6.5;
+export const SHOT_RANGE = 10;
 const RECOIL = 0.18;
 /**
  * Seconds a body keeps facing its attack after the arrow is let go. Without it a tap flips

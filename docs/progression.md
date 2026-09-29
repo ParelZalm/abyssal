@@ -298,7 +298,7 @@ ranged; the bite is the risk a build takes later, for the most damage the arrows
 the belly it feeds.
 
 A shot flies 7 tiles a second — faster than any hostile's, and faster again with the Siphon
-Jet, which lunges a bite harder — for 6.5 tiles (`SHOT_SPEED`, `SHOT_RANGE` in
+Jet, which lunges a bite harder — for 10 tiles, a third of a room (`SHOT_SPEED`, `SHOT_RANGE` in
 `PlayerController`), and lands as a blow (`Combat.hit`), never a swallow, so what it kills is
 left as a carcass for the mouth. The strike's kick still opens its window, so the organs that
 answer a strike answer a shot. The body paints it: a water sac under the jaw for the spit, a

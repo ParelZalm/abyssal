@@ -258,7 +258,7 @@ a shot (it was 0.8 of a bite); the bite comes back as the Lunging Bite, a reef c
 a shot and the swallow. Hostile health follows Isaac's curve instead of cancelling the size
 difference between tanks (`hostileHp` 0.55, 0.8, 1.1), the bosses' armour is down to two or
 three and their health set to match (200, 420, 700), and a boss leaves a mutation by the drain,
-leaning toward damage. The cards say damage, not bite; the Siphon Jet speeds shots too. The
+leaning toward damage. The cards say damage, not bite; the Siphon Jet speeds shots too. Shots reach 10 tiles, not 6.5: Isaac's number is half his room and was a fifth of ours. The
 board's *Pedestals & power* group has the bite beside the two shots, and the larva spitting.
 
 What it found, and what it leaves:

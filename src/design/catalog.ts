@@ -1086,7 +1086,7 @@ function pedestalsItem(id: string, name: string, note: string, stands: Omit<Pede
  */
 function statColumnCanvas() {
   const rows: [Parameters<typeof glyphCanvas>[0], string][] = [
-    ['teeth', '6.9'], ['pulse', '2.50'], ['ring', '6.5'], ['bolt', '7.0'], ['tail', '6.5'], ['shield', '0%'],
+    ['teeth', '6.9'], ['pulse', '2.50'], ['ring', '10.0'], ['bolt', '7.0'], ['tail', '6.5'], ['shield', '0%'],
   ];
   const c = document.createElement('canvas');
   c.width = 44; c.height = rows.length * 10 + 2;
