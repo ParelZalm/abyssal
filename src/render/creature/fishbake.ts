@@ -40,6 +40,8 @@ export interface Baked {
   back: number;
   /** Half-height of the strip. Constant along its length, so the texture keeps proportion. */
   halfH: number;
+  /** Half-depth of the body at its deepest, in R units — what the swim is scaled by. */
+  depth: number;
   /** Live views drawing this texture. Only an unused entry may be evicted — see `bakeFish`. */
   users: number;
   /** One rigged arm, root at u=0 and tip at u=1, for plans with `grasp`. Null otherwise. */
@@ -227,12 +229,14 @@ const TINY = 6, SMALL = 12;
 
 function finish(s: Sheet, pal: Palette, g: Genome, res: number, back: number, rigged: boolean,
                 f: Form, A: PlanArt): Baked {
+  let depth = 0;
+  for (let i = 0; i <= 40; i++) depth = Math.max(depth, halfWidth(i / 40, f));
   const shaded = shade(s, pal);
   const crop = cropOf(s);
   const canvas = document.createElement('canvas');
   canvas.width = crop.w; canvas.height = crop.h;
   canvas.getContext('2d')!.drawImage(shaded, crop.x, crop.y, crop.w, crop.h, 0, 0, crop.w, crop.h);
-  return { texture: pixelTexture(canvas), canvas, users: 0, lights: s.lights,
+  return { texture: pixelTexture(canvas), canvas, users: 0, lights: s.lights, depth,
            back: back + crop.x / res, front: back + (crop.x + crop.w) / res, halfH: crop.h / 2 / res,
            arm: rigged ? armRig(f, pal, A, g, res) : null };
 }

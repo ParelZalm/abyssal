@@ -138,25 +138,30 @@ function formGroup(): DesignGroup {
 }
 
 /**
- * A creature for a board cell. The game keeps every bloom in one additive layer so the
- * sprites batch; a cell holds one animal, where batching is moot and the bloom belongs on
- * the body — so it is parented back on here.
+ * A creature for a board cell, stacked the way `Game.reset` stacks the world: fog, then the
+ * bloom layer, then the body, as siblings. The bloom layer is deliberately not a child of the
+ * body — `FishView.place` carries each lamp through the body's transform by hand — so
+ * parenting it into the view would transform every lamp twice.
  */
-function boardFish(g: Genome, plan: Plan): FishView {
-  const v = new FishView(g, plan);
-  // both extra layers are parented in, in the same order `main` stacks them: the board
-  // showing a creature without its fog or its bloom is exactly the drift this page exists
-  // to prevent
-  v.addChildAt(v.glow, 0);
-  v.addChildAt(v.fog, 0);
-  return v;
+class BoardFish extends Container {
+  readonly fish: FishView;
+  constructor(g: Genome, plan: Plan) {
+    super();
+    this.fish = new FishView(g, plan);
+    this.addChild(this.fish.fog, this.fish.glow, this.fish);
+  }
 }
 
-/** How a game creature swims on the board: the same call `world.ts` makes each frame. */
+function boardFish(g: Genome, plan: Plan): BoardFish {
+  return new BoardFish(g, plan);
+}
+
+/** How a game creature swims on the board: the same calls `world.ts` makes each frame. */
 function fishAnimate(view: Container, dt: number, beat: number) {
   const bank = Math.sin(beat * 0.23) * 0.6;
-  view.rotation = Math.sin(beat * 0.23) * 0.12;
-  (view as FishView).animate(dt, 0.7, beat, bank);
+  const { fish } = view as BoardFish;
+  fish.animate(dt, 0.7, beat, bank);
+  fish.place(0, 0, Math.sin(beat * 0.23) * 0.12, 1);
 }
 
 // ------------------------------------------------------------------ silhouettes

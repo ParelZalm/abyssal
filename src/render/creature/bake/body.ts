@@ -128,8 +128,11 @@ export function viscera(s: Sheet, f: Form, pal: Palette) {
       s.dot(x - Math.abs(k) * halfWidth(t, f) * 0.4, edgeAt(t, f, k), pal.dark, 0.6);
     }
   }
+  // the gut: longer than it is deep, and not quite black — a flat disc of the darkest
+  // value reads as a hole punched through the animal rather than as something inside it
   const tg = 0.42;
-  s.blot(spineAt(tg, f), edgeAt(tg, f, 0.25), halfWidth(tg, f) * 0.45, pal.ramp[1], 1);
+  const r = halfWidth(tg, f) * 0.26;
+  for (const k of [-1, 0, 1]) s.blot(spineAt(tg, f) + k * r * 0.8, edgeAt(tg, f, 0.25), r, pal.ramp[2], 0.8);
 }
 
 /**

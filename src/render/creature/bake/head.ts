@@ -72,7 +72,9 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
   // of no light at all there is nothing to gather, and a blind socket is a dimple
   const te = A.eyeAt;
   const ex = spineAt(te, f), ey = edgeAt(te, f, -0.35);
-  const r = Math.max(s.texel * 0.5, halfWidth(te, f) * 0.26 * eyeOf(g) * A.eye);
+  // capped against the head: `eyeOf` grows with sense, and a hunter's big eye is still an
+  // eye in a head, not a disc covering half of it
+  const r = Math.max(s.texel * 0.5, halfWidth(te, f) * Math.min(0.3, 0.15 * eyeOf(g) * A.eye));
   const pale = A.paleEyes || g.eyeAdapt > 0.45;
   if (g.eyeAdapt < -0.4) {
     s.blot(ex, ey, r * 0.8, pal.ramp[1], 0.8);

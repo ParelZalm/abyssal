@@ -23,7 +23,8 @@ import { PLAN_ART, quintic, R, type Plan } from '../../content/form';
 import { menace, type Genome } from '../../content/genome';
 import { glowTexture } from '../textures';
 import { hsl, lerp } from '../../core/util';
-import { artVersion } from '../pixel';
+import { artDensity, artVersion } from '../pixel';
+import type { Emitter } from './bake/sheet';
 
 interface Motion {
   /** Columns in the strip. More only pays where the body is long enough to hold a wave. */
@@ -99,6 +100,12 @@ export class FishView extends Container {
   /** A bruised red bloom that grows as the animal becomes something to run from. */
   private aura = new Sprite(glowTexture());
   private halo = new Sprite(glowTexture());
+  /**
+   * One small bloom per light organ the bake recorded — photophores, the lure, a guardian's
+   * eye. The organ itself is a single hot pixel, and a lamp one texel across is only a lamp
+   * if light comes off it. In `glow` with the rest, so every lamp on screen is one batch.
+   */
+  private lamps: { s: Sprite; e: Emitter; phase: number }[] = [];
   /** A tight, hot centre inside the halo — the halo alone reads as fog, not as a light. */
   private core = new Sprite(glowTexture());
   private mesh: MeshSimple | null = null;
@@ -138,6 +145,17 @@ export class FishView extends Container {
     this.x = x; this.y = y; this.rotation = rotation;
     if (face !== this.face) { this.face = face; this.scale.y = Math.abs(this.scale.y) * face; }
     this.glow.x = x; this.glow.y = y;
+    // the glow layer is not rotated or mirrored with the body, so each lamp is carried
+    // through the body's own transform by hand. The swim wave is left out: it moves the
+    // tail far more than the flank, and a lamp a pixel off its organ is not visible
+    if (this.lamps.length) {
+      const c = Math.cos(rotation), s = Math.sin(rotation);
+      const kx = this.scale.x, ky = this.scale.y;
+      for (const { s: sp, e } of this.lamps) {
+        const lx = e.x * kx, ly = e.y * ky;
+        sp.position.set(lx * c - ly * s, lx * s + ly * c);
+      }
+    }
     this.fog.x = x; this.fog.y = y;
   }
 
@@ -153,6 +171,24 @@ export class FishView extends Container {
     // so tinting it would only make it glow in whatever colour the tint happens to be
     this.fog.visible = visible;
     this.fog.alpha = alpha;
+  }
+
+  /** A bloom per light organ, sized in pixels of the frame rather than in body lengths. */
+  private hangLamps(lights: Emitter[]) {
+    for (const l of this.lamps) l.s.destroy();
+    this.lamps = [];
+    // a lamp's reach is a few pixels of the frame whatever the animal's size: sized off the
+    // body, a leviathan's photophores would be searchlights and a lanternfish's invisible
+    const px = 1 / artDensity();
+    for (const e of lights) {
+      const s = new Sprite(glowTexture());
+      s.anchor.set(0.5);
+      s.blendMode = 'add';
+      s.tint = e.color;
+      s.width = s.height = px * (5 + e.strength * 9);
+      this.glow.addChild(s);
+      this.lamps.push({ s, e, phase: Math.random() * 6.28 });
+    }
   }
 
   /** The bloom is not a child, so it does not go down with the rest of the view. */
@@ -182,6 +218,7 @@ export class FishView extends Container {
     // genome never leaves the entry at zero users for an eviction to catch
     const old = this.baked;
     this.baked = bakeFish(g, this.plan);
+    this.hangLamps(this.baked.lights);
     if (old) releaseFish(old);
     const { front, back } = this.baked;
 
@@ -242,7 +279,10 @@ export class FishView extends Container {
     const gr = R * (4 + g.glow * 7);
     this.halo.width = this.halo.height = gr * 2;
     this.halo.tint = tint;
-    this.halo.alpha = Math.min(0.95, 0.26 + g.glow * 0.65);
+    // the floor is lower than it was before the pixel outline and rim: those carry the
+    // silhouette in dark water now, and a disc of light round every animal reads as a
+    // spotlight on each of them rather than as bioluminescence
+    this.halo.alpha = Math.min(0.95, 0.13 + g.glow * 0.65);
     // the core sits inside the body's own width, so it lifts the animal's value rather
     // than spilling a second disc of light around it
     // and only a real light organ gets one: on an unlit animal it lands as a hot white
@@ -294,8 +334,12 @@ export class FishView extends Container {
     if (!this.mesh || !this.baked) return;
     const m = this.motion;
     const h = this.baked.halfH;
+    // the sway and the bend are measured off the body, not the strip: side-on the strip
+    // also holds the dorsal fin, the lure and the barbels, and a wave sized to all of that
+    // curls the animal like a banana
+    const d = this.baked.depth;
     const n = this.colX.length;
-    const amp = h * m.amp * SIDE_ON * (0.45 + thrust * 0.75);
+    const amp = d * m.amp * SIDE_ON * (0.45 + thrust * 0.75);
     const spineY: number[] = [];
     // A turn bends the whole body into a C rather than rotating a rigid strip about its
     // middle: head and tail both fall to the inside of the turn, so the nose leads into it
@@ -306,7 +350,7 @@ export class FishView extends Container {
     const mid = (x0 + x1) / 2, half = Math.abs(x0 - x1) / 2 || 1;
     // in the mirrored frame local y is flipped, so the bend has to be too or a mirrored
     // animal curls away from the turn it is making
-    const bend = m.pulse ? 0 : bank * h * 1.25 * this.face;
+    const bend = m.pulse ? 0 : bank * d * 1.25 * this.face;
     for (let j = 0; j < n; j++) {
       const s = j / (n - 1);
       const env = quintic(s);
@@ -414,6 +458,11 @@ export class FishView extends Container {
 
   animate(dt: number, thrust: number, beat: number, bank: number) {
     if (this.version !== artVersion) this.rebuild(this.g);
+    // a light organ breathes rather than flickers: a slow drift in strength, each on its own
+    for (const l of this.lamps) {
+      l.phase += dt * 1.6;
+      l.s.alpha = Math.min(0.95, 0.3 + l.e.strength * 0.4) * (0.78 + Math.sin(l.phase) * 0.22);
+    }
     const unit = this.g.size / R * this.swell;
     let sx = 1;
     let sy = 1 - Math.abs(bank) * 0.16;

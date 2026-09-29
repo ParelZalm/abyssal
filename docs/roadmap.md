@@ -150,8 +150,10 @@ follows, in stages, each committed on its own:
    mirrors instead of rolling (`faceFor`) and caps its pitch (`drawnAngle`); the lure's
    strike point follows both. Left for tuning: the per-plan proportions, and small
    animals, which at their real size are a handful of texels.
-3. **Light.** Blooms, halos and the lure drawn as stepped pixel light rather than soft
-   discs.
+3. ~~**Light.**~~ Done: every light organ the bake records gets a bloom of its own in the
+   shared additive layer, sized in pixels of the frame, carried through the body's
+   transform and breathing on its own clock; `FramePass` bands and dithers all of it. The
+   glow floor every animal carries is halved, since the pixel rim now holds the silhouette.
 4. **The water and the background.** Props, fields and particulate redrawn for the grid.
 5. **The HUD.** A pixel face and hard-edged chrome, so the DOM layer agrees with the
    canvas under it.

@@ -143,7 +143,14 @@ below 12 it gets its lights but no eye, fins or mouth. At its real size a krill 
 texels long, and an eye on it is the whole animal.
 
 Colours that are not lit by the water — eyes, light organs, venom — go on as decals, and
-every light organ also records an emitter (`Baked.lights`) for the view to hang a bloom on.
+every light organ also records an emitter (`Baked.lights`). `FishView` hangs a small bloom
+on each, in `glow` with the rest so they batch. That layer is not rotated or mirrored with
+the body, so `place` carries each lamp through the body's transform by hand — which is why
+the design board stacks `glow` beside the body rather than inside it. A lamp is sized in
+pixels of the frame, not in body lengths, or a leviathan's photophores are searchlights.
+
+The swim wave and the turn bend are scaled by `Baked.depth`, the body's own half-depth,
+not by the strip: side-on the strip also holds the dorsal, the lure and the barbels.
 
 ### Skinning
 
