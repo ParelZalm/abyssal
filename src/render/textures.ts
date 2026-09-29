@@ -13,13 +13,30 @@ function radial(size: number, stops: [number, string][]): Texture {
 }
 
 let dot: Texture | null = null;
-/** A soft round dot. Shared by motes and particles so the whole lot batches. */
+/**
+ * A pixel dot: a hard 5×5 disc with a half-lit rim, nearest-sampled. Shared by motes and
+ * particles so the whole lot batches. At the size marine snow is drawn it samples to a
+ * single texel, which is what the reference's snow is; blown up into a blood cloud it stays
+ * a stepped disc on the grid rather than a smear. A soft gradient dot here was one more
+ * thing smoothing itself over the pixel grid.
+ */
 export function dotTexture(): Texture {
-  return (dot ??= radial(32, [
-    [0, 'rgba(255,255,255,1)'],
-    [0.5, 'rgba(255,255,255,0.7)'],
-    [1, 'rgba(255,255,255,0)'],
-  ]));
+  if (dot) return dot;
+  const c = document.createElement('canvas');
+  c.width = c.height = 5;
+  const ctx = c.getContext('2d')!;
+  const img = ctx.createImageData(5, 5);
+  for (let y = 0; y < 5; y++) for (let x = 0; x < 5; x++) {
+    const d = Math.hypot(x - 2, y - 2);
+    const a = d < 1.1 ? 1 : d < 2.1 ? 0.5 : 0;
+    const i = (y * 5 + x) * 4;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+    img.data[i + 3] = Math.round(a * 255);
+  }
+  ctx.putImageData(img, 0, 0);
+  dot = Texture.from(c);
+  dot.source.scaleMode = 'nearest';
+  return dot;
 }
 
 let glow: Texture | null = null;

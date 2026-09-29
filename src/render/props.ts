@@ -1,9 +1,12 @@
 /**
- * Soft organic props for the parallax background.
+ * Organic props for the parallax background, as pixel art.
  *
  * The parked silhouette pass failed because creature detail turns to mush at
  * background scale. These are purpose-drawn primitives — discs, blobs, masses,
- * wisps — meant to be soft. Blur is baked into the texture at boot; the scenery
+ * wisps — meant to be soft. They are painted and blurred at boot as before, then brought
+ * down to a small texel grid with their falloff turned into screen-door dither: the
+ * softness a plane's distance asks for survives as dither density, and the edge is still a
+ * stair-step on the frame's grid rather than a smooth gradient laid over it. The scenery
  * layer only places and tints them.
  */
 import { Texture } from 'pixi.js';
@@ -181,8 +184,42 @@ export function propTexture(kind: PropKind, level: number): Texture {
   const key = `${kind}|${level}`;
   let tex = cache.get(key);
   if (!tex) {
-    tex = blurred(flatten(kind), SRC * BLUR[level]);
+    tex = pixelate(blurred(flatten(kind), SRC * BLUR[level]));
     cache.set(key, tex);
   }
   return tex;
+}
+
+/**
+ * Texels on a prop's long side. A plane holds its apparent size (`scenery.ts`), so a prop
+ * is always about the same number of frame pixels across — sixty to a hundred and thirty
+ * at two CSS pixels per art pixel — and this keeps its texels close to the grid's.
+ */
+const PIXELS = 64;
+
+/** 4×4 Bayer, the frame's own dither — see `render/pixel.ts`. */
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) / 16);
+
+/** Down to `PIXELS` texels, with alpha stepped to empty, half and solid by the dither. */
+function pixelate(t: Texture): Texture {
+  const src = t.source.resource as HTMLCanvasElement;
+  const k = PIXELS / Math.max(src.width, src.height);
+  const w = Math.max(1, Math.round(src.width * k)), h = Math.max(1, Math.round(src.height * k));
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d')!;
+  ctx.drawImage(src, 0, 0, w, h);
+  const img = ctx.getImageData(0, 0, w, h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4;
+    const a = img.data[i + 3] / 255;
+    const lvl = Math.min(2, Math.floor(a * 2 + BAYER[(y & 3) * 4 + (x & 3)] * 0.98));
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+    img.data[i + 3] = Math.round(lvl / 2 * 255);
+  }
+  ctx.putImageData(img, 0, 0);
+  t.destroy(true);
+  const out = Texture.from(c);
+  out.source.scaleMode = 'nearest';
+  return out;
 }

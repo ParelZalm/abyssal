@@ -30,6 +30,11 @@ Two findings that remain load-bearing:
   invisible at 8000 m; below the twilight the shapes have to emit the biome's own
   colour, and the band switches to additive blending.
 
+With the pixel grid (September 2026) the props keep their painting and their blur, then
+drop to 64 texels with the blur's falloff stepped into a Bayer screen-door: the softness a
+distant plane needs survives as dither density instead of as a smooth gradient on big
+pixels.
+
 The old silhouette extractor lived in `silhouettes.ts` and is gone — the extraction
 trick (render a plan, keep alpha as white, blur) is no longer used.
 

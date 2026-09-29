@@ -154,7 +154,11 @@ follows, in stages, each committed on its own:
    shared additive layer, sized in pixels of the frame, carried through the body's
    transform and breathing on its own clock; `FramePass` bands and dithers all of it. The
    glow floor every animal carries is halved, since the pixel rim now holds the silhouette.
-4. **The water and the background.** Props, fields and particulate redrawn for the grid.
+4. ~~**The water and the background.**~~ First pass done: particulate and fx dots are a
+   hard 5×5 pixel disc, and the background props are brought down to 64 texels with their
+   blur turned into screen-door dither, so a plane's distance reads as dither density. The
+   water shader is left alone — `FramePass` bands it. Left: pixel-art scenery with real
+   structure (rock, kelp, vents), which is where the field prototype should land.
 5. **The HUD.** A pixel face and hard-edged chrome, so the DOM layer agrees with the
    canvas under it.
 
