@@ -2,6 +2,7 @@ import type { Role } from '../content/species';
 import { angleDelta, clamp, dist2, TAU } from '../core/util';
 import type { Creature } from './creature';
 import { Flow } from './flow';
+import { stealthOf } from './organs';
 import type { Terrain } from './terrain';
 import type { World } from './world';
 
@@ -49,6 +50,15 @@ export const SPOKES = 8;
 /** How far past its size a turret swells at the end of the tell. */
 export const SWELL = 0.5;
 
+/**
+ * Stealth against a hostile: how wide of the player a spitter's shot goes, in radians per
+ * point, and how much longer a room's hostiles take to find the player on entering, in
+ * seconds per point (`Spawner.hostiles`). A hostile always knows the player is in its room;
+ * stealth makes it slow and inaccurate, not blind.
+ */
+export const STEALTH_AIM = 0.4;
+export const STEALTH_DELAY = 1.5;
+
 /** The drifter: it comes on steadily by the shortest water, and the touch is the attack. */
 const DRIFT_THROTTLE = 0.85;
 
@@ -80,6 +90,15 @@ export class Roles {
     // a room's monsters before they move
     if (c.fade < 1) { c.drive(dt, c.angle, 0); return; }
     if (!p.alive) { c.drive(dt, c.angle, 0.2); return; }
+    // in ink the player is not there to be found: whatever was not already under way is
+    // abandoned, and the room's hostiles drift where they were until it thins
+    const inked = this.world.inks.some(k => dist2(k.x, k.y, p.x, p.y) < k.r * k.r);
+    if (inked && c.attack !== 'strike') {
+      if (c.attack === 'windup') c.attack = 'none';
+      c.view.swell = 1;
+      c.drive(dt, clearHeading(t, c, c.angle + Math.sin(c.wander * 0.8) * 0.8), 0.25);
+      return;
+    }
     switch (role) {
       case 'charger': this.charger(c, dt, p, t); break;
       case 'spitter': this.spitter(c, dt, p, t); break;
@@ -204,7 +223,8 @@ export class Roles {
     const w = this.world, p = w.player, kind = c.species.shot;
     if (role === 'spitter' && kind) {
       const lead = LEAD;
-      const a = Math.atan2(p.y + p.vy * lead - c.mouthY, p.x + p.vx * lead - c.mouthX);
+      const wide = (Math.random() * 2 - 1) * Math.max(0, stealthOf(p)) * STEALTH_AIM;
+      const a = Math.atan2(p.y + p.vy * lead - c.mouthY, p.x + p.vx * lead - c.mouthX) + wide;
       w.fire(c, kind, c.mouthX, c.mouthY, a, SHOT_SPEED[kind]);
     } else if (role === 'turret' && kind) {
       c.volley++;

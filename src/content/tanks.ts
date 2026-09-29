@@ -16,7 +16,7 @@ const LEGEND: Record<string, Tile> = { '.': 'water', '#': 'rock', '=': 'sand', '
 export const SOLID: Record<Tile, boolean> = { water: false, rock: true, sand: true, boulder: true };
 
 export interface Tank {
-  id: string;
+  id: TankId;
   name: string;
   /** World depth of the tank's middle row: the water it is drawn with. */
   depth: number;
@@ -56,6 +56,19 @@ export interface RoomTemplate {
    */
   rows: string[];
 }
+
+/**
+ * The tanks of a run, in the order they are descended through. Only the nursery is built;
+ * the others are named so that what belongs to them — their mutations, their hostiles — can
+ * say so before they arrive (stage 7).
+ */
+export const TANK_ORDER = ['nursery', 'reef', 'deep'] as const;
+export type TankId = typeof TANK_ORDER[number];
+export const tankIndex = (id: TankId) => TANK_ORDER.indexOf(id);
+/** What each tank is called, for what belongs to one before it is built. */
+export const TANK_NAMES: Record<TankId, string> = {
+  nursery: 'Nursery Tank', reef: 'Reef Tank', deep: 'Deep Tank',
+};
 
 export const TANKS: Tank[] = [
   // the Twilight's water: dark and cool, the look of the references, with the light pooled

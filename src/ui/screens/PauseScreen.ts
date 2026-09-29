@@ -1,5 +1,5 @@
 import { FAMILY_NAMES, formAt, MAX_FORMS, type Family } from '../../content/forms';
-import { armourOf, biteDamage, maxHp } from '../../content/genome';
+import { armourOf, biteDamage, mendPerRoom } from '../../content/genome';
 import type { Component } from '../Component';
 import { div, h1, h2, h3, h4, kbd, keysLine, li, p, span, ul } from '../dom/element';
 import { createIcon } from '../icons';
@@ -67,15 +67,14 @@ export class PauseScreen implements Component {
     const bodyStats = ul('stats');
     bodyStats.append(
       statRow('Length', `${g.size.toFixed(0)} cm`),
-      statRow('Health', `${maxHp(g)}`),
       statRow('Speed', `${g.speed.toFixed(0)}`),
       statRow('Turning', `${g.turn.toFixed(1)} rad/s`),
       statRow('Bite', `${biteDamage(g).toFixed(1)}`),
       statRow('Armour', `${armourOf(g).toFixed(0)}`),
       statRow('Sense', `${g.sense.toFixed(0)} m`),
-      statRow('Regen', `${g.regen.toFixed(1)}/s`),
-      statRow('Metabolism', `×${g.metabolism.toFixed(2)}`),
-      statRow('Gulp reach', `×${g.gulp.toFixed(2)}`),
+      statRow('Mends a room', `${mendPerRoom(g) / 2} ♥`),
+      statRow('Belly', `×${g.metabolism.toFixed(2)}`),
+      statRow('Carcass reach', `×${g.gulp.toFixed(2)}`),
     );
     if (g.stealth > 0) bodyStats.append(statRow('Stealth', `${Math.round(g.stealth * 100)}%`));
     if (g.lifesteal > 0) bodyStats.append(statRow('Lifesteal', `${Math.round(g.lifesteal * 100)}%`));

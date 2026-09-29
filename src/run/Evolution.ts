@@ -1,18 +1,20 @@
-import { formDue, type Transformation } from '../content/forms';
-import { TRAITS, type Trait } from '../content/traits';
+import { familyCounts, formDue, type Transformation } from '../content/forms';
+import { dealMutations, TRAITS, type Trait } from '../content/traits';
+import type { Rng } from '../core/util';
 import type { Camera } from '../render/Camera';
 import type { Fx } from '../render/fx';
 import type { Creature } from '../sim/creature';
 import type { UI } from '../ui/UI';
 import { recordForm, recordTrait } from './codex';
+import { completes, leanOf } from './prospects';
 import type { Flow } from './phase';
 import type { Run } from './Run';
 import type { Start } from './starts';
 
 /**
- * How the body changes: taking a mutation, the starting form, and the metamorphoses. The
- * level-up and its draft are gone with XP (roadmap stage 2); mutations come from pedestals
- * in stage 5, through `take`. Nothing here touches health — that is heart containers now,
+ * How the body changes: dealing and taking a mutation, the starting form, and the
+ * metamorphoses. Mutations come from pedestals (`TankMap`), dealt here from the tank's pool
+ * with a lean toward the build. Nothing here touches health — that is heart containers now,
  * and a mutation is not a heal.
  */
 export class Evolution {
@@ -36,6 +38,30 @@ export class Evolution {
     s.tweak?.(g);
     p.view.rebuild(g);
     p.refreshOrgans();
+  }
+
+  /**
+   * A mutation for a pedestal, from the tank's pool, leaning toward what the build would
+   * finish (`prospects.ts`). Null when the pool has run dry.
+   */
+  offer(rng: Rng): Trait | null {
+    const { run, p } = this;
+    const owned = run.takenTraits();
+    const counts = familyCounts(owned);
+    return dealMutations(rng, run.tank.id, run.taken, 1,
+      t => leanOf(p.genome, owned, run.forms, counts, t))[0] ?? null;
+  }
+
+  /**
+   * What taking `t` now would finish, in words, for the pedestal's card. A synergy the codex
+   * has never recorded is announced but not named: finding out what it is is the reward.
+   */
+  finishes(t: Trait): string | null {
+    const { run, p } = this;
+    const done = completes(p.genome, run.takenTraits(), run.forms, t);
+    if (!done.length) return null;
+    return 'Completes ' + done.map(d => d.kind === 'form' ? `the ${d.form.name}`
+      : run.codex.synergies.includes(d.id) ? d.name : 'a synergy you have not found').join(' and ');
   }
 
   /** Take a mutation: its genome change, the codex, the HUD's list, and a transformation if one is due. */

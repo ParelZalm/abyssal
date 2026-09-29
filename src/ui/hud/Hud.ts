@@ -3,6 +3,8 @@ import { ActiveSlot } from './ActiveSlot';
 import { DangerIndicator } from './DangerIndicator';
 import { DiscoveryCard } from './DiscoveryCard';
 import { Minimap } from './Minimap';
+import { OfferCard } from './OfferCard';
+import { StatColumn } from './StatColumn';
 import { StatusPanel } from './StatusPanel';
 import { RunStrip } from './RunStrip';
 import { Toast } from './Toast';
@@ -20,6 +22,8 @@ export class Hud {
   private readonly active = new ActiveSlot();
   private readonly discovery = new DiscoveryCard();
   private readonly minimap = new Minimap();
+  private readonly stats = new StatColumn();
+  private readonly offer = new OfferCard();
 
   constructor() {
     // wrapper stays layout-neutral; children keep their absolute positions under #ui
@@ -33,6 +37,8 @@ export class Hud {
       this.active.element,
       this.discovery.element,
       this.minimap.element,
+      this.stats.element,
+      this.offer.element,
     );
     this.setChrome(false);
   }
@@ -43,6 +49,8 @@ export class Hud {
     this.run.setVisible(on);
     this.active.setVisible(on);
     this.minimap.setVisible(on);
+    this.stats.setVisible(on);
+    this.offer.setVisible(on);
   }
 
   update(s: HudState) {
@@ -52,6 +60,8 @@ export class Hud {
     this.danger.update(s.danger);
     this.active.update(s.active);
     this.minimap.update(s.map, s.mapVersion);
+    this.stats.update(s.stats);
+    this.offer.update(s.offer);
   }
 
   showToast(text: string) {

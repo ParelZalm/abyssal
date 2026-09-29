@@ -2,7 +2,7 @@ import { FishView, type Pose } from '../render/creature/fishview';
 import { armourOf, maxHp, type Genome } from '../content/genome';
 import { hunts, type Species } from '../content/species';
 import { angleDelta, clamp, TAU } from '../core/util';
-import { organsOf, swimOf, type Organ, type SwimMods } from './organs';
+import { guardedOf, organsOf, swimOf, type Organ, type SwimMods } from './organs';
 
 /** Forward drag coefficient: terminal speed works out to genome.speed × throttle. */
 export const DRAG_FWD = 3.1;
@@ -37,6 +37,12 @@ const SHRUG_MAX = 0.4;
  * halves, so a wound cannot drain it smoothly the way it drains an animal's.
  */
 const AIL_EVERY = 1.5;
+/**
+ * An animal's points of health to one of the player's half hearts, for the heals written in
+ * points — lifesteal, Nematocyst. A hatchling had some thirty points before hearts, and has
+ * six halves now; five would be exact, four leans toward the heal being felt.
+ */
+const HP_PER_HALF = 4;
 
 export type Mood = 'cruise' | 'rest' | 'dart';
 /**
@@ -44,6 +50,11 @@ export type Mood = 'cruise' | 'rest' | 'dart';
  * hit by a shot, or stung by brushing against something.
  */
 export type Hurt = 'bite' | 'sting' | 'poison' | 'shot' | 'touch';
+
+/** Armour's chance of shrugging a hit off the player. */
+export function shrugChance(g: Genome) {
+  return Math.min(SHRUG_MAX, Math.max(0, armourOf(g)) * SHRUG_PER);
+}
 
 export class Creature {
   x = 0; y = 0; vx = 0; vy = 0; angle = 0;
@@ -89,6 +100,8 @@ export class Creature {
   shrugged = false;
   /** Seconds of venom or bleeding the player has taken since its last half heart to them. */
   ailT = 0;
+  /** Healing owed the player toward its next half heart; see `heal`. */
+  mend = 0;
   /** Set on a body swallowed whole, to what swallowed it — the view follows it down. */
   eatenBy: Creature | null = null;
   hp: number; hpMax: number;
@@ -224,7 +237,7 @@ export class Creature {
    */
   takeHit(by: Creature, halves: number, how: Hurt): number {
     if (this.invuln > 0) return 0;
-    if (Math.random() < Math.min(SHRUG_MAX, armourOf(this.genome) * SHRUG_PER)) {
+    if (guardedOf(this) || Math.random() < shrugChance(this.genome)) {
       this.invuln = SHRUG_GRACE;
       this.shrugged = true;
       return 0;
@@ -246,6 +259,18 @@ export class Creature {
     this.ailT -= AIL_EVERY;
     this.hp -= 1;
     this.view.hurt();
+  }
+
+  /**
+   * Health back, in an animal's points. An animal takes it as it comes; the player's hearts
+   * are in halves, so it is owed up to the next half and paid a half at a time — and a heal
+   * on full health is not banked against the next wound.
+   */
+  heal(points: number) {
+    if (!this.isPlayer) { this.hp = Math.min(this.hpMax, this.hp + points); return; }
+    if (this.hp >= this.hpMax) { this.mend = 0; return; }
+    this.mend += points / HP_PER_HALF;
+    while (this.mend >= 1 && this.hp < this.hpMax) { this.mend -= 1; this.hp += 1; }
   }
 
   /** Book what just hurt this body. */

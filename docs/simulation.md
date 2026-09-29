@@ -87,6 +87,13 @@ window, so what organs did on a boost kick — Ballistic's ram, Flash Sense, Smo
 puff, a bait ball scattering — they now do on a strike, and the boost modifiers scale its
 shove.
 
+**A ranged primary** (Archer Spit, Spine Volley; `Organ.primary`) fires the strike instead
+of biting with it: its shots leave from `biteX`/`biteY` down the aim, the body is pushed
+back a little rather than forward, and `Combat.strike` lands no bite while one is carried.
+The player's shots are `World.shots` like a hostile's, looking for anything alive but the
+player; one lands as `Combat.hit` at its share of a bite, carries a little of its way into
+what it hit, and never swallows. The kick still opens its window.
+
 ## Perception and behaviour
 
 `Behaviour.think(c, dt, player)` runs per creature, per frame, and is the whole AI:
@@ -332,6 +339,12 @@ in every tank.
 - **Drifter** — comes on by the shortest water with its heading wobbling about it; the touch
   is its attack.
 
+A role runs its own attack clock (`Roles.tick`), so `Behaviour.tickStrike` — the ecology's
+strike clock — skips a role hostile; run on both, every step went by twice as fast and the
+recovery ended with no cooldown. **Ink** over the player hides it: a hostile abandons a
+wind-up it has not thrown and drifts until the cloud thins. **Stealth** delays a room's first
+attacks (`STEALTH_DELAY`, in `Spawner.hostiles`) and throws a spitter's aim wide (`STEALTH_AIM`).
+
 **Touch.** Any hostile's body against the player's is a hit (`Combat.touch`), Isaac's rule —
 a circle of seven tenths of its radius, no reach past the body and no gulp, or a spitter
 would pull the player onto itself. `Creature.attacks` is true for a hostile against the
@@ -341,4 +354,5 @@ player whatever the sizes.
 player swims about five), a reach of 0.16 tiles, spent on rock, on the player — landed or
 not; a shot breaks on a body in its grace rather than passing through — or after five
 seconds. A hit is half a heart through `takeHit` like any other. Firing and breaking are
-published as `shot` and `splash` pulses for `Impacts`.
+published as `shot` and `splash` pulses for `Impacts`. A shot's flight is its range over its
+speed (`Shot.life`); a hostile's is five seconds.

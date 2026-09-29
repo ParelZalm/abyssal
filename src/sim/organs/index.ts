@@ -21,7 +21,7 @@ import type { Creature } from '../creature';
 import type { World } from '../world';
 import { ACTIVES } from './actives';
 import { CURSES, DIET, LOCOMOTION, SENSES } from './adaptations';
-import { BODY, FORMS } from './body';
+import { BODY, FORMS, PRIMARIES } from './body';
 import { SYNERGY_ORGANS } from './synergies';
 import type { Organ, WoundCtx } from './types';
 
@@ -36,7 +36,8 @@ export * from './query';
  * number compose in the same order every time, and `activeOf` takes the first active.
  */
 export const ORGANS: Organ[] = [
-  ...BODY, ...DIET, ...LOCOMOTION, ...SENSES, ...CURSES, ...ACTIVES, ...FORMS, ...SYNERGY_ORGANS,
+  ...BODY, ...DIET, ...LOCOMOTION, ...SENSES, ...CURSES, ...ACTIVES, ...PRIMARIES, ...FORMS,
+  ...SYNERGY_ORGANS,
 ];
 
 /** Every named synergy, in the order the registry declares them — the codex's list. */

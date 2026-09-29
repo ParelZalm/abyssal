@@ -45,6 +45,10 @@ export interface Shot {
   x: number; y: number; vx: number; vy: number;
   r: number;
   t: number;
+  /** Seconds it flies before it is spent anyway: its range over its speed. */
+  life: number;
+  /** Its share of a bite, for a shot the player fired. */
+  mult: number;
   by: Creature;
 }
 /** A shot's reach, in tiles, and the seconds it flies before it is spent anyway. */
@@ -266,22 +270,26 @@ export class World {
   }
 
   /**
-   * Put a shot in the water from (`x`, `y`), heading `a` at `speed` tiles a second. Nothing
-   * fires outside a room: a shot's size and speed are both in the room's tiles.
+   * Put a shot in the water from (`x`, `y`), heading `a` at `speed` tiles a second, to fly
+   * `range` tiles, worth `mult` of a bite if the player fired it. Nothing fires outside a
+   * room: a shot's size, speed and range are all in the room's tiles.
    */
-  fire(by: Creature, kind: ShotKind, x: number, y: number, a: number, speed: number) {
+  fire(by: Creature, kind: ShotKind, x: number, y: number, a: number, speed: number,
+       range = speed * SHOT_LIFE, mult = 1) {
     const t = this.terrain;
     if (!t) return;
     const v = speed * t.tile;
     this.shots.push({ kind, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: SHOT_R * t.tile,
-      t: 0, by });
+      t: 0, life: range / speed, mult, by });
     this.pulses.push({ x, y, r: by.radius * 0.6, kind: 'shot', shot: kind });
   }
 
   /**
    * Every shot a step along its line. One is spent on rock, on the end of its flight, or on
-   * the player — whether or not the hit lands: a shot does not pass through a body in its
-   * grace, it breaks on it, as Isaac's do.
+   * what it was fired at — whether or not the hit lands: a shot does not pass through a body
+   * in its grace, it breaks on it, as Isaac's do. A hostile's is looking for the player; the
+   * player's for anything else alive, and it lands as a blow, never a swallow, so what it
+   * kills is left as a carcass.
    */
   private fly(dt: number) {
     const p = this.player, t = this.terrain;
@@ -290,7 +298,20 @@ export class World {
       s.t += dt;
       s.x += s.vx * dt;
       s.y += s.vy * dt;
-      let spent = s.t > SHOT_LIFE || !t || t.solidAt(s.x, s.y);
+      let spent = s.t > s.life || !t || t.solidAt(s.x, s.y);
+      if (!spent && s.by.isPlayer) {
+        for (const c of this.creatures) {
+          const r = s.r + c.radius * 0.6;
+          if (!c.alive || dist2(s.x, s.y, c.x, c.y) > r * r) continue;
+          spent = true;
+          // no chomp: the mouth that fired it is a room away
+          this.combat.hit(p, c, s.mult, false);
+          // a shot carries its way on into what it hit, a little, so a hit is felt
+          c.vx += s.vx * 0.15;
+          c.vy += s.vy * 0.15;
+          break;
+        }
+      }
       const reach = s.r + p.radius * 0.5;
       if (!spent && p.alive && !s.by.isPlayer && dist2(s.x, s.y, p.x, p.y) < reach * reach) {
         spent = true;

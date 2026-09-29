@@ -29,7 +29,7 @@ import { caudalFin, fluke, mantleFins, dorsalRidge, medianFins, fins, ribbonFin,
          tentacles } from './bake/fins';
 import { bluntSnout, head, lureAt, lure, barbels } from './bake/head';
 import { spines, organs, ballisticReach, urchinReach, urchinSpines, electroplates, prickles,
-         inkSac, stoneWarts } from './bake/organs';
+         inkSac, spitSac, stoneWarts, volleyQuills } from './bake/organs';
 import { photophores, flankLights, embers } from './bake/lights';
 
 export interface Baked {
@@ -99,6 +99,7 @@ function key(g: Genome, plan: Plan) {
           Math.min(3, g.coral), Math.min(3, g.frill), g.jet > 0 ? 1 : 0,
           g.venom > 0 ? 1 : 0, Math.min(2, g.filter), g.crush > 0 ? 1 : 0,
           g.eel > 0 ? 1 : 0, g.mantle > 0 ? 1 : 0, g.lurk > 0 ? 1 : 0, g.smoke > 0 ? 1 : 0,
+          g.spit > 0 ? 1 : 0, g.volley > 0 ? 1 : 0,
           // a synergy's threshold can fall inside one bucket of the fields above — Urchin's
           // armour test sits mid-step — so the paint's own predicate goes in whole
           synergiesOf(g).join('+')].join('|');
@@ -243,6 +244,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   if (hasSynergy(g, 'stonefish')) stoneWarts(s, f, seed);
   if (g.discharge > 0) electroplates(s, f, g);
   if (g.ink > 0) inkSac(s, f);
+  if (g.spit > 0) spitSac(s, f);
   if (g.mantle > 0) mantle(s, f, pal);
   if (smoke) viscera(s, f, pal);
   if (photophoreOf(g) > 0) photophores(s, f, pal, g, seed);
@@ -254,6 +256,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   if (A.cilia) cilia(s, f);
   if (A.spines) spines(s, f, g, men);
   if (g.inflate > 0) prickles(s, f, g, seed);
+  if (g.volley > 0) volleyQuills(s, f);
   if (hasSynergy(g, 'urchin')) urchinSpines(s, f, g, seed);
   fins(s, f, g, A);
   organs(s, f, pal, g);

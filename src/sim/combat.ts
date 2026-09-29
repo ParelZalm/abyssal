@@ -3,7 +3,7 @@ import { armourOf, biteDamage } from '../content/genome';
 import { angleDelta, clamp, dist2 } from '../core/util';
 import type { Creature, Hurt } from './creature';
 import type { Blood } from './events';
-import { armourAgainst, biteRateOf, damageOf, gulpOf, takenOf, wound } from './organs';
+import { armourAgainst, biteRateOf, damageOf, gulpOf, primaryOf, takenOf, wound } from './organs';
 import { EXPOSED_TAKEN, PATTERN_CD, RUSH_BITE } from './patterns';
 import type { World } from './world';
 
@@ -110,7 +110,8 @@ export class Combat {
     // the player bites on the arrows, not on contact: only a strike that is out lands, from
     // wherever it reaches, and nothing is pulled in — swimming into prey is not eating it
     if (att.isPlayer) {
-      if (att.attack !== 'strike') return;
+      // a body with a primary fires its strike and bites nothing with it (`World.fly`)
+      if (att.attack !== 'strike' || primaryOf(att)) return;
       const r = att.radius * 1.1 + def.radius + att.genome.size * 0.45;
       if (dist2(att.biteX, att.biteY, def.x, def.y) <= r * r) this.bite(att, def);
       return;
@@ -171,9 +172,9 @@ export class Combat {
    * No cooldown and never a swallow, but otherwise the same wound: armour, organs, and a
    * kill booked to whoever landed it. Public because organs deliver it (`organs.ts`).
    */
-  hit(att: Creature, def: Creature, mult: number) {
+  hit(att: Creature, def: Creature, mult: number, chomp = true) {
     if (!att.alive || !def.alive) return;
-    att.view.chomp();
+    if (chomp) att.view.chomp();
     this.land(att, def, false, mult);
   }
 

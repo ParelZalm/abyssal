@@ -1,7 +1,8 @@
+import { biteDamage } from '../content/genome';
 import { angleDelta } from '../core/util';
 import type { Fx } from '../render/fx';
-import { activeOf, biteRateOf, boostModsOf, fire, POISE_MAX, PUFF_TIME } from '../sim/organs';
-import type { Creature } from '../sim/creature';
+import { activeOf, biteRateOf, boostModsOf, fire, POISE_MAX, primaryOf, PUFF_TIME } from '../sim/organs';
+import { shrugChance, type Creature } from '../sim/creature';
 import type { World } from '../sim/world';
 import type { Input } from './Input';
 
@@ -31,10 +32,34 @@ const LUNGE_RETREAT = 0.25;
 /** Seconds between strikes before organs bend it — the base of the HUD's rate. */
 const ATTACK_EVERY = 0.4;
 /**
+ * The player's shots, once a primary has replaced the bite: tiles a second — faster than any
+ * hostile's, so a duel is the player's to win — and tiles of reach, Isaac's six and a half,
+ * about a fifth of a room. The recoil is the kick back off each, a share of top speed.
+ */
+export const SHOT_SPEED = 7;
+export const SHOT_RANGE = 6.5;
+const RECOIL = 0.18;
+/**
  * Seconds a body keeps facing its attack after the arrow is let go. Without it a tap flips
  * the body back to its swim the frame the key comes up, and the lunge happens tail first.
  */
 const HOLD_FACE = 0.25;
+
+/** The stat column: what the body's attack and swim come to, in the room's own units. */
+export interface Stats {
+  /** Damage a hit does, before armour. */
+  damage: number;
+  /** Attacks a second. */
+  rate: number;
+  /** How far an attack reaches, in tiles. */
+  range: number;
+  /** Tiles a second a shot flies, or null for the bite. */
+  shotSpeed: number | null;
+  /** Tiles a second at a cruise. */
+  speed: number;
+  /** The chance of shrugging a hit off, 0..1. */
+  armour: number;
+}
 
 /**
  * The player's body under the player's hands: WASD swims, the arrows strike, Space fires
@@ -42,8 +67,12 @@ const HOLD_FACE = 0.25;
  */
 export class PlayerController {
   private wakeCd = 0;
-  /** Seconds until the active organ can fire again. */
-  private activeCd = 0;
+  /**
+   * Rooms cleared toward the active organ's next firing, and which active it is counting for:
+   * a new one arrives charged, as Isaac's do.
+   */
+  private charge = 0;
+  private charging = '';
   /** Seconds until the next strike. */
   private attackCd = 0;
   /** Seconds left facing the last attack; while it runs the body strafes. */
@@ -54,10 +83,39 @@ export class PlayerController {
   constructor(private readonly input: Input, private readonly p: Creature,
               private readonly world: World, private readonly fx: Fx) {}
 
-  /** The active organ for the HUD, and how far through its cooldown it is. */
+  /** The active organ for the HUD: its charges, and how many of them are full. */
   active() {
+    const a = this.held();
+    return a ? { name: a.name, icon: a.icon, charge: Math.min(this.charge, a.charge), need: a.charge } : null;
+  }
+
+  /** The active organ the body carries, with the charge brought up to date for a new one. */
+  private held() {
     const a = activeOf(this.p);
-    return a ? { name: a.name, icon: a.icon, ready: 1 - this.activeCd / a.cd } : null;
+    if (a && a.name !== this.charging) { this.charging = a.name; this.charge = a.charge; }
+    return a;
+  }
+
+  /** A room was cleared: the active organ takes one charge toward its next firing. */
+  recharge() {
+    const a = this.held();
+    if (a) this.charge = Math.min(a.charge, this.charge + 1);
+  }
+
+  /** The stat column, in tiles of `tile` world units. */
+  stats(tile: number): Stats {
+    const p = this.p, g = p.genome;
+    const prim = primaryOf(p);
+    const bite = biteDamage(g);
+    return {
+      damage: prim ? bite * prim.mult : bite,
+      rate: 1 / biteRateOf(p, ATTACK_EVERY),
+      // the bite's reach is `Combat.strike`'s, from the head, and the lunge carries it on
+      range: prim ? SHOT_RANGE : (p.radius * 1.1 + g.size * 0.45) / tile,
+      shotSpeed: prim ? SHOT_SPEED : null,
+      speed: g.speed / tile,
+      armour: shrugChance(g),
+    };
   }
 
   steer(dt: number) {
@@ -93,7 +151,7 @@ export class PlayerController {
       p.drive(dt, desired, moving ? 0.3 + 0.7 * Math.max(0, align) : 0, FLICK);
     }
 
-    this.fireActive(dt);
+    this.fireActive();
     // nothing to hold yet: the item slot arrives with the economy
     input.wantItem = false;
     // a lurking body has nothing on the HUD to say it is wound; one ring as the poise tops
@@ -130,6 +188,22 @@ export class PlayerController {
     p.aimY = ay;
     p.attack = 'strike';
     p.attackT = p.attackLen = STRIKE;
+    this.attackCd = biteRateOf(p, ATTACK_EVERY);
+    const prim = primaryOf(p);
+    if (prim) {
+      // fired, not bitten: from the mouth, or above or below the head, down the aim. The kick
+      // still opens its window, so what organs do on a strike they do on a shot; the body is
+      // pushed back a little rather than thrown forward
+      p.kick(STRIKE);
+      const a = Math.atan2(ay, ax);
+      for (const off of prim.fan) {
+        this.world.fire(p, prim.shot, p.biteX, p.biteY, a + off, SHOT_SPEED, SHOT_RANGE, prim.mult);
+      }
+      const top = Math.max(1, p.genome.speed);
+      p.vx -= ax * top * RECOIL;
+      p.vy -= ay * top * RECOIL;
+      return;
+    }
     // The lunge is the boost's seam now the boost is gone: it opens the same surge window
     // (`Creature.kick`), so what organs did on a boost kick — Ballistic's ram, Flash Sense,
     // Smoke Screen's puff, a bait ball scattering — they do on a strike, and the boost
@@ -139,7 +213,6 @@ export class PlayerController {
     p.vx += ax * top * lunge;
     p.vy += ay * top * lunge;
     p.beat = Math.PI * 0.5;
-    this.attackCd = biteRateOf(p, ATTACK_EVERY);
   }
 
   /** The strike's steps. `Behaviour.strike` runs every other body's; the player's is here. */
@@ -158,16 +231,15 @@ export class PlayerController {
   }
 
   /**
-   * The active organ, on its cooldown. A press is always consumed, fired or not, so one
+   * The active organ, on its charges. A press is always consumed, fired or not, so one
    * tapped early does not go off by itself the moment the organ recovers.
    */
-  private fireActive(dt: number) {
+  private fireActive() {
     const p = this.p;
-    this.activeCd = Math.max(0, this.activeCd - dt);
-    const a = activeOf(p);
-    if (this.input.wantActive && a && this.activeCd <= 0) {
+    const a = this.held();
+    if (this.input.wantActive && a && this.charge >= a.charge) {
       fire(this.world, p);
-      this.activeCd = a.cd;
+      this.charge = 0;
     }
     this.input.wantActive = false;
     // the swell eases in fast and out slow, so the body pops up and then sags

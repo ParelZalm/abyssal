@@ -15,7 +15,7 @@ import { PROP_SIZE, propTexture, type PropKind } from '../render/props';
 import { genomeFor, rangeOf, SPECIES } from '../content/species';
 import { TRAITS, type Rarity, type Trait } from '../content/traits';
 import { BANDS, zoneOf } from '../content/zones';
-import { ROOMS, tankById } from '../content/tanks';
+import { ROOMS, tankById, TANKS } from '../content/tanks';
 import { PIXEL } from '../render/pixel';
 import { RoomView } from '../render/room';
 import { DECOR_KINDS, DecorView, placeDecor, type DecorKind, type Piece } from '../render/decor';
@@ -23,6 +23,11 @@ import { Terrain } from '../sim/terrain';
 import { generateMap } from '../content/map';
 import { Minimap } from '../ui/hud/Minimap';
 import { spriteCanvas } from '../render/pickups';
+import { PedestalView } from '../render/pedestal';
+import { glyphCanvas } from '../render/glyphs';
+import { HOVER } from '../run/TankMap';
+import { SHOT_RANGE, SHOT_SPEED as PLAYER_SHOT_SPEED } from '../input/PlayerController';
+import { primaryOf, organsOf } from '../sim/organs';
 import { shotTexture, SHOT_GLOW } from '../render/shots';
 import { glowTexture } from '../render/textures';
 import {
@@ -476,12 +481,11 @@ function buildGroup(): DesignGroup {
 // ------------------------------------------------------------------ mutations
 
 /**
- * The water a mutation is drafted in: the middle of its own band, or the open water for a
- * card that belongs nowhere. The same band that gates it in the draft (`traits.ts`).
+ * The water a mutation is offered in: its own tank's, or the nursery's for one that belongs
+ * nowhere. Tanks not built yet borrow the nursery's water until they are (stage 7).
  */
 function homeDepth(t: Trait) {
-  const b = BANDS.find(x => x.id === t.band) ?? BANDS[0];
-  return t.band ? (b.top + b.bottom) / 2 : 500;
+  return (TANKS.find(x => x.id === t.tank) ?? TANKS[0]).depth;
 }
 
 /**
@@ -505,7 +509,7 @@ function mutationGroup(): DesignGroup {
         source: 'src/content/traits.ts',
         span: 130,
         depth: homeDepth(t),
-        facts: { rarity: t.rarity, stacks: t.maxStacks ?? 2, band: t.band ?? 'any' },
+        facts: { rarity: t.rarity, stacks: t.maxStacks ?? 2, tank: t.tank ?? 'any' },
         genome: g,
         icon: t.icon,
         rarity: t.rarity,
@@ -1025,7 +1029,111 @@ function roleGroup(): DesignGroup {
   };
 }
 
+// ------------------------------------------------------------------ pedestals and power
+
+/** The larva, as `Game.reset` hatches it: see-through, pale and big-eyed. */
+function larva(): Genome {
+  const g = baseGenome();
+  g.hue = 255; g.accentHue = 196; g.smoke = 1; g.pale = 1; g.eyeSize = 1.5;
+  return g;
+}
+
+/** A pedestal cell: the view's two layers, the plinth and glyph under their bloom. */
+class PedestalCell extends Container {
+  readonly pedestal = new PedestalView();
+  constructor() {
+    super();
+    this.addChild(this.pedestal.root, this.pedestal.glow);
+  }
+}
+
+/**
+ * The stat column as the HUD draws it (`ui/hud/StatColumn.ts`) — each row's glyph and a
+ * hatchling's numbers — painted onto a canvas at the HUD's grain, since the board is a
+ * canvas and the HUD is DOM.
+ */
+function statColumnCanvas() {
+  const rows: [Parameters<typeof glyphCanvas>[0], string][] = [
+    ['teeth', '6.9'], ['pulse', '2.50'], ['ring', '0.7'], ['bolt', '—'], ['tail', '6.5'], ['shield', '0%'],
+  ];
+  const c = document.createElement('canvas');
+  c.width = 44; c.height = rows.length * 10 + 2;
+  const x = c.getContext('2d')!;
+  x.font = '8px "Pixelify Sans", monospace';
+  x.textBaseline = 'middle';
+  rows.forEach(([icon, v], i) => {
+    x.drawImage(glyphCanvas(icon, 7, '#8fa4c4', '#0a101c'), 0, i * 10);
+    x.fillStyle = '#e6f2ff';
+    x.fillText(v, 12, i * 10 + 5);
+  });
+  return c;
+}
+
+/**
+ * The treasure room's pieces and what they give: the pedestal holding a mutation of each
+ * rarity, the stat column, and each ranged primary on the larva, firing on its own rate —
+ * its shot is the one the room's hostile of that weapon fires, faster and further.
+ */
+function powerGroup(): DesignGroup {
+  const tank = tankById('nursery');
+  const pedestal = (id: string) => {
+    const t = TRAITS.find(x => x.id === id)!;
+    return {
+      id: `pedestal-${t.rarity}`, name: `pedestal · ${t.rarity}`,
+      note: `${t.name} on its plinth: the glyph in its rarity's colour, lit, bobbing`,
+      source: 'src/render/pedestal.ts', span: 60, depth: tank.depth,
+      make: () => new PedestalCell(),
+      animate: (() => {
+        let clock = 0;
+        return (view: Container, dt: number) => {
+          clock += dt;
+          (view as PedestalCell).pedestal.update({ x: 0, y: 20, trait: t }, tank.tile * HOVER,
+            2 / SHOT_PX, clock);
+        };
+      })(),
+    } satisfies DesignItem;
+  };
+  const primary = (id: string) => {
+    const t = TRAITS.find(x => x.id === id)!;
+    const g = larva();
+    t.apply(g);
+    const prim = primaryOf({ organs: organsOf(g) } as never)!;
+    return {
+      id: `primary-${id}`, name: t.name, note: t.desc,
+      source: 'src/sim/organs/body.ts', span: 110, depth: tank.depth, genome: g,
+      facts: { shot: prim.shot, fan: prim.fan.length, 'share of a bite': prim.mult,
+        speed: PLAYER_SHOT_SPEED, range: SHOT_RANGE },
+      make: () => new RoleCell(g, 'wraith'),
+      animate: (() => {
+        let t0 = 0;
+        return (view: Container, dt: number, beat: number) => {
+          const cell = view as RoleCell;
+          t0 += dt;
+          if (t0 > 0.6) { t0 = 0; cell.fire(prim.shot, [...prim.fan], g.size * 0.5); }
+          cell.fly(dt, PLAYER_SHOT_SPEED * tank.tile);
+          const fish = cell.fish.fish;
+          const strike = t0 < 0.2 ? 1 - t0 / 0.2 : 0;
+          fish.animate(dt, 0.2, beat, 0, { windup: 0, strike, open: strike > 0 });
+          fish.place(0, 0, 0, 1);
+          fish.show(true, 1, 0xffffff);
+        };
+      })(),
+    } satisfies DesignItem;
+  };
+  return {
+    id: 'power', name: 'Pedestals & power',
+    note: 'The treasure room\'s pedestal at each rarity, the stat column, and each ranged primary firing.',
+    items: [
+      pedestal('muscle'), pedestal('inflate'), pedestal('apexjaw'),
+      { id: 'stat-column', name: 'stat column', note: 'damage, rate, range, shot speed, speed, armour — a hatchling\'s',
+        source: 'src/ui/hud/StatColumn.ts', span: 70, depth: tank.depth,
+        make: () => spriteCell(statColumnCanvas(), 1) },
+      primary('archerspit'), primary('spinevolley'),
+    ],
+  };
+}
+
 export function catalog(): DesignGroup[] {
-  return [roomGroup(), decorGroup(), healthGroup(), roleGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(),
+  return [roomGroup(), decorGroup(), healthGroup(), roleGroup(), powerGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(),
           speciesGroup(), guardianGroup(), motionGroup(), propGroup(), fieldGroup(), waterGroup()];
 }

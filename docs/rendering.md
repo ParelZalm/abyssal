@@ -369,9 +369,18 @@ rocks, so the object holds together and only its fronds and threads move on it.
 
 `src/ui/` is all DOM over the canvas — `UI.ts` is the game-facing facade, `hud/`
 holds the in-play chrome, `screens/` the overlays, and `icons.ts` the glyph set. Nothing in
-the HUD is drawn on the canvas, and nothing in the game reads the DOM. The one coupling is
-`ui.gateLabel(text, screenY, screenH)`, which `Scene.draw` feeds a screen position computed
-from the seal's world depth.
+the HUD is drawn on the canvas, and nothing in the game reads the DOM.
+
+Isaac's layout: the status panel top left (hearts, belly, shells), the stat column under it
+(`StatColumn`), the minimap top right, the active slot bottom centre with a pip a room of
+charge, and, beside a pedestal, the mutation's card at the top (`OfferCard`), clear of the
+floor the pedestal stands on.
+
+**The pedestal** (`render/pedestal.ts`) is drawn in the world: a plinth of the rock's own
+stone, a tile across, stood on flat floor under the middle of the room (`Terrain.standAt`),
+and the mutation over it as its glyph in its rarity's colour, bobbing, with a bloom and a
+light — the one lit thing in its room. The glyphs are one raster (`render/glyphs.ts`) for
+the HUD's SVG and the world's canvas alike.
 
 The DOM is not under `FramePass`, so it is put on the grid by hand. The glyphs are path data
 stroked once per size onto a grid of 2 px cells and kept or dropped by coverage

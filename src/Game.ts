@@ -15,6 +15,7 @@ import { Ocean } from './render/ocean';
 import { followZoom, FramePass, PIXEL } from './render/pixel';
 import { PickupView } from './render/pickups';
 import { ShotView } from './render/shots';
+import { PedestalView } from './render/pedestal';
 import { Lighting, lightTexture } from './render/lighting';
 import { Scene } from './render/Scene';
 import { Water } from './render/water';
@@ -22,10 +23,10 @@ import { Best } from './run/best';
 import { loadCodex, recordSpecies, recordSynergy, saveCodex } from './run/codex';
 import { Ending } from './run/Ending';
 import { Evolution } from './run/Evolution';
-import { Belly, BELLY_FULL } from './run/Belly';
+import { Belly } from './run/Belly';
 import type { Phase } from './run/phase';
 import { COMBO_WINDOW, comboMult, Run } from './run/Run';
-import { TankMap } from './run/TankMap';
+import { HOVER, TankMap } from './run/TankMap';
 import { backfillDepth, startById } from './run/starts';
 import { SYNERGIES } from './sim/organs';
 import { Creature } from './sim/creature';
@@ -68,6 +69,7 @@ export class Game {
   tank!: TankMap;
   private pickups!: PickupView;
   private shots!: ShotView;
+  private pedestal!: PedestalView;
   run!: Run;
   world!: World;
   player!: Creature;
@@ -198,6 +200,7 @@ export class Game {
     this.tank?.destroy();
     this.pickups?.destroy();
     this.shots?.destroy();
+    this.pedestal?.destroy();
 
     const seed = choice.seed ?? ((Math.random() * 2 ** 32) >>> 0);
     this.run = new Run(choice, seed, this.codex);
@@ -205,6 +208,7 @@ export class Game {
     this.ocean = new Ocean(this.rng);
     this.pickups = new PickupView();
     this.shots = new ShotView();
+    this.pedestal = new PedestalView();
 
     const g: Genome = baseGenome();
     // a larva: see-through, spine and gut showing, near white with a lavender cast, and
@@ -223,13 +227,14 @@ export class Game {
     this.camera.root.addChild(
       // what grows on the rock stands behind the bodies; the rock itself is drawn over them
       this.ocean.world, layers.decor, this.scene.focus,
-      world.fog, world.layer, this.pickups.root, this.shots.root, this.fx.layer,
+      this.pedestal.root, world.fog, world.layer, this.pickups.root, this.shots.root, this.fx.layer,
       // the rock over the bodies, so a nose pressed into a wall goes into it
       layers.rock,
     );
     // the blooms go above the lighting, in one additive layer of their own that batches as
     // one draw: they are the light, and the dark must not fall on them
-    this.camera.over.addChild(layers.glow, this.pickups.glow, this.shots.glow, world.glow);
+    this.camera.over.addChild(layers.glow, this.pedestal.glow, this.pickups.glow, this.shots.glow,
+      world.glow);
     this.app.stage.addChild(this.water.layer, this.camera.root, this.lighting.sprite,
       this.camera.over);
 
@@ -249,7 +254,13 @@ export class Game {
       title: () => this.showTitle(),
     });
     this.impacts = new Impacts(fx, camera, this.dread, ui);
-    this.tank = new TankMap(run, world, p, camera, layers, fx, ui);
+    const evolution = this.evolution, controller = this.controller, belly = this.belly;
+    this.tank = new TankMap(run, world, p, camera, layers, fx, ui, {
+      offer: rng => evolution.offer(rng),
+      take: t => evolution.take(t),
+      // a room won is what charges the active and what regeneration is paid on
+      cleared: () => { controller.recharge(); belly.cleared(); },
+    });
 
     this.evolution.hatch(startById(choice.start));
     p.hpMax = run.containers * 2;
@@ -345,8 +356,9 @@ export class Game {
     this.tank.draw(view.t);
     this.pickups.update(this.world.pickups, view.zoom, view.t);
     this.shots.update(this.world.shots, view.zoom);
+    this.pedestal.update(this.tank.pedestal, this.tank.room.tile * HOVER, view.zoom, view.t);
     const dread = this.scene.draw(view, this.world, p, this.phase, this.dread,
-      this.tank.lights.concat(this.shots.lights));
+      [...this.tank.lights, ...this.shots.lights, ...this.pedestal.lights]);
     this.lighting.render(this.camera);
     if ((this.phase === 'play' || this.phase === 'draft') && !this.tank.sliding) {
       this.world.cull(camera.x, camera.y, camera.viewR());
@@ -355,7 +367,7 @@ export class Game {
 
     this.ui.update({
       hp: Math.max(0, p.hp), hpMax: p.hpMax,
-      belly: run.belly / BELLY_FULL, shells: run.shells,
+      belly: run.belly / this.belly.full, shells: run.shells,
       stage: run.stage, size: p.genome.size, place: this.run.tank.name,
       traits: run.takenNames,
       score: Math.round(run.score), elapsed: run.elapsed,
@@ -366,7 +378,16 @@ export class Game {
       comboLeft: run.comboT / COMBO_WINDOW,
       danger: dread,
       active: this.controller.active(),
+      stats: this.controller.stats(this.tank.room.tile),
+      offer: this.offer(),
       map: this.tank.minimap(), mapVersion: this.tank.version,
     });
+  }
+
+  /** The pedestal's mutation for the HUD, while the player is beside it. */
+  private offer() {
+    const t = this.tank.offered;
+    if (!t || this.phase !== 'play') return null;
+    return { trait: t, note: this.evolution.finishes(t), isNew: !this.run.codex.traits[t.id] };
   }
 }

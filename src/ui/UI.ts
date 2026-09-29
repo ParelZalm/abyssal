@@ -1,11 +1,9 @@
 import type { Codex } from '../run/codex';
 import type { Transformation } from '../content/forms';
-import type { Trait } from '../content/traits';
 import { Hud } from './hud/Hud';
 import type { Component } from './Component';
 import { CodexScreen } from './screens/CodexScreen';
 import { DeathScreen } from './screens/DeathScreen';
-import { MutationScreen, type DraftOptions } from './screens/MutationScreen';
 import { PauseScreen } from './screens/PauseScreen';
 import { TitleScreen, type RunChoice } from './screens/TitleScreen';
 import type { LineageFrame } from './screens/lineage';
@@ -48,13 +46,6 @@ export class UI {
       onStart(choice);
     }, () => this.showCodex(codex, () => this.showTitle(onStart, codex, dailyBest)), codex,
     dailyBest));
-  }
-
-  showMutation(heading: string, traits: Trait[], pick: (t: Trait) => void, opts: DraftOptions) {
-    this.show(new MutationScreen(heading, traits, t => {
-      this.hide();
-      pick(t);
-    }, opts));
   }
 
   showDeath(cause: string, stats: string[], codex: Codex, onRestart: () => void, onTitle: () => void,

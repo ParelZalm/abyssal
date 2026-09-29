@@ -88,6 +88,14 @@ the silhouette, and counted toward a transformation. Either **passive**, always 
 effect, or **active**, filling the one active slot and fired by hand.
 _Avoid_: trait, evolution token, upgrade
 
+**Primary** — what the strike on the arrows does: the bite, until a ranged mutation replaces
+it for good with a shot. One is carried at a time.
+_Avoid_: weapon, main attack
+
+**Charge** — a room cleared, counted toward the active mutation's next use. Each active
+needs its own number of them.
+_Avoid_: cooldown, recharge time
+
 **Deal mutation** — a stronger variant of a mutation, found only in a deal room and paid
 for in heart containers rather than shells.
 _Avoid_: devil deal, cursed item

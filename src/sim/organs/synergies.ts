@@ -134,12 +134,11 @@ export const SYNERGY_ORGANS: Organ[] = [
     } }),
 
   O({ id: 'ballistic', name: 'Ballistic', when: g => g.jet > 0 && g.claws > 0,
-    desc: 'Siphon and claws. A boost into a body is a strike, whatever its size.',
+    desc: 'Siphon and claws. A strike\'s lunge into a body is a blow of its own, whatever its size.',
     // the mantis shrimp's club: the jet is the wind-up and the claws are the blow. Inside a
-    // kick's surge and at speed, whatever the head meets is struck — once per body per
-    // boost — including things that could eat you, which is the one way to answer a
-    // predator with the boost rather than run from it. Faster is harder: at the kick's own
-    // speed, about 1.6 of a bite
+    // strike's surge and at speed, whatever the head meets is struck — once per body per
+    // lunge — on top of the bite, so the lunge itself is a weapon, and one that reaches
+    // past a bait ball's wall. Faster is harder: at the lunge's own speed, about 1.6 of a bite
     onTick: (c, _dt, world) => {
       if (c.boosting <= 0) return false;
       const top = Math.max(1, c.genome.speed);
@@ -203,15 +202,13 @@ export const SYNERGY_ORGANS: Organ[] = [
     } }),
 
   O({ id: 'whaleshark', name: 'Whale Shark', when: g => g.ram > 0 && g.size >= WHALE_SIZE,
-    desc: 'Ram gills on a giant. Cruising costs less, and small prey ahead is swept into your mouth.',
+    desc: 'Ram gills on a giant. Small prey ahead is swept into your mouth while you cruise.',
     // a mouth held open at speed is a net. Past the Midnight gate a ram ventilator is big
     // enough that the water it pushes through itself carries food with it: anything under a
     // quarter of your length in a cone ahead is drawn to the mouth while you cruise, which
-    // turns a krill cloud from a hunt into a line you swim through. The same flow over the
-    // gills is why cruising is cheap — and hanging still still costs what ram's does.
-    // The reach is 7 × size because the whole-swallow gulp already reaches about 3.8 × size
+    // turns a krill cloud from a hunt into a line you swim through. Hanging still still costs
+    // what ram's does. The reach is 7 × size because the whole-swallow gulp already reaches about 3.8 × size
     // on a body this big: a wake inside the gulp's own reach measured as nothing at all
-    burn: (c, base) => cruising(c) ? base * 0.8 : base,
     onTick: (c, dt, world) => {
       if (!cruising(c)) return false;
       const reach = c.genome.size * 7;
@@ -233,12 +230,12 @@ export const SYNERGY_ORGANS: Organ[] = [
     } }),
 
   O({ id: 'flashsense', name: 'Flash Sense', when: g => g.electro > 0 && g.glow >= 0.6,
-    desc: 'Ampullae and photophores. Every boost fires a flash that dazzles anything with big eyes nearby.',
-    // the photophores fire all at once on the boost kick, and the ampullae tell you where to
+    desc: 'Ampullae and photophores. Every strike fires a flash that dazzles anything with big eyes nearby.',
+    // the photophores fire all at once on the strike's kick, and the ampullae tell you where to
     // aim it: every body with a light-gathering eye inside half again the electric range is
     // dazzled — it stops, drifts, and cannot bite until it recovers. The blind are immune,
     // which makes this a deep-water answer that the trench does not have to respect.
-    // Once per kick, through the kick counter, so a held boost is one flash
+    // Once per kick, through the kick counter, so one strike is one flash
     onTick: (c, _dt, world) => {
       if (c.kicks === c.flashed) return false;
       c.flashed = c.kicks;
@@ -262,11 +259,11 @@ export const SYNERGY_ORGANS: Organ[] = [
     } }),
 
   O({ id: 'smokescreen', name: 'Smoke Screen', when: g => g.jet > 0 && g.ink > 0,
-    desc: 'Siphon and ink sac. Every boost leaves a puff of ink behind you, and whatever is on your tail loses you in it.',
+    desc: 'Siphon and ink sac. Every strike leaves a puff of ink behind you, and whatever is on your tail loses you in it.',
     // the siphon and the sac share a duct, so the jet fires ink with the water: a small
     // cloud at the tail on every kick. It does not hide you, since you are already leaving
     // it; it breaks the line behind you, so a hunter that was chasing loses the thread in
-    // it. The sac's own cloud is still the hiding place, and still on its cooldown
+    // it. The sac's own cloud is still the hiding place, and still on its charge
     onTick: (c, _dt, world) => {
       if (c.kicks === c.inked) return false;
       c.inked = c.kicks;
@@ -394,7 +391,7 @@ export const SYNERGY_ORGANS: Organ[] = [
       let dps = 0;
       for (const o of world.creatures) if (o.alive && o.poisonT > 0 && o.poisonByPlayer) dps += o.poison;
       if (dps <= 0) return false;
-      c.hp = Math.min(c.hpMax, c.hp + dps * dt * (0.3 + c.genome.lifesteal * 2));
+      c.heal(dps * dt * (0.3 + c.genome.lifesteal * 2));
       return true;
     } }),
 ];

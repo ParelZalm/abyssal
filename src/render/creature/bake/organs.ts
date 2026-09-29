@@ -235,3 +235,44 @@ export function inkSac(s: Sheet, f: Form) {
   const n = Math.max(2, Math.round(w * 0.8 * s.res));
   for (let i = 0; i <= n; i++) s.dot(x + (i / n) * w * 0.9, y + (i / n) * w * 0.2, [20, 16, 30], 0.8);
 }
+
+/** Archer Spit's water, the shot's own blue (`render/shots.ts`), and the wet light on it. */
+const WATER: RGB = [120, 196, 240];
+const WATER_SHEEN: RGB = [236, 250, 255];
+
+/**
+ * Archer Spit: the archerfish's throat — a pale sac of water held under the jaw, and the
+ * groove in the roof of the mouth it is squeezed forward down, drawn as a line of the same
+ * blue to the lips. Low and forward, where a shot comes from.
+ */
+export function spitSac(s: Sheet, f: Form) {
+  const t = 0.17;
+  const w = halfWidth(t, f);
+  const x = spineAt(t, f), y = edgeAt(t, f, 0.5);
+  s.blot(x, y, w * 0.36, WATER, 0.85, M.BODY);
+  s.dot(x + w * 0.12, y - w * 0.14, WATER_SHEEN, 0.9);
+  const nose = spineAt(0.02, f), lip = edgeAt(0.04, f, 0.15);
+  const n = Math.max(2, Math.round((nose - x) * s.res));
+  for (let i = 1; i <= n; i++) {
+    const k = i / n;
+    s.dot(x + (nose - x) * k, y + (lip - y) * k, WATER, 0.7);
+  }
+}
+
+/**
+ * Spine Volley: a rack of loose quills along the back, longer than the dorsal spines and
+ * raked back flat, each with a pale point — spines that are not fixed in the body but set to
+ * be thrown. Drawn over the ordinary spines, so a volley body reads as the pufferfish's
+ * weapon and not as more armour.
+ */
+export function volleyQuills(s: Sheet, f: Form) {
+  for (let i = 0; i < 5; i++) {
+    const t = 0.3 + i * 0.075;
+    const w = halfWidth(t, f);
+    const x = spineAt(t, f), y = edgeAt(t, f, -0.95);
+    const len = Math.max(s.texel * 3, w * 1.05);
+    const tip: Pt = [x - len * 0.8, y - len * 0.5];
+    s.line([[x, y], tip], M.TOOTH);
+    s.dot(tip[0], tip[1], [255, 246, 226], 1);
+  }
+}

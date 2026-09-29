@@ -1,5 +1,6 @@
 import type { Genome } from '../../content/genome';
 import type { IconName } from '../../content/icon';
+import type { ShotKind } from '../../content/species';
 import type { Creature } from '../creature';
 import type { World } from '../world';
 
@@ -63,7 +64,7 @@ export interface Organ {
   /** How far this body draws prey toward itself. */
   lureRange?: (g: Genome, base: number) => number;
   boost?: (g: Genome, m: BoostMods) => void;
-  /** Fullness burned per second, given the body's current motion. */
+  /** Centimetres of belly lost per second, given the body's current motion. */
   burn?: (c: Creature, base: number) => number;
   /** Health returned from a swallow of this much biomass. */
   swallowHeal?: (g: Genome, gain: number) => number;
@@ -92,11 +93,20 @@ export interface Organ {
   /** Damage a blow does to this body once armour has had its say. */
   taken?: (c: Creature, dmg: number) => number;
   /**
-   * The one active organ: what the player fires by hand, and how long it takes to come
-   * back. Only one is ever carried — the cards clear the others — so `activeOf` takes the
-   * first. `fire` acts on the world and publishes what it did on `world.pulses`.
+   * The one active organ: what the player fires by hand, and how many rooms cleared it takes
+   * to come back — Isaac's charges. Only one is ever carried — the cards clear the others —
+   * so `activeOf` takes the first. `fire` acts on the world and publishes what it did on
+   * `world.pulses`.
    */
-  active?: { name: string; icon: IconName; cd: number; fire: (c: Creature, world: World) => void };
+  active?: { name: string; icon: IconName; charge: number; fire: (c: Creature, world: World) => void };
+  /**
+   * The primary: what the strike on the arrows fires in place of the bite — a kind of shot,
+   * the fan of headings it goes out on (radians off the aim), and each shot's share of a
+   * bite. One slot, like the active; `primaryOf` takes the first.
+   */
+  primary?: { shot: ShotKind; fan: readonly number[]; mult: number };
+  /** Whether a hit on this body is turned aside entirely right now. */
+  guard?: (c: Creature) => boolean;
 
   // ---- effects
   /** The attacker's organs, after its bite has landed. */

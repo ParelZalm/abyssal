@@ -75,7 +75,10 @@ export class Behaviour {
     c.moodT -= dt;
     c.graspCd = Math.max(0, c.graspCd - dt);
     c.scatter = Math.max(0, c.scatter - dt);
-    this.tickStrike(c, dt);
+    // a role runs its own attack's clock (`Roles.tick`); run this one on it too and every
+    // step goes by twice as fast, and the recovery ends without its cooldown
+    const role = c.hostile ? c.species.role : undefined;
+    if (!role) this.tickStrike(c, dt);
 
     // dazzled: the body hangs where the flash caught it and drifts on what it was doing
     if (c.stun > 0) {
@@ -86,7 +89,7 @@ export class Behaviour {
     }
     if (c.species.pattern && this.patterns.patternStep(c, dt, p)) return;
     // a room's hostile has one job, and its role is how it goes about it
-    if (c.hostile && c.species.role) { this.roles.step(c, dt, p, c.species.role); return; }
+    if (role) { this.roles.step(c, dt, p, role); return; }
 
     // a squid with something in its arms stops hunting and hangs onto it, nose to the catch
     const held = c.holding;

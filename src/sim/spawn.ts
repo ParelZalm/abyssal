@@ -1,6 +1,9 @@
 import { speciesById, type Role, type Species } from '../content/species';
 import type { Tank } from '../content/tanks';
 import { type Rng, TAU } from '../core/util';
+import type { Creature } from './creature';
+import { stealthOf } from './organs';
+import { STEALTH_DELAY } from './roles';
 import type { Terrain } from './terrain';
 import type { World } from './world';
 
@@ -24,7 +27,7 @@ export class Spawner {
    * knows of one is it coming. A role is held to `ROLE_MAX` a room: two turrets and a
    * spitter is a room to wait out, not one to fight.
    */
-  hostiles(room: Terrain, tank: Tank, player: { x: number; y: number }, count: number) {
+  hostiles(room: Terrain, tank: Tank, player: Creature, count: number) {
     const dealt: Partial<Record<Role, number>> = {};
     let n = 0;
     for (let guard = 0; n < count && guard < 40; guard++) {
@@ -37,7 +40,7 @@ export class Spawner {
       if (!c) continue;
       c.hostile = true;
       // staggered, so a room does not open fire all at once the moment it resolves
-      c.roleCd = this.rng.range(0.3, 1.4);
+      c.roleCd = this.rng.range(0.3, 1.4) + Math.max(0, stealthOf(player)) * STEALTH_DELAY;
       dealt[role] = (dealt[role] ?? 0) + 1;
       n++;
     }

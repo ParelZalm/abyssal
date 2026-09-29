@@ -250,6 +250,40 @@ export class Terrain {
     return true;
   }
 
+  /**
+   * Somewhere to stand a thing `w` world units wide and `h` tall: the top of the floor
+   * nearest under (`x`, `y`) that is flat across the width — every column's floor within a
+   * cell of the others — with open water over it all. Searched outward along the row from
+   * `x`, so it is as near the middle as the room allows. Null when nowhere will do.
+   */
+  standAt(x: number, y: number, w: number, h: number): { x: number; y: number } | null {
+    const half = Math.max(1, Math.ceil(w / 2 / this.cell));
+    const tall = Math.max(1, Math.ceil(h / this.cell));
+    const i0 = Math.floor((x - this.x0) / this.cell);
+    const j0 = Math.max(0, Math.floor((y - this.y0) / this.cell));
+    // the first rock under water in a column, from the row asked for down
+    const floor = (i: number) => {
+      let j = j0;
+      while (j < this.fineRows && this.solid(i, j)) j++;
+      while (j < this.fineRows && !this.solid(i, j)) j++;
+      return j < this.fineRows ? j : -1;
+    };
+    for (let d = 0; d < this.fineCols; d++) {
+      for (const i of d ? [i0 - d, i0 + d] : [i0]) {
+        if (i - half < 0 || i + half >= this.fineCols) continue;
+        const j = floor(i);
+        if (j < 0) continue;
+        let ok = true;
+        for (let k = -half; k <= half && ok; k++) {
+          if (Math.abs(floor(i + k) - j) > 1) ok = false;
+          for (let r = 1; r <= tall && ok; r++) if (this.solid(i + k, j - 1 - r)) ok = false;
+        }
+        if (ok) return { x: this.x0 + (i + 0.5) * this.cell, y: this.y0 + j * this.cell };
+      }
+    }
+    return null;
+  }
+
   /** The water a room's own animals keep to, as a depth range, so they stay off the rock. */
   get waterRange(): [number, number] {
     let top = this.fineRows, bottom = -1;

@@ -86,10 +86,11 @@ imports only point down them:
   `Behaviour.think`, `integrate`, `Combat.resolveContacts`; `Spawner`, `Patterns`,
   `Roles` (a hostile's brain, with `Flow` for the way round the rock) and `sim/organs/`
   hang off it. It never reaches up into `run/` or `Game`.
-- `run/` — one run's record (`Run`) and the systems that move it: `Evolution` (level-up,
-  traits, transformation), `Belly` (swallowing, pickups, the last heart), `Ending`.
+- `run/` — one run's record (`Run`) and the systems that move it: `TankMap` (the rooms, the
+  doors, the pedestal), `Evolution` (dealing and taking mutations, transformation), `Belly`
+  (swallowing, pickups, the last heart), `Ending`.
 - `input/` — `Input` (the keyboard, Isaac's layout) and `PlayerController` (the swim, the
-  strike on the arrows, the active mutation on Space).
+  strike or the shot on the arrows, the active mutation on Space and its charges, the stats).
 - `render/` — `Camera` (a room held whole), `Scene` (visibility, the water pass), `RoomView`
   (the room's rock), `Impacts` (the outbox made felt), `Dread`, the water shader, and
   `creature/` for the fish art.

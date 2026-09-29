@@ -62,6 +62,16 @@ export function takenOf(c: Creature, dmg: number) {
   return d;
 }
 
+/** What the body's strike fires in place of a bite, or null for the bite. */
+export function primaryOf(c: Creature) {
+  return c.organs.find(o => o.primary)?.primary ?? null;
+}
+
+/** Whether a hit on this body is turned aside entirely right now. */
+export function guardedOf(c: Creature) {
+  return c.organs.some(o => o.guard?.(c));
+}
+
 /** The body's one active organ, or null. */
 export function activeOf(c: Creature) {
   return c.organs.find(o => o.active)?.active ?? null;

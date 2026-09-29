@@ -3,6 +3,9 @@ import { dist2 } from '../../core/util';
 import { envenom, sting } from './effects';
 import { O, type Organ } from './types';
 
+/** Centimetres of belly a still ram ventilator loses a second. */
+const RAM_DRAIN = 6;
+
 /** An NPC lure's strike on whatever touches its bulb, as a multiple of a bite. */
 const LURE_STRIKE = 2.5;
 
@@ -73,15 +76,28 @@ export const BODY: Organ[] = [
     } }),
 
   O({ id: 'ram', when: g => g.ram > 0,
-    // buys its cheap metabolism by needing flow over the gills: hang still on it and you
-    // burn what you saved, which is the cost the card promises
+    // buys its quick belly by needing flow over the gills: hang still on it and the belly
+    // empties, about a nursery fish every three seconds, which is the cost the card promises
     burn: (c, base) => {
       const idle = Math.hypot(c.vx, c.vy) < c.genome.speed * 0.25;
-      return idle ? base * 1.8 : base;
+      return idle ? base + RAM_DRAIN : base;
     } }),
 
   O({ id: 'lifesteal', when: g => g.lifesteal > 0,
     swallowHeal: (g, gain) => gain * g.lifesteal }),
+];
+
+/**
+ * The primaries: the strike fired rather than bitten. The spit is one shot hard enough to be
+ * most of a bite; the volley three, spread a quarter of a radian, each under half — more
+ * damage in all at a crowd, less on one target unless it is close enough for the fan to
+ * land whole.
+ */
+export const PRIMARIES: Organ[] = [
+  O({ id: 'spit', when: g => g.spit > 0,
+    primary: { shot: 'spit', fan: [0], mult: 0.8 } }),
+  O({ id: 'volley', when: g => g.volley > 0,
+    primary: { shot: 'spine', fan: [-0.24, 0, 0.24], mult: 0.45 } }),
 ];
 
 /** Organs only a transformation grants. */

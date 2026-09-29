@@ -150,17 +150,32 @@ What it found, and what it leaves:
   wall rather than pressing into it, are left for tuning. The death screen still says
   EATEN (stage 7's end screens).
 
-## 5. Pedestals and power
+## 5. ~~Pedestals and power~~
 
-- The treasure room and the pedestal. The trait pool ported as mutations and pooled by
-  tank (open water → nursery, reef → reef, twilight to abyss → deep), offered at home or
-  deeper with the home lean kept. Cards that only fed a cut system are cut or rewritten.
-- Actives on Space, recharged by rooms cleared (Ink 2, Electric 1, Inflation 2), drawn as
-  pips.
-- The stat column: damage, rate, range, shot speed, speed, armour.
-- Ranged primaries: Archer Spit and Spine Volley, replacing the bite for good. Ballistic
-  reworked without the boost.
-- Board: the pedestal, the stat column, each ranged primary and its shot.
+Done: the treasure room's pedestal — a plinth on flat floor under the middle of the room
+with the mutation lit over it, its card read at the top of the screen, taken by swimming
+into it. The pool is the tank's (`Trait.tank`, `dealMutations`), leaning home and toward the
+build. The actives charge by rooms cleared (Ink 2, Electric 1, Inflation 2), drawn as pips
+on Space. The stat column. Archer Spit and Spine Volley replace the bite for good, each
+painted on the body; the player's shots are `World.shots` and leave carcasses. Ballistic,
+Flash Sense and Smoke Screen fire on the strike. The board has a Pedestals & power group.
+
+What it found, and what it leaves:
+
+- **Every role ran at double speed** since stage 4: the ecology's strike clock ran on
+  hostiles beside the role's own, and a recovery ended with no cooldown. A spitter fired
+  about every second and a half, not every three. Fixed; an idle larva now lasts about nine
+  seconds in a room of four.
+- **A third of the cards fed a cut system**, and are rewritten rather than cut: metabolism
+  became the belly's size, regeneration a mend as a room clears, lifesteal half hearts, the
+  boost the strike, Ram's cost the belly draining, stealth a slow, inaccurate hostile. The
+  draft screen is gone; its card is the pedestal's.
+- **Inflation on the player turns every hit aside** while swollen: a third of a hit cannot
+  come off a heart.
+- A body leaving a room from the edge of a door arrived in the rock beside the next one;
+  arrivals are held to the opening now.
+- Range, shot speed and the shots' own speed are constants on the stat column until
+  mutations move them — the stage 6 items and the deal mutations are where they would.
 
 ## 6. The economy
 

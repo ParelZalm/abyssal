@@ -6,8 +6,8 @@ export interface Genome {
   bite: number;        // damage per bite and how far above your weight you can punch
   sense: number;       // detection radius, also how much of the dark you see
   armor: number;       // flat damage reduction
-  regen: number;       // hp/sec
-  metabolism: number;  // biomass burned per second; growth costs upkeep
+  regen: number;       // hp/sec for an animal; for the player, halves mended as a room clears
+  metabolism: number;  // how much the belly needs before it passes something; ×1 is `BELLY_FULL`
   stealth: number;     // reduces the radius at which predators notice you
   gulp: number;        // multiplier on how far your mouth draws small prey in
   lifesteal: number;   // share of biomass eaten that comes back as health
@@ -40,6 +40,10 @@ export interface Genome {
   ink: number;         // ink sac: a cloud that hides you from everything that hunts
   discharge: number;   // electric organ: a shock that strikes and stuns all around
   inflate: number;     // inflation: swell too big to swallow, and hard to bite
+  // primaries — what the strike on the arrows is. The one slot: none is the bite, and taking
+  // one clears the other, so a ranged body has given up its mouth as a weapon for good
+  spit: number;        // archer spit: a jet of water fired down the aim
+  volley: number;      // spine volley: a fan of three spines
 
   // morphology — purely visual, but every trait nudges it so the fish reads as evolved
   hue: number;
@@ -92,7 +96,7 @@ export function baseGenome(): Genome {
     regen: 0.6, metabolism: 1, stealth: 0, gulp: 1, lifesteal: 0, pen: 0, ram: 0,
     venom: 0, lure: 0, claws: 0, jet: 0, coral: 0, frill: 0, filter: 0, crush: 0,
     eel: 0, mantle: 0, lurk: 0, frenzy: 0, electro: 0, glare: 0, brittle: 0, veins: 0, lead: 0,
-    ink: 0, discharge: 0, inflate: 0,
+    ink: 0, discharge: 0, inflate: 0, spit: 0, volley: 0,
     hue: 30, accentHue: 200, finSize: 1, tailSplit: 0.35, spikes: 0, serrate: 0,
     jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0, smoke: 0, pale: 0,
     photophores: 0, eyeAdapt: 0, gape: 0, veil: 0, bulk: 0, barbels: 0,
@@ -111,6 +115,19 @@ export function armourOf(g: Genome) {
 export function maxHp(g: Genome) {
   return Math.round(10 + g.size ** 1.35 * 0.5 + armourOf(g) * 10);
 }
+/**
+ * Regeneration above the hatchling's own that mends one of the player's half hearts as a
+ * room clears. The cards were written in points a second, and a heart that fills by itself
+ * mid-fight is not Isaac's; so it is paid as the room is won, half a heart for Regenerative
+ * Tissue's 1.6.
+ */
+const REGEN_PER_HALF = 1.6;
+
+/** Half hearts the player mends each time a room is cleared. */
+export function mendPerRoom(g: Genome) {
+  return Math.round(Math.max(0, g.regen - baseGenome().regen) / REGEN_PER_HALF);
+}
+
 export function biteDamage(g: Genome) {
   return g.bite * (1 + g.size / 90);
 }

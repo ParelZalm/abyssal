@@ -1,6 +1,7 @@
 import type { Family, Transformation } from '../content/forms';
 import type { Genome } from '../content/genome';
-import type { Rarity } from '../content/traits';
+import type { Rarity, Trait } from '../content/traits';
+import type { Stats } from '../input/PlayerController';
 import type { IconName } from './icons';
 import type { MapCell } from '../run/TankMap';
 
@@ -39,6 +40,10 @@ export interface HudState {
   /** The rooms of the tank seen so far, and a number that changes whenever they draw differently. */
   map: MapCell[];
   mapVersion: number;
-  /** The one active organ, if the body has one: its mark, and how ready it is, 0..1. */
-  active: { name: string; icon: IconName; ready: number } | null;
+  /** The one active organ, if the body has one: its mark, its charges, and how many are full. */
+  active: { name: string; icon: IconName; charge: number; need: number } | null;
+  /** The stat column. */
+  stats: Stats;
+  /** The mutation on the pedestal the player is beside: what taking it would finish, and whether the codex has it. */
+  offer: { trait: Trait; note: string | null; isNew: boolean } | null;
 }
