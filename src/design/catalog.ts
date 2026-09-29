@@ -7,7 +7,7 @@
  * that is the whole point of the page, so keep it accurate when things move.
  */
 import { Container, Graphics, Sprite } from 'pixi.js';
-import { faceFor, PLAN_FORMS, type Plan } from '../content/form';
+import { PLAN_FORMS, type Plan } from '../content/form';
 import { FishView, REST, type Pose } from '../render/creature/fishview';
 import { FAMILY_NAMES, TRANSFORMS, type Family } from '../content/forms';
 import { baseGenome, type Genome } from '../content/genome';
@@ -176,14 +176,14 @@ type Act = 'idle' | 'swim' | 'turn' | 'attack' | 'hurt' | 'death';
 
 /**
  * Each animation state a body can be in, looped on its own so it can be judged in isolation:
- * the idle hover, the cruise, the turn-about, the strike (wind-up, lunge, bite, recovery),
+ * the idle hover, the cruise, the flip, the strike (wind-up, lunge, bite, recovery),
  * the flinch, and the death. The timings are the simulation's own — `Behaviour`'s strike
  * constants and `FishView`'s — scripted here rather than waited for.
  */
 const ACTS: Record<Act, string> = {
   idle: 'Hangs level and breathes: a slow rise and fall, the nose nodding with it.',
   swim: 'Cruising: the wave rides the body and the tail beats with the effort.',
-  turn: 'Turning back: the nose swings round toward you, the body folds short behind it, the tail follows.',
+  turn: 'Turning back: a flip, round in one frame, with a squish and a crackle of texels as it settles.',
   attack: 'Wind-up, lunge, bite, recovery — the jaw opens on the coil and snaps shut on the bite.',
   hurt: 'A wound: knocked short, flashed red, blinked for a few frames.',
   death: 'Rolls belly-up, sinks and fades. Swallowed whole, it goes down the throat instead.',
@@ -196,10 +196,10 @@ function actAnimate(act: Act, windup: number) {
     t += dt;
     let pose: Pose = REST, thrust = act === 'idle' || act === 'hurt' ? 0.05 : 0.7;
     if (act === 'turn') {
-      // a half turn every two seconds, up and over at the rate a cruising body turns
-      const target = Math.floor(t / 2) % 2 ? Math.PI : 0;
-      angle += Math.max(-dt * 3.2, Math.min(dt * 3.2, target - angle));
-      face = faceFor(face, angle);
+      // a turn back every two seconds, the heading mirrored in a step as `drive` does
+      const back = Math.floor(t / 2) % 2 === 1;
+      angle = back ? Math.PI : 0;
+      face = back ? -1 : 1;
     }
     if (act === 'hurt' && t > 1.1) { t = 0; b.fish.hurt(); }
     if (act === 'attack') {

@@ -109,20 +109,23 @@ because a guardian is the animal the player is meant to recognise on sight.
 
 ### Facing
 
-A side-on animal pitches toward its heading and, once that heading is past vertical, turns
-about. `faceFor` (`content/form.ts`) decides which way it faces, with a hysteresis band so an
-animal swimming straight up does not turn back and forth; `drawnAngle` eases the drawn pitch
-toward 55°, because at vertical the two facings are mirror images about the spine and the only
-change between them is a roll. `FishView` turns each column of the strip on its own yaw,
-lagged from nose to tail (`TURN_TIME`, `TURN_LEAD`): the head swings round toward the viewer,
-the body folds short behind it, and the tail follows through. The strip draws tail first, so
-the head is on top of the fold. `Creature.face` is state of the body, not the view, because the
-lure's strike point (`sim/organs/body.ts`) has to agree with where the bulb is drawn.
+A side-on animal pitches toward its heading and turns back by flipping. `Creature.drive`
+mirrors the heading and the facing in one step (see `simulation.md`); `faceFor`
+(`content/form.ts`) catches a body whose heading drifts past vertical without asking, with a
+hysteresis band so one swimming straight up does not flip back and forth. `drawnAngle` eases
+the drawn pitch toward 55°, because at vertical the two facings are the same animal mirrored
+about its spine and a fish standing on its tail has no profile left to read.
 
-Three earlier versions were undone. A hard mirror at the hysteresis edge snapped the body into
-its mirror image in a frame; a drawn-pitch cap at 60° jumped by the difference whenever the
-facing changed; and a 0.3 s roll about the spine, squashing the body top to bottom, still read
-as the model flipping. The design board's *Motion* group loops the turn for three species.
+`FishView` mirrors the strip in the frame the facing changes — the body's origin is at x 0 on
+the strip, so the mirror is `x × facing` for every column, lamp and arm — and `FLIP_TIME`
+(0.2 s) of recoil is the whole of the turn: the body bunched along its length and deeper
+across it, and `uFlip` in `living.ts` nubbing the entire outline, back and belly as well as
+fins, re-rolled every few frames as it thins out. `Creature.face` is state of the body, not
+the view, because the lure's strike point (`sim/organs/body.ts`) has to agree with where the
+bulb is drawn. The design board's *Motion* group loops the flip for three species.
+
+Every animated turn was undone — a roll about the spine, then a yaw folding the strip nose to
+tail — see `decisions.md`.
 
 Every strip is drawn with `render/creature/living.ts`: sub-pixel sampling (four
 taps blended across one screen pixel, so a fractional move shows as in-between colours) and a

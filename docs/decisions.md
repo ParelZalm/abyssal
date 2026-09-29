@@ -111,17 +111,26 @@ Findings that shaped it:
 - **Detail needs a budget.** At the grid's real density small animals are a handful of texels,
   and an eye on a four-texel krill is the whole krill.
 
-## Turning back is a rotation and a roll, not a flip
+## Turning back is a flip, with a recoil and no in-betweens
 
-Two turns were tried after the move to side-on and both undone on sight. A one-step
-turn-about — the heading mirrored about vertical, the view squashing the body through the
-screen plane — was physically right and read as the model flipping. So did the first cut of
-facing, which mirrored the body in one frame at the hysteresis edge. The body now rotates
-through its turn as it always did, and `FishView` eases a roll about the spine over 0.3 s,
-so it thins edge-on and comes back up the right way. Directional keys (left swims left)
-went in with the turn-about and were reverted with it.
+Four turns were tried after the move to side-on before this one. A one-step turn-about with
+the view squashing the body through the screen plane, and a first cut of facing that mirrored
+the body in one frame at the hysteresis edge, both read as the model flipping. A rotation
+through vertical with a 0.3 s roll about the spine thinned the body edge-on and still read
+that way. A yaw folding the strip nose to tail read as a body turning, but only at lengths
+(0.6 s) that were slow to steer, and a hatchling's full-throttle reversal swung a loop five
+body lengths deep.
 
-They came back on their own, over the rotating turn. Side-on, tank steering inverts: facing
+What landed, compared side by side against the fold at 0.25 s, is the flip with nothing
+animated between the two facings: the heading mirrors in `Creature.drive`, the strip mirrors
+in the same frame, and the turn is carried by what follows it — the body keeps 0.45 of its
+speed and drifts the old way for an instant, bunches up, and its outline crackles for 0.2 s.
+The earlier flips failed on their in-betweens and on having no consequence; do not add a roll
+or a squash through the screen plane back to smooth this one. It applies to every body but a
+bell, so the ocean turns one way.
+
+Directional keys (left swims left) went in with the first turn-about and were reverted with
+it, then came back on their own. Side-on, tank steering inverts: facing
 left, "right" swings the nose up, so no key meant a direction on the screen, and a reversal
 was a full-throttle loop about five body lengths deep. The keys now name a direction the
 way the cursor does, both go through `drive`, and a turn-back is fast rather than wide:

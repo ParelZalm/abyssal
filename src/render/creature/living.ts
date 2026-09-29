@@ -57,6 +57,7 @@ uniform float uClock;
 uniform float uBody;
 uniform float uRipple;
 uniform float uSoft;
+uniform float uFlip;
 
 float hash(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
 
@@ -84,19 +85,25 @@ void main() {
   // held frames, as a hand-drawn cycle is: about nine to a stroke of the tail
   float frame = floor(uBeat * 1.5);
   vec2 d = vec2(0.0);
+  // Only the outline moves, and only outward by one texel: an empty texel just past the edge
+  // takes the edge texel's colour, so the edge grows a one-pixel nub. Moving whole columns of
+  // fin shifted every texel in them and read as rough, not as a fin breathing.
+  vec2 inward = vec2(0.0, -up);
+  bool edge = texel(cell).a < 0.01 && texel(cell + inward).a > 0.5;
+  bool nub = false;
   if (fin) {
-    // Only the fin's outline moves, and only outward by one texel: an empty texel just past the
-    // edge takes the edge texel's colour, so the edge grows a one-pixel nub. Moving whole
-    // columns of fin shifted every texel in them and read as rough, not as a fin breathing.
-    vec2 inward = vec2(0.0, -up);
-    bool edge = texel(cell).a < 0.01 && texel(cell + inward).a > 0.5;
     // one column in eight carries the nub, stepping back a column a frame, half of them skipped
     float k = mod(fromNose - frame, 8.0);
     bool bump = k < 1.0 && hash(cell.x + floor((frame - fromNose) / 8.0) * 17.0) > 0.5;
     // and at rest, rarely, a lone nub comes and goes
     bool flick = hash(cell.x * 7.0 + floor(uClock * 3.0) * 3.1) > 0.985;
-    if (edge && (bump || flick)) d.y += up;
+    nub = bump || flick;
   }
+  // a flip snapping round: nubs all along the outline, back and belly as well as the fins,
+  // thinning out as it settles and re-rolled every few frames, so the silhouette crackles for
+  // an instant — the in-between a pixel animator draws instead of a turn
+  if (uFlip > 0.0) nub = nub || hash(cell.x * 3.7 + up * 1.3 + floor(uClock * 20.0) * 5.3) < uFlip * 0.55;
+  if (edge && nub) d.y += up;
   // only the tail's last few columns step, and by one texel, when the stroke is near its peak
   d.y += floor(clamp((0.1 - cuv.x) / 0.1, 0.0, 1.0) * sin(frame * 0.7) + 0.5);
   // sampled from the other side: to show a texel moved by d, read the one d behind it
@@ -142,6 +149,8 @@ export function livingSkin(texture: Texture, body: number): LivingSkin {
     uRipple: { value: 1, type: 'f32' },
     // the blend's width in screen pixels: 1 is a true sub-pixel blend, 0 is nearest
     uSoft: { value: 1, type: 'f32' },
+    // a flip's recoil, 1 as it snaps round to 0 settled (`FishView`)
+    uFlip: { value: 0, type: 'f32' },
   });
   const shader = Object.assign(
     new Shader({ glProgram: program, resources: { uTexture: texture.source, living: uniforms } }),

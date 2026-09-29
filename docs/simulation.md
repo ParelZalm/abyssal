@@ -22,11 +22,18 @@ a force along the body axis and lets drag do the rest:
 
 `drive(dt, desiredAngle, throttle, flick)` wraps `propel` for anything that thinks in
 headings: the AI, and the player — the cursor and the keys both give a direction on the
-screen. `flick` is extra turning authority for a heading away from the body's, tapered to
-`1 + flick` straight behind: a C-start rather than a circle. Only the player passes one
-(`FLICK` in `PlayerController`, 1.5), so the chases tuned against the ordinary rate hold.
-The controller also eases throttle to 0.3 while the body points away from where it wants
-to go — full thrust through a reversal is what swung it round a loop.
+screen.
+
+- **Turning back is a flip.** Whenever the wanted heading is clearly on the other side
+  (`cos · face` under -0.2, the band `faceFor` holds a facing with) and the body is driving,
+  `drive` mirrors the heading about vertical and swaps `face` in one step. It keeps its climb
+  or dive, and `FLIP_KEEP` 0.45 of its speed, so it is checked and drifts the old way for an
+  instant. Every body but a bell.
+- **`flick`** is extra turning authority for what is left, the pitch: tapered to `1 + flick`
+  at the widest, so a dive thrown into a climb snaps rather than arcs. Only the player passes
+  one (`FLICK` in `PlayerController`, 6), so the chases tuned against the ordinary rate hold.
+- The controller eases throttle to 0.3 while the body points away from where it wants to go,
+  so a hard turn pivots instead of arcing under full power.
 
 Side-on, two rules keep bodies looking like fish in profile:
 
@@ -37,9 +44,8 @@ Side-on, two rules keep bodies looking like fish in profile:
   1.15 in a chase or a bolt. A hunter under prey climbs on a slant, not straight up.
   Plankton and drifters are carried, and are exempt.
 
-A turn back is still a rotation through vertical — the one-step turn-about about the
-vertical axis was tried and undone (see `decisions.md`); the view rolls the body over on
-the way instead.
+Every animated turn-back — a roll about the spine, a yaw folding nose to tail — was tried
+and undone; see `decisions.md` for why the flip landed where the earlier flips did not.
 
 ### Strikes
 

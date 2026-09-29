@@ -167,7 +167,8 @@ follows, in stages, each committed on its own:
 6. ~~**Motion.**~~ Done: idle levels out and hovers, pitch is capped by activity, hunters
    wind up, strike and recover with a jaw baked open for it, a wound flinches and flashes,
    and a death is played out — belly-up, or down the swallower's throat. Turning back is a
-   rotation with an eased roll. The design board's Motion group loops each state.
+   flip: mirrored in a frame, checked in speed, with a squish and a crackle as it settles.
+   The design board's Motion group loops each state.
 
 What is left across the whole pass is tuning, not structure: per-plan proportions and
 palettes side-on, small animals at their real size, pixel icons, and scenery with real

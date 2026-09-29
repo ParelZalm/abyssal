@@ -8,11 +8,13 @@ import type { World } from '../sim/world';
 import type { Input } from './Input';
 
 /**
- * How much faster the player's body turns back on itself than it turns (`Creature.drive`).
- * At 1.5 a hatchling reverses in about half a second, not the 0.95 s of the ordinary rate,
- * which is what makes a key or a cursor thrown behind read as an answer, not a manoeuvre.
+ * How much harder than usual the player's body takes a hard turn (`Creature.drive`). Turning
+ * back is a flip and needs none; this is the pitch left over — level to straight up, a dive
+ * into a climb — which at 6 a hatchling swings through in about a quarter of a second, so a
+ * key or a cursor thrown somewhere reads as an answer, not a manoeuvre. It tapers with the
+ * angle, so small corrections gain little and nothing oscillates.
  */
-const FLICK = 1.5;
+const FLICK = 6;
 
 /**
  * The player's body under the player's hands: steering, the boost and what it costs, and
@@ -77,10 +79,9 @@ export class PlayerController {
       }
     }
     // Turn first, then swim. Full thrust on a body pointed away from where it wants to go
-    // drives it round a loop several lengths across, through vertical; easing off lets drag
-    // bleed the speed that `agility` is lost to, and the lateral drag kills the slide, so a
-    // turn-back is a pivot about a length wide. Floored at 0.3, above the 0.2 under which
-    // `propel` levels the body out and would fight the turn.
+    // drives it round an arc; easing off lets drag bleed the speed that `agility` is lost to,
+    // so a hard turn pivots. Floored at 0.3, above the 0.2 under which `propel` levels the
+    // body out and would fight the turn, and the 0.1 under which `drive` will not flip.
     const align = Math.cos(angleDelta(p.angle, desired));
     throttle *= 0.3 + 0.7 * Math.max(0, align);
 

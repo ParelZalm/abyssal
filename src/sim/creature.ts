@@ -8,6 +8,12 @@ import { organsOf, swimOf, type Organ, type SwimMods } from './organs';
 const DRAG_FWD = 3.1;
 /** Sideways drag — a body with a keel barely slides. */
 const DRAG_LAT = 9;
+/**
+ * The speed a body keeps through a flip (`drive`). The heading reverses in a frame but the
+ * water does not, so most of the way on is lost at once and the rest drags it backward for
+ * an instant: the check that makes a snapped turn read as effort rather than a cut.
+ */
+const FLIP_KEEP = 0.45;
 
 export type Mood = 'cruise' | 'rest' | 'dart';
 
@@ -235,7 +241,7 @@ export class Creature {
 
   /**
    * One swim step from raw controls: `turnInput` is a multiple of the available turning
-   * rate, ±1 an ordinary turn and more only for a turn-back (`drive`'s `flick`), and
+   * rate, ±1 an ordinary turn and more only for a hard one (`drive`'s `flick`), and
    * `throttle` is the propelling force along the body axis, negative to back up. Thrust
    * surges on the tail beat, and lateral drag is far stronger than forward drag — that is
    * what makes a turn arc and a glide coast instead of the heading snapping the velocity.
@@ -294,17 +300,27 @@ export class Creature {
   }
 
   /**
-   * Steering for anything that thinks in headings rather than in keys. `flick` is extra
-   * turning authority for a heading away from the body's, reaching `1 + flick` times the
-   * usual rate straight behind: a fish reverses with a C-start, bent double and round in a
-   * fraction of a second, not by swimming a circle. Only the player asks for it, so the
-   * chases and escapes tuned against the ordinary rate keep it.
+   * Steering for anything that thinks in headings rather than in keys. A heading across to
+   * the other side is a flip; what is left is pitch, and `flick` is extra turning authority
+   * for a heading far from the body's, tapered to `1 + flick` times the usual rate at the
+   * widest — a dive thrown into a climb snaps like a C-start rather than swimming an arc.
+   * Only the player asks for it, so the chases tuned against the ordinary rate keep it.
    */
   drive(dt: number, desired: number, throttle: number, flick = 0) {
+    // Turning back is a flip, in one step: the heading mirrored about vertical keeps its climb
+    // or dive and swaps its side. Only on a heading clearly across — the same 0.2 band
+    // `faceFor` holds a facing with — or a body swimming near vertical would flip on every
+    // wobble. A bell has no side to turn to.
+    if (throttle > 0.1 && this.swim.pulseEvery <= 0 && Math.cos(desired) * this.face < -0.2) {
+      this.angle = Math.PI - this.angle;
+      this.face = this.face > 0 ? -1 : 1;
+      this.vx *= FLIP_KEEP;
+      this.vy *= FLIP_KEEP;
+    }
     const rate = this.agility() * dt;
     const want = angleDelta(this.angle, desired);
     // tapered over the whole turn, not cut at the perpendicular, or the flick runs out
-    // halfway round and the back half of a reversal crawls at the ordinary rate
+    // halfway round and the back half of a hard turn crawls at the ordinary rate
     const reach = 1 + flick * (1 - Math.cos(want)) * 0.5;
     this.propel(dt, rate > 0 ? clamp(want / rate, -reach, reach) : 0, throttle);
   }

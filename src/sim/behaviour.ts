@@ -23,7 +23,7 @@ const BLOOD_REACH = 11;
  * swims level and changes depth on a slant: one that points its nose straight up to reach
  * something overhead reads as a stick, not a fish. Cruising, schooling and idling stay near
  * level; the chase and the bolt may go steep, but not vertical — they climb in a zigzag of
- * turn-abouts instead, which is what a side-on fish actually does.
+ * flips instead, which is what a side-on fish actually does.
  */
 const STEEP = { calm: 0.5, scent: 0.8, chase: 1.15 };
 

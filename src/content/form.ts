@@ -421,10 +421,10 @@ export function edgeAt(t: number, f: Form, k: number) {
 }
 
 /**
- * Which way up a side-on animal is: 1 with its back toward -y while heading toward +x, -1
- * rolled over for heading toward -x — so its back stays up whichever way it swims. It only
- * changes once the heading is well past vertical, or an animal swimming straight up would
- * roll back and forth; the view eases the roll (`FishView`), so there is no snap.
+ * Which way a side-on animal faces: 1 heading toward +x, -1 toward -x, mirrored so its back
+ * stays up whichever way it swims. It only changes once the heading is well past vertical, or
+ * an animal swimming straight up would flip back and forth. `Creature.drive` flips a body
+ * that wants to turn back before its heading gets here; this catches one that drifts round.
  */
 export function faceFor(prev: 1 | -1, angle: number): 1 | -1 {
   const c = Math.cos(angle);
@@ -432,11 +432,9 @@ export function faceFor(prev: 1 | -1, angle: number): 1 | -1 {
 }
 
 /**
- * The steepest a side-on body is drawn climbing or diving. Tank steering takes a turn-about
- * through vertical, and a body drawn there has no side to turn to: facing left and facing
- * right are the same animal mirrored about its spine, and any change between them is a roll.
- * Held off vertical, the facing changes on a body still pitched well short of it, where the
- * turn can be a yaw — the nose swinging round toward the viewer — instead.
+ * The steepest a side-on body is drawn climbing or diving. Straight up or down, facing left
+ * and facing right are the same animal mirrored about its spine, and a fish drawn standing on
+ * its tail has no profile left to read.
  */
 const MAX_PITCH = 0.96;
 
