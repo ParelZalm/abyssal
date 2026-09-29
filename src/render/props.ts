@@ -168,7 +168,7 @@ function flatten(kind: PropKind): HTMLCanvasElement {
  * past the silhouette, and clipping it at the old bounds puts a straight edge back on a
  * shape whose whole job is to be soft.
  */
-export function blurred(src: HTMLCanvasElement, radius: number): Texture {
+function blurred(src: HTMLCanvasElement, radius: number): Texture {
   const pad = Math.ceil(radius * 2.5);
   const c = document.createElement('canvas');
   c.width = src.width + pad * 2;

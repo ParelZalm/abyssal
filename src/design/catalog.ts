@@ -18,10 +18,6 @@ import { BANDS, depthLabel, zoneOf } from '../content/zones';
 import type { IconName } from '../ui/icons';
 import { rgb, Rng } from '../core/util';
 import { waterColor } from '../render/water';
-import { FishForm, shoulderAt, SPINDLE, type Form, type FormSpec } from './fishform';
-import { protoKinds, protoScene, PROTO_W, ProtoScene } from './proto-scenery';
-import { angler, dragonfish, gulper, hatchling, jelly, lanternfish, PixelCreature, PixelScene,
-         type PixelArt } from './proto-pixel';
 
 export interface DesignItem {
   id: string;
@@ -54,87 +50,6 @@ export interface DesignGroup {
   name: string;
   note: string;
   items: DesignItem[];
-}
-
-// ------------------------------------------------------------------ the fish form
-
-/**
- * The from-scratch form. Two rows: what the width function's parameters do to a silhouette,
- * and the same parameters drifting over a life. Both are the one curve in `fishform.ts` —
- * there is no second drawing, which is the test of whether a parametric body is enough.
- */
-function formGroup(): DesignGroup {
-  const shapes: { id: string; name: string; note: string; form: Form;
-                  detail?: boolean; dorsal?: boolean; hue?: number }[] = [
-    { id: 'curve', name: '0 — The curve', form: SPINDLE, detail: false, dorsal: false,
-      note: 'w(t) alone: spine, width function, one smooth contour. Nothing else.' },
-    { id: 'shaded', name: '1 — Countershaded', form: SPINDLE, detail: false,
-      note: 'the dark back, narrowing on its own because it rides the same curve' },
-    { id: 'spindle', name: '2 — Spindle (base)', form: SPINDLE,
-      note: 'the proposed base form: eyes, mouth, gill line, pectorals, pelvics, caudal' },
-    { id: 'deep', name: 'Deep', hue: 42,
-      form: { len: 1.7, width: 0.82, fore: 0.8, aft: 0.95, peduncle: 0.2, shoulder: 0, nose: 0, trunk: 0, cheek: 0.12,
-              fluke: 0.26, fork: 0.35 },
-      note: 'reef fish — wide and short, widest well forward, a paddle for a tail' },
-    { id: 'bullet', name: 'Bullet', hue: 208,
-      form: { len: 2.4, width: 0.6, fore: 0.85, aft: 1.5, peduncle: 0.1, shoulder: 0, nose: 0, trunk: 0, cheek: 0.14,
-              fluke: 0.3, fork: 0.95 },
-      note: 'tuna — mass thrown forward, peduncle pinched to nothing, scythe caudal' },
-    { id: 'lance', name: 'Lance', hue: 186,
-      form: { len: 3.1, width: 0.42, fore: 0.5, aft: 1.05, peduncle: 0.14, shoulder: 0, nose: 0, trunk: 0, cheek: 0.06,
-              fluke: 0.24, fork: 0.6 },
-      note: 'barracuda — long, barely tapered, a body that is mostly approach' },
-    { id: 'ribbon', name: 'Ribbon', hue: 268,
-      form: { len: 3.8, width: 0.34, fore: 0.45, aft: 0.75, peduncle: 0.34, shoulder: 0, nose: 0, trunk: 0, cheek: 0.05,
-              fluke: 0.14, fork: 0.1 },
-      note: 'eel — the peduncle floor raised until the body never really ends' },
-  ];
-
-  /** One life, as four settings of the same parameters. */
-  const life: { id: string; name: string; note: string; size: string; form: Form }[] = [
-    { id: 'larva', name: 'Life 1 — Larva', size: '8 mm',
-      form: { len: 1.6, width: 0.46, fore: 1.3, aft: 2.1, peduncle: 0.07, shoulder: 0, nose: 0, trunk: 0, cheek: 0.3,
-              fluke: 0.2, fork: 0.05 },
-      note: 'all head and a thread of tail — the body has not been built yet' },
-    { id: 'fry', name: 'Life 2 — Fry', size: '6 cm',
-      form: { len: 1.85, width: 0.54, fore: 1.05, aft: 1.7, peduncle: 0.1, shoulder: 0, nose: 0, trunk: 0, cheek: 0.2,
-              fluke: 0.26, fork: 0.28 },
-      note: 'the trunk fills in behind the head and the caudal starts to fork' },
-    { id: 'juvenile', name: 'Life 3 — Juvenile', size: '30 cm',
-      form: { len: 2.05, width: 0.58, fore: 0.92, aft: 1.4, peduncle: 0.13, shoulder: 0, nose: 0, trunk: 0, cheek: 0.14,
-              fluke: 0.3, fork: 0.46 },
-      note: 'the widest point slides back as the body outgrows the head' },
-    { id: 'adult', name: 'Life 4 — Adult', size: '1.2 m',
-      form: { len: 2.35, width: 0.62, fore: 0.82, aft: 1.28, peduncle: 0.15, shoulder: 0, nose: 0, trunk: 0, cheek: 0.1,
-              fluke: 0.34, fork: 0.72 },
-      note: 'long body, hard fork, shoulder a third of the way back' },
-  ];
-
-  const item = (id: string, name: string, note: string, form: Form,
-                extra: Record<string, string | number>,
-                spec: Partial<FormSpec>): DesignItem => ({
-    id, name, note,
-    source: 'src/design/fishform.ts',
-    // the drawn animal is the spine plus whatever the caudal adds behind it
-    span: form.len * (1 + form.fluke) * 10,
-    depth: 3200,
-    facts: { ...extra, len: form.len, width: form.width, fore: form.fore, aft: form.aft,
-             shoulder: shoulderAt(form).toFixed(2), peduncle: form.peduncle, fork: form.fork },
-    make: () => new FishForm(form, spec),
-    animate: (view, dt, beat) =>
-      (view as FishForm).animate(dt, beat, Math.sin(beat * 0.23) * 0.6),
-  });
-
-  return {
-    id: 'form',
-    name: 'Fish form',
-    note: 'Built from scratch: a spine and one width curve. Every shape here is that curve.',
-    items: [
-      ...shapes.map(sh => item(sh.id, sh.name, sh.note, sh.form, {},
-        { detail: sh.detail, dorsal: sh.dorsal, hue: sh.hue })),
-      ...life.map(l => item(l.id, l.name, l.note, l.form, { size: l.size }, {})),
-    ],
-  };
 }
 
 /**
@@ -726,93 +641,7 @@ function waterGroup(): DesignGroup {
   };
 }
 
-/**
- * PROTOTYPE — zone-specific scenery as fields, one cell per band. Throwaway:
- * `proto-scenery.ts` is not imported by the game, and this group comes back out once the
- * fields are folded into `scenery.ts`. See that file's header for what was tried.
- */
-function protoSceneryGroup(): DesignGroup {
-  return {
-    id: 'proto',
-    name: '✦ scenery (proto)',
-    note: 'Fields — one motif many times, gathered into a structure, with water around it.',
-    items: BANDS.map((band, i) => {
-      const depth = (band.top + band.bottom) / 2;
-      // the prototype predates the sixth band and only has five profiles; it is on its
-      // way out, so the deepest two share one rather than being drawn a new field
-      const props = protoKinds(Math.min(i, 4));
-      return {
-        id: `proto-${i}`,
-        name: band.name,
-        note: props,
-        source: 'src/design/proto-scenery.ts',
-        // a patch is a screen of water, not an object on a stand, so it is framed to fill
-        // its cell rather than sit inside one. The 0.8 is as far as that can go before the
-        // cell crops the composition instead of the composition ending at the water.
-        span: PROTO_W * 0.8,
-        depth,
-        facts: {
-          props, world: `${band.top}–${band.bottom}`,
-          // what the shipping plane puts here today, to compare the proposal against
-          shipping: band.water.scenery.kinds.join(' '),
-        },
-        make: () => protoScene(Math.min(i, 4), depth),
-        animate: (view, dt, beat) => (view as ProtoScene).animate(dt, beat),
-      };
-    }),
-  };
-}
-
-/**
- * PROTOTYPE — the creature art as pixel art, in profile. Throwaway: `proto-pixel.ts` is not
- * imported by the game. See that file's header for what it is asking.
- */
-function protoPixelGroup(): DesignGroup {
-  const fish = (id: string, name: string, note: string, depth: number, make: () => PixelArt) => {
-    let art: PixelArt | null = null;
-    const get = () => (art ??= make());
-    return {
-      id: `px-${id}`, name, note, source: 'src/design/proto-pixel.ts', depth,
-      // one world unit per texel, so the span is the sheet and the fit is whole pixels
-      get span() { return Math.max(get().w, get().h) * 1.25; },
-      facts: { get texels() { return `${get().w}×${get().h}`; } },
-      make: () => new PixelCreature(get()),
-      animate: (view: Container, dt: number) => {
-        const c = view as PixelCreature;
-        c.update(dt);
-        c.snap();
-      },
-    } satisfies DesignItem;
-  };
-  return {
-    id: 'pixel',
-    name: '✦ pixel (proto)',
-    note: 'Creature art as pixel art in profile: ramps, dither, a pixel outline, a lit rim.',
-    items: [
-      {
-        id: 'px-scene', name: 'Midnight, on one grid',
-        note: 'Every animal and the water on the same texel grid — the reference, rebuilt.',
-        source: 'src/design/proto-pixel.ts', depth: 5000,
-        span: PixelScene.W * 0.62,
-        make: () => new PixelScene(),
-        animate: (view, dt) => {
-          const s = view as PixelScene;
-          s.animate(dt);
-          s.snap();
-        },
-      },
-      fish('angler', 'Anglerfish', 'All head: an underbite of fangs and the light it fishes with.', 5100, angler),
-      fish('dragon', 'Dragonfish', 'Belly lights, a chin barbel, and the red eye-light.', 5100, dragonfish),
-      fish('gulper', 'Gulper Eel', 'A mouth with an eel attached, ending in a pink light.', 5600, gulper),
-      fish('jelly', 'Deep Jelly', 'See-through bell over gonad rings; the bell pulses.', 3400, jelly),
-      fish('lantern', 'Lanternfish', 'Small and silver, schools — the scene\'s school is this one.', 2400, lanternfish),
-      fish('hatchling', 'Hatchling', 'The player, in lit water: the ramp has to hold in blue too.', 500, hatchling),
-    ],
-  };
-}
-
 export function catalog(): DesignGroup[] {
-  return [formGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(),
-          mutationGroup(), speciesGroup(), guardianGroup(), motionGroup(), propGroup(), waterGroup(),
-          protoSceneryGroup(), protoPixelGroup()];
+  return [planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(), speciesGroup(),
+          guardianGroup(), motionGroup(), propGroup(), waterGroup()];
 }

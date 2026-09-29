@@ -138,7 +138,7 @@ The biggest roguelite gap. There is no save beyond the best score in `localStora
 Decided September 2026: the game is drawn as pixel art on one coarse grid, and every
 creature is seen side-on instead of from above — Terraria, Isaac, Core Keeper for the
 density, and a reference frame of a midnight scene for the look. The prototype that made
-the case is `design/proto-pixel.ts`, on the board at `/design.html?g=pixel`. Everything
+the case was `design/proto-pixel.ts`, taken off the board once it shipped. Everything
 follows, in stages, each committed on its own:
 
 1. ~~**The grid.**~~ Done: `render/pixel.ts`. The canvas is created at `1 / PIXEL`
@@ -158,7 +158,8 @@ follows, in stages, each committed on its own:
    hard 5×5 pixel disc, and the background props are brought down to 64 texels with their
    blur turned into screen-door dither, so a plane's distance reads as dither density. The
    water shader is left alone — `FramePass` bands it. Left: pixel-art scenery with real
-   structure (rock, kelp, vents), which is where the field prototype should land.
+   structure (rock, kelp, vents), which is where the field prototype should land
+   (`decisions.md` has it and where to recover its code).
 5. ~~**The HUD.**~~ Done: Pixelify Sans, bundled, with font smoothing off; square corners,
    2 px frames, hard 2 px rings for every glow, one-pixel drop shadows, flat bar fills with
    a lit top row, bevelled buttons. Left: the mutation icons are still smooth vector

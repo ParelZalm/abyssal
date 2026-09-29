@@ -38,11 +38,14 @@ pixels.
 The old silhouette extractor lived in `silhouettes.ts` and is gone — the extraction
 trick (render a plan, keep alpha as white, blur) is no longer used.
 
-### Biome-specific scenery — prototype, not yet folded in (`design/proto-scenery.ts`)
+### Biome-specific scenery — prototype, not yet folded in
 
 The bands place the same four primitives in every tier and let the biome only reweight
 them, so a tier is told apart by colour and density and not by what is in its water.
-Three answers were drawn on the design board, at `/design.html?g=proto`:
+Three answers were drawn on the design board. The prototype was taken off the board once it
+had fallen behind the pixel grid and the sixth band; it is recoverable as
+`git show f37e716:src/design/proto-scenery.ts`, with its board group in `design/catalog.ts`
+at the same commit.
 
 - **Vocabulary** — the same scatter with per-biome props (kelp, fans, siphonophores,
   bells, chimneys). Rejected: more nouns, no more meaning. It is still confetti spread
@@ -93,8 +96,8 @@ travelling wave and the swarm's sequence do not survive the move.
 
 The creatures were seen from directly above and painted as smooth fills at up to 48 texels
 per R unit. The move was to pixel art on one grid, and side-on, after a prototype on the
-design board (`design/proto-pixel.ts`, `?g=pixel`) rebuilt a reference frame of a midnight
-scene. Profile was the bigger half of it: from above an anglerfish is a purple triangle, and
+design board (`design/proto-pixel.ts`, removed once it shipped; `git show f37e716:` it)
+rebuilt a reference frame of a midnight scene. Profile was the bigger half of it: from above an anglerfish is a purple triangle, and
 side-on it is an anglerfish — lure, gape and hump all live in the profile.
 
 Findings that shaped it:

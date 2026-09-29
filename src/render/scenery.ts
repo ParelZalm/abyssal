@@ -62,7 +62,7 @@ interface Placed {
  * the dark tiers there is nothing behind it, so the only way to be seen is to give off
  * the band's own light.
  */
-export function shadeFor(depth: number, dark: number, lit: number) {
+function shadeFor(depth: number, dark: number, lit: number) {
   const deep = 1 - lightAt(depth);
   const water = waterColor(depth);
   const accent = bandWater(depth).accent;

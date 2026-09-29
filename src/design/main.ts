@@ -19,10 +19,9 @@ import { ICONS, createIcon, type IconName } from '../ui/icons';
 import type { Rarity } from '../content/traits';
 import { catalog, type DesignGroup, type DesignItem } from './catalog';
 import { followZoom } from '../render/pixel';
-import { setFormRenderer } from './fishform';
 
 const params = new URLSearchParams(location.search);
-let groupId = params.get('g') ?? 'form';
+let groupId = params.get('g') ?? 'plans';
 let focusId = params.get('i');
 /** Background depth when not using each item's own. */
 let depth = Number(params.get('depth') ?? 4200);
@@ -44,8 +43,6 @@ let showMorph = params.get('morph') === '1';
 const app = new Application();
 await app.init({ background: 0x01060d, resizeTo: window, antialias: true });
 document.querySelector<HTMLDivElement>('#stage')!.appendChild(app.canvas);
-// the fish form bakes its art into a texture, which needs a renderer to exist first
-setFormRenderer(app.renderer);
 // creature art is baked at the game's pixel density for a camera zoom; the board shows it at
 // a mid-run zoom, where a guardian is worth looking at and a hatchling is still legible
 followZoom(0.8);
