@@ -1,6 +1,6 @@
 import type { Plan } from './form';
 import { baseGenome, type Genome } from './genome';
-import { clamp, type Rng } from '../core/util';
+import type { Rng } from '../core/util';
 import { DEPTH_MAX, ZONES, type ZoneId } from './zones';
 
 export type Behavior = 'plankton' | 'school' | 'drift' | 'hunter' | 'ambush' | 'apex';
@@ -382,80 +382,6 @@ export function genomeFor(sp: Species, rng: Rng): Genome {
  */
 export function hunts(s: Species) {
   return s.behavior === 'hunter' || s.behavior === 'ambush' || s.behavior === 'apex';
-}
-
-/**
- * The column is one long difficulty curve, and this is the whole of it.
- *
- * The top is the tutorial: swarms are thick enough that a 14 cm hatchling can eat its way
- * to its first stage without meeting anything, and the things that hunt are thinned to
- * under a fifth of their weight. The deep is the same rule run backwards — predators are
- * nearly twice as likely there, which is what makes a kill in the Abyss draw a crowd
- * (`Behaviour.smell`) while a kill in the shallows mostly draws nothing.
- *
- * The apex is thinned with the rest: the Sunlit guardian is alive from the first minute
- * and is meant to be met, but it should not be the first thing a hatchling meets.
- */
-function weightAt(s: Species, depth: number, spent: number) {
-  // one straight ramp over the whole column rather than a tutorial shelf that ends at
-  // 1000 m and a separate deep ramp that starts at 2400. Two curves with flat water
-  // between them is a difficulty step you can feel crossing, and the run is supposed to
-  // get harder the whole way down rather than twice
-  const t = clamp(depth / DEPTH_MAX, 0, 1);
-  // `spent` bends the same curve in time: water the player has outgrown and stayed in
-  // turns into the water below it — less to graze, more that hunts. Guardians are left
-  // alone, since `World` holds them to one each and a heavier roll would change nothing
-  const food = 1 - 0.65 * spent;
-  if (hunts(s)) return s.weight * (0.15 + 1.95 * t) * (s.guardian ? 1 : 1 + 1.2 * spent);
-  // the things a hatchling can actually catch, thinning as the hunters thicken
-  if (s.behavior === 'school') return s.weight * (2 - 1.1 * t) * food;
-  if (s.behavior === 'plankton') return s.weight * (1.8 - 0.9 * t) * food;
-  return s.weight;
-}
-
-/**
- * Pick a species appropriate for a depth, weighted; returns null if none fit. Guardians
- * are in the pool like anything else — a guardian is alive in its zone from the moment
- * the player first arrives, and it is `World` that holds it to one instance and keeps it
- * dead once killed.
- */
-export function rollSpecies(rng: Rng, depth: number, spent = 0): Species | null {
-  const pool = SPECIES.filter(s => {
-    const [top, bottom] = RANGE.get(s.id)!;
-    return depth >= top && depth <= bottom;
-  });
-  if (!pool.length) return null;
-  let total = 0;
-  for (const s of pool) total += weightAt(s, depth, spent);
-  let r = rng.next() * total;
-  for (const s of pool) {
-    r -= weightAt(s, depth, spent);
-    if (r <= 0) return s;
-  }
-  return pool[pool.length - 1];
-}
-
-/**
- * What comes for a player who has stayed too long: the least of the hunters that live at
- * this depth and could swallow a body this size at the top of their own range, or null.
- *
- * The least, because the arrival is a tell rather than an execution — it should be the
- * thing that makes the player go down, not the thing that ends the run. Home water only
- * (`rangeOf`), since anything from further down would be steered straight back to its
- * band by `Behaviour.think`. Past the reef nothing that is not a guardian is big enough, and
- * the thinning in `weightAt` is the whole of the clock there.
- */
-export function riserFor(depth: number, size: number): Species | null {
-  let best: Species | null = null;
-  for (const s of SPECIES) {
-    if (s.behavior !== 'hunter' || s.guardian) continue;
-    const [top, bottom] = rangeOf(s);
-    if (depth < top || depth > bottom) continue;
-    const gape = s.size[1] * (1 + ((s.jaw ?? 0.3) - 0.3) * 0.35);
-    if (gape <= size * 1.1) continue;
-    if (!best || s.size[1] < best.size[1]) best = s;
-  }
-  return best;
 }
 
 export function speciesById(id: string) {

@@ -28,19 +28,32 @@ that finishes it.
   belly fills with what goes down, and a full belly passes a pickup.
 - **Descent.** Size ×~1.8, the next tank authored at that scale, nothing else changes.
 
-## 1. The room frame
+## 1. ~~The room frame~~
 
-One hand-authored room, and swimming and biting in it feels good.
+Done: `content/tanks.ts` (the nursery tank and its first template), `sim/terrain.ts` (the
+grid and circle collision, which every body now meets), `render/room.ts` (the rock baked
+onto the pixel grid, drawn over the bodies), `Camera.hold`, and Isaac's keys — WASD swims,
+the arrows strike four ways, Space fires the active. The column's systems are out: `Bands`,
+the descent limit, the pocket, the squeeze, the shallows clock, depth labels, the depth bar
+and the gate label. The board has a Rooms group.
 
-- A room is a tile grid on the pixel grid: rock, substrate, open water. Terrain collision
-  for every creature, which the simulation has never had (today it clamps x only).
-- A fixed camera framing the room; the zoom is per tank, not per body size.
-- WASD steering through `drive`; arrows fire the primary (a bite lunge in that direction,
-  through the existing wind-up, strike and recover); no boost.
-- Out: the column, `DEPTH_MAX`-sized spawning, bands, thermoclines, gates, the descent
-  limit, the shallows clock, the pocket, the squeeze, depth labels. Out of the HUD with
-  them: the depth readout and the gate hint.
-- Board: a Rooms group drawing the template and its tiles.
+What it found, and what it leaves:
+
+- **The lunge had to give way to kiting.** A full lunge at a pursuer threw the body back
+  into it; a strike thrown against the swim keeps a quarter of it.
+- **The strike took the boost's seam** (`Creature.kick`), so Ballistic, Flash Sense, Smoke
+  Screen and the bait-ball scatter fire on a strike instead of dying with the boost.
+  Whether that is right for each of them is stage 5's question.
+- **World-sized particulate turned to stars** at a room's zoom; it is now sized in screen
+  terms. The water shader's clouds are world-sized too and read well enough — look again
+  when a tank's zoom falls at the descent.
+- **Nothing avoids a wall.** A shoal heading into one presses against it until its wander
+  turns it. Stage 4.
+- A room is about 34 hatchling lengths across and takes ~4.5 s to swim; Isaac's take ~3.
+  Speed is a stat now, so tune the base with the stat column (stage 5).
+- Still here from the column, for the stages that replace them: the thermocline uniforms
+  in the water shader, the level-up draft and hunger (stage 2), `Creature.quarry` (stage 4),
+  the starting forms' depth unlock (stage 7), and the parallax scenery (stage 8).
 
 ## 2. Hearts and swallowing
 

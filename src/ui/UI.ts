@@ -7,7 +7,6 @@ import { CodexScreen } from './screens/CodexScreen';
 import { DeathScreen } from './screens/DeathScreen';
 import { MutationScreen, type DraftOptions } from './screens/MutationScreen';
 import { PauseScreen } from './screens/PauseScreen';
-import { BandScreen } from './screens/BandScreen';
 import { TitleScreen, type RunChoice } from './screens/TitleScreen';
 import type { LineageFrame } from './screens/lineage';
 import { TransformScreen } from './screens/TransformScreen';
@@ -32,10 +31,6 @@ export class UI {
 
   update(s: HudState) {
     this.hud.update(s);
-  }
-
-  gateLabel(text: string | null, screenY: number, screenH: number) {
-    this.hud.gateLabel(text, screenY, screenH);
   }
 
   toast(text: string) {
@@ -83,13 +78,6 @@ export class UI {
   /** The codex over whatever screen opened it; `onBack` puts that screen back. */
   showCodex(codex: Codex, onBack: () => void) {
     this.show(new CodexScreen(codex, onBack));
-  }
-
-  showBand(index: number, onContinue: () => void) {
-    this.show(new BandScreen(index, () => {
-      this.hide();
-      onContinue();
-    }));
   }
 
   showTransform(to: Transformation, was: Transformation | null, nth: number,

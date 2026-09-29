@@ -56,13 +56,13 @@ export class Evolution {
   }
 
   /**
-   * Depth unlocks the rarer half of the pool just as much as biomass does, and the band you
-   * are in decides which cards are in it. The draw leans toward the build (`leanOf`), and a
-   * reroll leaves out the hand it replaces.
+   * Biomass unlocks the rarer half of the pool, and the band whose water you are in decides
+   * which cards are in it. The draw leans toward the build (`leanOf`), and a reroll leaves
+   * out the hand it replaces. The draft itself goes with the pedestals (roadmap stage 5).
    */
   offerDraft(heading = `Evolution — stage ${this.run.stage}`, shown = new Set<string>()) {
     const run = this.run;
-    const reach = Math.max(run.stage, run.maxBand * 2 + 1);
+    const reach = run.stage;
     const g = this.p.genome;
     const owned = run.takenTraits();
     const counts = familyCounts(owned);

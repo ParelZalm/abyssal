@@ -17,8 +17,9 @@ src/
 ├── content/         what things are: tables, and pure queries over them
 │   ├── genome.ts        the stat block, and the derived stats read off it
 │   ├── species.ts       the roster: what lives in each zone, the guardians, speciesById
-│   ├── zones.ts         the five zones and their bands: look, gates, depth labels, the
-│   │                    size at which each guardian takes notice; DEPTH_MAX, WORLD_HALF_W
+│   ├── tanks.ts         the tanks of a run and the room templates they are built from
+│   ├── zones.ts         the column's strata, kept as water looks and species homes, and
+│   │                    the size at which each guardian takes notice; DEPTH_MAX
 │   ├── form.ts          the spine + width curve every body is made of, and PLAN_ART
 │   ├── traits.ts        the mutation pool and the rarity-weighted draft
 │   ├── forms.ts         the five transformations and the families that lead to them
@@ -27,7 +28,8 @@ src/
 │   ├── world.ts         state, the outbox, and the three update passes
 │   ├── creature.ts      one animal, and its swim physics (propel / drive)
 │   ├── events.ts        Bite, Blood, Pulse — what the outbox carries
-│   ├── spawn.ts         Spawner: the ring, shoals, strays, plankton, pockets, summoning
+│   ├── terrain.ts       one room's solid ground, and pushing bodies back out of it
+│   ├── spawn.ts         Spawner: stocking a room with its tank's fauna
 │   ├── behaviour.ts     think: flee, hunt, smell, school, moods; who notices whom
 │   ├── patterns.ts      a guardian's tell, rush, click and opening
 │   ├── combat.ts        contacts, bites and blows, grasping, bleeding, booking a death
@@ -36,15 +38,15 @@ src/
 │   ├── Run.ts           the shared record: stage, xp, food, taken, score, combo, lineage
 │   ├── Evolution.ts     level-up, the draft and rerolls, taking a trait, transformation
 │   ├── Metabolism.ts    eating, healing, burn, and the hunger warning
-│   ├── Bands.ts         thermoclines, forcing a seal, the shallows clock, stocking water
 │   ├── Ending.ts        the banked score, the cause of death, the lineage silhouettes
 │   ├── codex.ts  best.ts  starts.ts  prospects.ts  phase.ts
 ├── input/
-│   ├── Input.ts         keyboard and pointer as state, bound once for the page
-│   └── PlayerController.ts  steering, the boost and its cost, the active organ
+│   ├── Input.ts         the keyboard as state, Isaac's layout, bound once for the page
+│   └── PlayerController.ts  the swim, the strike on the arrows, the active mutation
 ├── render/
-│   ├── Camera.ts        zoom, follow, shake and hit-stop; owns the world-space root
-│   ├── Scene.ts         what the player can make out, the nearest gate, the water pass
+│   ├── Camera.ts        a room held whole on screen, shake and hit-stop; the world root
+│   ├── Scene.ts         what the player can make out, and the water pass
+│   ├── room.ts          RoomView: a room's rock and sand baked onto the pixel grid
 │   ├── Impacts.ts       the world's outbox made felt: blood, pulses, hits, a guardian's turn
 │   ├── Dread.ts         the spike and the hold behind uDread
 │   ├── water.ts         full-screen GLSL pass; also owns the depth→colour palette
@@ -58,12 +60,12 @@ src/
 └── ui/              DOM UI — UI.ts facade, hud/*, screens/*, icons.ts
 ```
 
-`render/scenery.ts` draws soft organic props on parallax planes — *planes*, because
-*band* now means a slice of the water column. See
-[decisions.md](decisions.md) for why the art is primitives rather than creature
-silhouettes. `render/fields.ts` stands one structure per band on a plane of its own between
-the two back ones: a clump of weed, a torn sea fan, a siphonophore in snow, a ring of
-sparks, a column of embers, a sinking ribcage (see *Fields* in `rendering.md`).
+`render/scenery.ts`, `props.ts` and `fields.ts` are the column's parallax background. They
+are not in play since the tank rework (roadmap stage 1) and are kept for the design board
+until stage 8 decides what a room's decoration reuses of them.
+
+The run is being rebuilt as tanks of rooms — [adr/0003](adr/0003-tanks-of-rooms-replace-the-column.md)
+and [roadmap.md](roadmap.md). Until it is finished, a run is one room of the nursery tank.
 
 ## Dependency direction
 
@@ -74,7 +76,7 @@ every spawn bought nothing.
 
 `sim` never reaches up into `run` or `Game`. It exposes what happened last frame as plain
 fields on `World` — `bites`, `spilled`, `pulses`, `playerGain`, `playerHeal`, `devoured`,
-`synergies`, `noticedBy`, `tellBy`, `killedGuardian`, `blocked` — and `Game.digest()`
+`synergies`, `noticedBy`, `tellBy`, `killedGuardian`, `glanced`, `playerHeld` — and `Game.digest()`
 routes each to the system it concerns: the visual ones to `Impacts`, food to
 `Metabolism`, discoveries to the codex, a guardian's death to `Ending`. Keep it that way:
 the simulation should stay runnable without the presentation.
@@ -92,26 +94,30 @@ read world state.
 
 1. **Hit-stop.** `camera.slow(dt)`: a landed bite holds a few frames at 0.3 speed.
 2. **`fx.update`** always runs, so particles keep moving while paused or drafting.
-3. **If `phase === 'play'`:** `controller.steer` → `bands.descentLimit()` →
-   `world.update(dt)` → `digest()` → `metabolism.update` → the camera's shake, the combo
-   and the dread decay → `bands.check` → `bands.spendWater`.
-4. **`render(dt)`** always runs: `camera.follow`, ocean and scenery, `scene.draw`
-   (per-creature visibility and tint, the gate, the water uniforms, the gate label),
-   `bands.stock` (spawn and cull), and the HUD.
+3. **If `phase === 'play'`:** `controller.steer` → `world.update(dt)` → `digest()` →
+   `metabolism.update` → the camera's shake, the combo and the dread decay →
+   `impacts.hints`.
+4. **`render(dt)`** always runs: `camera.follow`, the ocean, the room's view (re-baked on
+   a new art tier), `scene.draw` (per-creature visibility and tint, the water uniforms),
+   culling the dead and topping the room up (`Spawner.stock`), and the HUD.
 
 Phase is one of `title | play | draft | paused | over`. Only `play` advances the
 simulation; `render` runs in all of them, which is why the title screen still has live
 water behind it.
 
 `world.update(dt)` is three passes over the creature list: `Behaviour.think` (set desired
-heading and throttle), `integrate` (physics, bounds, wounds, organ ticks, view sync), then
+heading and throttle), `integrate` (physics, the room's walls, wounds, organ ticks, view sync), then
 `Combat.resolveContacts` (overlap, strikes, swallowing).
 
 ## Layers and coordinates
 
 World units are centimetres-ish: `genome.size` is a body length in cm and is used
-directly as a world length. **`y` is depth and increases downward**, from 0 at the
-surface to `DEPTH_MAX` (9000) at the floor. `WORLD_HALF_W` (7000) bounds x.
+directly as a world length. **`y` is depth and increases downward**, from 0 to
+`DEPTH_MAX` (9000). A tank is a box of water in a building and has no depth in the
+fiction, but its rooms are laid out at a world depth all the same (`Tank.depth`): the water
+shader, `lightAt` and every species' home range are keyed on `y`, and borrowing a band's
+depth is what gives a tank that band's water. A room is a grid of tiles (`Tank.tile` world
+units each) centred on x = 0; its walls are the only bounds a body meets.
 
 The display is two things stacked on the stage:
 
@@ -120,22 +126,22 @@ app.stage
 ├── water.layer    a screen-sized Sprite with the GLSL filter — shaded from world
 │                  coordinates passed in as uniforms, so it never moves or scales
 └── camera.root    a Container, scaled by zoom and translated by the camera position
-    ├── scenery.back   far parallax props, the fields between them
     ├── ocean.world
     ├── scene.focus  the ring drawn around the player
+    ├── world.fog    darkening clouds, under the bodies
     ├── world.glow   every creature's additive bloom, in one container so it batches
     ├── world.layer  every creature's FishView
     ├── fx.layer
-    └── scenery.front  near parallax props (out of focus the other way)
+    └── roomView.root  the room's rock, over the bodies, so a nose in a wall goes into it
 ```
 
 Because the water is a filter over a static sprite rather than a child of the camera,
-anything it draws — thermoclines, the band below, god rays — has to be computed from
-`uCam`/`uView` in the shader. That is why the seal's screen position is recomputed in
-`Scene.draw` (through `camera.screenY`) for the HUD label rather than read off a display
-object.
+anything it draws — god rays, clouds — has to be computed from `uCam`/`uView` in the
+shader. (It still carries the thermocline's uniforms; `Scene.draw` puts the seal below the
+world's floor.)
 
-Zoom comes from `camera.zoomFor(size)` and falls from about 1.3 to 0.34 over a run, so the view
-covers roughly four times more world at the end than at the start. Any new background
-system has to hold up across that whole range — that is what killed the first two
-attempts at one.
+The camera holds the room whole (`Camera.hold`), refitting the zoom to the window every
+frame. A tank's tile is sized to its animal, so the zoom is set by the tank and not by the
+body, and falls at each descent as the tanks grow. Anything drawn in screen terms rather
+than world terms — the particulate is — divides by the zoom to keep its apparent size, the
+lesson the column's fourfold zoom change taught the background planes.

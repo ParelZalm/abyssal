@@ -6,6 +6,13 @@ https://github.com/user-attachments/assets/211267d9-5ab7-45c0-9060-ae5d542e15cc
 played as a single run. You hatch small, eat whatever fits down your throat, mutate
 every time you grow, and swim nine kilometres down to whatever is waiting at the bottom.
 
+> **In rework.** On `rework/gameloop` the open column is becoming a chain of aquarium
+> tanks made of one-screen rooms, played like *The Binding of Isaac* — see
+> [ADR 0003](docs/adr/0003-tanks-of-rooms-replace-the-column.md) and
+> [the roadmap](docs/roadmap.md). The controls below are already the new ones; the rest
+> of this page describes the column game on `main`, and is rewritten when a whole tank
+> plays through.
+
 ## The game
 
 The ocean is stacked into five zones, each its own ecosystem and each sealed from the
@@ -106,10 +113,11 @@ run can be replayed or shared with `?seed=`.
 
 | | |
 | --- | --- |
-| Swim | `W` `A` `S` `D` or the arrows swim that way on screen, diagonals included. Or steer with the mouse: effort scales with how far away the cursor is. |
-| Boost | Hold `Space`, `Shift` or left-click. A hard kick, then a wind-up to about twice cruise speed. It burns fullness. |
-| Active organ | `E` or right-click, once you have one. |
-| Pause | `P`. The pause sheet is your inventory: body stats, every organ and what it does, and the full mutation list. |
+| Swim | `W` `A` `S` `D`, diagonals included. |
+| Strike | The arrows, one of four ways. Left and right turn you to face it; up and down bite above or below your head. Holding one keeps you facing it while you swim, so you can back away from what you are biting. |
+| Active mutation | `Space`, once you have one. |
+| Item | `E` (nothing to hold yet). |
+| Pause | `P` or `Esc`. The pause sheet is your inventory: body stats, every organ and what it does, and the full mutation list. |
 | Sound | `M` |
 
 The fish runs on swim physics, not a velocity you set. Thrust goes along the body, and
@@ -183,7 +191,7 @@ The folders are layers, and imports only point down them. See
 | `src/content/` | The tables: genome, species, zones and bands, traits, transformations, the body form. |
 | `src/sim/` | The simulation: `World`, `Creature`, spawning, behaviour, guardian patterns, combat, and every organ's mechanic in `sim/organs/`. |
 | `src/run/` | One run's record and the systems that move it: evolution and the draft, metabolism, the bands and their gates, the ending, the codex. |
-| `src/input/` | Keyboard and pointer, plus the player's steering, boost and active organ. |
+| `src/input/` | The keyboard, and the player's swim, strike and active mutation. |
 | `src/render/` | Camera, scene visibility, the GLSL water, particulate, scenery, particles. `render/creature/` bakes and skins the fish. |
 | `src/ui/` | The DOM UI facade: HUD chrome, overlay screens, and the glyphs mutations are shown by. |
 | `src/design/` | The design board at `/design.html`. Dev only. |

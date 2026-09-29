@@ -1,6 +1,7 @@
 import type { Plan } from '../content/form';
 import type { Transformation } from '../content/forms';
 import type { Genome } from '../content/genome';
+import { TANKS, type Tank } from '../content/tanks';
 import { TRAITS, type Trait } from '../content/traits';
 import type { Creature } from '../sim/creature';
 import type { RunChoice } from '../ui/screens/TitleScreen';
@@ -19,7 +20,7 @@ export interface TakenName {
 /**
  * One run's record: what it has taken, eaten, scored and become. A new one is made on every
  * reset, so nothing here has to remember to clear itself. The systems that change these
- * numbers (`Evolution`, `Metabolism`, `Bands`) hold their own working state; this is only
+ * numbers (`Evolution`, `Metabolism`) hold their own working state; this is only
  * what more than one of them, the HUD or the end screen needs to read.
  */
 export class Run {
@@ -37,13 +38,13 @@ export class Run {
   /** What the body is now: the last metamorphosis, or null before the first. */
   get form(): Transformation | null { return this.forms[this.forms.length - 1] ?? null; }
   eaten = 0;
-  deepest = 0;
   elapsed = 0;
+  /** The tank the run is in. */
+  tank: Tank = TANKS[0];
   score = 0;
   /** Kills landed inside the combo window, and the seconds left in it. */
   combo = 0;
   comboT = 0;
-  maxBand = 0;
   /**
    * The body at each stage of the run — a genome copy and its plan, taken at hatching, on
    * every level-up and at a transformation — for the silhouettes on the end screen.
@@ -78,12 +79,6 @@ export class Run {
   tick(dt: number) {
     this.comboT = Math.max(0, this.comboT - dt);
     if (this.comboT <= 0) this.combo = 0;
-  }
-
-  /** New water is worth points once, so diving pays but hovering at a depth does not. */
-  dive(y: number) {
-    if (y > this.deepest) this.score += (y - this.deepest) * 0.5;
-    this.deepest = Math.max(this.deepest, y);
   }
 
   /** A first for the codex: saved now, since a discovery is what a player would miss. */

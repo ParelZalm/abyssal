@@ -2,8 +2,6 @@ import type { HudState } from '../types';
 import { ActiveSlot } from './ActiveSlot';
 import { DangerIndicator } from './DangerIndicator';
 import { DiscoveryCard } from './DiscoveryCard';
-import { DepthBar } from './DepthBar';
-import { GateLabel } from './GateLabel';
 import { StatusPanel } from './StatusPanel';
 import { RunStrip } from './RunStrip';
 import { Toast } from './Toast';
@@ -15,8 +13,6 @@ export class Hud {
 
   private readonly status = new StatusPanel();
   private readonly traits = new TraitBar();
-  private readonly depth = new DepthBar();
-  private readonly gate = new GateLabel();
   private readonly run = new RunStrip();
   private readonly toast = new Toast();
   private readonly danger = new DangerIndicator();
@@ -30,8 +26,6 @@ export class Hud {
       this.status.element,
       this.traits.element,
       this.run.element,
-      this.depth.element,
-      this.gate.element,
       this.toast.element,
       this.danger.element,
       this.active.element,
@@ -44,22 +38,15 @@ export class Hud {
     this.status.setVisible(on);
     this.traits.setVisible(on);
     this.run.setVisible(on);
-    this.depth.setVisible(on);
     this.active.setVisible(on);
-    if (!on) this.gate.hide();
   }
 
   update(s: HudState) {
     this.status.update(s);
     this.traits.update(s.traits);
     this.run.update(s);
-    this.depth.update(s.depth, s.size);
     this.danger.update(s.danger);
     this.active.update(s.active);
-  }
-
-  gateLabel(text: string | null, screenY: number, screenH: number) {
-    this.gate.update(text, screenY, screenH);
   }
 
   showToast(text: string) {

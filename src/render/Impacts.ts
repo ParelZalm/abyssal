@@ -16,6 +16,8 @@ import { lightAt, waterColor } from './water';
 export class Impacts {
   /** Guardians whose tell has already been explained this run. */
   private readonly toldBy = new Set<string>();
+  /** Seconds before another hint may toast, so a held state does not repeat itself. */
+  private hintCd = 0;
 
   constructor(private readonly fx: Fx, private readonly camera: Camera,
               private readonly dread: Dread, private readonly ui: UI) {}
@@ -88,6 +90,19 @@ export class Impacts {
         camera.jolt(b.fatal ? 6 : 3, 11);
         camera.stop(b.fatal ? 0.075 : 0.045);
       }
+    }
+  }
+
+  /** The states that have an answer the player may not know: a balled shoal, a grip. */
+  hints(world: World, dt: number) {
+    this.hintCd = Math.max(0, this.hintCd - dt);
+    if (this.hintCd > 0) return;
+    if (world.glanced) {
+      this.hintCd = 3;
+      this.ui.toast('The shoal has balled up — strike into it to scatter it');
+    } else if (world.playerHeld) {
+      this.hintCd = 4;
+      this.ui.toast('Caught — strike away to tear free');
     }
   }
 

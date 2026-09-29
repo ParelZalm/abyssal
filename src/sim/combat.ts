@@ -102,6 +102,14 @@ export class Combat {
     // is meant to be a way out
     if (att.drawT > 0) return;
     if (PLAN_ART[att.species.plan].grasp > 0 && !att.isPlayer) { this.grasp(att, def); return; }
+    // the player bites on the arrows, not on contact: only a strike that is out lands, from
+    // wherever it reaches, and nothing is pulled in — swimming into prey is not eating it
+    if (att.isPlayer) {
+      if (att.attack !== 'strike') return;
+      const r = att.radius * 1.1 + def.radius + att.genome.size * 0.45;
+      if (dist2(att.biteX, att.biteY, def.x, def.y) <= r * r) this.bite(att, def);
+      return;
+    }
     // a rush hits what is in its line and nothing else: none of the lunge's extra reach and
     // no gulp, or a guardian that size connects from so far off its path that the dodge the
     // tell promises cannot be made
@@ -129,7 +137,8 @@ export class Combat {
     att.view.chomp();
     // ...except in tentacles, where the catch is already at the beak: a lunge there
     // overshoots it, and the reel then pulls it the wrong way through the crown
-    if (!att.holding) {
+    // (the player's strike already carried its own lunge in, so it gets none on top)
+    if (!att.holding && !att.isPlayer) {
       const surge = Math.max(1, att.genome.speed) * 0.45;
       att.vx += Math.cos(att.angle) * surge;
       att.vy += Math.sin(att.angle) * surge;

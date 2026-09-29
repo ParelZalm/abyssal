@@ -191,8 +191,9 @@ count, lean)` picks without replacement from a rarity-weighted pool.
 
 - `RARITY_WEIGHT` sets the base odds; `RARITY_CLIMB` makes rare and apex more likely as
   `reach` grows.
-- **`reach` is not the stage.** `Evolution.offerDraft` passes
-  `max(stage, maxBand * 2 + 1)`, so diving upgrades the odds as much as feeding does.
+- **`reach` is the stage.** It was `max(stage, maxBand * 2 + 1)` in the column, so diving
+  upgraded the odds as much as feeding; with no bands to reach it is the stage alone until
+  the pool moves to pedestals (roadmap stage 5).
 - **Zone pools.** A trait's `band` is the water it belongs to: it is only offered when the
   draft happens in that band or deeper — the band the player is *in*, `bandAt(player.y)`,
   not the deepest reached — and it leans ×1.6 in the band itself. This replaced
@@ -210,8 +211,8 @@ count, lean)` picks without replacement from a rarity-weighted pool.
   | Midnight (7) | 47 | 39 / 51 / 10 | 8% |
   | Abyss (9) | 50 | 35 / 53 / 12 | 4% |
 
-  Since the band is where you are, levelling in the shallows keeps the pool shallow, and a
-  thermocline reward — drafted as you arrive — is the new water's own cards.
+  Since the band is where you are, levelling in the shallows keeps the pool shallow. (The
+  table is the column's; a run is in the nursery's Open Water for now.)
 - **Every apex card costs something**, and its text says so: the jaws turn worse (Apex
   Predator −18%, Titan Jaws −15%), plate and toxin and fast muscle burn more (Carapace,
   Neurotoxin, White Muscle Burst, Ampullae, Leviathan Blood), and the heavy organs swim
@@ -298,65 +299,28 @@ Shark, then an Angler". `Run.forms` holds them, and `Run.form` is the latest, th
 - Draft cards show a trait's families, the pause sheet shows progress per family (or the
   form once taken), the end screen names it, and the codex keeps every form reached.
 
-## Zones, bands and gates
+## Tanks and rooms
 
-`zones.ts` is five `Zone` records — the places the player names, each owning a guardian
-— over six `Band` records, which are the contiguous slices of water the column is
-actually made of. Only the Sunlit Zone is subdivided, into Open Water and the Reef
-Shelf. A band carries the `top`, `bottom`, `gate` in centimetres, `WaterLook`, and the
-`metres` label at its top.
+A run is a chain of **tanks**, each a grid of one-screen **rooms** (`content/tanks.ts`; the
+words are in `CONTEXT.md`, the decision in `docs/adr/0003-*`). A `Tank` has a name, the
+world depth whose water it borrows, a tile size in world units, its loose fauna and how
+many bodies a room holds. A `RoomTemplate` is rows of characters — `#` rock, `=` sand, `o`
+boulder, `.` water — authored by hand, as Isaac's are. The roadmap builds the rest in
+stages: today a run is one room of the nursery tank, chosen from its templates by the seed.
 
-- `bandAt(y)` / `zoneAt(y)` — which band or zone a depth is in.
-- `depthLabel(y)` — world depth as metres of real ocean, piecewise-linear through one
-  control point per band boundary. Presentation only; nothing in the simulation reads
-  it. See `docs/adr/0001-depth-labels-decoupled-from-world-depth.md`.
-- `descentLimit(size)` — the floor of the deepest band the player has unlocked, minus
-  12. `main` feeds it to `world` every frame.
-- `nextGate(size)` — the next sealed thermocline, for the HUD hint and the seal label.
+The column's systems are gone with it: size gates, the descent limit, the pocket under a
+seal, forcing a seal and the shallows clock. They all existed to pace one open column in
+which the easiest water was the best place to grow, and a tank of rooms with a boss as its
+only exit paces itself. `git show 2bed3f0:docs/progression.md` has how they worked.
 
-Gates are checked against **body size only**, with one exception the player pays for.
-Depth unlocks the water below it, its own draft pool (see *Zone pools*) and a free
-mutation.
-
-**The pocket under a seal.** While a gate is shut and the player is in the band above it,
-within about a view of the shear, `Bands.tendPocket` has `Spawner.pocket` keep 14 bodies of
-the band's `pocket` species — reef fish, lanternfish, bristlemouths, dumbos, snailfish —
-in the first 70–320 units under the thermocline. They are placed in frame and fade in out
-of the shadow (an off-screen arrival swam about at the edge and was never seen), and they
-carry `Creature.hold`, a depth range that replaces their species' own in `think`, since
-the ordinary band hold pushes anything 220 units down from its band's top. The pocket is
-the reason to look down through a seal: the withheld water is visibly richer.
-
-**Forcing a seal.** A body at 70% of a gate or more can boost into it: `Bands.squeeze`
-counts time held at the shear (`world.blocked`) with the boost down, easing off twice as
-fast as it builds, and at 1 s puts the body through for 30% of its maximum health. That
-band is `squeezed` — open to its own floor and drawn open by the shader — and until the
-body grows to the gate or climbs back out, it loses 1.5% of maximum health a second and
-regenerates nothing. A forced entry is a raid on the pocket and the new band's cards
-(its thermocline reward is drafted on arrival as usual), not a way to live there early.
-The seal label and the blocked toast both say so once the body is big enough.
-
-`Bands.check` watches two things: the count of open gates (for the "thermocline parts"
-toast) and `bandAt(player.y)` exceeding `maxBand`, which plays the band card and grants
-the free draft.
-
-`Bands.spendWater` is the shallows clock, the answer to size-only gates making the easiest water
-the best place to grow. It runs only in a band whose gate below is already open — a player
-too small to leave is never pushed — and counts `overstay` seconds per band. After
-`SPEND_GRACE` (40 s) the band's `world.spent` climbs to 1 over `SPEND_RAMP` (100 s):
-`weightAt` cuts schools and plankton to 35% and raises non-guardian hunters to 2.2×, and
-the population target falls by 30%. Halfway, `riserFor(depth, size)` picks the least
-local hunter that can swallow the player at the top of its range and `World.summon`
-sends it in on `quarry`: it travels in without spending stamina until it could have
-sensed the player itself, then chases as any hunter does, and drops the quarry when it
-tires. Below the Reef nothing that is not a guardian is big enough, so deep bands get
-the thinning only. Spent water stays spent for the run.
+`zones.ts` stays, as the water looks and the species' home ranges. Evolution's draft still
+offers the cards of the band whose water the player is in, which is the nursery's Open
+Water until the pool is ported to tanks (stage 5).
 
 ## Run state
 
 Held on `Game`: `stage`, `xp`, `food`, `taken` (id → stacks), `form`, `takenNames` (for the HUD
-and pause sheet), `eaten`, `deepest`, `elapsed`, `maxBand`, `gatesOpen`, `overstay` and `risen` (the
-shallows clock). `reset()`
+and pause sheet), `eaten`, `elapsed` and `tank`, the tank the run is in. `reset()`
 rebuilds all of it plus the world and the player, from a `RunChoice` — a starting form
 and, optionally, a seed.
 
@@ -376,8 +340,8 @@ the day was beaten, and the title's Daily button carries it. A daily still count
 the all-time best.
 
 **Starting forms** (`run/starts.ts`). One per zone some run has reached —
-`Codex.deepest`, written the moment a band is first entered and backfilled from the kill
-counts of codices older than it: the Reef Wrasse hatches with Parrot Beak, the
+`Codex.deepest`, backfilled from the kill counts. Nothing writes it since the column went;
+the forms become one per tank reached with the descent (roadmap stage 7). They are: the Reef Wrasse hatches with Parrot Beak, the
 Lanternfish with Photophores (smaller and quicker), the Angler Larva with Illicium
 (slower), the Squid Paralarva with Mantle Pump and Ink Sac. The traits go through the
 ordinary taken path, quietly, so they count toward families and synergies. The title

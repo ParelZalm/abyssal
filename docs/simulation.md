@@ -64,6 +64,29 @@ up — they strike with their arms (`Combat.grasp`). An ambusher's `lunge` is no
 strike, which is what makes it settle back afterwards. Guardians' tells and rushes read the
 same way to the view through `Creature.pose`.
 
+### The player's strike
+
+The player does not bite on contact. The arrows throw a strike one of four ways
+(`PlayerController.strike`): left and right turn the body to face it, up and down leave it
+level and move the bite above or below the head (`Creature.aimY`, read by `biteX`/`biteY`),
+since a fish pointed straight up stands on its tail. The strike is out for 0.2 s and the
+bite lands on whatever is in reach while it is (`Combat.strike`); nothing is pulled in by a
+gulp, so swimming into prey is not eating it. Strikes come every `ATTACK_EVERY` (0.4 s)
+bent by the organs' `biteRate`, which is the HUD's rate.
+
+While an arrow is held, and for `HOLD_FACE` after, the body **strafes** (`Creature.strafe`):
+it stays level and facing the attack and moves toward WASD whichever way that is, with even
+drag in every direction and backing away held to 0.6 of top speed — a fish sculls, it does
+not swim tail first. That is Isaac's walk one way, shoot the other, and it is what kiting
+is. A strike thrown against the direction of the swim keeps only a quarter of its lunge:
+at full strength each strike at a pursuer threw the body back into it, and a held arrow
+while retreating stood still.
+
+The lunge goes through the boost's old seam, `Creature.kick`: it opens the same surge
+window, so what organs did on a boost kick — Ballistic's ram, Flash Sense, Smoke Screen's
+puff, a bait ball scattering — they now do on a strike, and the boost modifiers scale its
+shove.
+
 ## Perception and behaviour
 
 `Behaviour.think(c, dt, player)` runs per creature, per frame, and is the whole AI:
@@ -113,8 +136,8 @@ then `strike` decides what happens:
   cone, then reels it to the crown and bites there — never whole, and only after 0.9 s
   held, so a guardian's grab is a struggle and not an instant death. The catch escapes
   by building `strain`: its `thrust × speed` against the holder's speed scaled by a root
-  of the size ratio, plus any outward burst the grip damping has not eaten yet (a boost
-  kick). Cruising never breaks free; sprinting does slowly; boosting is the answer.
+  of the size ratio, plus any outward burst the grip damping has not eaten yet (a strike's
+  lunge). Cruising never breaks free; striking away from the holder is the answer.
   Effort is read from `thrust`, not velocity, because the grip damps velocity. A holder
   does not throttle and does not lunge on its bites — either one feeds back through the
   reel and the pair drifts apart with no strain at all. `world.playerHeld` is published
@@ -125,71 +148,29 @@ and `main` converts it into biomass, size and particles.
 
 ## Population
 
-`spawnAround(cx, cy, viewR, target, inner?)` tops the list up to `target` creatures,
-rolling species by `weight` and by whether the depth falls in their range. A species
-belongs to exactly one zone (optionally to one band of it) and carries a `bleed` in world
-units, which is how far past its home it strays; `rangeOf` precomputes the result at boot.
-A vertical migrator is a species with a wide bleed, not a species of two zones. `cull`
-drops anything outside the radius.
+A room is stocked from its tank (`Tank.fauna`, `Tank.population`): `Spawner.stock` rolls a
+species by `weight` and places it in open water — a school as a shoal of three to six on
+one heading, plankton as a sheet five to nine wide, anything else alone — and the room is
+topped back up as bodies die. That keeps a room alive while there is nothing else in it;
+fight rooms, hostiles and rooms that stay cleared come with stage 3 of the roadmap.
+Guardians are not rolled at all until they come back as bosses (stage 7).
 
-**Where a body is placed.** `spot` draws a point in a ring around the camera and
-**rejects** anything outside the water rather than clamping it. Clamping y was what
-stacked the shallows: every draw that fell above the surface landed on the same depth, and
-`weightAt` boosts plankton hardest exactly there, so a third of every fill near the top
-arrived as krill and bloom piled onto one line at 40 m. The ring starts just past the
-corner of the screen (`RING`), so an arrival swims in rather than appears; apexes come from
-further out still (`RING_APEX`), because a guardian standing at the frame's edge merely
-exists there. An ambusher is then pulled toward the bottom of its own water. The first fill
-of a run passes a small `inner` — there is no frame to protect yet, and an empty opening
-screen is worse than a fade.
-
-The anchor is only half of it: a group reaches ±95 around its own anchor, so an anchor just
-under the lid used to pile part of its sheet onto y = 40 via `add`'s backstop clamp — the
-same stack, one level down. `fold` mirrors a member's offset back into the water instead,
-which keeps the density and gives a sheet lying against the surface the one-sided shape it
-should have. `add` still clamps, but nothing should now reach it: if bodies ever appear
-stacked on one depth again, something has started clamping y instead of re-rolling or
-folding it.
+**Where a body is placed.** `Terrain.openSpot` draws points in the room and **rejects**
+anything without enough water around it, never nudges one out of the rock — a nudged point
+is a body half inside a boulder. A group member that would land in rock is simply not
+placed: a shoal against a wall is a smaller shoal. Every room animal carries
+`Creature.hold` set to the room's water, since its species' own depth range would steer it
+into the ceiling or the floor.
 
 **Never at the origin.** `add` places the view and hides it before returning. A fresh
 `FishView` is a Container — visible, opaque, at its own origin, which is world (0, 0) — and
-`Bands.stock` tops the population up *after* it has decided what every creature looks like
-this frame. Without those two lines every spawn in the game is drawn once, at full alpha,
-in the corner of the world, and then snaps to where it really is on the next frame or
-vanishes when `show` finally reaches it. The player hatches at (0, 260), so that corner is
-a fixed point just above the start: creatures flickered into being and teleported away
-there for the whole run.
+the room is topped up *after* `Scene.draw` has decided what every creature looks like this
+frame. Without those two lines every spawn is drawn once, at full alpha, in the corner of
+the world, and then snaps to where it really is on the next frame.
 
 **Fading in.** Every body carries `fade`, 0 to 1 over `FADE_IN`, exposed as `emergence`
-and multiplied into the alpha `Scene.draw` hands `view.show`. Anything spawned off-screen
-finishes it unseen; the cases that cannot be — the first fill, and the thin water above you
-in the shallows where there is no off-screen to hide in — resolve out of the murk instead.
-The player is born whole.
-
-**Groups.** `groupSize` scales the count off the body, so the smaller the animal the larger
-the group, capped by the room left under the population target — and deliberately smaller
-than that budget could afford, because many small groups populate the whole frame where a
-few big ones populate a corner of it. `flock` merges two that drift together, so the big
-shoal still happens; it is just not the only thing in the water.
-
-`shoal` places a school as a school: one heading, one lens of bodies stretched along it,
-everyone already at cruising speed — a box of independent strangers reads as a spawn.
-`patch` places plankton as a layer, far wider than it is tall. Half of all schooling rolls
-(`STRAY_CHANCE`) go to `strays` instead: one to three of the species, loose, spread wide
-and each going its own way. A schooling species is not a species that is always in a
-school, and without the strays the ocean is a row of set pieces with nothing between them.
-
-- The **difficulty ramp** is one straight line over the whole column (`weightAt`), not a
-  tutorial shelf and a separate deep ramp with flat water between them — two curves is a
-  step you can feel crossing, and the run should get harder the whole way down rather than
-  twice. Hunters, ambushers and guardians run 0.15× their weight at the surface to 2.1× at
-  the floor; schools and plankton run the other way. Measured over 30 fills: 35 predator
-  rolls at 300 m against 597 at 8400 m, with food bodies falling 17.5k to 5.8k.
-- **Guardians** are in the spawn pool like anything else — one is alive in its zone from
-  the moment the player first arrives. `World` holds each to a single instance and keeps
-  it in `deadGuardians` once killed, so a guardian is gone for the run rather than on a
-  respawn timer. Killing the Trenches' guardian (`FINAL_GUARDIAN`) ends the run; the other
-  four just grant a very large meal.
+and multiplied into the alpha `Scene.draw` hands `view.show`. A room has no off-screen to
+hide an arrival in, so every one resolves out of the murk. The player is born whole.
 
 ## Blood
 
@@ -225,7 +206,7 @@ Three animals are beaten by behaviour rather than by size:
 
 - **Bait balls.** A schooling body with six or more of its own kind within
   `3 × size + 40` is `balled`: a bite that has to tear glances off it (a gulp that would
-  swallow it whole still works), and the player is told to scatter it. Every boost kick
+  swallow it whole still works), and the player is told to scatter it. Every strike
   (`Creature.kicks`, answered once in `World.update` by `Behaviour.scatterFrom`) scatters schooling bodies within
   `4 × radius + 220` of the player — they bolt outward, panicked, and are loose for 3 s.
 - **Shark blood**, above.
@@ -259,7 +240,10 @@ and comes round every 6 s.
   that frame cannot bite again. Cruising straight out escapes from outside half the range,
   a boost from all but the lips, and from beside or behind it there is no pull at all. A
   miss leaves it `exposed`, as the charge does.
-- The squids keep their arms: a grab you tear free of by boosting.
+- The squids keep their arms: a grab you tear free of by striking away.
+
+The patterns were tuned against the boost, which the rework took out; they are refitted to
+one screen and the strike with the bosses (roadmap stage 7).
 
 The first tell from each guardian toasts its counter (`world.tellBy`); after that the
 tell has to be read.
@@ -283,8 +267,15 @@ went in: the same budget spread evenly reads as crowded, and spent on a handful 
 shoals it buys a frame with one shoal in it and dead water everywhere else. Measured at
 420 m: 138 bodies, 95 of them in frame, 115 fps. At 6300 m: 75 bodies, 40 in frame.
 
-## Bounds
+## Walls
 
-`WORLD_HALF_W` clamps x. `world.descentLimit`, set every frame by `main` from
-`zones.descentLimit(size)`, clamps the player's y and sets `world.blocked` on the frame
-they press against it — that flag is what raises the "too small" toast.
+A room's rock, sand and boulders are `Terrain` (`sim/terrain.ts`), a tile grid in world
+space; off the grid is rock. `World.integrate` moves a body and then `Terrain.collide`
+pushes its circle out of every solid cell it overlaps and takes away the velocity it was
+driving into the wall, in two passes so an inside corner settles. The circle is half the
+body's radius (`WALL_R`): the radius is half a body length, and side-on a fish is long and
+thin, so a full-radius circle held it a head's length off every floor. The nose goes a
+little into the rock, which the room draws over the bodies to hide.
+
+Nothing steers around a wall yet: a shoal that heads for one presses against it until its
+wander turns it. The hostile roles (roadmap stage 4) are where avoidance belongs.

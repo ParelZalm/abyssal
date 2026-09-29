@@ -46,21 +46,24 @@ intended way to drive the game from the browser console:
 
 ```js
 const g = window.game;
-g.phase = 'play';                                // skip the title screen (or click Hatch)
+[...document.querySelectorAll('button')].find(b => b.textContent === 'Hatch').click();
 g.evolution.levelUp = () => { g.run.xp = 0; };   // stop drafts interrupting a look
-g.bands.check = () => {}; g.digest = () => {}; g.metabolism.update = () => {};
-g.player.genome.size = 120;                      // size drives zoom and which bands are open
-g.player.view.rebuild(g.player.genome);
-setInterval(() => { g.player.y = 6300; g.player.vy = 0; g.player.vx = 0; }, 16);
+g.metabolism.update = () => {};                  // and hunger
+const key = (k, down = true) => dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { key: k }));
+key('ArrowRight'); for (let i = 0; i < 12; i++) g.frame(1 / 60); key('ArrowRight', false);
 ```
 
-`run`, `player`, `world` and the run systems (`evolution`, `bands`, `metabolism`,
+`run`, `player`, `world`, `room` and the run systems (`evolution`, `metabolism`,
 `controller`) are rebuilt on every reset, so patch them after the run has started, and
-again after a restart. Pinning `player.y` in an interval is the only reliable way to hold
-a depth — the camera eases and the simulation will otherwise drag you off. Overriding
-`g.camera.zoomFor` to a constant is how to inspect creature art up close. Depths worth
-checking: ~500, 2400, 4200, 6300, 8400, one per zone. Size gates (`content/zones.ts`)
-will block a small fish from deep water, so raise `size` first.
+again after a restart. The camera holds the room whole, so there is nothing to pin: move
+`g.player.x`/`y` to put the body where you want to look.
+
+**Step the frame by hand when testing input.** The Browser pane stops animating while it is
+hidden, so a key held with a timeout does nothing; `g.frame(1 / 60)` in a loop (private in
+TypeScript, callable from the console) advances the game deterministically, and a
+screenshot afterwards shows the result. Key taps from the browser tool are too short to
+read as a held key — dispatch `keydown`/`keyup` instead. A code change reloads the page back
+to the title.
 
 ## Architecture
 
@@ -76,16 +79,17 @@ imports only point down them:
   `Behaviour.think`, `integrate`, `Combat.resolveContacts`; `Spawner`, `Patterns` and
   `sim/organs/` hang off it. It never reaches up into `run/` or `Game`.
 - `run/` — one run's record (`Run`) and the systems that move it: `Evolution` (level-up,
-  draft, traits, transformation), `Metabolism`, `Bands` (gates, forcing, the shallows
-  clock, stocking the water), `Ending`.
-- `input/` — `Input` (raw state) and `PlayerController` (steering, boost, active organ).
-- `render/` — `Camera`, `Scene` (visibility, the gate, the water pass), `Impacts` (the
-  outbox made felt), `Dread`, the water shader, and `creature/` for the fish art.
+  draft, traits, transformation), `Metabolism`, `Ending`.
+- `input/` — `Input` (the keyboard, Isaac's layout) and `PlayerController` (the swim, the
+  strike on the arrows, the active mutation on Space).
+- `render/` — `Camera` (a room held whole), `Scene` (visibility, the water pass), `RoomView`
+  (the room's rock), `Impacts` (the outbox made felt), `Dread`, the water shader, and
+  `creature/` for the fish art.
 - `ui/` — the DOM HUD and screens behind the `UI` facade. `design/` — the design board.
 
 The simulation publishes what happened as plain fields on `World` (`bites`, `spilled`,
 `pulses`, `playerGain`, `playerHeal`, `devoured`, `synergies`, `noticedBy`,
-`killedGuardian`, `blocked`), and `Game.digest()` routes each to the system it concerns.
+`killedGuardian`, `glanced`, `playerHeld`), and `Game.digest()` routes each to the system it concerns.
 A run system gets only what it needs in its constructor — never `Game`; the phase is the
 one thing it may set, through `Flow` (`run/phase.ts`). Keep new code in that shape: a
 class that owns its own state, in the folder of the layer it belongs to, rather than
@@ -96,10 +100,16 @@ Two display roots: a static screen-sized sprite carrying the GLSL water filter, 
 The water is shaded from world coordinates passed in as uniforms, not from the scene
 graph, so anything it draws has no display object to read a position from.
 
+**The game is mid-rework** on `rework/gameloop`: the open column is becoming a chain of
+tanks made of one-screen rooms (`docs/adr/0003-*`, `docs/roadmap.md`, and the words in
+`CONTEXT.md`). Work the roadmap's stages in order.
+
 `y` is depth and increases downward (0 → `DEPTH_MAX` 9000). `genome.size` is a body
-length in cm used directly as a world length. Zoom falls from ~1.3 to ~0.34 across a
-run, so any new visual system has to work across a fourfold change in how much world the
-screen covers — that constraint has already killed two attempts at a background layer.
+length in cm used directly as a world length. A tank's rooms are laid out at the world
+depth whose water it borrows (`Tank.depth`), on a tile grid (`Tank.tile`) sized to its
+animal, and the camera fits the room to the window — so the zoom is set per tank and falls
+at each descent. Anything drawn in screen terms has to divide by the zoom to hold its
+apparent size; the column's fourfold zoom change killed two background layers that did not.
 
 **Full notes are in [`docs/`](docs/README.md)** — architecture, simulation, progression,
 rendering, performance, and a decisions log of what has already been tried and undone.

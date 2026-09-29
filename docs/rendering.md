@@ -57,6 +57,34 @@ Below the twilight the column tint is nearly black, so `ambient` mixes the band'
 *accent* into the water rather than the column colour — without that the two deepest
 tiers are indistinguishable. Same reason `shimmer` does not scale away with `uLight`.
 
+The particulate is sized and moved in screen terms, divided by the zoom against the
+column's hatchling zoom (`REF_ZOOM`, 1.3): sized in world units, motes turned into stars at
+a room's zoom, and a tank's zoom changes at every descent.
+
+## Rooms
+
+`render/room.ts` is `RoomView`: a room's `Terrain` baked once into one texture on the pixel
+grid, and re-baked only when the art density changes tier. Nothing about the terrain moves.
+
+- **The mask is the grid, warped.** Every pixel takes its kind from the tile under it, with
+  the sampling point pushed off the grid by noise (`WARP`, 0.3 of a tile) so a wall is a
+  rock face and not a stair of squares. The collision is the grid itself, so the warp is a
+  lie kept small enough that a body stopping short of a bulge reads as the rock's texture.
+- **Shading is read off the mask**, as a creature's is off its silhouette: a lit lip where a
+  face looks up at open water, a dark outline where rock meets water, rock deeper in a wall
+  darker, strata stretched sideways with a mottle over them, sand grained and lighter at
+  its top. Everything steps through the Bayer screen, lit by `lightAt` and fogged toward
+  the tank's own water. In lit water the rock has to sit well under the water colour, or it
+  lies on the water rather than against it — the fields found the same.
+- **The letterbox is more cave.** The camera fits the room and the window is rarely its
+  shape, so the view is baked with `MARGIN` (10) tiles of rock around it, darkening and
+  fogging away from the room.
+- **It draws over the bodies**, so a nose pressed into a wall goes into it: the wall circle
+  is half the body's radius (`sim/world.ts`, `WALL_R`).
+
+The design board's *Rooms* group draws every template at the density it plays at on a
+1440 × 900 screen, since the board's own tier is a mid-run one for the animals.
+
 ## Creatures
 
 `src/content/form.ts` (shape), `src/render/creature/fishbake.ts` and its `bake/` painters
@@ -232,6 +260,10 @@ spine, so no part can be clipped by a bounds estimate.
 `menace` is read inside the view, so the same genome always produces the same animal.
 
 ## Fields
+
+Not in play since the tank rework (roadmap stage 1): the fields and the parallax planes
+were the column's background, and are kept for the board until stage 8 decides what a
+room's decoration takes from them.
 
 `render/fields.ts` gives each band one or two things adrift in its water, on a plane of its
 own at parallax 0.45 between the two back planes: a clump of sargassum with fronds hanging

@@ -14,7 +14,11 @@ import { baseGenome, type Genome } from '../content/genome';
 import { PROP_SIZE, propTexture, type PropKind } from '../render/props';
 import { genomeFor, rangeOf, SPECIES } from '../content/species';
 import { TRAITS, type Rarity, type Trait } from '../content/traits';
-import { BANDS, depthLabel, zoneOf } from '../content/zones';
+import { BANDS, zoneOf } from '../content/zones';
+import { ROOMS, tankById } from '../content/tanks';
+import { PIXEL } from '../render/pixel';
+import { RoomView } from '../render/room';
+import { Terrain } from '../sim/terrain';
 import type { IconName } from '../ui/icons';
 import { rgb, Rng } from '../core/util';
 import { waterColor } from '../render/water';
@@ -678,12 +682,7 @@ function waterGroup(): DesignGroup {
         span: 200,
         depth: (band.top + band.bottom) / 2,
         facts: {
-          // world depth is what everything is tuned in; the metres are what the player
-          // is told. Both, because the board is where a mismatch between them shows up.
           world: `${band.top}–${band.bottom}`,
-          label: `${depthLabel(band.top).toLocaleString()}–`
-            + `${depthLabel(band.bottom).toLocaleString()} m`,
-          gate: `${band.gate} cm`,
           turbid: w.turbid, rays: w.rays, shimmer: w.shimmer,
           ambient: w.ambient, scenery: w.scenery.kinds.join(' '),
         },
@@ -693,7 +692,51 @@ function waterGroup(): DesignGroup {
   };
 }
 
+// ------------------------------------------------------------------ rooms
+
+/**
+ * The screen the rooms are baked for here: a laptop's, fitted the way `Camera.hold` fits
+ * a room. The board's own tier is a mid-run one for the animals, and rock baked there is
+ * coarser than any room plays at.
+ */
+const REF_SCREEN = { w: 1440, h: 900 };
+
+/** Every room template, whole, over its tank's water, at the density it plays at. */
+function roomGroup(): DesignGroup {
+  return {
+    id: 'rooms',
+    name: 'Rooms',
+    note: 'Every room template, as the fixed camera frames it. Rock, sand and boulders block; water is swum.',
+    items: ROOMS.map(t => {
+      const tank = tankById(t.tank);
+      const terrain = new Terrain(t, tank);
+      const zoom = Math.min(REF_SCREEN.w / terrain.width, REF_SCREEN.h / terrain.height);
+      return {
+        id: `room-${t.id}`,
+        name: t.id,
+        note: tank.name,
+        source: 'src/content/tanks.ts',
+        // the board frames a cell on its short side, which for a room is its height; a
+        // little under it, so the room fills the cell and its margin rock is cropped
+        span: terrain.height * 0.75,
+        depth: tank.depth,
+        facts: { tank: tank.name, tiles: `${terrain.cols} × ${terrain.rows}`,
+          tile: `${tank.tile} cm`, fauna: tank.fauna.join(' ') },
+        make: () => {
+          const view = new RoomView(terrain, zoom / PIXEL);
+          view.update();
+          // a room sits at its tank's depth in the world; the cell wants it about the origin
+          view.root.y = -terrain.cy;
+          const c = new Container();
+          c.addChild(view.root);
+          return c;
+        },
+      };
+    }),
+  };
+}
+
 export function catalog(): DesignGroup[] {
-  return [planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(), speciesGroup(),
-          guardianGroup(), motionGroup(), propGroup(), fieldGroup(), waterGroup()];
+  return [roomGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(),
+          speciesGroup(), guardianGroup(), motionGroup(), propGroup(), fieldGroup(), waterGroup()];
 }

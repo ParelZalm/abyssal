@@ -1,14 +1,11 @@
 import { Graphics } from 'pixi.js';
 import { clamp, dist2 } from '../core/util';
 import { sightOf } from '../content/genome';
-import { BANDS } from '../content/zones';
-import { SQUEEZE_MIN } from '../run/Bands';
+import { DEPTH_MAX } from '../content/zones';
 import type { Phase } from '../run/phase';
 import { feelOf, stealthOf } from '../sim/organs';
 import type { Creature } from '../sim/creature';
 import type { World } from '../sim/world';
-import type { UI } from '../ui/UI';
-import type { Camera } from './Camera';
 import type { Dread } from './Dread';
 import type { View } from './view';
 import { lightAt, type Water } from './water';
@@ -25,25 +22,21 @@ const HIDDEN = 0.75;
 
 /**
  * What the player can make out this frame: which bodies show and how clearly, the ring
- * around your own, the nearest thermocline and its requirement, and the water pass.
+ * around your own, and the water pass.
  */
 export class Scene {
   /** The membrane of awareness around your own body, so you never lose yourself. */
   readonly focus = new Graphics();
 
-  constructor(private readonly water: Water, private readonly camera: Camera,
-              private readonly ui: UI) {
+  constructor(private readonly water: Water) {
     // drawn large and scaled down, so the curve stays smooth at any zoom
     this.focus
       .circle(0, 0, 100).stroke({ color: 0xdffdf2, width: 4.5, alpha: 0.5 })
       .circle(0, 0, 94).stroke({ color: 0xdffdf2, width: 12, alpha: 0.07 });
   }
 
-  /**
-   * Draw the frame and return how frightening it is, for the HUD. `squeezed` is the band
-   * the player has forced, whose seal is drawn open.
-   */
-  draw(view: View, world: World, p: Creature, phase: Phase, dread: Dread, squeezed: number) {
+  /** Draw the frame and return how frightening it is, for the HUD. */
+  draw(view: View, world: World, p: Creature, phase: Phase, dread: Dread) {
     const halo = p.radius * (4.4 + Math.sin(view.t * 1.1) * 0.12);
     this.focus.x = p.x;
     this.focus.y = p.y;
@@ -107,26 +100,9 @@ export class Scene {
       c.view.show(seen, alpha * c.emergence, tint);
     }
 
-    // Draw the band boundary nearest the camera rather than the next one below it:
-    // a "next one below" rule jumps a whole band the instant you cross a seal, which
-    // pops the barrier and the shadowed layer across the screen.
-    let gateBand = BANDS[1];
-    for (let i = 2; i < BANDS.length; i++) {
-      if (Math.abs(BANDS[i].top - view.y) < Math.abs(gateBand.top - view.y)) {
-        gateBand = BANDS[i];
-      }
-    }
-    // a forced seal is drawn open: the player is on the far side of it, or passing through
-    const gateOpen = p.genome.size >= gateBand.gate || BANDS.indexOf(gateBand) === squeezed;
     const level = dread.level(danger);
-    this.water.update(view, p.genome.glow, phase === 'play' ? level : 0, gateBand.top, gateOpen);
-
-    // the requirement floats on the barrier itself while it is sealed and in frame
-    this.ui.gateLabel(
-      !gateOpen && phase !== 'over' ? `${gateBand.gate} cm to enter ${gateBand.name}` +
-        (p.genome.size >= gateBand.gate * SQUEEZE_MIN ? ' · boost to force it' : '') : null,
-      // sit just above the shear line: the seal itself is the brightest thing on screen
-      this.camera.screenY(gateBand.top) - 34, this.camera.H);
+    // a tank has no thermocline: the shader's seal is put below the floor of the world, open
+    this.water.update(view, p.genome.glow, phase === 'play' ? level : 0, DEPTH_MAX * 2, true);
     return phase === 'over' ? 0 : level;
   }
 }

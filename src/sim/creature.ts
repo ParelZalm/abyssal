@@ -16,6 +16,12 @@ const KIN_SPARED = 0.5;
  * an instant: the check that makes a snapped turn read as effort rather than a cut.
  */
 const FLIP_KEEP = 0.45;
+/**
+ * Top speed backing away from what a strafing body faces (`strafe`). A fish does not swim
+ * tail first; it sculls. Keeping an attack turned on something while retreating from it is
+ * the kiting that makes a room a fight, and this is what it costs.
+ */
+const BACKPEDAL = 0.6;
 
 export type Mood = 'cruise' | 'rest' | 'dart';
 
@@ -36,6 +42,12 @@ export class Creature {
   attack: 'none' | 'windup' | 'strike' | 'recover' = 'none';
   attackT = 0;
   attackLen = 1;
+  /**
+   * Which way the player's strike reaches, while one is out. Side-on the body stays level
+   * for an attack up or down, so `aimY` moves the bite above or below the head rather than
+   * pointing the body there (`biteX`, `biteY`). Zero for everything else.
+   */
+  aimY = 0;
   /** Set on a body swallowed whole, to what swallowed it — the view follows it down. */
   eatenBy: Creature | null = null;
   hp: number; hpMax: number;
@@ -110,9 +122,9 @@ export class Creature {
   /** Seconds until the mantle can pulse again. */
   pulseT = 0;
   /**
-   * The depths this body keeps to instead of its species' range, or null. Set on the pocket
-   * under a sealed thermocline (`Spawner.pocket`), which has to hang just below the seal —
-   * inside the top of its own band, where the ordinary band hold would push it down.
+   * The depths this body keeps to instead of its species' range, or null. Set on a room's
+   * animals (`Spawner.stock`) to the room's own water, since their species' range would
+   * steer them into its ceiling or its floor.
    */
   hold: [number, number] | null = null;
   /** Seconds of stillness banked by a lurking body, spent on its next bite. */
@@ -187,6 +199,10 @@ export class Creature {
   /** Where the mouth actually is — bites and gulps are measured from here. */
   get mouthX() { return this.x + Math.cos(this.angle) * this.radius * 0.8; }
   get mouthY() { return this.y + Math.sin(this.angle) * this.radius * 0.8; }
+
+  /** Where a bite lands from: the mouth, or above or below the head for a strike up or down. */
+  get biteX() { return this.aimY ? this.x + this.face * this.radius * 0.45 : this.mouthX; }
+  get biteY() { return this.aimY ? this.y + this.aimY * this.radius * 0.7 : this.mouthY; }
 
   /** Effective reach: a distensible gullet lets you swallow above your weight. */
   get swallowSize() {
@@ -318,6 +334,34 @@ export class Creature {
     this.vx = fx * fwd - fy * lat;
     this.vy = fy * fwd + fx * lat;
     this.thrust = Math.abs(throttle);
+  }
+
+  /**
+   * Swimming while holding a facing: the body stays level and turned the way `face` says,
+   * and moves toward (`dx`, `dy`) whichever way that is — the player's swim while an attack
+   * is held, Isaac's walk-one-way-shoot-the-other. Drag is the same in every direction
+   * here, since a body swimming sideways to its keel is the whole point; backing away is
+   * held to `BACKPEDAL` of top speed.
+   */
+  strafe(dt: number, dx: number, dy: number, throttle: number) {
+    const g = this.genome;
+    const top = Math.max(1, g.speed);
+    const level = this.face > 0 ? 0 : Math.PI;
+    this.angle += angleDelta(this.angle, level) * Math.min(1, dt * 12);
+    this.bank += -this.bank * Math.min(1, dt * 7);
+    const n = Math.hypot(dx, dy);
+    const speed = Math.hypot(this.vx, this.vy);
+    this.beat += dt * (3.4 + throttle * 5.5 + (speed / top) * 3.5);
+    if (n > 0) {
+      const back = dx * this.face < 0 ? BACKPEDAL : 1;
+      const accel = top * DRAG_FWD * throttle * back * this.swim.stroke;
+      this.vx += (dx / n) * accel * dt;
+      this.vy += (dy / n) * accel * dt;
+    }
+    const k = Math.exp(-DRAG_FWD * this.swim.drag * dt);
+    this.vx *= k;
+    this.vy *= k;
+    this.thrust = n > 0 ? throttle : 0;
   }
 
   /**

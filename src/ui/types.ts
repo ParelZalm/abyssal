@@ -15,7 +15,6 @@ export interface PauseInfo {
   forms: readonly Transformation[];
   stage: number;
   zone: string;
-  depth: number;
   eaten: number;
   elapsed: number;
 }
@@ -24,7 +23,9 @@ export interface HudState {
   hp: number; hpMax: number;
   food: number; foodMax: number;
   xp: number; xpNeed: number;
-  stage: number; size: number; depth: number;
+  stage: number; size: number;
+  /** The tank the player is in, by name. */
+  place: string;
   traits: TraitEntry[];
   score: number; elapsed: number;
   /** The score to beat: the all-time best, or on the daily the day's best. */

@@ -49,16 +49,13 @@ export class TitleScreen implements Component {
     this.element.append(
       h2('A fish evolution roguelite'),
       h1('Abyssal'),
-      p('You begin as something small enough to be swallowed whole. Eat what is smaller, outswim what is not, and mutate every time you grow.'),
-      p('The ocean is stacked into five zones, sealed off from one another by thermoclines. Each one only opens for a fish of the right size — grow enough and you break through into a new ecosystem, a harder one, with better mutations waiting. Something enormous holds the bottom.'),
+      p('You begin as something small enough to be swallowed whole, dropped into the nursery tank of an aquarium. Eat what is smaller, strike at what is not, and mutate.'),
+      p('Every tank is a warren of rooms and a thing at its heart that is the only way out. Beat it and you are moved on to a bigger tank, deeper in the building, and you grow to fill it.'),
+      keysLine([kbd('W'), kbd('A'), kbd('S'), kbd('D'), ' swim  ·  ', kbd('←'), kbd('↑'),
+        kbd('→'), kbd('↓'), ' strike that way']),
       keysLine([
-        kbd('W'), kbd('A'), kbd('S'), kbd('D'), ' / arrows swim that way \u00a0·\u00a0 or follow the ',
-        kbd('mouse'),
-      ]),
-      keysLine([
-        'Hold ', kbd('Space'), ' / ', kbd('Shift'), ' / ', kbd('click'),
-        ' to boost \u00a0·\u00a0 ', kbd('E'), ' / ', kbd('right-click'), ' active organ \u00a0·\u00a0 ',
-        kbd('P'), ' pause \u00a0·\u00a0 ', kbd('M'), ' sound',
+        kbd('Space'), ' active mutation  ·  ', kbd('E'), ' item  ·  ',
+        kbd('P'), ' pause  ·  ', kbd('M'), ' sound',
       ]),
       ...(codex.deepest > 0 ? [forms] : []),
       actions(

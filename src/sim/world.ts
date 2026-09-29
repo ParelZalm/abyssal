@@ -1,7 +1,7 @@
 import { Container } from 'pixi.js';
 import { faceFor } from '../content/form';
 import { genomeFor, type Species } from '../content/species';
-import { BANDS, DEPTH_MAX, WORLD_HALF_W } from '../content/zones';
+import { DEPTH_MAX } from '../content/zones';
 import { clamp, dist2, type Rng, TAU } from '../core/util';
 import { Behaviour } from './behaviour';
 import { Combat } from './combat';
@@ -10,9 +10,17 @@ import type { Bite, Blood, Pulse } from './events';
 import { tick as tickOrgans, type Organ } from './organs';
 import { Patterns } from './patterns';
 import { Spawner } from './spawn';
+import type { Terrain } from './terrain';
 
 /** Seconds a body takes to resolve out of the water. */
 const FADE_IN = 0.9;
+/**
+ * The share of a body's radius that meets a wall. The radius is half the body's length, and
+ * side-on a fish is long and thin: a circle that wide holds it a head's length off every
+ * floor. This keeps the belly on the sand and lets the nose go just into the rock, which the
+ * room draws over it.
+ */
+const WALL_R = 0.5;
 
 /**
  * The simulation: every body, the blood and ink in the water, and the outbox of what
@@ -40,22 +48,14 @@ export class World {
   playerHeal = 0;
   /** Whether the player is in something's tentacles this frame, for the HUD to act on. */
   playerHeld = false;
-  /**
-   * How spent each band's water is, 0..1, by `BANDS` index. Written by `Game` from how
-   * long the player has stayed in water they have outgrown; read by the spawner, so the
-   * population thins where the spawn lands and not where the player happens to be.
-   */
-  readonly spent: number[] = BANDS.map(() => 0);
-  /** Deepest y the player may reach; the next sealed thermocline holds them here. */
-  descentLimit = DEPTH_MAX;
+  /** The room's rock, which every body is kept out of. Null in open water. */
+  terrain: Terrain | null = null;
   /** Species id of a guardian whose tell started this frame, for the first-time toast. */
   tellBy: string | null = null;
   /** True on a frame the player's bite glanced off a bait ball. */
   glanced = false;
   /** The player's boost kicks already answered by a scatter. */
   private seenKicks = 0;
-  /** True on any frame the player pressed against a sealed thermocline. */
-  blocked = false;
   /** Species id of a guardian killed this run, or null. Drained by `Game.digest`. */
   killedGuardian: string | null = null;
   /**
@@ -104,10 +104,7 @@ export class World {
 
   add(sp: Species, x: number, y: number) {
     const c = new Creature(sp, genomeFor(sp, this.rng));
-    c.x = clamp(x, -WORLD_HALF_W, WORLD_HALF_W);
-    // a backstop that nothing should reach: anchors are rejected out of bounds and group
-    // members are folded back in. If bodies ever appear stacked on one depth again, it is
-    // because something started clamping y instead of re-rolling or folding it
+    c.x = x;
     c.y = clamp(y, 40, DEPTH_MAX - 40);
     c.angle = this.rng.next() * TAU;
     c.fade = 0;
@@ -118,7 +115,7 @@ export class World {
     // Place it and hide it before anything can draw it.
     //
     // A fresh `FishView` is a Container: visible, opaque, and at its own origin, which is
-    // world (0, 0). `Bands.stock` tops the population up *after* `Scene.draw` has decided
+    // world (0, 0). The spawner tops a room up *after* `Scene.draw` has decided
     // what every creature looks like this frame, so without these two lines every spawn is
     // drawn once, at full alpha, in the corner of the world — and then snaps to where it
     // really is on the next frame, or vanishes when `show` finally reaches it. The player
@@ -192,7 +189,6 @@ export class World {
     this.devoured.length = 0;
     this.playerGain = 0;
     this.playerHeal = 0;
-    this.blocked = false;
     this.glanced = false;
     this.tellBy = null;
     this.hunted = false;
@@ -230,11 +226,9 @@ export class World {
   }
 
   private integrate(c: Creature, dt: number) {
-    c.x = clamp(c.x + c.vx * dt, -WORLD_HALF_W, WORLD_HALF_W);
-    const floor = c.isPlayer ? this.descentLimit : DEPTH_MAX;
-    const ny = c.y + c.vy * dt;
-    if (c.isPlayer && ny > floor) this.blocked = true;
-    c.y = clamp(ny, 30, floor);
+    c.x += c.vx * dt;
+    c.y = clamp(c.y + c.vy * dt, 30, DEPTH_MAX);
+    this.terrain?.collide(c, c.radius * WALL_R);
     c.biteCd = Math.max(0, c.biteCd - dt);
     c.boosting = Math.max(0, c.boosting - dt);
     if (c.puffT > 0) {

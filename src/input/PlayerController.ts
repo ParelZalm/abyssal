@@ -1,8 +1,6 @@
-import { angleDelta, clamp } from '../core/util';
-import type { Camera } from '../render/Camera';
+import { angleDelta } from '../core/util';
 import type { Fx } from '../render/fx';
-import type { Run } from '../run/Run';
-import { activeOf, boostModsOf, fire, POISE_MAX, PUFF_TIME } from '../sim/organs';
+import { activeOf, biteRateOf, boostModsOf, fire, POISE_MAX, PUFF_TIME } from '../sim/organs';
 import type { Creature } from '../sim/creature';
 import type { World } from '../sim/world';
 import type { Input } from './Input';
@@ -11,33 +9,50 @@ import type { Input } from './Input';
  * How much harder than usual the player's body takes a hard turn (`Creature.drive`). Turning
  * back is a flip and needs none; this is the pitch left over — level to straight up, a dive
  * into a climb — which at 6 a hatchling swings through in about a quarter of a second, so a
- * key or a cursor thrown somewhere reads as an answer, not a manoeuvre. It tapers with the
- * angle, so small corrections gain little and nothing oscillates.
+ * key thrown somewhere reads as an answer, not a manoeuvre. It tapers with the angle, so
+ * small corrections gain little and nothing oscillates.
  */
 const FLICK = 6;
 
 /**
- * The player's body under the player's hands: steering, the boost and what it costs, and
- * the active organ. One per run, so its cooldowns start clear.
+ * The strike on the arrows: how long the lunge is out and the bite live, the recovery
+ * after it, and the kick, as a share of top speed. Short and hard, because a room is a
+ * dozen body lengths across and a lunge that carries three of them is a dash, not a bite.
+ */
+const STRIKE = 0.2;
+const RECOVER = 0.14;
+const LUNGE = 0.95;
+/**
+ * The lunge left in a strike thrown back over the shoulder of a retreat. At full strength
+ * every strike at a pursuer threw the body back into it, and a held arrow while swimming
+ * away stood still: kiting — the thing that makes a room a fight — could not be done.
+ */
+const LUNGE_RETREAT = 0.25;
+/** Seconds between strikes before organs bend it — the base of the HUD's rate. */
+const ATTACK_EVERY = 0.4;
+/**
+ * Seconds a body keeps facing its attack after the arrow is let go. Without it a tap flips
+ * the body back to its swim the frame the key comes up, and the lunge happens tail first.
+ */
+const HOLD_FACE = 0.25;
+
+/**
+ * The player's body under the player's hands: WASD swims, the arrows strike, Space fires
+ * the active mutation. One per run, so its cooldowns start clear.
  */
 export class PlayerController {
   private wakeCd = 0;
-  private _sprinting = false;
-  /** Seconds the boost has been held, which is what winds it up. */
-  private boostHeld = 0;
-  /** Seconds until another boost kick; stops tapping from being a free speed hack. */
-  private boostCd = 0;
   /** Seconds until the active organ can fire again. */
   private activeCd = 0;
+  /** Seconds until the next strike. */
+  private attackCd = 0;
+  /** Seconds left facing the last attack; while it runs the body strafes. */
+  private faceT = 0;
   /** Whether a lurking body was wound to full last frame, so the cue fires on the edge. */
   private poised = false;
 
   constructor(private readonly input: Input, private readonly p: Creature,
-              private readonly world: World, private readonly run: Run,
-              private readonly camera: Camera, private readonly fx: Fx) {}
-
-  /** Boosting with somewhere to go this frame — what forcing a seal is pressed with. */
-  get sprinting() { return this._sprinting; }
+              private readonly world: World, private readonly fx: Fx) {}
 
   /** The active organ for the HUD, and how far through its cooldown it is. */
   active() {
@@ -47,98 +62,98 @@ export class PlayerController {
 
   steer(dt: number) {
     const { p, input } = this;
-    const g = p.genome;
-    const k = input.keys;
-    const left = k.has('a') || k.has('arrowleft');
-    const right = k.has('d') || k.has('arrowright');
-    const up = k.has('w') || k.has('arrowup');
-    const down = k.has('s') || k.has('arrowdown');
-    if (left || right || up || down) input.useMouse = false;
+    let [dx, dy] = input.move;
+    let aim = input.aim;
 
-    let throttle = 0;
-    let desired = p.angle;
-
-    if (input.useMouse) {
-      // cursor mode: swim toward the pointer, effort scaled by how far it is
-      const w = this.camera.toWorld(input.mouse.x, input.mouse.y);
-      const d = Math.hypot(w.x - p.x, w.y - p.y);
-      const dead = g.size * 0.9;
-      if (d > dead) {
-        desired = Math.atan2(w.y - p.y, w.x - p.x);
-        throttle = clamp((d - dead) / (g.size * 1.6), 0, 1);
-      }
-    } else {
-      // Keys name a direction on the screen, the same thing the cursor does: left swims
-      // left. Tank steering (A/D swinging the body) was the old scheme, and side-on it
-      // inverts — facing left, "right" pitches the nose up — so no key meant a direction.
-      const dx = (right ? 1 : 0) - (left ? 1 : 0);
-      const dy = (down ? 1 : 0) - (up ? 1 : 0);
-      if (dx || dy) {
-        desired = Math.atan2(dy, dx);
-        throttle = 1;
-      }
-    }
-    // Turn first, then swim. Full thrust on a body pointed away from where it wants to go
-    // drives it round an arc; easing off lets drag bleed the speed that `agility` is lost to,
-    // so a hard turn pivots. Floored at 0.3, above the 0.2 under which `propel` levels the
-    // body out and would fight the turn, and the 0.1 under which `drive` will not flip.
-    const align = Math.cos(angleDelta(p.angle, desired));
-    throttle *= 0.3 + 0.7 * Math.max(0, align);
-
-    // stunned by a sperm whale's click: no drive and no boost until it wears off
+    // stunned by a sperm whale's click: no swim and no strike until it wears off
     if (p.stun > 0) {
       p.stun = Math.max(0, p.stun - dt);
-      throttle = 0;
-      desired = p.angle;
+      dx = dy = 0;
+      aim = null;
     }
 
-    const wants = k.has('shift') || k.has(' ') || input.mouse.down;
-    const sprinting = wants && this.run.food > 1 && throttle > 0.1;
-    const boost = boostModsOf(p);
-    this.boostCd = Math.max(0, this.boostCd - dt);
-    if (sprinting && !this._sprinting && this.boostCd <= 0) {
-      // the kick is the boost: a hard shove up front, paid for in one bite of fullness, so a
-      // lunge at prey is cheap and a long chase is not
-      this.boostCd = 0.45;
-      // the surge an organ can strike in: about as long as the kick carries the body
-      p.kick(0.4);
-      this.run.food = Math.max(0, this.run.food - 1.5);
-      p.vx += Math.cos(p.angle) * g.speed * 1.6 * boost.kick;
-      p.vy += Math.sin(p.angle) * g.speed * 1.6 * boost.kick;
-      p.beat = Math.PI * 0.5;
-      this.fx.burst(p.mouthX, p.mouthY, 0xd8fff2, 7, 110, p.radius * 0.22);
-      this.camera.jolt(3, 6);
+    this.attackCd = Math.max(0, this.attackCd - dt);
+    this.tickStrike(dt);
+    if (aim && this.attackCd <= 0 && p.attack === 'none') {
+      const away = dx * aim[0] < 0 || dy * aim[1] < 0;
+      this.strike(aim[0], aim[1], away ? LUNGE_RETREAT : LUNGE);
     }
-    this._sprinting = sprinting;
+    this.faceT = aim ? HOLD_FACE : Math.max(0, this.faceT - dt);
+
+    const moving = dx !== 0 || dy !== 0;
+    if (this.faceT > 0 || p.attack !== 'none') {
+      p.strafe(dt, dx, dy, moving ? 1 : 0);
+    } else {
+      const desired = moving ? Math.atan2(dy, dx) : p.angle;
+      // Turn first, then swim. Full thrust on a body pointed away from where it wants to go
+      // drives it round an arc; easing off lets drag bleed the speed that `agility` is lost
+      // to, so a hard turn pivots. Floored at 0.3, above the 0.2 under which `propel` levels
+      // the body out and would fight the turn, and the 0.1 under which `drive` will not flip.
+      const align = Math.cos(angleDelta(p.angle, desired));
+      p.drive(dt, desired, moving ? 0.3 + 0.7 * Math.max(0, align) : 0, FLICK);
+    }
+
     this.fireActive(dt);
+    // nothing to hold yet: the item slot arrives with the economy
+    input.wantItem = false;
     // a lurking body has nothing on the HUD to say it is wound; one ring as the poise tops
     // out is the tell that the next bite is the big one
     const poised = p.poise >= POISE_MAX;
     if (poised && !this.poised) this.fx.ring(p.x, p.y, 0xe8f0ff, p.radius * 2.2);
     this.poised = poised;
-    // front-loaded: the surge peaks on the press and settles to a cruising sprint over
-    // ~0.6 s, which is what makes it read as a boost rather than a second gear
-    this.boostHeld = sprinting ? Math.min(1.2, this.boostHeld + dt) : 0;
-    const surge = 1 - clamp(this.boostHeld / 0.6, 0, 1);
-    const wind = sprinting ? (1.55 + 0.75 * surge * surge) * boost.wind : 1;
-
-    const drive = throttle * wind;
-    p.drive(dt, desired, drive, FLICK);
-    if (sprinting) {
-      const cost = 3.2 * wind * boost.cost;
-      this.run.food = Math.max(0, this.run.food - cost * dt * Math.abs(throttle));
-    }
 
     // shed bubbles off the tail on the power half of each stroke
     this.wakeCd -= dt;
-    if (drive > 0.3 && this.wakeCd <= 0 && (sprinting || Math.sin(p.beat) > 0.2)) {
-      this.wakeCd = sprinting ? 0.028 : 0.07;
+    if (moving && this.wakeCd <= 0 && Math.sin(p.beat) > 0.2) {
+      this.wakeCd = 0.07;
       const back = p.radius * 1.15;
       this.fx.wake(
         p.x - Math.cos(p.angle) * back, p.y - Math.sin(p.angle) * back,
         -p.vx * 0.22 + (Math.random() - 0.5) * 40,
         -p.vy * 0.22 + (Math.random() - 0.5) * 40,
         0xcdf6e6, p.radius * (0.16 + Math.random() * 0.14));
+    }
+  }
+
+  /**
+   * Throw a strike one of the four ways. Left and right turn the body to face it; up and
+   * down leave it level and reach the bite above or below the head, since a fish pointed
+   * straight up stands on its tail. The bite itself is `Combat`'s: it lands on whatever is
+   * in reach while the strike is out, and ends the strike when it does.
+   */
+  private strike(ax: number, ay: number, lunge: number) {
+    const p = this.p;
+    if (ax) {
+      p.face = ax > 0 ? 1 : -1;
+      p.angle = ax > 0 ? 0 : Math.PI;
+    }
+    p.aimY = ay;
+    p.attack = 'strike';
+    p.attackT = p.attackLen = STRIKE;
+    // The lunge is the boost's seam now the boost is gone: it opens the same surge window
+    // (`Creature.kick`), so what organs did on a boost kick — Ballistic's ram, Flash Sense,
+    // Smoke Screen's puff, a bait ball scattering — they do on a strike, and the boost
+    // modifiers scale its shove.
+    p.kick(STRIKE);
+    const top = Math.max(1, p.genome.speed) * boostModsOf(p).kick;
+    p.vx += ax * top * lunge;
+    p.vy += ay * top * lunge;
+    p.beat = Math.PI * 0.5;
+    this.attackCd = biteRateOf(p, ATTACK_EVERY);
+  }
+
+  /** The strike's steps. `Behaviour.strike` runs every other body's; the player's is here. */
+  private tickStrike(dt: number) {
+    const p = this.p;
+    if (p.attack === 'none') return;
+    p.attackT -= dt;
+    if (p.attackT > 0) return;
+    if (p.attack === 'strike') {
+      p.attack = 'recover';
+      p.attackT = p.attackLen = RECOVER;
+    } else {
+      p.attack = 'none';
+      p.aimY = 0;
     }
   }
 
