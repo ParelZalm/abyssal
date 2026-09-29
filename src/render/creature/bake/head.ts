@@ -82,7 +82,14 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
   // the eye. A light-gathering eye is pale because of the tapetum behind it; past the point
   // of no light at all there is nothing to gather, and a blind socket is a dimple
   const te = A.eyeAt;
-  const ex = spineAt(te, f), ey = edgeAt(te, f, -0.35);
+  const ex = spineAt(te, f);
+  let ey = edgeAt(te, f, -0.35);
+  if (A.stalks) {
+    // carried up on a stalk off the top of the head, leaning forward
+    const base = edgeAt(te, f, -0.9), stalk = halfWidth(0.2, f) * 0.9;
+    ey = base - stalk;
+    s.line([[ex - s.texel, base], [ex, ey + s.texel]], M.FIN);
+  }
   // capped against the head: `eyeOf` grows with sense, and a hunter's big eye is still an
   // eye in a head, not a disc covering half of it
   const r = Math.max(s.texel * 0.5, halfWidth(te, f) * Math.min(0.3, 0.15 * eyeOf(g) * A.eye));

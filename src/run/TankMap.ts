@@ -176,7 +176,7 @@ export class TankMap {
     const c = this.cells[i];
     const t = this.terrainOf(i);
     c.view ??= new RoomView(t);
-    c.decor ??= new DecorView(placeDecor(t, c.seed), t.cy);
+    c.decor ??= new DecorView(placeDecor(t, c.seed, this.run.tank.id), t.cy);
     return { view: c.view, decor: c.decor };
   }
 

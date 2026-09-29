@@ -290,11 +290,15 @@ export interface PlanArt {
   smoke: boolean;
   /** A mantis shrimp's raptorial club, folded under the head, whatever the genome. */
   club: boolean;
+  /** Eyes carried up on stalks off the top of the head, as a crustacean's are. */
+  stalks: boolean;
+  /** Armour across the trunk in bands, a crustacean's segments, each plate's edge lit. */
+  bands: boolean;
 }
 
 const art = (o: Partial<PlanArt> = {}): PlanArt => ({
   arms: 0, armCount: 0, armLen: 0, armWidth: 0, armPair: 1, armReach: 0, grasp: 0, spines: true,
-  gills: true, cilia: false, paleEyes: false, caudal: 1, samples: 90, smoke: false, club: false,
+  gills: true, cilia: false, paleEyes: false, caudal: 1, samples: 90, smoke: false, club: false, stalks: false, bands: false,
   tail: 'caudal', blunt: 0, dorsalFin: 0, fins: FISH_FINS, eye: 1, eyeAt: 0.16, mottle: 1, tone: 1, shade: 1, finRays: true, mouth: 1, eyeGlow: 0, fog: 0, ...o,
 });
 
@@ -349,7 +353,8 @@ export const PLAN_ART: Record<Plan, PlanArt> = {
   // the club folded under the head is the animal (`club`); four pairs of little swimmerets
   // under the trunk and no fins above it, and eyes on the front of a blunt face
   mantis:     art({ eyeGlow: 0.8, fog: 0.6, spines: false, gills: false, caudal: 1.2, blunt: 0.4,
-                    eye: 0.7, eyeAt: 0.06, mouth: 0.4, finRays: false, club: true, samples: 110,
+                    eye: 0.7, eyeAt: 0.06, mouth: 0.4, finRays: false, club: true, stalks: true, bands: true,
+                    samples: 110,
                     fins: [{ at: 0.45, len: 0.32, rake: 1.1, chord: 0.35, taper: 0.5 },
                            { at: 0.62, len: 0.28, rake: 1.1, chord: 0.35, taper: 0.5 }] }),
   wraith:     art({ smoke: true }),

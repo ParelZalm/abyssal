@@ -358,9 +358,9 @@ words are in `CONTEXT.md`, the decision in `docs/adr/0003-*`). A `Tank` has a na
 world depth whose water it borrows, a tile size in world units, its loose fauna, its
 hostiles, and how many bodies a room holds. A `RoomTemplate` is 32 × 18 rows of characters —
 `#` rock, `=` sand, `o` boulder, `.` water — authored by hand, as Isaac's are, and tagged
-with the room types it may be dealt as. The nursery has eight; the reef and the deep tank
-deal from every layout until they have their own (stage 8), and every room is mirrored half
-the time.
+with the room types it may be dealt as. Each tank deals its own: the nursery's eight, the
+reef's five (coral heads, an arch, a lagoon, shelves, a boulder channel) and the deep's five
+(a tall hall, a shaft, columns, a grotto, vent chimneys), every room mirrored half the time.
 
 **Three tanks** (`TANKS`, `TANK_ORDER`): the Nursery at a 23-unit tile, its boss the mantis
 shrimp; the Reef at 41, the Great White; the Deep at 74, the Giant Squid. Each tile is the

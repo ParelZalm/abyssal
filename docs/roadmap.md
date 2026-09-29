@@ -229,14 +229,26 @@ What it found, and what it leaves:
   eyes, banding and legs are for the liveliness pass. The reef and deep tanks have no rooms or
   decoration of their own yet (stage 8), and the deal room's seal still shows before the boss.
 
-## 8. Liveliness
+## 8. ~~Liveliness~~
 
-- Decoration per tank, on the first pass above: the wreck as the reef's centrepiece, the
-  deep tank's own growth, and what hangs from ceilings and clings to walls. Side-on rooms get bottom-heavy, so
-  templates carry things that block higher up — overhangs, arches, stalactites, a wreck on
-  its side, a chain, a net.
-- Ambient fauna in every room: things to eat and things that flee.
-- Board: every tank's decoration set.
+Done: decoration on every face — floors, ceilings and walls — and a set per tank
+(`DECOR_SETS`): the reef's sea fans, coral, snagged nets and its centrepiece, the wreck with
+its lamp; the deep's tube worms, sea lilies, glass sponges and glow-worm threads, which light
+its rooms; chains, weed and barnacles where they belong. The reef and the deep tank have
+their own room layouts, five each, the overhangs, arches, columns and chimneys that block
+higher up. The reef's fauna grazes plankton too. The mantis shrimp got its armour bands and
+stalked eyes. The board's *Decoration* group has every kind and the tanks it grows in; the
+*Rooms* group every layout in its own tank's dress.
+
+What it found, and what it leaves:
+
+- **A room hung as thickly as its floor grows is shut.** Ceilings and walls carry under half
+  a floor's cover.
+- **The deep is seen by its threads.** With no weed and no lamp but the larva's, a deep room
+  was black; hanging glow-worm threads from every ceiling made it a cave you can read.
+- Decoration now runs to 110–145 pieces a room; a crossing's worst frame is ~16 ms.
+- Not done: a wreck on its side as an obstacle, which wants a tile of its own in the
+  templates; bottom-dwellers (crabs, shrimp) that walk the floor; per-tank rock colour.
 
 ## Later
 

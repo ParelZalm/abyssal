@@ -37,8 +37,9 @@ shows of it: the rooms seen, the rooms visited, and the one the player is in.
 
 **Obstacle** — a part of a room that blocks: a boulder, a rock pillar, a wreck's hull.
 
-**Decoration** — what grows on a room's rock or has sunk onto it: sponges, anemones, weed,
-coral, a crate. It never blocks; it is where a room's colour and much of its light come from.
+**Decoration** — what grows on a room's rock, has sunk onto it or hangs from it: sponges,
+anemones, weed, coral, a crate, a wreck, a chain. Each tank grows its own. It never blocks;
+it is where a room's colour and much of its light come from.
 _Avoid_: prop, scenery
 
 **Pedestal** — a place in a room where one thing is offered, taken or left: the treasure

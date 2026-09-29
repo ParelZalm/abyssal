@@ -29,7 +29,7 @@ import { caudalFin, fluke, mantleFins, dorsalRidge, medianFins, fins, ribbonFin,
          tentacles } from './bake/fins';
 import { bluntSnout, head, lureAt, lure, barbels } from './bake/head';
 import { spines, organs, ballisticReach, urchinReach, urchinSpines, electroplates, prickles,
-         inkSac, spitSac, stoneWarts, volleyQuills } from './bake/organs';
+         inkSac, spitSac, stoneWarts, volleyQuills, armourBands } from './bake/organs';
 import { photophores, flankLights, embers } from './bake/lights';
 
 export interface Baked {
@@ -245,6 +245,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   if (g.discharge > 0) electroplates(s, f, g);
   if (g.ink > 0) inkSac(s, f);
   if (g.spit > 0) spitSac(s, f);
+  if (A.bands) armourBands(s, f, pal, g.segments);
   if (g.mantle > 0) mantle(s, f, pal);
   if (smoke) viscera(s, f, pal);
   if (photophoreOf(g) > 0) photophores(s, f, pal, g, seed);

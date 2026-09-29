@@ -276,3 +276,23 @@ export function volleyQuills(s: Sheet, f: Form) {
     s.dot(tip[0], tip[1], [255, 246, 226], 1);
   }
 }
+
+/**
+ * A crustacean's armour: the trunk in plates, each seam a dark line across the body with the
+ * next plate's edge lit behind it, from the head back to the tail fan — six to nine of them,
+ * more with more segments, so a mantis shrimp reads as jointed and not as a fish.
+ */
+export function armourBands(s: Sheet, f: Form, pal: Palette, segments: number) {
+  const n = Math.round(6 + Math.min(3, segments * 0.75));
+  const t0 = 0.16, t1 = 0.9;
+  for (let i = 1; i <= n; i++) {
+    const t = t0 + (i / (n + 1)) * (t1 - t0);
+    const x = spineAt(t, f);
+    const steps = Math.max(3, Math.round(halfWidth(t, f) * 2 * s.res));
+    for (let k = 0; k <= steps; k++) {
+      const e = -0.95 + (k / steps) * 1.9;
+      s.dot(x, edgeAt(t, f, e), pal.ramp[1], 0.85);
+      s.dot(x - s.texel, edgeAt(t, f, e), pal.ramp[Math.min(pal.ramp.length - 1, 5)], 0.5);
+    }
+  }
+}

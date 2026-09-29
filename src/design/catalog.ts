@@ -18,7 +18,7 @@ import { BANDS, zoneOf } from '../content/zones';
 import { ROOMS, tankById, TANKS } from '../content/tanks';
 import { PIXEL } from '../render/pixel';
 import { RoomView } from '../render/room';
-import { DECOR_KINDS, DecorView, placeDecor, type DecorKind, type Piece } from '../render/decor';
+import { DECOR_KINDS, DECOR_SETS, DecorView, placeDecor, type DecorKind, type Grow, type Piece } from '../render/decor';
 import { Terrain } from '../sim/terrain';
 import { generateMap } from '../content/map';
 import { Minimap } from '../ui/hud/Minimap';
@@ -748,7 +748,7 @@ function roomGroup(): DesignGroup {
         make: () => {
           const view = new RoomView(terrain, zoom / PIXEL);
           view.update();
-          const decor = new DecorView(placeDecor(terrain, 1), terrain.cy, zoom / PIXEL);
+          const decor = new DecorView(placeDecor(terrain, 1, tank.id), terrain.cy, zoom / PIXEL);
           decor.update(0);
           // a room sits at its tank's depth in the world; the cell wants it about the origin
           const c = new Container();
@@ -793,24 +793,33 @@ function decorGroup(): DesignGroup {
   const zoom = Math.min(REF_SCREEN.w / (32 * tank.tile), REF_SCREEN.h / (18 * tank.tile));
   const d = zoom / PIXEL;
   const heights: Record<DecorKind, number> = { sponge: 1.1, anemone: 0.7, kelp: 3, coral: 1.2,
-    brain: 0.55, grass: 0.5, bulb: 0.9, crate: 0.9 };
+    brain: 0.55, grass: 0.5, bulb: 0.9, crate: 0.9, fan: 1.4, wreck: 2.6, tubeworm: 1.2, crinoid: 2.4,
+    glass: 1.5, weed: 1.8, chain: 2.6, net: 1.6, threads: 2.2, barnacle: 0.5 };
+  // what hangs is shown hanging, from the top of its cell
+  const hangs = new Set<DecorKind>(['weed', 'chain', 'net', 'threads']);
+  const tanks = (k: DecorKind) => (Object.keys(DECOR_SETS) as (keyof typeof DECOR_SETS)[])
+    .filter(t => DECOR_SETS[t][k]).map(t => tankById(t).name).join(', ') ||
+    (k === 'crate' ? 'Nursery Tank (one a room)' : k === 'wreck' ? 'Reef Tank (the centrepiece)' : '—');
   return {
     id: 'decor',
     name: 'Decoration',
-    note: 'What grows on the rock and what has sunk onto it. Nothing here blocks; kelp and grass sway.',
+    note: 'What grows on the rock, has sunk onto it or hangs from it, and the tanks each grows in. Nothing here blocks.',
     items: DECOR_KINDS.map(kind => {
       const h = heights[kind] * tank.tile;
+      const grow: Grow = hangs.has(kind) ? 'down' : 'up';
+      const wide = kind === 'wreck';
       return {
         id: `decor-${kind}`,
         name: kind,
-        note: 'three seeds',
+        note: wide ? 'one seed' : 'three seeds',
         source: 'src/render/decor.ts',
-        span: h * 1.6,
+        span: h * (wide ? 2.8 : 1.6),
         depth: tank.depth,
-        facts: { height: `${heights[kind]} tiles` },
+        facts: { height: `${heights[kind]} tiles`, grows: grow === 'down' ? 'from a ceiling' : 'on a floor', tanks: tanks(kind) },
         make: () => {
-          const pieces: Piece[] = [-1, 0, 1].map((k, i) => ({
-            kind, x: k * h * 0.75, y: h * 0.5, h, seed: 11 + i * 97, flip: i === 1,
+          const pieces: Piece[] = (wide ? [0] : [-1, 0, 1]).map((k, i) => ({
+            kind, x: k * h * 0.75, y: grow === 'down' ? -h * 0.5 : h * 0.5, h, seed: 11 + i * 97,
+            flip: i === 1, grow,
           }));
           const decor = new DecorView(pieces, tank.depth, d);
           decor.update(0);

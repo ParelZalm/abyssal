@@ -157,28 +157,39 @@ thing in the room, which is how it is found.
 
 ## Decoration
 
-`render/decor.ts`: what grows on the rock and what has sunk onto it, where a room's colour
-lives. It never blocks, so it is placed and drawn in the render layer and the simulation
-does not hear of it.
+`render/decor.ts`: what grows on the rock, what has sunk onto it and what hangs from it,
+where a room's colour lives. It never blocks, so it is placed and drawn in the render layer
+and the simulation does not hear of it.
 
-- **Placement** (`placeDecor`) scans the room's field column by column for every face that
-  looks up at open water, notes how level it is and how much water stands over it, and
-  walks the faces in a seeded shuffle placing kinds by weight — rock and sand each have
-  their own — with a least gap per kind, until about `COVER` (1.8) pieces a tile of face.
-  Small kinds stand on uneven ground; the rest need it level. At most one crate, on the
-  flattest open floor. The first cut at under one a tile read as bare rock with a few plants.
-- **Kinds:** tube sponges, anemones with glowing tips, kelp, branching coral, brain coral,
-  sea grass, glow bulbs and a sunken crate. Each is painted per pixel (`PAINTERS`) at the art
-  density, side-on and lit from above-left, then outlined and rimmed off its own silhouette
-  as a creature is, stepped through the Bayer screen and lit by the tank's light. Emissive
-  pixels (a tip, an orb) are left bright.
-- **Kelp and grass sway** as a `MeshRope` from the base, painted lying along x so the rope's
-  length is theirs; nothing rotates as a whole. Swaying pieces go behind standing ones.
+- **Every face** (`placeDecor`). The room's field is scanned column by column for floors
+  (water above rock) and ceilings (rock above water), and row by row for walls. Each face
+  notes how much water it faces and whether it is level, and the faces are walked in a
+  seeded shuffle placing kinds by weight — floor rock, sand, ceiling and wall each weigh a
+  kind differently — with a least gap per kind: `COVER` (1.8) pieces a tile of floor,
+  `COVER_CEILING` (0.7) and `COVER_WALL` (0.5), since a room hung as thickly as its floor
+  grows read as a cave choked shut. Small kinds take uneven faces; the rest need them level.
+- **Each tank grows its own set** (`DECOR_SETS`): the nursery the reference frames' mix; the
+  reef coral country — sea fans, brain and branching coral, sponges — with nets snagged on its
+  roofs; the deep no weed and no light but its own — tube worms, sea lilies, glass sponges,
+  glow bulbs and glow-worm threads hung from every ceiling, which are most of what a deep room
+  is seen by. One **centrepiece** a room at most, on the widest flat floor: the nursery's
+  crate, and the reef's wreck, the bow of a small boat half in the sand with its lamp still lit.
+- **Kinds:** tube sponges (and glass sponges), anemones with glowing tips, kelp, branching
+  coral, brain coral, sea grass, glow bulbs, a crate, sea fans, the wreck, tube worms, sea
+  lilies, hanging weed, chains, nets, glow-worm threads and barnacles. Each is painted per
+  pixel (`PAINTERS`) at the art density, upright and lit from above-left, then outlined and
+  rimmed off its own silhouette, stepped through the Bayer screen and lit by the tank's light.
+  Emissive pixels (a tip, an orb, a bead) are left bright.
+- **Growing any way** (`Piece.grow`): a standing piece is turned from upright to hang from a
+  ceiling or stand out of a wall, its base sunk back into the face; a swaying one is a
+  `MeshRope` laid out from its holdfast the way it grows, so weed and threads hang and sway at
+  their tips. A chain barely swings. Nothing rotates as a whole in motion.
 - Pieces stand behind the bodies and under the rock's layer, so the rock covers each base
-  and its shadow falls on what grows beside it.
+  and its shadow falls on what grows beside it; the centrepiece stands furthest back.
 
-The board has a *Decoration* group, three seeds of each kind, and the *Rooms* cells are
-decorated. Neither is lit: the board shows the art, the game shows it in the dark.
+The board has a *Decoration* group — three seeds of each kind, what hangs shown hanging, and
+the tanks each grows in — and the *Rooms* cells are decorated with their own tank's set.
+Neither is lit: the board shows the art, the game shows it in the dark.
 
 ## Creatures
 
