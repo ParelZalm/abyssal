@@ -1,5 +1,5 @@
 import { Container, Sprite, Texture } from 'pixi.js';
-import { fbm, fbmSigned } from '../core/noise';
+import { fbm } from '../core/noise';
 import { clamp, lerp } from '../core/util';
 import type { Terrain } from '../sim/terrain';
 import { artDensity, artVersion } from './pixel';
@@ -11,13 +11,6 @@ import { lightAt, waterColor } from './water';
  * more rock, darkening away from the room, makes the letterbox part of the cave.
  */
 const MARGIN = 10;
-
-/**
- * How far a wall's drawn edge wanders off the grid, as a share of a tile. The collision is
- * the grid, so this is a lie the eye accepts only while it is small: at under a third a
- * body stopping short of a bulge or brushing into a hollow reads as the rock's texture.
- */
-const WARP = 0.3;
 
 type Rgb = [number, number, number];
 
@@ -39,8 +32,9 @@ function stepped(v: number, steps: number, px: number, py: number) {
  * as one sprite. Nothing about the terrain moves, so there is nothing to draw per frame; it
  * is baked again only when the art density changes tier (`pixel.ts`).
  *
- * Solid is set per pixel from the grid, with the edge warped by noise so a wall is a rock
- * face and not a stair of squares. The shading is read off that mask the way a creature's is
+ * Solid is set per pixel from the terrain's field (`Terrain.field`), the same smooth shape
+ * the collision is built from, so the rock is drawn to the pixel and not to its cells. The
+ * shading is read off that mask the way a creature's is
  * read off its silhouette: a lit lip on every face that looks up at open water, a dark
  * outline where rock meets water, and the body of the rock mottled and banded into strata.
  */
@@ -80,17 +74,15 @@ export class RoomView {
     const ox = t.x0 - MARGIN * t.tile, oy = t.y0 - MARGIN * t.tile;
     const px2w = 1 / d;
 
-    // the kind of every pixel, warped: 0 water, 1 rock, 2 sand, 3 boulder
+    // the kind of every pixel, read off the terrain's own field so the edge drawn is the
+    // edge collided with: 0 water, 1 rock, 2 sand, 3 boulder
     const kind = new Uint8Array(w * h);
-    const warp = t.tile * WARP;
-    const f = 1 / (t.tile * 1.4);
     for (let py = 0; py < h; py++) {
       for (let px = 0; px < w; px++) {
         const wx = ox + px * px2w, wy = oy + py * px2w;
-        const sx = wx + fbmSigned(wx * f, wy * f, 3, 2) * warp;
-        const sy = wy + fbmSigned(wx * f, wy * f, 9, 2) * warp;
-        const tile = t.at(Math.floor((sx - t.x0) / t.tile), Math.floor((sy - t.y0) / t.tile));
-        kind[py * w + px] = tile === 'water' ? 0 : tile === 'rock' ? 1 : tile === 'sand' ? 2 : 3;
+        if (t.field(wx, wy) <= 0.5) continue;
+        const tile = t.kindAt(wx, wy);
+        kind[py * w + px] = tile === 'sand' ? 2 : tile === 'boulder' ? 3 : 1;
       }
     }
     const at = (x: number, y: number) =>

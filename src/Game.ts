@@ -197,7 +197,7 @@ export class Game {
     this.ocean = new Ocean(this.rng);
     const tank = this.run.tank;
     const templates = ROOMS.filter(r => r.tank === tank.id);
-    const room = this.room = new Terrain(templates[this.rng.int(0, templates.length - 1)], tank);
+    const room = this.room = new Terrain(this.rng.pick(templates), tank, this.rng.int(0, 999));
     this.roomView = new RoomView(room);
 
     const g: Genome = baseGenome();

@@ -21,9 +21,9 @@ export interface Tank {
   /** World depth of the tank's middle row: the water it is drawn with. */
   depth: number;
   /**
-   * World length of one tile. A tank is authored at its animal's scale — a tile a little
-   * longer than the body, which puts a room about fifteen body lengths across — so that
-   * growing at the descent reads as the world widening rather than the body swelling.
+   * World length of one tile. A tank is authored at its animal's scale — a tile about a
+   * body and a half long, which puts a 32-tile room some forty-five body lengths across — so
+   * that growing at the descent reads as the world widening rather than the body swelling.
    */
   tile: number;
   /** What lives loose in its rooms, by species id. */
@@ -37,7 +37,8 @@ export interface RoomTemplate {
   tank: string;
   /**
    * The room as rows of tiles, top first: `#` rock, `=` sand, `o` boulder, `.` water. Every
-   * row the same length. A side-on room settles toward its floor — coral, rocks and wrecks
+   * row the same length. The rock is the smooth shape the tiles imply (`Terrain.field`), so
+   * a lone tile is a small lump and a gap one tile wide may close: draw features two wide. A side-on room settles toward its floor — coral, rocks and wrecks
    * all stand on the substrate — so a template carries something that blocks higher up
    * too (a ledge, an overhang, a stalactite), or the middle of the screen is empty water.
    */
@@ -54,20 +55,47 @@ export const ROOMS: RoomTemplate[] = [
   {
     id: 'nursery-ledge', tank: 'nursery',
     rows: [
-      '########################',
-      '########################',
-      '###.....####......######',
-      '##.......##........#####',
-      '#...................####',
-      '#.....................##',
-      '######................##',
-      '####...................#',
-      '#......................#',
-      '#...................o..#',
-      '#=...............=oooo=#',
-      '#===oo....o...=========#',
-      '########################',
-      '########################',
+      '################################',
+      '################################',
+      '#####......#######.....#########',
+      '###.........#####.......########',
+      '##...........###..........######',
+      '##............#............#####',
+      '#...........................####',
+      '#######.......................##',
+      '#########.....................##',
+      '######........................##',
+      '#..............................#',
+      '#..............................#',
+      '#...................oo.........#',
+      '#=........o.......oooo.......==#',
+      '#===....oooo....=========...===#',
+      '#=========oo===================#',
+      '################################',
+      '################################',
+    ],
+  },
+  {
+    id: 'nursery-pillar', tank: 'nursery',
+    rows: [
+      '################################',
+      '################################',
+      '######....#########....#########',
+      '####.......#######......########',
+      '###.........#####........#######',
+      '##...........###..........######',
+      '##............#............#####',
+      '#.............................##',
+      '#..............................#',
+      '#.........#####................#',
+      '#........#######...............#',
+      '#.........#####.........oo.....#',
+      '#..........###.........oooo....#',
+      '#==........###.........ooo....=#',
+      '#====.....#####.....========.==#',
+      '#=======..#####================#',
+      '################################',
+      '################################',
     ],
   },
 ];

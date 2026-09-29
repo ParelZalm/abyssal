@@ -716,9 +716,9 @@ function roomGroup(): DesignGroup {
         name: t.id,
         note: tank.name,
         source: 'src/content/tanks.ts',
-        // the board frames a cell on its short side, which for a room is its height; a
-        // little under it, so the room fills the cell and its margin rock is cropped
-        span: terrain.height * 0.75,
+        // the board frames a cell on its short side, and a room is wider than it is tall:
+        // framed on a little over half its width it fills the cell with the room whole
+        span: terrain.width * 0.55,
         depth: tank.depth,
         facts: { tank: tank.name, tiles: `${terrain.cols} × ${terrain.rows}`,
           tile: `${tank.tile} cm`, fauna: tank.fauna.join(' ') },

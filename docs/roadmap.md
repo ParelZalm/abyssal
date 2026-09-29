@@ -49,8 +49,12 @@ What it found, and what it leaves:
   when a tank's zoom falls at the descent.
 - **Nothing avoids a wall.** A shoal heading into one presses against it until its wander
   turns it. Stage 4.
-- A room is about 34 hatchling lengths across and takes ~4.5 s to swim; Isaac's take ~3.
-  Speed is a stat now, so tune the base with the stat column (stage 5).
+- **Rooms grew, and the rock went smooth.** The first cut was 24 × 14 tiles of squares and
+  felt cramped and blocky. A template is now 32 × 18, and the rock is the smooth shape the
+  tiles imply, collided on quarter-tile cells. A room is ~45 hatchling lengths across and
+  ~6 s to swim; speed is a stat now, so tune the base with the stat column (stage 5).
+- **A room bakes in ~200 ms.** Fine once a run; at every door in stage 3 it wants the
+  neighbours baked ahead, or the slide hitches.
 - Still here from the column, for the stages that replace them: the thermocline uniforms
   in the water shader, the level-up draft and hunger (stage 2), `Creature.quarry` (stage 4),
   the starting forms' depth unlock (stage 7), and the parallax scenery (stage 8).

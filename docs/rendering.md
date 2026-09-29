@@ -66,10 +66,11 @@ a room's zoom, and a tank's zoom changes at every descent.
 `render/room.ts` is `RoomView`: a room's `Terrain` baked once into one texture on the pixel
 grid, and re-baked only when the art density changes tier. Nothing about the terrain moves.
 
-- **The mask is the grid, warped.** Every pixel takes its kind from the tile under it, with
-  the sampling point pushed off the grid by noise (`WARP`, 0.3 of a tile) so a wall is a
-  rock face and not a stair of squares. The collision is the grid itself, so the warp is a
-  lie kept small enough that a body stopping short of a bulge reads as the rock's texture.
+- **The mask is the terrain's field.** Every pixel asks `Terrain.field` whether it is rock —
+  the same smooth, noise-bent shape the collision cells are built from — so the edge is
+  drawn to the pixel and is the edge a body meets. `Terrain.kindAt` says what it is made
+  of, through a small warp, so the seam between sand and rock wanders like the edge does.
+  The first cut drew the template's squares with a noise warp on top and read as blocks.
 - **Shading is read off the mask**, as a creature's is off its silhouette: a lit lip where a
   face looks up at open water, a dark outline where rock meets water, rock deeper in a wall
   darker, strata stretched sideways with a mottle over them, sand grained and lighter at
