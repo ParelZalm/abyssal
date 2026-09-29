@@ -1,10 +1,11 @@
 /**
  * A creature seen side-on: one continuous surface that swims.
  *
- * It faces the way it swims by rotating to its heading and, once that heading is past
- * vertical, rolling over about its own spine — so its back ends up up and its lure above its
- * head whichever way it swims. The roll is eased, so a turn is the body rotating round and
- * rolling as it goes, never a mirror image appearing. `face` is decided by the simulation
+ * It faces the way it swims by pitching toward its heading and, once that heading is past
+ * vertical, turning about: a yaw that starts at the nose and runs down the body, so the head
+ * swings round toward the viewer, the body folds short behind it and the tail follows through.
+ * Each column of the strip turns on its own, which is what makes it a turn rather than a sprite
+ * squashing to a line and coming back mirrored. `face` is decided by the simulation
  * (`faceFor`), because the lure's strike point has to agree with where the light is drawn.
  *
  * The art is painted flat and baked into a texture once per distinct genome (`fishbake.ts`).
@@ -20,11 +21,12 @@
  */
 import { Container, MeshSimple, Sprite } from 'pixi.js';
 import { bakeFish, releaseFish, type Baked, type Rig } from './fishbake';
-import { PLAN_ART, quintic, R, type Plan } from '../../content/form';
+import { drawnAngle, PLAN_ART, quintic, R, type Plan } from '../../content/form';
 import { menace, type Genome } from '../../content/genome';
 import { glowTexture } from '../textures';
-import { hsl, lerp } from '../../core/util';
+import { clamp, hsl, lerp } from '../../core/util';
 import { artDensity, artVersion } from '../pixel';
+import { livingSkin, type LivingSkin } from './living';
 import type { Emitter } from './bake/sheet';
 
 interface Motion {
@@ -87,11 +89,20 @@ export interface Pose {
 export const REST: Pose = { windup: 0, strike: 0, open: false };
 
 /**
- * Seconds for a body to roll over when it turns back. It rotates through the turn as it
- * always has; the roll only keeps its back up, and a body that snapped from one side to the
- * other in a frame read as being mirrored rather than as swimming.
+ * Seconds for a turn-about, nose starting to tail finished. Under a third of a second read as
+ * the model flipping whatever the in-betweens did: the eye needs the fold to hold for a few
+ * frames to see a body bent round rather than a sprite replaced.
  */
-const ROLL_TIME = 0.3;
+const TURN_TIME = 0.6;
+/**
+ * How far the tail lags the nose through a turn, as a share of one column's own turn. At 0
+ * every column turns together and the body only squashes to a line and back; this much keeps
+ * the head already round while the tail is still pointing the old way, so for the middle of
+ * the turn the animal is folded into a U seen side-on — short, doubled, and plainly turning.
+ */
+const TURN_LEAD = 0.8;
+/** Below 1, how briefly a column passes edge-on through a turn; 1 is the plain projection. */
+const EDGE_ON = 0.6;
 
 /** Columns per rigged arm. An arm is thin, so it needs length resolution and nothing else. */
 const ARM_COLS = 12;
@@ -131,8 +142,18 @@ export class FishView extends Container {
   /** A tight, hot centre inside the halo — the halo alone reads as fog, not as a light. */
   private core = new Sprite(glowTexture());
   private mesh: MeshSimple | null = null;
+  /** The shader the strip is drawn with: sub-pixel sampling and displaced fins (`living.ts`). */
+  private skin: LivingSkin | null = null;
   private verts = new Float32Array(0);
   private colX: number[] = [];
+  /**
+   * Each column's x once turned, and how far round it is as the cosine of its yaw: 1 facing
+   * +x, -1 facing -x, 0 edge-on. Written by `pose`, read by the lamps and the arms.
+   */
+  private turnX = new Float32Array(0);
+  private turnCos = new Float32Array(0);
+  /** Where along the strip the body's origin sits, as a column index: the turn's pivot. */
+  private hinge = 0;
   private baked: Baked | null = null;
   private motion = MOTION.darter;
   /** Counts down from 1 through a bite, driving the squash-and-snap. */
@@ -145,15 +166,20 @@ export class FishView extends Container {
   private strike = 0;
   /** What the feeding pair is holding, read for its live world position; null when nothing. */
   private grip: { x: number; y: number } | null = null;
-  /** 1 back-up heading toward +x, -1 rolled over. Set by `place`. */
+  /** 1 heading toward +x, -1 toward -x. Set by `place`. */
   private face: 1 | -1 = 1;
+  /** The turn-about's progress, 0 facing +x to 1 facing -x, eased toward `face`. */
+  private yaw = 0;
   /**
-   * How far over the body has rolled, eased toward `face`: its depth on screen is this times
-   * its own, so it thins edge-on through the middle of the roll and comes back the other
-   * way up. The eye reads that as the fish rolling, which is what it is.
+   * Which end of the progress this turn started from. The nose has to lead in both
+   * directions, so the lag is laid down the body the other way round going back — and it is
+   * only chosen at rest, because swapping it mid-turn would jump every column at once.
    */
-  private roll = 1;
-  /** The body's scale this frame, before the roll is applied in `place`. */
+  private lead: 0 | 1 = 0;
+  /** The pivot column's facing, -1 to 1: how far round the body as a whole is. */
+  private facing = 1;
+  private placed = false;
+  /** The body's scale this frame, set by `animate` and applied in `place`. */
   private sx = 1;
   private sy = 1;
   /** Idle hover and the strike's draw-back, in world units, applied by `place`. */
@@ -188,28 +214,31 @@ export class FishView extends Container {
    * this is the one place the body's final transform is put together: its facing, the
    * turn-about, the hover and the strike's draw-back on top of where the simulation has it.
    */
-  place(x: number, y: number, rotation: number, face: 1 | -1 = 1) {
+  place(x: number, y: number, heading: number, face: 1 | -1 = 1) {
     this.face = face;
-    const r = rotation + this.sway;
+    // a view that first appears facing -x is already turned, not turning
+    if (!this.placed) { this.placed = true; this.yaw = face > 0 ? 0 : 1; this.facing = face; }
+    // The mirror is in the strip, column by column, so the frame only pitches. The pitch is
+    // the same climb or dive either way round, which as a rotation is its negative in the
+    // mirrored frame: passing through level at the middle of a turn is what joins the two,
+    // and the body is folded short there, where the difference cannot be seen.
+    const pitch = drawnAngle(heading, face) * face;
+    const r = pitch * this.facing + this.sway;
     const unit = this.g.size / R * this.swell;
-    // never quite a line: at the very middle of a roll the strip keeps a sliver of depth,
-    // and the sign changes there, where the difference cannot be seen
-    const roll = Math.sign(this.roll || 1) * Math.max(0.08, Math.abs(this.roll));
-    this.scale.set(unit * this.sx, unit * this.sy * roll);
-    // drawn back along the body on a wind-up — the coil before the spring. The nose points
-    // along the rotation in either facing: the mirror is about the spine, not across it
-    x -= Math.cos(r) * this.recoil;
-    y -= Math.sin(r) * this.recoil - this.bob;
-    this.x = x; this.y = y; this.rotation = rotation = r;
+    this.scale.set(unit * this.sx, unit * this.sy);
+    // drawn back along the heading on a wind-up — the coil before the spring
+    x -= Math.cos(heading) * this.recoil;
+    y -= Math.sin(heading) * this.recoil - this.bob;
+    this.x = x; this.y = y; this.rotation = r;
     this.glow.x = x; this.glow.y = y;
     // the glow layer is not rotated or mirrored with the body, so each lamp is carried
     // through the body's own transform by hand. The swim wave is left out: it moves the
     // tail far more than the flank, and a lamp a pixel off its organ is not visible
     if (this.lamps.length) {
-      const c = Math.cos(rotation), s = Math.sin(rotation);
+      const c = Math.cos(r), s = Math.sin(r);
       const kx = this.scale.x, ky = this.scale.y;
       for (const { s: sp, e } of this.lamps) {
-        const lx = e.x * kx, ly = e.y * ky;
+        const lx = this.turned(e.x) * kx, ly = e.y * ky;
         sp.position.set(lx * c - ly * s, lx * s + ly * c);
       }
     }
@@ -258,6 +287,9 @@ export class FishView extends Container {
   /** The bloom is not a child, so it does not go down with the rest of the view. */
   destroy(options?: Parameters<Container['destroy']>[0]) {
     if (this.baked) { releaseFish(this.baked); this.baked = null; }
+    // a mesh does not free its shader, and this one holds the skin's uniforms
+    this.skin?.shader.destroy();
+    this.skin = null;
     if (!this.glow.destroyed) this.glow.destroy({ children: true });
     if (!this.fog.destroyed) this.fog.destroy({ children: true });
     super.destroy(options);
@@ -291,6 +323,9 @@ export class FishView extends Container {
     const uvs = new Float32Array(cols * 4);
     const idx = new Uint32Array((cols - 1) * 6);
     this.colX = [];
+    this.turnX = new Float32Array(cols);
+    this.turnCos = new Float32Array(cols).fill(1);
+    this.hinge = clamp(front / (front - back), 0, 1) * (cols - 1);
     for (let j = 0; j < cols; j++) {
       const x = lerp(front, back, j / (cols - 1));
       this.colX.push(x);
@@ -299,9 +334,11 @@ export class FishView extends Container {
       const u = (x - back) / (front - back);
       uvs[j * 4] = u; uvs[j * 4 + 1] = 0;
       uvs[j * 4 + 2] = u; uvs[j * 4 + 3] = 1;
+      // tail first, so the head is drawn over it: mid-turn the strip folds back across
+      // itself, and it is the nose that has swung round toward the viewer
       if (j < cols - 1) {
         const a = j * 2;
-        idx.set([a, a + 2, a + 1, a + 1, a + 2, a + 3], j * 6);
+        idx.set([a, a + 2, a + 1, a + 1, a + 2, a + 3], (cols - 2 - j) * 6);
       }
     }
     this.verts = verts;
@@ -329,8 +366,10 @@ export class FishView extends Container {
                          feeding: i === 0 || i === A.armCount - 1 });
       }
     }
+    this.skin?.shader.destroy();
+    this.skin = livingSkin(this.baked.texture, this.baked.depth / this.baked.halfH);
     this.mesh = new MeshSimple({ texture: this.baked.texture, vertices: verts, uvs,
-                                 indices: idx });
+                                 indices: idx, shader: this.skin.shader });
     this.addChild(this.mesh);
 
     // emission and dread stay sprites: they are light, not body.
@@ -378,7 +417,7 @@ export class FishView extends Container {
 
     this.gaping = false;
     this.pose(0, 0, 0.5, 0);
-    this.scale.set(g.size / R * this.sx, g.size / R * this.sy * this.face);
+    this.scale.set(g.size / R * this.sx, g.size / R * this.sy);
   }
 
   chomp() {
@@ -422,7 +461,7 @@ export class FishView extends Container {
       // the roll: the body narrows edge-on and comes back upside down, over a third of a
       // second, as it drifts to a stop and starts to sink
       const roll = Math.min(1, t / 0.35);
-      this.scale.y = unit * this.face * Math.max(0.12, Math.abs(Math.cos(roll * Math.PI)))
+      this.scale.y = unit * Math.max(0.12, Math.abs(Math.cos(roll * Math.PI)))
         * (roll < 0.5 ? 1 : -1);
       this.fall.vx *= Math.exp(-3 * dt);
       this.fall.vy = this.fall.vy * Math.exp(-3 * dt) + 24 * dt;
@@ -431,7 +470,7 @@ export class FishView extends Container {
       this.rotation += (Math.round(this.rotation / Math.PI) * Math.PI - this.rotation) * Math.min(1, dt * 3);
       this.alpha = 1 - Math.max(0, (t - 0.6) / 0.7);
       this.tint = 0x8f96a4;
-      if (this.mesh && this.baked) this.mesh.texture = this.baked.texture;
+      if (this.mesh && this.baked) this.skinWith(this.baked.texture);
     }
     // the lights go out first
     this.glow.alpha = Math.max(0, 1 - t * 3);
@@ -469,26 +508,29 @@ export class FishView extends Container {
     // bell gets none, because a jelly does not steer by flexing.
     const x0 = this.colX[0], x1 = this.colX[n - 1];
     const mid = (x0 + x1) / 2, half = Math.abs(x0 - x1) / 2 || 1;
-    // in the mirrored frame local y is flipped, so the bend has to be too or a mirrored
-    // animal curls away from the turn it is making
-    const bend = m.pulse ? 0 : bank * d * 1.25 * Math.sign(this.roll || 1);
+    // turned round, the strip is mirrored across x, so the same steer curls the other way
+    // unless the bend turns with it
+    const bend = m.pulse ? 0 : bank * d * 1.25 * this.facing;
     for (let j = 0; j < n; j++) {
       const s = j / (n - 1);
       const env = quintic(s);
       const u = (this.colX[j] - mid) / half;
       spineY.push(Math.sin(s * m.waves * Math.PI * 2 - beat) * amp * env + bend * u * u);
     }
+    this.turn(n);
     // a bell does not undulate, it contracts: the strip narrows and lengthens on the beat
     const pulse = m.pulse ? 1 + Math.sin(beat) * m.pulse : 1;
     for (let j = 0; j < n; j++) {
-      const x = this.colX[j];
+      const x = this.turnX[j], c = this.turnCos[j];
       const y = spineY[j];
       const ja = Math.max(0, j - 1), jb = Math.min(n - 1, j + 1);
       // the normal comes from the neighbours, which keeps the width perpendicular to the
-      // curve rather than to the axis — the difference between a fish and a bent sprite
+      // curve rather than to the axis — the difference between a fish and a bent sprite.
+      // It is taken on the body before it turns and then turned with its column: taken
+      // after, an edge-on column's normal would lie along the body and lay its width flat
       const dx = this.colX[jb] - this.colX[ja], dy = spineY[jb] - spineY[ja];
       const l = Math.hypot(dx, dy) || 1;
-      const nx = -dy / l, ny = dx / l;
+      const nx = -dy / l * c, ny = dx / l;
       const hw = h * (m.pulse ? 2 - pulse : 1);
       this.verts[j * 4] = x * pulse + nx * hw;
       this.verts[j * 4 + 1] = y + ny * hw;
@@ -497,6 +539,52 @@ export class FishView extends Container {
     }
     this.mesh.vertices = this.verts;
     if (this.baked.arm) this.poseArms(this.baked.arm, spineY[0], pulse, thrust, dt);
+  }
+
+  /**
+   * Lay each column's yaw for this instant and walk the strip out along it. Column `j` is
+   * `yaw` of the way round, lagged by its distance from the nose, so the turn travels down
+   * the body; its x is the running sum of the segments before it, each foreshortened by its
+   * own yaw, then shifted so the body's origin stays where the simulation has it. That sum is
+   * what folds the body: the turned head lays its segments back across the unturned tail.
+   */
+  private turn(n: number) {
+    const L = TURN_LEAD;
+    for (let j = 0; j < n; j++) {
+      const s = j / (n - 1);
+      const v = this.yaw * (1 + L) - L * (this.lead ? 1 - s : s);
+      // linear in angle: the projection is already a cosine, slow at either end and fastest
+      // edge-on, and an ease on top of it spent the whole turn in two frames at the middle.
+      // The power keeps a column from lingering edge-on, where the strip has no thickness to
+      // show and the head read as a card turning rather than a body with a width of its own
+      const c = Math.cos(Math.PI * clamp(v, 0, 1));
+      this.turnCos[j] = Math.sign(c) * Math.abs(c) ** EDGE_ON;
+    }
+    let x = 0;
+    this.turnX[0] = 0;
+    for (let j = 1; j < n; j++) {
+      x -= (this.colX[j - 1] - this.colX[j]) * (this.turnCos[j - 1] + this.turnCos[j]) / 2;
+      this.turnX[j] = x;
+    }
+    const k = Math.min(n - 2, Math.floor(this.hinge)), f = this.hinge - k;
+    const at = lerp(this.turnX[k], this.turnX[k + 1], f);
+    for (let j = 0; j < n; j++) this.turnX[j] -= at;
+    this.facing = lerp(this.turnCos[k], this.turnCos[k + 1], f);
+  }
+
+  /**
+   * A body-space x carried through the turn: between columns it follows the strip, and past
+   * either end — a lure, an arm reaching ahead — it runs on along the end column's yaw.
+   */
+  private turned(x: number) {
+    const cx = this.colX, n = cx.length;
+    if (n < 2) return x;
+    const step = (cx[0] - cx[n - 1]) / (n - 1);
+    const t = (cx[0] - x) / step;
+    if (t <= 0) return this.turnX[0] - t * step * this.turnCos[0];
+    if (t >= n - 1) return this.turnX[n - 1] - (t - n + 1) * step * this.turnCos[n - 1];
+    const k = Math.floor(t);
+    return lerp(this.turnX[k], this.turnX[k + 1], t - k);
   }
 
   /**
@@ -525,7 +613,8 @@ export class FishView extends Container {
     for (let i = 0; i < n; i++) {
       const arm = this.arms[i];
       const v = (i / (n - 1)) * 2 - 1;
-      const rx = rig.rootX * pulse, ry = headY + v * rig.spread;
+      const ry = headY + v * rig.spread;
+      let rx = rig.rootX * pulse;
       // swimming bundles the crown into a point; holding something flares it open
       let heading = v * 0.5 * (1 - Math.min(1, thrust) * 0.4) * (1 + e * 0.7);
       const len = rig.len * (arm.feeding ? 0.5 : 0.78 / A.armPair) * (1 + e * 0.12);
@@ -540,6 +629,10 @@ export class FishView extends Container {
         x += Math.cos(heading) * step;
         y += Math.sin(heading) * step;
       }
+      // the coil is walked out on the body before it turns, then carried round with it; the
+      // lash is aimed afterwards, since what it is aimed at is where it is on screen
+      for (let j = 0; j < ARM_COLS; j++) pts[j * 2] = this.turned(pts[j * 2] / pulse) * pulse;
+      rx = this.turned(rig.rootX) * pulse;
       if (arm.feeding && e > 0.001) {
         const dx = tx - rx, dy = ty - ry;
         const d = Math.hypot(dx, dy) || 1;
@@ -580,10 +673,9 @@ export class FishView extends Container {
   animate(dt: number, thrust: number, beat: number, bank: number, act: Pose = REST) {
     if (this.version !== artVersion) this.rebuild(this.g);
     this.clock += dt;
-    // two units of roll, back-up to back-down, over `ROLL_TIME`
-    const step = dt * 2 / ROLL_TIME;
-    this.roll = this.roll < this.face ? Math.min(this.face, this.roll + step)
-      : Math.max(this.face, this.roll - step);
+    const want = this.face > 0 ? 0 : 1;
+    if (this.yaw === 1 - want) this.lead = this.yaw ? 1 : 0;
+    this.yaw = want ? Math.min(1, this.yaw + dt / TURN_TIME) : Math.max(0, this.yaw - dt / TURN_TIME);
     this.hurtT = Math.max(0, this.hurtT - dt * 3.5);
     // a light organ breathes rather than flickers: a slow drift in strength, each on its own
     for (const l of this.lamps) {
@@ -592,6 +684,9 @@ export class FishView extends Container {
     }
     let sx = 1;
     let sy = 1 - Math.abs(bank) * 0.16;
+    // folded short through a turn, the body bulges across it: the squash has to keep its
+    // volume or it reads as the art shrinking rather than the animal bunching round
+    sy *= 1 + Math.sin(this.yaw * Math.PI) * 0.1;
     // Idle: a body with nothing to do hangs in the water and breathes — a slow rise and fall
     // and the nose nodding with it. It fades out as the body puts effort in, or every
     // cruising fish would bob like a cork.
@@ -623,9 +718,21 @@ export class FishView extends Container {
     const gape = act.open && this.chompT < 0.35;
     if (gape !== this.gaping && this.mesh && this.baked) {
       this.gaping = gape;
-      this.mesh.texture = gape ? this.baked.open : this.baked.texture;
+      this.skinWith(gape ? this.baked.open : this.baked.texture);
+    }
+    if (this.skin) {
+      const u = this.skin.uniforms.uniforms;
+      u.uBeat = beat;
+      u.uClock = this.clock;
+      this.skin.uniforms.update();
     }
     this.pose(beat, bank, thrust * (1 + w * 0.9), dt);
+  }
+
+  private skinWith(texture: Baked['texture']) {
+    if (!this.mesh) return;
+    this.mesh.texture = texture;
+    this.skin?.use(texture);
   }
 
   get genome() { return this.g; }

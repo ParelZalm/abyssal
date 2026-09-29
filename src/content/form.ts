@@ -431,6 +431,26 @@ export function faceFor(prev: 1 | -1, angle: number): 1 | -1 {
   return c < -0.2 ? -1 : c > 0.2 ? 1 : prev;
 }
 
+/**
+ * The steepest a side-on body is drawn climbing or diving. Tank steering takes a turn-about
+ * through vertical, and a body drawn there has no side to turn to: facing left and facing
+ * right are the same animal mirrored about its spine, and any change between them is a roll.
+ * Held off vertical, the facing changes on a body still pitched well short of it, where the
+ * turn can be a yaw — the nose swinging round toward the viewer — instead.
+ */
+const MAX_PITCH = 0.96;
+
+/**
+ * The rotation of a body's facing frame: a body point `(x, y)` in R units, nose +x and back
+ * -y, lands at `rotate((x * face, y), drawnAngle(angle, face))`. The pitch is eased toward
+ * `MAX_PITCH` rather than clamped, so a cruising body is drawn at its true heading and only
+ * a steep one is held back — a clamp jumps by the difference whenever the facing changes.
+ */
+export function drawnAngle(angle: number, face: 1 | -1) {
+  const pitch = Math.atan2(Math.sin(angle), Math.cos(angle) * face);
+  return face * MAX_PITCH * Math.tanh(pitch / MAX_PITCH);
+}
+
 /** Position along the spine at t. The nose is +x: the animal faces the way it swims. */
 export function spineAt(t: number, f: Form) {
   return lerp(f.len * 0.52, -f.len * 0.48, t) * R;

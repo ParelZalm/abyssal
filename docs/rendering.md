@@ -109,17 +109,28 @@ because a guardian is the animal the player is meant to recognise on sight.
 
 ### Facing
 
-A side-on animal rotates to its heading, and once that heading is past vertical it rolls
-over about its own spine so its back ends up up. `faceFor` (`content/form.ts`) decides which
-way up it should be, with a hysteresis band so an animal swimming straight up does not roll
-back and forth; `FishView` eases `roll` toward it over `ROLL_TIME`, so the body thins
-edge-on through the middle of the roll and comes back the other way up. `Creature.face` is
-state of the body, not the view, because the lure's strike point (`sim/organs/body.ts`) has
-to agree with where the bulb is drawn.
+A side-on animal pitches toward its heading and, once that heading is past vertical, turns
+about. `faceFor` (`content/form.ts`) decides which way it faces, with a hysteresis band so an
+animal swimming straight up does not turn back and forth; `drawnAngle` eases the drawn pitch
+toward 55°, because at vertical the two facings are mirror images about the spine and the only
+change between them is a roll. `FishView` turns each column of the strip on its own yaw,
+lagged from nose to tail (`TURN_TIME`, `TURN_LEAD`): the head swings round toward the viewer,
+the body folds short behind it, and the tail follows through. The strip draws tail first, so
+the head is on top of the fold. `Creature.face` is state of the body, not the view, because the
+lure's strike point (`sim/organs/body.ts`) has to agree with where the bulb is drawn.
 
-Two earlier versions were undone. A hard mirror at the hysteresis edge snapped the body
-into its mirror image in a frame, and a drawn-pitch cap at 60° jumped by the difference
-whenever the facing changed; both read as the model flipping rather than the fish turning.
+Three earlier versions were undone. A hard mirror at the hysteresis edge snapped the body into
+its mirror image in a frame; a drawn-pitch cap at 60° jumped by the difference whenever the
+facing changed; and a 0.3 s roll about the spine, squashing the body top to bottom, still read
+as the model flipping. The design board's *Motion* group loops the turn for three species.
+
+Every strip is drawn with `render/creature/living.ts`: sub-pixel sampling (four
+taps blended across one screen pixel, so a fractional move shows as in-between colours) and a
+displacement on the grid: single texels moved by whole texels, decided per texel and held for
+a frame — a one-texel nub running back along each fin's outline, the tail's tip stepping a
+texel on the beat, a lone nub now and then. A smooth sine field read as the art wobbling, and
+shifting whole fin columns by a texel read as rough: only the outline moves, and only outward.
+The cost is the batch: a mesh with its own shader is a draw call per body.
 
 ### Motion states
 

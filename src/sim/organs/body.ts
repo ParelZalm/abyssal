@@ -1,4 +1,4 @@
-import { formFor, lureBulb, R } from '../../content/form';
+import { drawnAngle, formFor, lureBulb, R } from '../../content/form';
 import { dist2 } from '../../core/util';
 import { envenom, sting } from './effects';
 import { O, type Organ } from './types';
@@ -45,10 +45,12 @@ export const BODY: Organ[] = [
       if (!p.alive) return;
       const b = lureBulb(c.genome, formFor(c.genome, c.species.plan));
       const k = c.genome.size / R;
+      // in the view's facing frame, so the bulb is struck where it is drawn
+      const r = drawnAngle(c.angle, c.face);
+      const cr = Math.cos(r), sr = Math.sin(r);
+      const lx = b.x * c.face;
+      const bx = c.x + (lx * cr - b.y * sr) * k, by = c.y + (lx * sr + b.y * cr) * k;
       const cos = Math.cos(c.angle), sin = Math.sin(c.angle);
-      // mirrored with the view: the bulb hangs over the head whichever way the animal faces
-      const ly = b.y * c.face;
-      const bx = c.x + (b.x * cos - ly * sin) * k, by = c.y + (b.x * sin + ly * cos) * k;
       const touch = p.radius * 0.8 + c.genome.size * 0.25;
       if (dist2(p.x, p.y, bx, by) > touch * touch) return;
       c.angle = Math.atan2(p.y - c.y, p.x - c.x);

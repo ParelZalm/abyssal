@@ -183,7 +183,7 @@ type Act = 'idle' | 'swim' | 'turn' | 'attack' | 'hurt' | 'death';
 const ACTS: Record<Act, string> = {
   idle: 'Hangs level and breathes: a slow rise and fall, the nose nodding with it.',
   swim: 'Cruising: the wave rides the body and the tail beats with the effort.',
-  turn: 'Turning back: rotates round through the turn and rolls over as it goes, back up.',
+  turn: 'Turning back: the nose swings round toward you, the body folds short behind it, the tail follows.',
   attack: 'Wind-up, lunge, bite, recovery — the jaw opens on the coil and snaps shut on the bite.',
   hurt: 'A wound: knocked short, flashed red, blinked for a few frames.',
   death: 'Rolls belly-up, sinks and fades. Swallowed whole, it goes down the throat instead.',
