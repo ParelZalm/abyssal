@@ -23,6 +23,7 @@ import { bakeFish, releaseFish, type Baked, type Rig } from './fishbake';
 import { drawnAngle, PLAN_ART, quintic, R, type Plan } from '../../content/form';
 import { menace, type Genome } from '../../content/genome';
 import { glowTexture } from '../textures';
+import type { Light } from '../lighting';
 import { hsl, lerp } from '../../core/util';
 import { artDensity, artVersion } from '../pixel';
 import { livingSkin, type LivingSkin } from './living';
@@ -242,6 +243,24 @@ export class FishView extends Container {
     this.fog.alpha = alpha;
   }
 
+  /**
+   * The light this body throws on the room (`render/lighting.ts`): one light per lamp where
+   * the lamp is, and one round the body for a real light organ or a pale body's own glow.
+   * Reach is in world units — this is light falling on rock, not the bloom in the eye.
+   */
+  shine(out: Light[]) {
+    if (!this.visible || this.glow.alpha <= 0.02) return;
+    const a = this.glow.alpha;
+    const R = this.g.size * 0.62;
+    const own = Math.max(this.g.glow, this.g.pale * 0.6);
+    if (own > 0.05) out.push({ x: this.glow.x, y: this.glow.y, r: R * (3 + own * 5),
+      color: this.halo.tint as number, a: Math.min(1, own) * a });
+    for (const { s, e } of this.lamps) {
+      out.push({ x: this.glow.x + s.x, y: this.glow.y + s.y, r: R * (1.4 + e.strength * 2.2),
+        color: e.color, a: s.alpha * a });
+    }
+  }
+
   /** A bloom per light organ, sized in pixels of the frame rather than in body lengths. */
   private hangLamps(lights: Emitter[]) {
     for (const l of this.lamps) l.s.destroy();
@@ -358,7 +377,8 @@ export class FishView extends Container {
     // the floor is lower than it was before the pixel outline and rim: those carry the
     // silhouette in dark water now, and a disc of light round every animal reads as a
     // spotlight on each of them rather than as bioluminescence
-    this.halo.alpha = Math.min(0.95, 0.13 + g.glow * 0.65);
+    // a pale body is lit from within, so it carries a real halo whatever its organs
+    this.halo.alpha = Math.min(0.95, 0.13 + g.glow * 0.65 + g.pale * 0.3);
     // the core sits inside the body's own width, so it lifts the animal's value rather
     // than spilling a second disc of light around it
     // and only a real light organ gets one: on an unlit animal it lands as a hot white

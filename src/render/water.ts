@@ -38,6 +38,8 @@ uniform float uGateY;    // world depth of the next thermocline
 uniform float uGateOpen; // 0 sealed, 1 open
 uniform float uLight;
 uniform float uGlow;
+uniform vec2 uPool;      // world position of the light the player carries
+uniform float uPoolR;    // how far that light falls off, world units
 uniform float uDread;   // how close something that can eat you is, 0..1
 
 // --- biome: the visual identity of the tier the camera is in ----------------
@@ -159,8 +161,10 @@ void main() {
   col += uAccent * rays * reach * uLight * uRays * (0.1 + 0.3 * aloft);
   col += uAccent * rays * rays * reach * uLight * uRays * 0.07;
 
-  float d = length((uv - 0.5) * uView);
-  col += vec3(0.30, 0.95, 0.78) * uGlow * exp(-d / 380.0) * 0.45;
+  // the player's own light, pooled in the water around it wherever it is in the room: the
+  // camera no longer follows it, so the pool is placed in the world, not at the screen's centre
+  float d = length(world - uPool);
+  col += vec3(0.42, 0.55, 0.95) * uGlow * exp(-d / uPoolR) * 0.45;
 
   // --- dread: something large has noticed you ------------------------------
   if (uDread > 0.01) {
@@ -236,6 +240,7 @@ export class Water {
     uView: Float32Array; uCam: Float32Array; uTime: number;
     uNear: Float32Array; uFar: Float32Array; uBelow: Float32Array;
     uGateY: number; uGateOpen: number; uLight: number; uGlow: number; uDread: number;
+    uPool: Float32Array; uPoolR: number;
     uTurbid: number; uCloudScale: number; uCloudEdge: number; uRays: number;
     uShimmer: number; uAccent: Float32Array; uAmbient: number;
   };
@@ -251,6 +256,8 @@ export class Water {
     uGateOpen: { value: 0, type: 'f32' },
     uLight: { value: 1, type: 'f32' },
     uGlow: { value: 0, type: 'f32' },
+    uPool: { value: new Float32Array([0, 0]), type: 'vec2<f32>' },
+    uPoolR: { value: 120, type: 'f32' },
     uDread: { value: 0, type: 'f32' },
     uTurbid: { value: 0.34, type: 'f32' },
     uCloudScale: { value: 1, type: 'f32' },
@@ -288,7 +295,11 @@ export class Water {
     this.shown.height = h;
   }
 
-  update(view: View, glow: number, dread: number, gateY: number, gateOpen: boolean) {
+  /**
+   * `pool` is where the player's light is and how far it reaches; `glow` how bright it is.
+   */
+  update(view: View, glow: number, dread: number, gateY: number, gateOpen: boolean,
+         pool: { x: number; y: number; r: number }) {
     const { x: camX, y: camY } = view;
     const u = this.u;
     u.uView[0] = view.w; u.uView[1] = view.h;
@@ -303,6 +314,8 @@ export class Water {
     u.uBelow.set(waterColor(Math.min(gateY + 700, DEPTH_MAX)));
     u.uLight = lightAt(camY);
     u.uGlow = glow;
+    u.uPool[0] = pool.x; u.uPool[1] = pool.y;
+    u.uPoolR = pool.r;
     u.uDread += (dread - u.uDread) * 0.08;
 
     // the biome is already cross-faded across the thermocline by depth; easing on top

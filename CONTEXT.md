@@ -26,8 +26,11 @@ drop-in lands; a **Fight** room locks its exits until its hostiles are dead; a
 **Deal** room, which may open after a boss, offers deal mutations; the
 **Boss** room holds the tank's boss, and beating it opens the descent.
 
-**Obstacle** — a part of a room that blocks: a boulder, a coral head, a wreck's hull.
-Anything that sways and can be swum through is decoration, not an obstacle.
+**Obstacle** — a part of a room that blocks: a boulder, a rock pillar, a wreck's hull.
+
+**Decoration** — what grows on a room's rock or has sunk onto it: sponges, anemones, weed,
+coral, a crate. It never blocks; it is where a room's colour and much of its light come from.
+_Avoid_: prop, scenery
 
 **Pedestal** — a place in a room where one mutation is offered, taken or left.
 
@@ -89,6 +92,9 @@ emptied in halves; a deal is paid in containers, not in what fills them.
 
 **Shell** — the currency, found in rooms and spent in shops.
 _Avoid_: coin, money
+
+**Key** — what opens a locked door or a chest. Found and dropped like a shell, spent one
+at a time.
 
 **Belly** — what swallowing fills, by the size of what went down. A full belly empties by
 passing a pickup, and starts again.

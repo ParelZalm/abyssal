@@ -8,6 +8,7 @@ import type { Creature } from '../sim/creature';
 import type { World } from '../sim/world';
 import type { Dread } from './Dread';
 import type { View } from './view';
+import type { Lighting, Light } from './lighting';
 import { lightAt, type Water } from './water';
 
 /** The cast on a body the ampullae found but the eyes could not: cold, like the field. */
@@ -19,6 +20,13 @@ const FELT_TINT = 0x9fc4ff;
  * fifths as clear as it would be, which is a shape to notice and not one to count on.
  */
 const HIDDEN = 0.75;
+/** The light every player body throws into the water, on top of what its organs add. */
+const LARVA_LIGHT = 0.9;
+/**
+ * How far the larva's own light reaches, in body radii: a pool some four body lengths
+ * across, the reference's, which is what the player sees the room by.
+ */
+const POOL = 11;
 
 /**
  * What the player can make out this frame: which bodies show and how clearly, the ring
@@ -28,15 +36,20 @@ export class Scene {
   /** The membrane of awareness around your own body, so you never lose yourself. */
   readonly focus = new Graphics();
 
-  constructor(private readonly water: Water) {
+  private readonly shine: Light[] = [];
+
+  constructor(private readonly water: Water, private readonly lighting: Lighting) {
     // drawn large and scaled down, so the curve stays smooth at any zoom
     this.focus
       .circle(0, 0, 100).stroke({ color: 0xdffdf2, width: 4.5, alpha: 0.5 })
       .circle(0, 0, 94).stroke({ color: 0xdffdf2, width: 12, alpha: 0.07 });
   }
 
-  /** Draw the frame and return how frightening it is, for the HUD. */
-  draw(view: View, world: World, p: Creature, phase: Phase, dread: Dread) {
+  /**
+   * Draw the frame and return how frightening it is, for the HUD. `lights` are the room's
+   * standing lights — the decoration's — added to what the bodies throw.
+   */
+  draw(view: View, world: World, p: Creature, phase: Phase, dread: Dread, lights: readonly Light[]) {
     const halo = p.radius * (4.4 + Math.sin(view.t * 1.1) * 0.12);
     this.focus.x = p.x;
     this.focus.y = p.y;
@@ -101,8 +114,22 @@ export class Scene {
     }
 
     const level = dread.level(danger);
-    // a tank has no thermocline: the shader's seal is put below the floor of the world, open
-    this.water.update(view, p.genome.glow, phase === 'play' ? level : 0, DEPTH_MAX * 2, true);
+    // the lights the frame is made of: the larva's pool first, then every lamp in the room
+    const lit = this.lighting;
+    lit.begin();
+    if (phase !== 'over') {
+      lit.add({ x: p.x, y: p.y, r: p.radius * POOL, color: 0xd6e2ff, a: 1 });
+    }
+    this.shine.length = 0;
+    p.view.shine(this.shine);
+    for (const c of world.creatures) c.view.shine(this.shine);
+    for (const l of this.shine) lit.add(l);
+    for (const l of lights) lit.add(l);
+    // a tank has no thermocline: the shader's seal is put below the floor of the world, open.
+    // The player carries a light of its own whatever its organs: a larva is the brightest
+    // thing in the tank (`docs/media/reference/`), and the pool it throws is how you find it
+    this.water.update(view, LARVA_LIGHT + p.genome.glow, phase === 'play' ? level : 0,
+      DEPTH_MAX * 2, true, { x: p.x, y: p.y, r: p.radius * 7 });
     return phase === 'over' ? 0 : level;
   }
 }

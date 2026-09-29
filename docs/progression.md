@@ -281,7 +281,10 @@ Shark, then an Angler". `Run.forms` holds them, and `Run.form` is the latest, th
   silhouette the player is meant to recognise on sight.
 - **The smoke stays.** The wraith's see-through body is `Genome.smoke` (set on the player
   in `reset`), not only the wraith plan's `smoke` art flag, so a transformed player is a
-  smoky shark among real ones. The paint reads either.
+  smoky shark among real ones. The paint reads either. The player also hatches `pale` (a
+  larva's pallor, near white; the palette lifts and desaturates its ramp) with a big eye and
+  a lavender cast, and a pale body is less see-through and carries a halo, since it is the
+  brightest thing in a dark tank.
 - **Grants are organ magnitudes**, so the registry carries them and nothing reads a form
   by name. `frenzy` is the one organ only a form grants; the `damage` hook gained the
   defender for it.

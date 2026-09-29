@@ -12,7 +12,8 @@ same room as a cave). What they agree on, and what every stage should build towa
   coral heads, bioluminescent tips — decoration growing off the surfaces is where a room's
   colour comes from.
 - **Light pools around what glows.** The pale larval player is the brightest thing on
-  screen, with a pool of light around it; lures, jellies and photophores are the rest.
+  screen, with a pool of light around it; lures, jellies, photophores and glowing growth
+  are the rest. The frame is dark and they make it (*Lighting*, below).
 - **Rooms are furnished.** Crates, cages, pipes, a grate in the floor, a lit hatch: the
   aquarium shows through the reef.
 - **Isaac's HUD.** Hearts, then currency, bombs and keys under them at top left; the
@@ -114,6 +115,50 @@ grid, and re-baked only when the art density changes tier. Nothing about the ter
 
 The design board's *Rooms* group draws every template at the density it plays at on a
 1440 × 900 screen, since the board's own tier is a mid-run one for the animals.
+
+## Lighting
+
+The tank is dark and its light sources make the scene (`render/lighting.ts`). Every frame
+the lights are drawn additively, under the camera's transform, into a texture at a quarter
+of the frame's resolution that starts at a deep-blue ambient (`Lighting.level`); a
+screen-sized sprite multiplies the world by it — water, rock, decoration and bodies. Light
+is smooth, and `FramePass` steps and dithers it onto the grid with everything else.
+
+- **The lights:** the larva's own pool (`POOL`, eleven body radii, in `Scene`), every body's
+  lamps and a real light organ's or a pale body's glow (`FishView.shine`), and the
+  decoration's — each anemone's crown, each glow bulb (`DecorView.lights`).
+- **The blooms are above the dark.** `Camera.over` is a second world root posed like
+  `root` and drawn after the multiply; `World.glow` and the decoration's blooms live there,
+  so a lamp is never darkened by its own shadow. A light that only reveals what is near it
+  does not read as a light: each decoration light has a bloom in the water too.
+- The water shader still adds the player's colour to the water around it (`uPool`), now at
+  the body's world position rather than the screen's centre, since the camera holds the
+  room and no longer follows.
+
+## Decoration
+
+`render/decor.ts`: what grows on the rock and what has sunk onto it, where a room's colour
+lives. It never blocks, so it is placed and drawn in the render layer and the simulation
+does not hear of it.
+
+- **Placement** (`placeDecor`) scans the room's field column by column for every face that
+  looks up at open water, notes how level it is and how much water stands over it, and
+  walks the faces in a seeded shuffle placing kinds by weight — rock and sand each have
+  their own — with a least gap per kind, until about `COVER` (1.8) pieces a tile of face.
+  Small kinds stand on uneven ground; the rest need it level. At most one crate, on the
+  flattest open floor. The first cut at under one a tile read as bare rock with a few plants.
+- **Kinds:** tube sponges, anemones with glowing tips, kelp, branching coral, brain coral,
+  sea grass, glow bulbs and a sunken crate. Each is painted per pixel (`PAINTERS`) at the art
+  density, side-on and lit from above-left, then outlined and rimmed off its own silhouette
+  as a creature is, stepped through the Bayer screen and lit by the tank's light. Emissive
+  pixels (a tip, an orb) are left bright.
+- **Kelp and grass sway** as a `MeshRope` from the base, painted lying along x so the rope's
+  length is theirs; nothing rotates as a whole. Swaying pieces go behind standing ones.
+- Pieces stand behind the bodies and under the rock's layer, so the rock covers each base
+  and its shadow falls on what grows beside it.
+
+The board has a *Decoration* group, three seeds of each kind, and the *Rooms* cells are
+decorated. Neither is lit: the board shows the art, the game shows it in the dark.
 
 ## Creatures
 

@@ -62,6 +62,19 @@ What it found, and what it leaves:
   in the water shader, the level-up draft and hunger (stage 2), `Creature.quarry` (stage 4),
   the starting forms' depth unlock (stage 7), and the parallax scenery (stage 8).
 
+## Art pass (pulled forward)
+
+Done after stage 1, from two reference frames (`docs/media/reference/`, and *Art direction*
+in `rendering.md`): the rock is dark pebbled stone with lit caps, the water navy, the
+player a pale glowing larva (`Genome.pale`), and the frame dark and made by its lights
+(`render/lighting.ts`). A first decoration pass is in (`render/decor.ts`), taken from stage
+8: sponges, anemones, kelp, coral, brain coral, sea grass, glow bulbs and a crate, placed
+along every upward face.
+
+Left for later: the tank frame of the first reference (rooms stay cave for now), decoration
+hanging from ceilings and on walls, a crate that turns up more often, and tuning the dark
+by eye.
+
 ## 2. Hearts and swallowing
 
 - Hearts in halves, hits and invulnerability, armour as a shrug chance.
@@ -105,6 +118,8 @@ What it found, and what it leaves:
 - The shop: three items at 3–5, one mutation at 15.
 - Items on E: food pellet (a heart), air stone (a bubble burst that shoves), snail (cures
   poison and bleeding).
+- Keys: dropped and found like shells; the treasure room's and shop's doors and a room's
+  chests take one. Shown under shells on the HUD, as in the reference.
 - The deal room, 50% after a boss: one deal mutation paid in heart containers, one curse
   (Blood Lamp, Brittle Frame, Open Veins, Leaden Bones and whatever joins them).
 - Board: the shop, the deal room, every item.
@@ -120,8 +135,8 @@ What it found, and what it leaves:
 
 ## 8. Liveliness
 
-- Decoration per tank: coral, macro-algae, sea grass and anemones in the reef; the wreck
-  as the reef's centrepiece; the deep tank's own. Side-on rooms get bottom-heavy, so
+- Decoration per tank, on the first pass above: the wreck as the reef's centrepiece, the
+  deep tank's own growth, and what hangs from ceilings and clings to walls. Side-on rooms get bottom-heavy, so
   templates carry things that block higher up — overhangs, arches, stalactites, a wreck on
   its side, a chain, a net.
 - Ambient fauna in every room: things to eat and things that flee.

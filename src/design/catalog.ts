@@ -18,6 +18,7 @@ import { BANDS, zoneOf } from '../content/zones';
 import { ROOMS, tankById } from '../content/tanks';
 import { PIXEL } from '../render/pixel';
 import { RoomView } from '../render/room';
+import { DECOR_KINDS, DecorView, placeDecor, type DecorKind, type Piece } from '../render/decor';
 import { Terrain } from '../sim/terrain';
 import type { IconName } from '../ui/icons';
 import { rgb, Rng } from '../core/util';
@@ -725,11 +726,62 @@ function roomGroup(): DesignGroup {
         make: () => {
           const view = new RoomView(terrain, zoom / PIXEL);
           view.update();
+          const decor = new DecorView(placeDecor(terrain, 1), terrain.cy, zoom / PIXEL);
+          decor.update(0);
           // a room sits at its tank's depth in the world; the cell wants it about the origin
-          view.root.y = -terrain.cy;
           const c = new Container();
-          c.addChild(view.root);
-          return c;
+          const world = new Container();
+          world.y = -terrain.cy;
+          world.addChild(decor.root, view.root);
+          c.addChild(world);
+          return Object.assign(c, { decor });
+        },
+        animate: (view: Container, dt: number) => {
+          const v = view as Container & { decor: DecorView; t?: number };
+          v.t = (v.t ?? 0) + dt;
+          v.decor.update(v.t);
+        },
+      };
+    }),
+  };
+}
+
+/**
+ * Every kind of decoration, three of each, standing on nothing over the nursery's water — the
+ * same painter the rooms use, at the density they play at.
+ */
+function decorGroup(): DesignGroup {
+  const tank = tankById('nursery');
+  const zoom = Math.min(REF_SCREEN.w / (32 * tank.tile), REF_SCREEN.h / (18 * tank.tile));
+  const d = zoom / PIXEL;
+  const heights: Record<DecorKind, number> = { sponge: 1.1, anemone: 0.7, kelp: 3, coral: 1.2,
+    brain: 0.55, grass: 0.5, bulb: 0.9, crate: 0.9 };
+  return {
+    id: 'decor',
+    name: 'Decoration',
+    note: 'What grows on the rock and what has sunk onto it. Nothing here blocks; kelp and grass sway.',
+    items: DECOR_KINDS.map(kind => {
+      const h = heights[kind] * tank.tile;
+      return {
+        id: `decor-${kind}`,
+        name: kind,
+        note: 'three seeds',
+        source: 'src/render/decor.ts',
+        span: h * 1.6,
+        depth: tank.depth,
+        facts: { height: `${heights[kind]} tiles` },
+        make: () => {
+          const pieces: Piece[] = [-1, 0, 1].map((k, i) => ({
+            kind, x: k * h * 0.75, y: h * 0.5, h, seed: 11 + i * 97, flip: i === 1,
+          }));
+          const decor = new DecorView(pieces, tank.depth, d);
+          decor.update(0);
+          return Object.assign(decor.root, { decor });
+        },
+        animate: (view: Container, dt: number) => {
+          const v = view as Container & { decor: DecorView; t?: number };
+          v.t = (v.t ?? 0) + dt;
+          v.decor.update(v.t);
         },
       };
     }),
@@ -737,6 +789,6 @@ function roomGroup(): DesignGroup {
 }
 
 export function catalog(): DesignGroup[] {
-  return [roomGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(),
+  return [roomGroup(), decorGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(),
           speciesGroup(), guardianGroup(), motionGroup(), propGroup(), fieldGroup(), waterGroup()];
 }

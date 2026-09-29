@@ -19,6 +19,7 @@ import { Texture } from 'pixi.js';
 import { eyeOf, fadeOf, menace, photophoreOf, type Genome } from '../../content/genome';
 import { formFor, halfWidth, PLAN_ART, spineAt, R, type Form, type Plan, type PlanArt } from '../../content/form';
 import { fbmSigned } from '../../core/noise';
+import { lerp } from '../../core/util';
 import { BLOOM_TRAIL, hasSynergy, synergiesOf } from '../../sim/organs';
 import { artDensity } from '../pixel';
 import { palette, type Palette } from './bake/palette';
@@ -154,7 +155,9 @@ function paint(g: Genome, plan: Plan): Baked {
   // The player's own plan. A single surface has no overlaps to composite, so the body is
   // simply drawn see-through and that is all.
   const smoke = A.smoke || g.smoke > 0;
-  if (smoke) pal.alpha *= 0.6;
+  // see-through, but a pale body less so: a larva's glass is lit from inside, and the
+  // water showing through it would dim the one bright thing in the tank
+  if (smoke) pal.alpha *= lerp(0.6, 0.88, g.pale);
   // Ghost Light: a light hanging in water that has nothing behind it. The lure keeps its
   // full strength, so fading the body is what makes the light stand out
   if (hasSynergy(g, 'ghostlight')) pal.alpha *= 0.62;

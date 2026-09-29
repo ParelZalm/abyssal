@@ -58,10 +58,13 @@ export function ramp(hue: number, sat: number, lo: number, hi: number, n = 6, sh
 export function palette(g: Genome, men: number, A: PlanArt, seed: number): Palette {
   const t = A.tone;
   // the more dangerous it is, the darker the mass and the hotter its accent
-  const hi = (0.74 - men * 0.2) * t;
+  // and the paler, the lighter the whole ramp and the less of its hue: a larva is lit from
+  // within, near white, and only its darks keep the cold of the water
+  const pale = g.pale;
+  const hi = lerp((0.74 - men * 0.2) * t, 0.95, pale);
   const accentHue = lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, men * 0.75);
   return {
-    ramp: ramp(g.hue, 0.34 + men * 0.1, 0.035, Math.max(0.2, hi)),
+    ramp: ramp(g.hue, (0.34 + men * 0.1) * (1 - 0.55 * pale), lerp(0.035, 0.16, pale), Math.max(0.2, hi)),
     accent: rgbOf(accentHue, 0.6 + men * 0.3, 0.58),
     dark: rgbOf(g.hue, 0.5, 0.06),
     bone: rgbOf(72, 0.22, 0.78),

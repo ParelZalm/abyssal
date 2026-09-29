@@ -14,6 +14,8 @@ import { Fx } from './render/fx';
 import { Impacts } from './render/Impacts';
 import { Ocean } from './render/ocean';
 import { followZoom, FramePass, PIXEL } from './render/pixel';
+import { DecorView, placeDecor } from './render/decor';
+import { Lighting, lightTexture } from './render/lighting';
 import { RoomView } from './render/room';
 import { Scene } from './render/Scene';
 import { Water } from './render/water';
@@ -53,6 +55,7 @@ export class Game {
   /** What every run has found, kept across runs. See `run/codex.ts`. */
   private readonly codex = backfillDepth(loadCodex());
   private water!: Water;
+  private lighting!: Lighting;
   private scene!: Scene;
   private input!: Input;
 
@@ -64,6 +67,7 @@ export class Game {
   private dread!: Dread;
   room!: Terrain;
   private roomView!: RoomView;
+  private decor!: DecorView;
   run!: Run;
   world!: World;
   player!: Creature;
@@ -88,7 +92,8 @@ export class Game {
     this.app.stage.filterArea = this.app.screen;
     document.getElementById('stage')!.append(this.app.canvas);
     this.water = new Water(this.app.renderer);
-    this.scene = new Scene(this.water);
+    this.lighting = new Lighting(this.app.renderer, lightTexture());
+    this.scene = new Scene(this.water, this.lighting);
     this.input = new Input({
       pause: () => this.togglePause(),
       mute: () => this.ui.toast(toggleMute() ? 'Sound off' : 'Sound on'),
@@ -189,7 +194,9 @@ export class Game {
   private reset(choice: RunChoice = this.run?.choice ?? { start: 'hatchling' }) {
     this.app.stage.removeChildren();
     this.camera.root.removeChildren();
+    this.camera.over.removeChildren();
     this.roomView?.destroy();
+    this.decor?.destroy();
 
     const seed = choice.seed ?? ((Math.random() * 2 ** 32) >>> 0);
     this.run = new Run(choice, seed, this.codex);
@@ -199,10 +206,16 @@ export class Game {
     const templates = ROOMS.filter(r => r.tank === tank.id);
     const room = this.room = new Terrain(this.rng.pick(templates), tank, this.rng.int(0, 999));
     this.roomView = new RoomView(room);
+    this.decor = new DecorView(placeDecor(room, this.rng.int(0, 1e6)), room.cy);
 
     const g: Genome = baseGenome();
-    g.hue = this.rng.range(18, 48);
+    // a larva: see-through, spine and gut showing, near white with a lavender cast, and
+    // big-eyed (`docs/media/reference/`)
+    g.hue = this.rng.range(245, 265);
+    g.accentHue = 196;
     g.smoke = 1;
+    g.pale = 1;
+    g.eyeSize = 1.5;
     // a copy, because a transformation changes the plan and the next run must not inherit it
     const p = this.player = new Creature({ ...PLAYER_SPECIES }, g);
     p.isPlayer = true;
@@ -214,14 +227,17 @@ export class Game {
     const world = this.world = new World(this.rng, p);
     world.terrain = room;
     this.camera.root.addChild(
-      this.ocean.world, this.scene.focus,
-      // the blooms sit under the bodies in one additive layer of their own, which is
-      // what lets every creature's glow batch into a single draw
-      world.fog, world.glow, world.layer, this.fx.layer,
+      // what grows on the rock stands behind the bodies; the rock itself is drawn over them
+      this.ocean.world, this.decor.root, this.scene.focus,
+      world.fog, world.layer, this.fx.layer,
       // the rock over the bodies, so a nose pressed into a wall goes into it
       this.roomView.root,
     );
-    this.app.stage.addChild(this.water.layer, this.camera.root);
+    // the blooms go above the lighting, in one additive layer of their own that batches as
+    // one draw: they are the light, and the dark must not fall on them
+    this.camera.over.addChild(this.decor.glow, world.glow);
+    this.app.stage.addChild(this.water.layer, this.camera.root, this.lighting.sprite,
+      this.camera.over);
 
     const { run, camera, fx, ui } = this;
     this.dread = new Dread();
@@ -327,7 +343,9 @@ export class Game {
     this.water.resize(camera.W, camera.H);
     this.ocean.update(dt, view);
     this.roomView.update();
-    const dread = this.scene.draw(view, this.world, p, this.phase, this.dread);
+    this.decor.update(view.t);
+    const dread = this.scene.draw(view, this.world, p, this.phase, this.dread, this.decor.lights);
+    this.lighting.render(this.camera);
     if (this.phase === 'play' || this.phase === 'draft') {
       this.world.cull(camera.x, camera.y, camera.viewR());
       this.world.spawner.stock(this.room, this.run.tank, this.run.tank.population);

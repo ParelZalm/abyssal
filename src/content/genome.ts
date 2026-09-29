@@ -64,6 +64,11 @@ export interface Genome {
    * that the roster's own animals also wear.
    */
   smoke: number;
+  /**
+   * How little pigment the body has, 0..1: a larva's glassy pallor, near white and barely
+   * tinted, the brightest thing in a dark tank (`docs/media/reference/`). Morphology only.
+   */
+  pale: number;
 
   // deep-water morphology — the vocabulary that tells one zone's animals from another's.
   // Hue alone cannot do it: everything below the twilight is drawn against black water.
@@ -89,7 +94,7 @@ export function baseGenome(): Genome {
     eel: 0, mantle: 0, lurk: 0, frenzy: 0, electro: 0, glare: 0, brittle: 0, veins: 0, lead: 0,
     ink: 0, discharge: 0, inflate: 0,
     hue: 30, accentHue: 200, finSize: 1, tailSplit: 0.35, spikes: 0, serrate: 0,
-    jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0, smoke: 0,
+    jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0, smoke: 0, pale: 0,
     photophores: 0, eyeAdapt: 0, gape: 0, veil: 0, bulk: 0, barbels: 0,
   };
 }

@@ -10,6 +10,12 @@ import type { View } from './view';
  */
 export class Camera {
   readonly root = new Container();
+  /**
+   * A second world-space root drawn above the lighting, posed exactly as `root` is: what
+   * gives light rather than receives it — the blooms — goes here, so the dark does not
+   * swallow the lamps (`render/lighting.ts`).
+   */
+  readonly over = new Container();
   /** World position of the screen centre. */
   x = 0;
   y = 0;
@@ -110,9 +116,11 @@ export class Camera {
       this.y += (p.y + p.vy * lead - this.y) * k;
     }
 
-    this.root.scale.set(this.zoom);
-    this.root.x = this.W / 2 - this.x * this.zoom + sx;
-    this.root.y = this.H / 2 - this.y * this.zoom + sy;
+    for (const r of [this.root, this.over]) {
+      r.scale.set(this.zoom);
+      r.x = this.W / 2 - this.x * this.zoom + sx;
+      r.y = this.H / 2 - this.y * this.zoom + sy;
+    }
     return { x: this.x, y: this.y, w: this.W / this.zoom, h: this.H / this.zoom, zoom: this.zoom, t };
   }
 }
