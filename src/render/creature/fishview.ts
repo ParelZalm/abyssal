@@ -1,5 +1,10 @@
 /**
- * A creature seen from directly above: one continuous surface that swims.
+ * A creature seen side-on: one continuous surface that swims.
+ *
+ * It faces the way it swims by rotating to its heading and, once that heading is past
+ * vertical, mirroring about its own spine rather than rolling — so its back is always up and
+ * its lure always above its head. `face` is decided by the simulation (`faceFor`), because
+ * the lure's strike point has to agree with where the light is drawn.
  *
  * The art is painted flat and baked into a texture once per distinct genome (`fishbake.ts`).
  * That texture is skinned onto a triangle strip whose centre line is a travelling wave, so
@@ -18,6 +23,7 @@ import { PLAN_ART, quintic, R, type Plan } from '../../content/form';
 import { menace, type Genome } from '../../content/genome';
 import { glowTexture } from '../textures';
 import { hsl, lerp } from '../../core/util';
+import { artVersion } from '../pixel';
 
 interface Motion {
   /** Columns in the strip. More only pays where the body is long enough to hold a wave. */
@@ -67,6 +73,14 @@ const MOTION: Record<Plan, Motion> = {
 /** Columns per rigged arm. An arm is thin, so it needs length resolution and nothing else. */
 const ARM_COLS = 12;
 
+/**
+ * How much of a plan's sway survives turning the animal on its side. A fish swims by
+ * flexing side to side, which from the side is mostly into and out of the screen: the full
+ * lateral amplitude drawn as a vertical wave reads as a dolphin kick. An eel keeps more of
+ * it, since `motionFor` adds its share on top.
+ */
+const SIDE_ON = 0.45;
+
 export class FishView extends Container {
   /**
    * The additive bloom, deliberately NOT a child of this container. Every creature's
@@ -102,6 +116,10 @@ export class FishView extends Container {
   private strike = 0;
   /** What the feeding pair is holding, read for its live world position; null when nothing. */
   private grip: { x: number; y: number } | null = null;
+  /** 1 facing +x, -1 mirrored. Set by `place`, applied to the scale in `animate`. */
+  private face: 1 | -1 = 1;
+  /** The art density this view was baked at; a new tier means a re-bake. */
+  private version = artVersion;
 
   constructor(private g: Genome, private plan: Plan = 'darter') {
     super();
@@ -116,8 +134,9 @@ export class FishView extends Container {
   }
 
   /** Body and bloom are in different layers, so they are moved together from here. */
-  place(x: number, y: number, rotation: number) {
+  place(x: number, y: number, rotation: number, face: 1 | -1 = 1) {
     this.x = x; this.y = y; this.rotation = rotation;
+    if (face !== this.face) { this.face = face; this.scale.y = Math.abs(this.scale.y) * face; }
     this.glow.x = x; this.glow.y = y;
     this.fog.x = x; this.fog.y = y;
   }
@@ -152,6 +171,7 @@ export class FishView extends Container {
 
   rebuild(g: Genome) {
     this.g = g;
+    this.version = artVersion;
     const m = this.motion = motionFor(g, this.plan);
     const men = menace(g);
 
@@ -253,7 +273,7 @@ export class FishView extends Container {
     }
 
     this.pose(0, 0, 0.5, 0);
-    this.scale.set(g.size / R);
+    this.scale.set(g.size / R, g.size / R * this.face);
   }
 
   chomp() {
@@ -275,7 +295,7 @@ export class FishView extends Container {
     const m = this.motion;
     const h = this.baked.halfH;
     const n = this.colX.length;
-    const amp = h * m.amp * (0.45 + thrust * 0.75);
+    const amp = h * m.amp * SIDE_ON * (0.45 + thrust * 0.75);
     const spineY: number[] = [];
     // A turn bends the whole body into a C rather than rotating a rigid strip about its
     // middle: head and tail both fall to the inside of the turn, so the nose leads into it
@@ -284,7 +304,9 @@ export class FishView extends Container {
     // bell gets none, because a jelly does not steer by flexing.
     const x0 = this.colX[0], x1 = this.colX[n - 1];
     const mid = (x0 + x1) / 2, half = Math.abs(x0 - x1) / 2 || 1;
-    const bend = m.pulse ? 0 : bank * h * 1.25;
+    // in the mirrored frame local y is flipped, so the bend has to be too or a mirrored
+    // animal curls away from the turn it is making
+    const bend = m.pulse ? 0 : bank * h * 1.25 * this.face;
     for (let j = 0; j < n; j++) {
       const s = j / (n - 1);
       const env = quintic(s);
@@ -391,6 +413,7 @@ export class FishView extends Container {
   swell = 1;
 
   animate(dt: number, thrust: number, beat: number, bank: number) {
+    if (this.version !== artVersion) this.rebuild(this.g);
     const unit = this.g.size / R * this.swell;
     let sx = 1;
     let sy = 1 - Math.abs(bank) * 0.16;
@@ -402,7 +425,7 @@ export class FishView extends Container {
       sy *= 1 + s * 0.26;
     }
     this.scale.x = unit * sx;
-    this.scale.y = unit * sy;
+    this.scale.y = unit * sy * this.face;
     this.pose(beat, bank, thrust, dt);
   }
 

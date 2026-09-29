@@ -9,7 +9,7 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #01060d; color: var(--ink); }
-/* the canvas is drawn at a third of this size and scaled up — see render/pixel.ts */
+/* the canvas is drawn at 1/PIXEL of this size and scaled up — see render/pixel.ts */
 #stage canvas { display: block; image-rendering: pixelated; }
 #ui { position: fixed; inset: 0; pointer-events: none; }
 
@@ -288,5 +288,5 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 .lineage { display: flex; align-items: flex-end; justify-content: center; gap: 14px; flex-wrap: wrap;
   margin: 10px auto 16px; max-width: 900px; }
 .lineage-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.lineage-cell > canvas { filter: drop-shadow(0 0 5px rgba(170,235,255,.45)); }
+.lineage-cell > canvas { filter: drop-shadow(0 0 5px rgba(170,235,255,.45)); image-rendering: pixelated; }
 .lineage-cell > span { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }

@@ -1,8 +1,14 @@
 /**
- * The shape of a creature, as a spine and one width curve over it.
+ * The shape of a creature, as a spine and one depth curve over it.
  *
- * A body seen from directly above is only two things: a line from nose to tail, and how
- * wide the animal is at each point along it. Everything else — which silhouette a species
+ * Creatures are seen side-on. A body in profile is only two things: a line from nose to
+ * tail, and how deep the animal is at each point along it — split about the spine by `up`,
+ * so a humped back and a flat belly are one parameter rather than a second curve. The
+ * functions keep their older names (`halfWidth` is the half-depth) because they were
+ * written for the view from above, and the curve itself did not have to change to turn the
+ * animal on its side.
+ *
+ * Everything else Everything else — which silhouette a species
  * has, how a larva differs from an adult, what a mutation does to a profile — is a change
  * to the parameters of that one curve rather than a different drawing. The previous system
  * had a hand-drawn path per body plan and could not interpolate between any two of them.
@@ -17,7 +23,7 @@ import { clamp, lerp } from '../core/util';
 /** Reference half-length the body is drawn at; the view scales the whole thing to real size. */
 export const R = 10;
 
-/** Silhouettes, seen from directly above. A species picks one. */
+/** Silhouettes, seen side-on. A species picks one. */
 export type Plan =
   | 'microbe' | 'darter' | 'shark' | 'eel' | 'jelly' | 'squid' | 'angler' | 'leviathan'
   /**
@@ -78,6 +84,14 @@ export interface Form {
   fluke: number;
   /** How deeply the caudal forks, 0 paddle to 1 scythe. */
   fork: number;
+  /**
+   * Share of the depth above the spine: 0.5 is symmetric, higher a humped back over a flat
+   * belly. Profile only — from above a body is always symmetric, so this is new with the
+   * side-on view and defaults to 0.5.
+   */
+  up?: number;
+  /** How far the spine bows the back upward, as a fraction of `width`. */
+  arch?: number;
 }
 
 /**
@@ -87,42 +101,38 @@ export interface Form {
 export const PLAN_FORMS: Record<Plan, Form> = {
   microbe:   { len: 1.2, width: 0.86, fore: 1.1, aft: 1.0, peduncle: 0.42, trunk: 0, shoulder: 0, nose: 0, cheek: 0,
                fluke: 0.14, fork: 0 },
-  darter:    { len: 2.2, width: 0.58, fore: 0.85, aft: 1.3, peduncle: 0.15, trunk: 0, shoulder: 0, nose: 0, cheek: 0.1,
-               fluke: 0.34, fork: 0.55 },
+  darter:    { len: 2.2, width: 0.62, fore: 0.85, aft: 1.3, peduncle: 0.15, trunk: 0, shoulder: 0, nose: 0, cheek: 0.1,
+               fluke: 0.34, fork: 0.55, up: 0.52, arch: 0.1 },
   // the great white's proportions at a reef shark's scale: slender, mass at the pectorals,
   // long run-out to a thin peduncle. `cheek: 0` for the same reason — a gill bulge put the
   // widest point in front of the fins and made the head the broadest part of the animal.
-  shark:     { len: 3.0, width: 0.32, fore: 0.85, aft: 1.3, peduncle: 0.4, trunk: 0.45, shoulder: 0.1,
-               nose: 1, cheek: 0, fluke: 0.19, fork: 0.45 },
-  eel:       { len: 4.2, width: 0.3, fore: 0.55, aft: 0.8, peduncle: 0.44, trunk: 0, shoulder: 0, nose: 0, cheek: 0.04,
+  shark:     { len: 3.0, width: 0.42, fore: 0.85, aft: 1.3, peduncle: 0.4, trunk: 0.45, shoulder: 0.1,
+               nose: 1, cheek: 0, fluke: 0.19, fork: 0.45, up: 0.54, arch: 0.1 },
+  eel:       { len: 4.2, width: 0.26, fore: 0.55, aft: 0.8, peduncle: 0.44, trunk: 0, shoulder: 0, nose: 0, cheek: 0.04,
                fluke: 0.12, fork: 0.05 },
   // a bell is a body whose widest point is at the front and which trails everything else
   jelly:     { len: 1.5, width: 0.95, fore: 1.5, aft: 0.85, peduncle: 0.5, trunk: 0, shoulder: 0, nose: 0, cheek: 0,
                fluke: 0.26, fork: 0 },
   squid:     { len: 2.5, width: 0.52, fore: 1.5, aft: 0.85, peduncle: 0.3, trunk: 0, shoulder: 0, nose: 0, cheek: 0.05,
                fluke: 0.26, fork: 0.2 },
-  angler:    { len: 1.9, width: 0.8, fore: 0.7, aft: 1.5, peduncle: 0.12, trunk: 0, shoulder: 0, nose: 0, cheek: 0.2,
-               fluke: 0.26, fork: 0.3 },
-  leviathan: { len: 3.1, width: 0.64, fore: 0.85, aft: 1.4, peduncle: 0.13, trunk: 0, shoulder: 0, nose: 0, cheek: 0.13,
-               fluke: 0.38, fork: 0.9 },
-  // From directly above a great white is a far narrower animal than it is from the side:
-  // half-width is about a ninth of its length, so `width` here is the *lowest* of the big
-  // bodies, not the highest. What makes it look heavy is the pectorals, which reach further
-  // from the midline than the trunk ever does — that is in PLAN_ART, not here.
-  //
-  // `fore` high keeps the snout a long cone; `nose` rounds off its last few percent so the
-  // cone ends on something blunt instead of a spearhead. `trunk` then holds full width
-  // behind it and `aft` runs the rest out — cone, box, taper, which is the whole animal.
-  // `cheek: 0` is the one that mattered: the gill bulge was pulling the widest point up to
-  // t≈0.28, which made the head the broadest part of the animal. On a real one the gills are
-  // a mark on the flank, not a swelling — the widest point is the pectoral roots.
-  greatshark:  { len: 3.4, width: 0.373, fore: 0.85, aft: 1.25, peduncle: 0.42, trunk: 0.46, shoulder: 0.1,
-                 nose: 1, cheek: 0, fluke: 0.19, fork: 0.45 },
+  // all hump: the back bows up over a head that is most of the animal
+  angler:    { len: 1.9, width: 0.95, fore: 0.7, aft: 1.5, peduncle: 0.12, trunk: 0, shoulder: 0, nose: 0, cheek: 0.2,
+               fluke: 0.26, fork: 0.3, up: 0.5, arch: 0.25 },
+  leviathan: { len: 3.1, width: 0.7, fore: 0.85, aft: 1.4, peduncle: 0.13, trunk: 0, shoulder: 0, nose: 0, cheek: 0.13,
+               fluke: 0.38, fork: 0.9, up: 0.55, arch: 0.1 },
+  // Side-on a great white is a deep animal, a third again as deep as the reef shark, with
+  // the mass forward over the pectorals. `fore` high keeps the snout a long cone; `nose`
+  // rounds off its last few percent so the cone ends on something blunt instead of a
+  // spearhead. `trunk` then holds full depth behind it and `aft` runs the rest out — cone,
+  // box, taper, which is the whole animal. `cheek: 0`: the gills are a mark on the flank,
+  // not a swelling.
+  greatshark:  { len: 3.4, width: 0.5, fore: 0.85, aft: 1.25, peduncle: 0.42, trunk: 0.46, shoulder: 0.1,
+                 nose: 1, cheek: 0, fluke: 0.19, fork: 0.45, up: 0.56, arch: 0.12 },
   // a box on the front of a taper. `fore` this low puts the widest point at t≈0.18, which
   // is the whole animal: a third of a sperm whale is head, and nothing else in the ocean
   // is shaped like that
-  whale:       { len: 3.4, width: 0.6, fore: 0.42, aft: 1.9, peduncle: 0.09, trunk: 0, shoulder: 0, nose: 0, cheek: 0.3,
-                 fluke: 0.3, fork: 0.75 },
+  whale:       { len: 3.4, width: 0.66, fore: 0.42, aft: 1.9, peduncle: 0.09, trunk: 0, shoulder: 0, nose: 0, cheek: 0.3,
+                 fluke: 0.3, fork: 0.75, up: 0.55 },
   // a long narrow mantle that trails far more than its own length in arms
   longsquid:   { len: 3.2, width: 0.42, fore: 1.8, aft: 0.8, peduncle: 0.24, trunk: 0, shoulder: 0, nose: 0, cheek: 0.04,
                  fluke: 0.34, fork: 0.35 },
@@ -295,8 +305,10 @@ export const PLAN_ART: Record<Plan, PlanArt> = {
   // a bell and its trailing arms. Nothing on a jellyfish is a fin.
   jelly:      art({ arms: 1.15, armCount: 9, armLen: 1.1, armWidth: 0.07, armReach: 0.6,
                     spines: false, gills: false, caudal: 0.6, fins: [] }),
+  // no blades on any squid: side-on a row of spines along the mantle is a crest, and a
+  // squid's mantle is smooth
   squid:      art({ arms: 1.15, armCount: 8, armLen: 1.5, armWidth: 0.12, armReach: 0.6, armPair: 1.6,
-                    grasp: 0.9 }),
+                    grasp: 0.9, spines: false }),
   angler:     art({ paleEyes: true }),
   leviathan:  art({ eyeGlow: 1, fog: 1.25, paleEyes: true, samples: 110, caudal: 1.8, eye: 0.45,
                     fins: [{ at: 0.4, len: 1.4, rake: 0.8, chord: 0.5, taper: 0.8 },
@@ -321,10 +333,10 @@ export const PLAN_ART: Record<Plan, PlanArt> = {
   // two feeding tentacles far beyond the other eight, which is the giant squid's whole
   // silhouette and the reason it needs a plan rather than a bigger `squid`. No lateral
   // fins at all — a squid's fin is the mantle, which `mantleFins` already draws.
-  longsquid:  art({ eyeGlow: 1, fog: 1, arms: 1.5, armCount: 10, armLen: 2.6, armWidth: 0.085, armReach: 2.2,
+  longsquid:  art({ eyeGlow: 1, fog: 1, spines: false, arms: 1.5, armCount: 10, armLen: 2.6, armWidth: 0.085, armReach: 2.2,
                     armPair: 1.9, grasp: 1.3, paleEyes: true, caudal: 0.6, tail: 'mantle', fins: [] }),
   // the same animal built short and heavy instead: stubbier mantle, far broader fins
-  broadsquid: art({ eyeGlow: 1, fog: 1, arms: 1.35, armCount: 8, armLen: 1.5, armWidth: 0.17, armReach: 1.2,
+  broadsquid: art({ eyeGlow: 1, fog: 1, spines: false, arms: 1.35, armCount: 8, armLen: 1.5, armWidth: 0.17, armReach: 1.2,
                     armPair: 1.7, grasp: 1.05,
                     paleEyes: true, caudal: 1.5, tail: 'mantle', fins: [] }),
   wraith:     art({ smoke: true }),
@@ -386,12 +398,52 @@ export function halfWidth(t: number, f: Form): number {
 }
 
 /**
- * Where a lure's bulb hangs, in R units: out past the nose on its stalk, a little to one
- * side. Shared by the paint and by the organ that strikes whatever touches the bulb, so the
- * light you see is the trigger that fires.
+ * Where a lure's bulb hangs, in R units: up over the head and out in front of the jaw, on
+ * its stalk off the forehead. Shared by the paint and by the organ that strikes whatever
+ * touches the bulb, so the light you see is the trigger that fires. Local to the animal,
+ * which faces +x with its back at -y; `faceFor` says which way that is in the world.
  */
 export function lureBulb(g: Genome, f: Form) {
-  return { x: spineAt(0, f) + R * (0.8 + g.lure * 0.45), y: -R * 0.3 };
+  return { x: spineAt(0, f) + R * (0.3 + g.lure * 0.3),
+           y: edgeAt(0.14, f, -1) - R * (0.55 + g.lure * 0.3) };
+}
+
+/**
+ * The body's edge at `t`, in R units: `k` -1 is the top of the back, +1 the bottom of the
+ * belly, 0 the spine. Painters place parts with this, so moving the depth curve moves them.
+ */
+export function edgeAt(t: number, f: Form, k: number) {
+  const u = Math.min(1, Math.max(0, t));
+  const h = halfWidth(u, f);
+  const up = f.up ?? 0.5;
+  const spine = -(f.arch ?? 0) * f.width * R * 4 * u * (1 - u);
+  return k < 0 ? spine + k * h * 2 * up : spine + k * h * 2 * (1 - up);
+}
+
+/**
+ * Which way a side-on animal faces: 1 toward +x, -1 toward -x. It mirrors rather than
+ * rolls when it turns back, so its back stays up — and it only mirrors once the heading is
+ * well past vertical, or an animal swimming straight up flickers between the two.
+ */
+export function faceFor(prev: 1 | -1, angle: number): 1 | -1 {
+  const c = Math.cos(angle);
+  return c < -0.2 ? -1 : c > 0.2 ? 1 : prev;
+}
+
+/** The steepest a side-on body is drawn, either way from level. */
+const MAX_PITCH = Math.PI / 3;
+
+/**
+ * The angle a side-on body is drawn at. The heading is the simulation's and can point
+ * anywhere; drawn at a straight 90° a fish in profile stands on its tail and stops reading as
+ * a fish at all, so the drawing only climbs or dives so far and the swim does the rest.
+ */
+export function drawnAngle(angle: number, face: 1 | -1) {
+  const level = face > 0 ? 0 : Math.PI;
+  let d = (angle - level) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return level + Math.max(-MAX_PITCH, Math.min(MAX_PITCH, d));
 }
 
 /** Position along the spine at t. The nose is +x: the animal faces the way it swims. */

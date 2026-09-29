@@ -149,7 +149,9 @@ URL carries the whole state, so a link to one cell is a link to one design quest
 
 ### How it is drawn
 
-- **Everything is seen from directly above.** Each species uses one of the body plans:
+- **Pixel art, side-on.** The frame is drawn at half resolution and scaled up with hard
+  pixels, then quantised onto a dithered palette, so everything shares one grid. Every
+  creature is painted per pixel in profile. Each species uses one of the body plans:
   microbe, darter, shark, eel, jelly, squid or angler. The wraith is the plan you hatch
   as, and every guardian gets a body nothing else wears. A plan decides both the
   silhouette and how the animal swims. Within a plan the genome still does the work.
@@ -157,8 +159,8 @@ URL carries the whole state, so a link to one cell is a link to one design quest
   `rebuild(genome)`. Swimming moves mesh vertices, never geometry, so a hundred animals
   cost a few vertex writes each.
 - **Nothing on an animal is stroked.** A contour has a position of its own, so it draws
-  twice wherever two parts cross. Silhouettes are carried by value instead:
-  noise-ragged edges, countershading and mottling.
+  twice wherever two parts cross. The pixel outline is read off the finished silhouette
+  instead, with a rim lit from the surface, a hue-shifted ramp and an ordered dither.
 - **The water is a single full-screen GLSL pass.** It combines domain-warped FBM, a
   depth-sampled palette, god rays, your own bioluminescence and the thermoclines, all
   shaded from world coordinates. So the next zone is always visible below you, long

@@ -107,14 +107,17 @@ Read `docs/decisions.md` before rebuilding anything that looks missing.
 
 ## Conventions that matter
 
+- **Everything is pixel art on one grid, and creatures are side-on.** The canvas renders at
+  `1 / PIXEL` and `FramePass` quantises the frame (`render/pixel.ts`); anything new that
+  draws should sit on that grid rather than smooth itself over it.
 - **Creature art is baked into a texture once per `rebuild(genome)`; swimming moves mesh
   vertices, never geometry.** Never issue paths per frame. The shape lives in
-  `content/form.ts` (a spine and one width curve), the painting in
-  `render/creature/fishbake.ts` (`paint()` is the order; the painters are in `bake/`), the
-  skinned mesh in `render/creature/fishview.ts`.
+  `content/form.ts` (a spine and one depth curve; `edgeAt` places parts on it), the painting
+  in `render/creature/fishbake.ts` (`paint()` is the order; the painters are in `bake/`,
+  per pixel on a `Sheet`), the skinned mesh in `render/creature/fishview.ts`.
 - **Nothing on a creature is stroked.** A contour has a position of its own, so it draws
-  twice wherever parts cross and the join shows. Silhouettes are carried by value —
-  noise-ragged edges, countershading, mottling. See `docs/decisions.md`.
+  twice wherever parts cross. Painters set what a pixel is; `bake/sheet.ts` shades it, and
+  the outline and rim are read off the finished silhouette. See `docs/decisions.md`.
 - **Organs carry a mechanic and a morphology together.** Adding one to `Genome` means an
   entry in `sim/organs/` (the mechanic, as hooks the simulation calls) and paint in
   `render/creature/bake/`; a stat with no visible consequence is not how this game

@@ -1,5 +1,6 @@
 import { FishView } from '../render/creature/fishview';
 import { maxHp, type Genome } from '../content/genome';
+import { drawnAngle } from '../content/form';
 import { hunts, type Species } from '../content/species';
 import { angleDelta, clamp, TAU } from '../core/util';
 import { organsOf, swimOf, type Organ, type SwimMods } from './organs';
@@ -13,6 +14,12 @@ export type Mood = 'cruise' | 'rest' | 'dart';
 
 export class Creature {
   x = 0; y = 0; vx = 0; vy = 0; angle = 0;
+  /**
+   * Which way the animal faces, side-on: it mirrors when it turns back rather than rolling
+   * onto its back. Part of the body's state rather than the view's, because the lure's
+   * strike point is measured from it and has to agree with where the light is drawn.
+   */
+  face: 1 | -1 = 1;
   hp: number; hpMax: number;
   alive = true;
   view: FishView;
@@ -185,7 +192,7 @@ export class Creature {
     return this.genome.size * 0.62;
   }
   syncView() {
-    this.view.place(this.x, this.y, this.angle);
+    this.view.place(this.x, this.y, drawnAngle(this.angle, this.face), this.face);
   }
 
   /** The fade as an alpha, eased at both ends so an arrival has no edges. */

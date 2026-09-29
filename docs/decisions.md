@@ -84,6 +84,28 @@ travelling wave and the swarm's sequence do not survive the move.
   are wide soft discs, they swamp the extracted bounds, and every plan comes back as the
   same round blob.
 
+## Side-on pixel art replaced the top-down smooth bake (September 2026)
+
+The creatures were seen from directly above and painted as smooth fills at up to 48 texels
+per R unit. The move was to pixel art on one grid, and side-on, after a prototype on the
+design board (`design/proto-pixel.ts`, `?g=pixel`) rebuilt a reference frame of a midnight
+scene. Profile was the bigger half of it: from above an anglerfish is a purple triangle, and
+side-on it is an anglerfish — lure, gape and hump all live in the profile.
+
+Findings that shaped it:
+
+- **One grid for the frame, not one per animal.** Scaling each creature's art up by itself
+  puts every animal on a grid of its own, and a skinned or rotated one resamples its pixels at
+  every bend. Drawing the whole canvas at low resolution re-grids everything for free.
+- **Two CSS pixels per art pixel, not three.** At three a hatchling is thirteen texels long and
+  carries nothing; at two it has room for an eye, a mouth and a fin.
+- **Quantise the frame, not just the art.** Without `FramePass` the water and the blooms stay
+  smooth on big pixels, which reads as a blurry image scaled up.
+- **Mirror, don't roll.** A side-on animal turning back has to flip about its spine, and the
+  drawn pitch is capped, or a fish swimming upward stands on its tail.
+- **Detail needs a budget.** At the grid's real density small animals are a handful of texels,
+  and an eye on a four-texel krill is the whole krill.
+
 ## Creatures are one deforming surface, not a chain of parts
 
 Three passes died on the same problem, in this order: a jointed chain of `Graphics` links;

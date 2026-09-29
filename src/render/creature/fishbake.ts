@@ -1,40 +1,40 @@
 /**
- * Creature art, painted flat and baked into a texture.
+ * Creature art, painted side-on as pixel art and baked into a texture.
  *
- * Nothing here is stroked. A contour is a line with a position of its own, so the moment
- * two parts of an animal move across each other it draws twice and the join shows — which
- * is what the old jointed views did at every bend. With fills only, the body can be skinned
- * onto a single deforming surface (`fishview.ts`) and no part of it can ever overlap another.
- * What the outline used to do is done by value instead: a noise-ragged edge, countershading,
- * and mottling, all from the same value noise the water shader runs on.
+ * Every body is painted per pixel on a `Sheet` at the frame's own density — one texel of
+ * art is one pixel of the frame (`render/pixel.ts`) — and shaded in one pass from what each
+ * pixel is: a hue-shifted ramp, an ordered dither where two values meet, a one-pixel
+ * outline and a rim lit from the surface. The outline is derived from the silhouette rather
+ * than drawn, so it can never double where two parts cross; that is what the old rule
+ * against stroking was protecting, and it still holds.
  *
- * Painting happens once per distinct genome and is then cached — a school of forty krill is
- * one texture. The cost that matters is the bake, so the cache key is deliberately coarse:
- * two animals that differ by less than a hue step are the same picture.
+ * Painting happens once per distinct genome and density and is then cached — a school of
+ * forty krill is one texture. The cost that matters is the bake, so the cache key is
+ * deliberately coarse: two animals that differ by less than a hue step are the same picture.
  *
  * The painters live in `bake/`, one file per region of the body; `paint` below is the
  * order they run in, back to front, and is the one place to read what a body is made of.
  */
-import { Graphics, type Renderer, type Texture } from 'pixi.js';
+import { Texture } from 'pixi.js';
 import { eyeOf, fadeOf, menace, photophoreOf, type Genome } from '../../content/genome';
 import { formFor, halfWidth, PLAN_ART, spineAt, R, type Form, type Plan, type PlanArt } from '../../content/form';
 import { fbmSigned } from '../../core/noise';
 import { BLOOM_TRAIL, hasSynergy, synergiesOf } from '../../sim/organs';
+import { artDensity } from '../pixel';
 import { palette, type Palette } from './bake/palette';
-import { flank, countershade, mottle, whaleSpots, camouflage, crazing, viscera, mantle, cilia } from './bake/body';
-import { caudalFin, fluke, mantleFins, dorsalRidge, fins, ribbonFin, veil, bloomTrail, tentacles } from './bake/fins';
+import { M, shade, Sheet, type Emitter } from './bake/sheet';
+import { flank, whaleSpots, camouflage, crazing, viscera, mantle, cilia } from './bake/body';
+import { caudalFin, fluke, mantleFins, dorsalRidge, medianFins, fins, ribbonFin, veil, bloomTrail,
+         tentacles } from './bake/fins';
 import { bluntSnout, head, lureAt, lure, barbels } from './bake/head';
-import { spines, organs, ballisticReach, urchinReach, urchinSpines, electroplates, prickles, inkSac } from './bake/organs';
+import { spines, organs, ballisticReach, urchinReach, urchinSpines, electroplates, prickles,
+         inkSac } from './bake/organs';
 import { photophores, flankLights, embers } from './bake/lights';
-
-let renderer: Renderer | null = null;
-/** Called once at boot; baking needs a GPU context to render into. */
-export function setBakeRenderer(r: Renderer) {
-  renderer = r;
-}
 
 export interface Baked {
   texture: Texture;
+  /** The pixels themselves, for anything that wants the picture off the GPU (the end screen). */
+  canvas: HTMLCanvasElement;
   /** Front and back of the painted strip, in R units — the mesh spans exactly this. */
   front: number;
   back: number;
@@ -44,6 +44,8 @@ export interface Baked {
   users: number;
   /** One rigged arm, root at u=0 and tip at u=1, for plans with `grasp`. Null otherwise. */
   arm: Rig | null;
+  /** The light organs, in R units, for the view to hang blooms on. */
+  lights: Emitter[];
 }
 
 /** A rigged arm's texture and where the arms leave the body, in R units. */
@@ -65,18 +67,14 @@ const q = (v: number, step: number) => Math.round(v / step) * step;
 
 /**
  * Texels per R unit. The art is painted in R units and the view scales it by `size / R`,
- * so a fixed resolution is a fixed number of texels per *animal*: 6 was plenty for a 14 cm
- * hatchling and left a 280 cm guardian at about one texel per five screen pixels, which
- * reads as pixel art. What the screen needs is `size / R × zoom × devicePixelRatio`; this
- * covers that at a close zoom on a 2× display, in doubling steps so a growing player
- * re-bakes a handful of times rather than every centimetre, and capped so the biggest
- * strip stays well inside a 4096 texture.
+ * so for one texel of art to land on one pixel of the frame the density has to be the
+ * grid's (`artDensity`, texels per world unit) times the animal's own scale. Quantised in
+ * steps of a sixth of an octave: finer and every individual of a species is a bake of its
+ * own, coarser and an animal is visibly resampled onto the grid.
  */
 function resolutionFor(g: Genome) {
-  const want = (g.size / R) * 2.4;
-  let res = 6;
-  while (res < want && res < 48) res *= 2;
-  return res;
+  const want = artDensity() * g.size / R;
+  return Math.max(0.15, 2 ** (Math.round(Math.log2(want) * 6) / 6));
 }
 
 function key(g: Genome, plan: Plan) {
@@ -141,118 +139,127 @@ function evict() {
 }
 
 function paint(g: Genome, plan: Plan): Baked {
-  if (!renderer) throw new Error('setBakeRenderer() must be called before any creature is built');
+  const res = resolutionFor(g);
   const f = formFor(g, plan);
   const men = menace(g);
   const A = PLAN_ART[plan];
-  const pal = palette(g, men, A);
   const seed = Math.round(g.hue * 7 + g.accentHue * 3 + g.spikes * 11) % 9973;
-  const wob = 0.035;
+  const pal = palette(g, men, A, seed);
 
-  // The player's own plan. Main's wraith needed every part drawn opaque and the whole form
-  // faded by one AlphaFilter, because per-part alpha composites every overlap twice and the
-  // joints then outline themselves. A single surface has no overlaps to composite, so the
-  // render target that cost is simply gone — the body is drawn see-through and that is all.
+  // The player's own plan. A single surface has no overlaps to composite, so the body is
+  // simply drawn see-through and that is all.
   const smoke = A.smoke || g.smoke > 0;
   if (smoke) pal.alpha *= 0.6;
-  // Ghost Light: a light hanging in water that has nothing behind it. The lure is painted
-  // at full strength on its own alpha, so fading the body is what makes the light stand out
+  // Ghost Light: a light hanging in water that has nothing behind it. The lure keeps its
+  // full strength, so fading the body is what makes the light stand out
   if (hasSynergy(g, 'ghostlight')) pal.alpha *= 0.62;
 
-  const art = new Graphics();
-
-  // --- bounds ------------------------------------------------------------
+  // --- a sheet generous enough for anything, cropped to what was painted -----
   let widest = 0;
   for (let i = 0; i <= 40; i++) widest = Math.max(widest, halfWidth(i / 40, f));
-  // the strip has to hold whatever is on the back of the animal, and the three kinds
-  // reach different distances — a fluke is wider than the fork it replaces, and mantle
-  // fins are measured at the mantle rather than at the tail root
-  const caudal =
-    A.tail === 'fluke' ? halfWidth(1, f) * (3.4 + f.fork * 1.2) * A.caudal
-    : A.tail === 'mantle' ? halfWidth(0.8, f) * (1.6 + A.caudal * 0.9)
-    : halfWidth(1, f) * (2.4 + f.fork * 1.8) * A.caudal;
-  // rigged arms are strips of their own and take no room in the body's texture
   const rigged = A.grasp > 0;
-  const arms = rigged ? 0 : widest * A.arms;
-  // a fin reaching further than the body does has to be inside the strip, or it bakes
-  // clipped square with nothing to say so
-  let finReach = 0;
-  for (const fin of A.fins) {
-    const ft = Math.min(0.9, fin.at);
-    const fw = halfWidth(ft, f);
-    finReach = Math.max(finReach, fw * 0.72 + fw * fin.len * (0.7 + g.finSize * 0.35));
-  }
-  const frill = g.frill > 0 ? widest * 0.3 : 0;
-  const veiling = widest * g.veil * 1.5;
-  const ribbon = g.eel > 0 ? widest * 0.45 : 0;
-  // the longest rim thorn: 0.8 of the half-width out, then up to 0.63 of it again
-  const urchin = hasSynergy(g, 'urchin') ? widest * 0.65 * urchinReach(g) : 0;
-  // the bulb's halo is measured off the bulb, not guessed: the toxic and ghost halos both
-  // reach past it, and art outside the pinning rect widens the texture under the mesh
   const L = g.lure > 0 ? lureAt(g, f) : null;
-  const halfH = Math.max(widest * (1 + wob), caudal, arms, finReach, widest + frill,
-                         widest + veiling, widest + urchin, widest + ribbon,
-                         L ? -L.y + L.r * L.halo : 0) * 1.08 + R * 0.1;
-  // a lure and a barbel both hang out in front of the face, so the strip has to be longer
-  // than the body. Whichever reaches further sets the bound.
-  const front = spineAt(0, f) + Math.max(R * 0.12,
-    L ? L.x - spineAt(0, f) + L.r * L.halo + R * 0.04 : 0,
-    g.barbels > 0 ? R * (0.55 + g.barbels * 0.9) : 0,
-    hasSynergy(g, 'ballistic') ? ballisticReach(g) + R * 0.08 : 0);
   const bloom = hasSynergy(g, 'driftingbloom');
-  const back = Math.min(spineAt(1, f) - f.len * f.fluke * R * 1.06 - (rigged ? 0 : A.armReach * R),
-    bloom ? spineAt(0.9, f) - f.len * BLOOM_TRAIL * R * 1.08 : Infinity);
-
-  // an invisible rect pins the texture to exactly this rect, so the UVs line up with the
-  // body rather than with whatever the art happened to touch
-  art.rect(back, -halfH, front - back, halfH * 2).fill({ color: 0, alpha: 0 });
+  const reachUp = Math.max(widest * 3.2, L ? -L.y + L.r * 3 : 0,
+                           widest * (1 + 0.7 * urchinReach(g)) * 1.6) + R * 0.4;
+  const front = spineAt(0, f) + Math.max(R * 0.4, L ? L.x - spineAt(0, f) + L.r * 3 : 0,
+    hasSynergy(g, 'ballistic') ? ballisticReach(g) + R * 0.2 : 0, widest * 0.5);
+  const back = spineAt(1, f) - f.len * R * (f.fluke * 1.5 + g.veil * 0.7 + (bloom ? BLOOM_TRAIL * 1.1 : 0))
+    - (rigged ? 0 : A.armLen * R * (1 + g.segments * 0.1) * 1.8) - R * 0.6;
+  const halfH = Math.ceil(reachUp * res) / res;
+  const s = new Sheet(back, front, halfH, res);
 
   // --- behind the body ---------------------------------------------------
-  if (A.arms > 0 && !rigged) tentacles(art, f, pal, A, g);
-  if (g.veil > 0) veil(art, f, pal, g, seed);
-  if (g.eel > 0) ribbonFin(art, f, pal, seed);
-  if (bloom) bloomTrail(art, f, pal, g, seed);
-  if (A.blunt > 0) bluntSnout(art, f, pal, A);
-  if (A.tail === 'fluke') fluke(art, f, pal, A);
-  else if (A.tail === 'mantle') mantleFins(art, f, pal, A);
-  else caudalFin(art, f, pal, g, A);
-  if (g.lure > 0) lure(art, f, pal, g);
+  const jellyArms = A.arms > 0 && !rigged;
+  if (jellyArms) tentacles(s, f, A, g);
+  if (g.veil > 0) veil(s, f, g, seed);
+  if (g.eel > 0) ribbonFin(s, f, seed);
+  if (bloom) bloomTrail(s, f, pal, g, seed);
+  if (!jellyArms) {
+    if (A.tail === 'fluke') fluke(s, f, A);
+    else if (A.tail === 'mantle') mantleFins(s, f, A);
+    else caudalFin(s, f, A);
+  }
+  if (A.dorsalFin > 0) dorsalRidge(s, f, A);
+  else if (A.finRays && A.fins.length > 0 && A.tail === 'caudal' && A.arms === 0 && g.eel <= 0) {
+    medianFins(s, f, g);
+  }
 
   // --- the body itself ---------------------------------------------------
-  const n = A.samples;
-  flank(art, f, 0, 1, -1, n, true, wob, seed);
-  flank(art, f, 1, 0, 1, n, false, wob, seed);
-  art.closePath().fill({ color: pal.skin, alpha: pal.alpha });
+  flank(s, f, 0.05, seed);
+  // A detail budget. At its real size a krill is four texels long, and an eye socket or a
+  // ring of cilia on a body that small is the whole animal: it reads as a black square
+  // with a hair on it. Below `SMALL` pixels of length a body is a body and its lights;
+  // below `TINY` it is only a body.
+  const len = f.len * R * res;
+  if (len < TINY) return finish(s, pal, g, res, back, rigged, f, A);
+  if (A.blunt > 0) bluntSnout(s, f, A);
 
-  countershade(art, f, pal, A, seed);
-  if (A.mottle > 0) mottle(art, f, pal, g, A, seed);
-  if (hasSynergy(g, 'whaleshark')) whaleSpots(art, f, pal, seed);
-  if (photophoreOf(g) > 0) photophores(art, f, pal, g, seed);
-  if (hasSynergy(g, 'flashsense')) flankLights(art, f, pal);
-  if (g.glare > 0) embers(art, f, seed);
-  if (g.brittle > 0) crazing(art, f, pal, seed);
-  if (g.discharge > 0) electroplates(art, f, pal);
-  if (g.inflate > 0) prickles(art, f, pal, seed);
-  if (g.ink > 0) inkSac(art, f);
-  if (A.cilia) cilia(art, f, pal);
-  if (g.lurk > 0) camouflage(art, f, pal, seed);
-  if (g.mantle > 0) mantle(art, f, pal);
+  // --- on its skin --------------------------------------------------------
+  if (hasSynergy(g, 'whaleshark')) whaleSpots(s, f, seed);
+  if (g.lurk > 0) camouflage(s, f, pal, seed);
+  if (g.brittle > 0) crazing(s, f, seed);
+  if (g.discharge > 0) electroplates(s, f);
+  if (g.ink > 0) inkSac(s, f);
+  if (g.mantle > 0) mantle(s, f, pal);
+  if (smoke) viscera(s, f, pal);
+  if (photophoreOf(g) > 0) photophores(s, f, pal, g, seed);
+  if (hasSynergy(g, 'flashsense')) flankLights(s, f, pal);
+  if (g.glare > 0) embers(s, f, seed);
 
-  // --- on top ------------------------------------------------------------
-  if (smoke) viscera(art, f, pal);
-  if (A.dorsalFin > 0) dorsalRidge(art, f, pal, A);
-  fins(art, f, pal, g, A);
-  if (A.spines) spines(art, f, pal, g, men);
-  if (urchin > 0) urchinSpines(art, f, pal, g, seed);
-  organs(art, f, pal, g);
-  head(art, f, pal, g, A, men);
-  if (g.barbels > 0) barbels(art, f, pal, g);
+  if (len < SMALL) return finish(s, pal, g, res, back, rigged, f, A);
 
-  const tex = renderer.generateTexture({ target: art, resolution: resolutionFor(g),
-                                        antialias: true });
-  art.destroy();
-  return { texture: tex, front, back, halfH, users: 0,
-           arm: rigged ? armRig(f, pal, A, g, seed) : null };
+  // --- standing off it ---------------------------------------------------
+  if (A.cilia) cilia(s, f);
+  if (A.spines) spines(s, f, g, men);
+  if (g.inflate > 0) prickles(s, f, seed);
+  if (hasSynergy(g, 'urchin')) urchinSpines(s, f, g, seed);
+  fins(s, f, g, A);
+  organs(s, f, pal, g);
+  head(s, f, pal, g, A, men);
+  if (g.barbels > 0) barbels(s, f, pal, g);
+  if (g.lure > 0) lure(s, f, pal, g);
+  return finish(s, pal, g, res, back, rigged, f, A);
+}
+
+/** Body lengths, in texels, below which detail is dropped. See `paint`. */
+const TINY = 6, SMALL = 12;
+
+function finish(s: Sheet, pal: Palette, g: Genome, res: number, back: number, rigged: boolean,
+                f: Form, A: PlanArt): Baked {
+  const shaded = shade(s, pal);
+  const crop = cropOf(s);
+  const canvas = document.createElement('canvas');
+  canvas.width = crop.w; canvas.height = crop.h;
+  canvas.getContext('2d')!.drawImage(shaded, crop.x, crop.y, crop.w, crop.h, 0, 0, crop.w, crop.h);
+  return { texture: pixelTexture(canvas), canvas, users: 0, lights: s.lights,
+           back: back + crop.x / res, front: back + (crop.x + crop.w) / res, halfH: crop.h / 2 / res,
+           arm: rigged ? armRig(f, pal, A, g, res) : null };
+}
+
+function pixelTexture(canvas: HTMLCanvasElement) {
+  const tex = Texture.from(canvas);
+  tex.source.scaleMode = 'nearest';
+  return tex;
+}
+
+/**
+ * The painted extent plus the one-pixel outline, held symmetric about the spine: the mesh
+ * spans ±halfH around its centre line, so a crop that is not centred would shift the art
+ * off the line it swims about.
+ */
+function cropOf(s: Sheet) {
+  let x0 = s.w, x1 = -1, y0 = s.h, y1 = -1;
+  for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
+    const i = y * s.w + x;
+    if (s.mat[i] === M.EMPTY && !s.decal.has(i)) continue;
+    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  if (x1 < 0) return { x: 0, y: 0, w: s.w, h: s.h };
+  const cy = s.h / 2;
+  const half = Math.min(cy, Math.max(cy - y0, y1 + 1 - cy) + 1);
+  const x = Math.max(0, x0 - 1), w = Math.min(s.w, x1 + 2) - x;
+  return { x, y: Math.round(cy - half), w, h: Math.round(half * 2) };
 }
 
 /**
@@ -260,49 +267,36 @@ function paint(g: Genome, plan: Plan): Baked {
  * view. Every arm on the animal shares it: the feeding pair differs only in how far the
  * view stretches it, and a tentacle really is an arm that extends.
  *
- * The crown sits at the head, not trailing off the mantle: from above a squid is fins,
- * mantle, eyes and then arms, and arms that reach forward are the only arms that can
- * plausibly take hold of something the animal is swimming toward.
+ * The crown sits at the head, not trailing off the mantle: side-on a squid is fins, mantle,
+ * eye and then arms, and arms that reach forward are the only arms that can plausibly take
+ * hold of something the animal is swimming toward.
  */
-function armRig(f: Form, pal: Palette, A: PlanArt, g: Genome, seed: number): Rig {
+function armRig(f: Form, pal: Palette, A: PlanArt, g: Genome, res: number): Rig {
   const len = R * A.armLen * (1 + g.segments * 0.1) * A.armPair;
-  const w = R * A.armWidth * 1.3;
-  const halfH = w * 1.15;
-  const gr = new Graphics();
-  gr.rect(0, -halfH, len, halfH * 2).fill({ color: 0, alpha: 0 });
-  const n = 24;
+  const w = Math.max(1 / res, R * A.armWidth * 1.3);
+  const halfH = Math.ceil(w * 1.3 * res + 1) / res;
+  const s = new Sheet(0, len + w, halfH, res);
   // taper to a fraction rather than a point, then swell into a club over the last fifth:
   // the club is what says tentacle rather than eel
-  const width = (s: number) => w * (1 - s * 0.72 + Math.sin(Math.max(0, s - 0.8) / 0.2 * Math.PI) * 0.45);
-  const top: { x: number; y: number }[] = [];
-  for (let i = 0; i <= n; i++) {
-    const s = i / n;
-    const k = 1 + fbmSigned(s * 9, 1.3, seed) * 0.08;
-    top.push({ x: s * len, y: width(s) * k });
-  }
-  gr.moveTo(0, -top[0].y);
-  for (const p of top) gr.lineTo(p.x, -p.y);
-  gr.quadraticCurveTo(len + w * 0.5, 0, top[n].x, top[n].y);
-  for (let i = n; i >= 0; i--) gr.lineTo(top[i].x, top[i].y);
-  gr.closePath().fill({ color: pal.skin, alpha: 0.9 * pal.alpha });
-  // a darker aboral stripe, so the arm has a top the way the body does
-  // — one polygon, since overlapping translucent dabs band wherever they double up
-  gr.moveTo(0, -width(0) * 0.4);
-  for (let i = 1; i <= n; i++) gr.lineTo(i / n * len, -width(i / n) * 0.4);
-  for (let i = n; i >= 0; i--) gr.lineTo(i / n * len, width(i / n) * 0.4);
-  gr.closePath().fill({ color: pal.back, alpha: 0.3 * pal.alpha });
-  // suckers are on the underside, so from above only the club shows any: it turns them
-  // outward to hold, and a row of pale dots at the tip is what makes the strike legible
-  for (let i = 0; i < 8; i++) {
-    const s = 0.8 + (i + 0.5) / 8 * 0.18;
-    for (const dir of [-1, 1]) {
-      gr.circle(s * len, dir * width(s) * 0.5, width(s) * 0.24)
-        .fill({ color: pal.belly, alpha: 0.45 * pal.alpha });
+  const width = (u: number) => w * (1 - u * 0.72 + Math.sin(Math.max(0, u - 0.8) / 0.2 * Math.PI) * 0.45);
+  const layer = s.next();
+  for (let ix = 0; ix < s.w; ix++) {
+    const u = Math.min(1, s.rx(ix) / len);
+    const hw = width(u) * (1 + fbmSigned(u * 9, 1.3, 7) * 0.08);
+    const top = s.py(-hw), bot = s.py(hw);
+    s.column(ix, top, bot);
+    for (let iy = Math.floor(top); iy <= Math.ceil(bot); iy++) {
+      if (iy + 0.5 >= top && iy + 0.5 <= bot) s.set(ix, iy, M.BODY, 0, layer);
     }
+    if (bot - top < 1) s.set(ix, (top + bot) / 2, M.BODY, 0, layer);
   }
-  const texture = renderer!.generateTexture({ target: gr, resolution: resolutionFor(g),
-                                            antialias: true });
-  gr.destroy();
+  // suckers on the club, turned outward to hold: the row of pale dots at the tip is what
+  // makes the strike legible
+  for (let i = 0; i < 6; i++) {
+    const u = 0.8 + (i + 0.5) / 6 * 0.18;
+    s.dot(u * len, width(u) * 0.5, pal.ramp[4], 0.8);
+  }
+  const canvas = shade(s, { ...pal, alpha: pal.alpha * 0.95 });
   const rootT = 0.07;
-  return { texture, len, halfH, rootX: spineAt(rootT, f), spread: halfWidth(rootT, f) * 0.8 };
+  return { texture: pixelTexture(canvas), len, halfH, rootX: spineAt(rootT, f), spread: halfWidth(rootT, f) * 0.8 };
 }

@@ -1,75 +1,62 @@
 /**
- * Light organs: photophores along the flank, Flash Sense's lamps, and a glaring body's embers.
+ * Light organs, side-on: photophores along the belly, Flash Sense's lamps, and a glaring
+ * body's embers. Each is a hot pixel plus an emitter the view can hang a bloom on — a lamp
+ * a single texel across is only a lamp if light comes off it.
  */
-import { Graphics } from 'pixi.js';
 import { photophoreOf, type Genome } from '../../../content/genome';
-import { halfWidth, spineAt, R, type Form } from '../../../content/form';
-import { fbm, fbmSigned } from '../../../core/noise';
-import { hsl } from '../../../core/util';
-import type { Palette } from './palette';
+import { edgeAt, spineAt, R, type Form } from '../../../content/form';
+import { tAt } from './body';
+import { fbm } from '../../../core/noise';
+import { lerp } from '../../../core/util';
+import type { Palette, RGB } from './palette';
+import type { Sheet } from './sheet';
+
+/** The accent pushed toward white: a photophore is a light, not a paint colour. */
+const lamp = (c: RGB): RGB => [lerp(c[0], 255, 0.35), lerp(c[1], 255, 0.35), lerp(c[2], 255, 0.35)];
 
 /**
  * Photophores — the deep ocean's one universal adaptation, and the thing that makes an
- * animal read as deep before anything else about it does. Two ventral rows, because
- * counter-illumination only works pointing down: the animal lights its own belly to
- * erase the silhouette it would otherwise show to something hunting from below.
- *
- * Drawn after the mottle so the lights sit on the skin rather than under it, and as a
- * soft disc under a hard core — a single flat dot reads as a hole, not a lamp.
+ * animal read as deep before anything else about it does. A row along the belly, because
+ * counter-illumination only works pointing down; a strong one grows a second row above it.
+ * Side-on, these are the dotted lines down a dragonfish that say "midnight" on sight.
  */
-export function photophores(gr: Graphics, f: Form, pal: Palette, g: Genome, seed: number) {
-  const lit = Math.min(1.5, photophoreOf(g));
-  const n = Math.round(10 + lit * 22);
-  const scale = 0.7 + lit * 0.5;
-  for (let i = 0; i < n; i++) {
-    const t = 0.16 + (i / n) * 0.74;
-    const w = halfWidth(t, f);
-    const x = spineAt(t, f);
-    for (const dir of [-1, 1] as const) {
-      // the row wanders, because a ruled line of dots reads as machinery
-      const y = dir * w * (0.78 + fbmSigned(t * 21, dir * 5.1, seed + 53) * 0.09);
-      const r = R * 0.035 * scale;
-      gr.circle(x, y, r * 2.4).fill({ color: pal.accent, alpha: 0.16 });
-      gr.circle(x, y, r).fill({ color: pal.accent, alpha: 0.85 });
-      gr.circle(x, y, r * 0.45).fill({ color: 0xffffff, alpha: 0.7 });
+export function photophores(s: Sheet, f: Form, pal: Palette, g: Genome, seed: number) {
+  const k = photophoreOf(g);
+  const c = lamp(pal.accent);
+  // spaced in texels, not in t: a row of lights one pixel apart is a stripe, not a row
+  const gap = Math.max(s.texel * 3, f.len * R * 0.05 / (0.6 + k));
+  const rows = k > 0.6 ? [0.7, 0.3] : [0.7];
+  rows.forEach((row, ri) => {
+    let i = 0;
+    for (let x = spineAt(0.15, f); x > spineAt(0.9, f); x -= gap * (ri ? 1.6 : 1)) {
+      const t = tAt(x, f);
+      if (fbm(t * 13, ri, seed + 37, 1) < 0.2) continue;
+      s.light(x, edgeAt(t, f, row), c, (ri ? 0.3 : 0.5) * Math.min(1.2, k + 0.3) * (i++ % 2 ? 0.8 : 1));
     }
+  });
+}
+
+/**
+ * Flash Sense: the photophores have run up onto the flank — one bright row along the
+ * middle, larger than the belly's, because these point outward: they are the flash.
+ */
+export function flankLights(s: Sheet, f: Form, pal: Palette) {
+  const c = lamp(pal.accent);
+  for (let i = 0; i < 6; i++) {
+    const t = 0.2 + i * 0.12;
+    s.light(spineAt(t, f), edgeAt(t, f, -0.05), c, 0.8, true);
   }
 }
 
 /**
- * Flash Sense: the photophores have run up onto the flank. One bright row along each side,
- * larger than the belly's and set wide, because these point outward — they are the flash,
- * not the counter-illumination — and a row at the very edge of the silhouette is what makes
- * the whole outline light when it fires.
+ * Blood Lamp: the body burns. Three coals down the back in the red the deep takes first, so
+ * in dark water the curse is visible from as far as it is felt.
  */
-export function flankLights(gr: Graphics, f: Form, pal: Palette) {
-  const n = 12;
-  for (let i = 0; i < n; i++) {
-    const t = 0.14 + (i / (n - 1)) * 0.66;
-    const w = halfWidth(t, f);
-    const x = spineAt(t, f);
-    const r = R * 0.05 * (1 - Math.abs(t - 0.45) * 0.8);
-    for (const dir of [-1, 1] as const) {
-      const y = dir * w * 0.93;
-      gr.circle(x, y, r * 2.6).fill({ color: 0xe8fbff, alpha: 0.14 });
-      gr.circle(x, y, r).fill({ color: 0xe8fbff, alpha: 0.9 });
-    }
-  }
-}
-
-/**
- * Blood Lamp: the body burns. Three coals down the back, each a hot core in a wide soft
- * halo, in the red that the deep takes first — so in dark water the curse is visible from
- * as far as it is felt, which is the point of drawing it.
- */
-export function embers(gr: Graphics, f: Form, seed: number) {
-  const hot = hsl(8, 0.95, 0.55), core = hsl(34, 1, 0.72);
+export function embers(s: Sheet, f: Form, seed: number) {
   for (let i = 0; i < 3; i++) {
-    const t = 0.3 + i * 0.17 + (fbm(i * 5.3, 1, seed + 241) - 0.5) * 0.04;
-    const w = halfWidth(t, f);
-    const x = spineAt(t, f);
-    gr.circle(x, 0, w * 0.9).fill({ color: hot, alpha: 0.16 });
-    gr.circle(x, 0, w * 0.5).fill({ color: hot, alpha: 0.5 });
-    gr.circle(x, 0, w * 0.22).fill({ color: core, alpha: 0.95 });
+    const t = 0.3 + i * 0.18 + (fbm(i, 3, seed + 91, 1) - 0.5) * 0.06;
+    const x = spineAt(t, f), y = edgeAt(t, f, -0.55);
+    s.blot(x, y, s.texel * 1.5, [255, 90, 40], 0.6);
+    s.light(x, y, [255, 60, 30], 0.9, true);
   }
 }

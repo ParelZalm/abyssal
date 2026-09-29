@@ -1,283 +1,194 @@
 /**
- * Organ morphology on the body: spines and plates, claws and the stinging fringe, and the
- * marks of an active organ — electroplates, prickles, the ink sac.
+ * Organ morphology on the body, side-on: spines and plates, claws and the stinging fringe,
+ * and the marks of an active organ — electroplates, prickles, the ink sac. Each is a
+ * mechanic in `sim/organs/` as well as a shape here; a stat with no visible consequence is
+ * not how this game communicates.
  */
-import { Graphics } from 'pixi.js';
 import { armourOf, type Genome } from '../../../content/genome';
-import { halfWidth, shoulderAt, spineAt, R, type Form } from '../../../content/form';
+import { edgeAt, halfWidth, shoulderAt, spineAt, R, type Form } from '../../../content/form';
 import { fbm } from '../../../core/noise';
+import { lerp } from '../../../core/util';
 import { hasSynergy } from '../../../sim/organs';
-import { hsl, TAU } from '../../../core/util';
-import type { Palette } from './palette';
+import { tAt } from './body';
+import { TOXIC } from './head';
+import { rgbOf, type Palette, type RGB } from './palette';
+import { M, type Pt, type Sheet } from './sheet';
 
-/** Dorsal spines along the flank. Count rides menace: evolving grows the weapon. */
-export function spines(gr: Graphics, f: Form, pal: Palette, g: Genome, men: number) {
+/** Spines standing up out of the back. Count rides menace: evolving grows the weapon. */
+export function spines(s: Sheet, f: Form, g: Genome, men: number) {
   const n = Math.min(7, Math.round(men * 4 + g.spikes * 1.4));
   for (let i = 0; i < n; i++) {
-    const t = 0.38 + (i / Math.max(1, n)) * 0.34;
+    const t = 0.3 + (i / Math.max(1, n)) * 0.4;
     const w = halfWidth(t, f);
-    const len = w * (0.3 + men * 0.4) * (1 - i * 0.05);
-    for (const dir of [-1, 1] as const) {
-      const x = spineAt(t, f), y = w * dir * 0.96;
-      gr.moveTo(x + len * 0.3, y * 0.9)
-        .lineTo(x - len * 0.5, y + dir * len)
-        .lineTo(x - len * 0.55, y * 0.9)
-        .closePath().fill({ color: pal.dark, alpha: 0.9 * pal.alpha });
-    }
+    const len = Math.max(s.texel * 2, w * (0.35 + men * 0.5) * (1 - i * 0.06));
+    const x = spineAt(t, f), y = edgeAt(t, f, -1);
+    s.poly([[x + len * 0.18, y + s.texel], [x - len * 0.35, y - len], [x - len * 0.3, y + s.texel]], M.FIN);
+    s.dot(x - len * 0.33, y - len + s.texel * 0.5, rgbOf(72, 0.2, 0.8), 0.9);
   }
 }
 
-/**
- * Organs grown by mutation — the parts that make a build legible at a glance. Each one is a
- * mechanic in `world.ts` as well as a shape here; a stat with no visible consequence is not
- * how this game communicates.
- */
-export function organs(gr: Graphics, f: Form, pal: Palette, g: Genome) {
-  const toxic = hsl(78, 0.8, 0.5);
-  const reef = hsl(348, 0.38, 0.5);
+/** Organs grown by mutation — the parts that make a build legible at a glance. */
+export function organs(s: Sheet, f: Form, pal: Palette, g: Genome) {
+  const reef: RGB = rgbOf(348, 0.45, 0.52);
 
-  // coral: irregular plates crusting the back
+  // coral: knobbed plates crusting the back, breaking the top of the outline
   for (let i = 0; i < g.coral; i++) {
     for (let k = 0; k < 5; k++) {
-      const t = 0.3 + k * 0.1;
+      const t = 0.28 + k * 0.1 + i * 0.03;
       const w = halfWidth(t, f);
-      const y = ((k % 2) ? 1 : -1) * w * (0.22 + (k % 3) * 0.16);
-      const r = w * (0.16 + ((k * 7 + i * 3) % 4) * 0.04);
-      gr.circle(spineAt(t, f) - i * R * 0.06, y, r).fill({ color: reef, alpha: 0.7 * pal.alpha });
-      gr.circle(spineAt(t, f) - i * R * 0.06 - r * 0.25, y - r * 0.25, r * 0.36)
-        .fill({ color: 0xffffff, alpha: 0.18 });
+      const r = w * (0.18 + ((k * 7 + i * 3) % 4) * 0.05);
+      const x = spineAt(t, f), y = edgeAt(t, f, -0.85);
+      s.ellipse(x, y, r, r * 0.8, M.BODY);
+      s.blot(x, y, r, reef, 0.8);
+      s.dot(x - r * 0.3, y - r * 0.4, [255, 220, 226], 0.5);
     }
   }
 
-  // frill: a fringe of stinging tentacles along the rear margin — unless it has let go of the
-  // body and trails behind it, which is the Drifting Bloom and is painted under the body
+  // frill: stinging tentacles along the rear of the belly — unless they have let go and
+  // trail behind, which is the Drifting Bloom and is painted under the body
   if (g.frill > 0 && !hasSynergy(g, 'driftingbloom')) {
-    const n = Math.round(7 + g.frill * 3);
+    const n = Math.round(4 + g.frill * 2);
     for (let i = 0; i < n; i++) {
-      const v = n === 1 ? 0.5 : i / (n - 1);
-      const t = 0.72 + v * 0.26;
-      const w = halfWidth(t, f);
-      const dir = i % 2 ? 1 : -1;
-      const x = spineAt(t, f), y = w * dir * 0.9;
-      const len = R * (0.16 + g.frill * 0.08);
-      gr.moveTo(x, y)
-        .quadraticCurveTo(x - len * 0.7, y + dir * len * 0.5, x - len * 1.1, y + dir * len * 0.3)
-        .quadraticCurveTo(x - len * 0.5, y + dir * len * 0.15, x, y)
-        .closePath().fill({ color: pal.accent, alpha: 0.6 * pal.alpha });
+      const t = 0.62 + (i / Math.max(1, n - 1)) * 0.32;
+      const x = spineAt(t, f), y = edgeAt(t, f, 1);
+      const len = Math.max(s.texel * 2, R * (0.18 + g.frill * 0.08));
+      const pts: Pt[] = [[x, y], [x - len * 0.4, y + len * 0.7], [x - len * 0.9, y + len]];
+      s.line(pts);
+      s.dot(pts[2][0], pts[2][1], pal.accent, 0.9);
     }
   }
 
-  // claws: pincers on the shoulders, opened toward the prey — or, with the siphon behind
-  // them, folded forward along the head as a club, which is the Ballistic body
-  if (hasSynergy(g, 'ballistic')) raptorials(gr, f, pal, g);
-  // Vivisect: the pincer's inner edge is a saw, so what it closes on is cut as it is held
+  // claws: pincers under the head reaching forward — or, with the siphon behind them, the
+  // mantis shrimp's club folded under the jaw, which is the Ballistic body
+  if (hasSynergy(g, 'ballistic')) raptorials(s, f, pal, g);
   const vivisect = hasSynergy(g, 'vivisect');
   for (let i = 0; !hasSynergy(g, 'ballistic') && i < g.claws; i++) {
-    const t = shoulderAt(f) * (0.8 - i * 0.12);
+    const t = shoulderAt(f) * (0.75 - i * 0.12);
     const w = halfWidth(t, f);
-    const len = w * 0.9;
-    for (const dir of [-1, 1] as const) {
-      const x = spineAt(t, f), y = w * dir * 0.8;
-      gr.moveTo(x, y)
-        .quadraticCurveTo(x + len * 0.7, y + dir * len * 0.2, x + len, y + dir * len * 0.7)
-        .quadraticCurveTo(x + len * 0.35, y + dir * len * 0.15, x + len * 0.55, y - dir * len * 0.1)
-        .closePath().fill({ color: pal.bone, alpha: 0.9 * pal.alpha });
-      if (vivisect) sawEdge(gr, x + len, y + dir * len * 0.7, x + len * 0.55, y - dir * len * 0.1,
-                            x + len * 1.2, y, len * 0.12, 5, pal.bone, 0.95 * pal.alpha);
+    const len = Math.max(s.texel * 3, w * 0.95);
+    const x = spineAt(t, f), y = edgeAt(t, f, 0.8);
+    const tip: Pt = [x + len, y + len * 0.35];
+    // two jaws opening forward: the lower one hooked up, the upper one straight
+    s.poly([[x, y - len * 0.1], [x + len * 0.7, y - len * 0.05], tip, [x + len * 0.5, y + len * 0.1],
+            [x + len * 0.1, y + len * 0.3]], M.TOOTH);
+    s.poly([[x + len * 0.3, y + len * 0.25], [x + len * 0.95, y + len * 0.7], [x + len * 0.55, y + len * 0.4]], M.TOOTH);
+    if (vivisect) {
+      for (let j = 0; j < 4; j++) {
+        const k = (j + 0.5) / 4;
+        s.dot(lerp(x + len * 0.5, tip[0], k), lerp(y + len * 0.1, tip[1], k) + s.texel, pal.dark, 1);
+      }
     }
   }
 
-  // jet: a siphon at the peduncle, the only organ that points backwards
+  // jet: a siphon under the peduncle, the only organ that points backwards
   if (g.jet > 0) {
-    const t = 0.86;
+    const t = 0.84;
     const w = halfWidth(t, f);
-    gr.ellipse(spineAt(t, f), 0, w * 0.9, w * 0.55)
-      .fill({ color: pal.dark, alpha: 0.8 * pal.alpha });
-    gr.ellipse(spineAt(t, f) - w * 0.3, 0, w * 0.45, w * 0.3)
-      .fill({ color: pal.accent, alpha: 0.5 });
+    const x = spineAt(t, f), y = edgeAt(t, f, 0.9);
+    s.poly([[x + w, y - w * 0.3], [x - w * 0.8, y], [x - w * 0.8, y + w * 0.6], [x + w * 0.4, y + w * 0.4]], M.FIN);
+    s.dot(x - w * 0.7, y + w * 0.3, pal.accent, 0.9);
   }
 
-  // venom: the sacs show through the flank as two bright patches
+  // venom: the sacs show through the flank as a bright patch
   if (g.venom > 0) {
-    const t = 0.62;
+    const t = 0.6;
     const w = halfWidth(t, f);
-    for (const dir of [-1, 1]) {
-      gr.ellipse(spineAt(t, f), w * dir * 0.45, w * 0.5, w * 0.3)
-        .fill({ color: toxic, alpha: 0.35 + Math.min(0.35, g.venom * 0.1) });
+    const x = spineAt(t, f), y = edgeAt(t, f, 0.25);
+    s.blot(x, y, w * 0.4, TOXIC, 0.4 + Math.min(0.35, g.venom * 0.1), M.BODY);
+    if (hasSynergy(g, 'nematocyst')) {
+      // capsules round the sac, and a duct forward to the gut: venom out, healing back in
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        s.dot(x + Math.cos(a) * w * 0.55, y + Math.sin(a) * w * 0.45, [236, 255, 200], 0.9);
+      }
+      const gut = spineAt(0.42, f);
+      const n = Math.max(2, Math.round((x - gut) * s.res));
+      for (let i = 0; i <= n; i++) s.dot(lerp(x, gut, i / n), y, TOXIC, 0.6);
     }
-    if (hasSynergy(g, 'nematocyst')) nematocysts(gr, f, g, t);
   }
 }
 
 /**
- * A row of small teeth along an edge from (x0, y0) to (x1, y1), pointing to whichever side of
- * it (px, py) is on. The serrated lip and the Vivisect pincer.
+ * Ballistic: the mantis shrimp's raptorial club, folded — cocked along the underside of
+ * the head from the shoulder to past the snout, ending in a heavy heel. Past the nose on
+ * purpose: the heel is what lands, and it has to reach whatever you boost at first.
  */
-export function sawEdge(gr: Graphics, x0: number, y0: number, x1: number, y1: number, px: number,
-                 py: number, h: number, n: number, color: number, alpha: number) {
-  const dx = x1 - x0, dy = y1 - y0;
-  const l = Math.hypot(dx, dy) || 1;
-  let nx = -dy / l, ny = dx / l;
-  if ((px - x0) * nx + (py - y0) * ny < 0) { nx = -nx; ny = -ny; }
-  for (let i = 0; i < n; i++) {
-    const a = i / n, b = (i + 1) / n;
-    // raked toward the far end, the way a cutting tooth leans into the pull
-    const m = a + (b - a) * 0.75;
-    gr.moveTo(x0 + dx * a, y0 + dy * a)
-      .lineTo(x0 + dx * m + nx * h, y0 + dy * m + ny * h)
-      .lineTo(x0 + dx * b, y0 + dy * b)
-      .closePath().fill({ color, alpha });
-  }
-}
-
-/**
- * Ballistic: the mantis shrimp's raptorial claws. Folded, not opened — a club is cocked
- * along the body and fired, so it lies flat against the head from the shoulder to past
- * the nose, a long bone blade each side ending in a heavy heel. Past the nose on purpose:
- * the heel is what lands, and it has to be the first thing to reach whatever you boost at.
- */
-function raptorials(gr: Graphics, f: Form, pal: Palette, g: Genome) {
+function raptorials(s: Sheet, f: Form, pal: Palette, g: Genome) {
   const t0 = shoulderAt(f) * 0.9;
-  const w0 = halfWidth(t0, f);
-  const x0 = spineAt(t0, f);
   const tip = spineAt(0, f) + ballisticReach(g);
+  const y0 = edgeAt(t0, f, 0.85), y1 = edgeAt(0.05, f, 1);
   const heavy = 1 + Math.min(1, (g.claws - 1) * 0.35);
-  for (const dir of [-1, 1] as const) {
-    const y0 = dir * w0 * 0.86;
-    const y1 = dir * halfWidth(0.08, f) * 0.95;
-    const s = w0 * 0.19 * heavy;
-    gr.moveTo(x0, y0 - dir * s)
-      .quadraticCurveTo((x0 + tip) / 2, y0 + dir * s * 0.6, tip, y1)
-      .quadraticCurveTo((x0 + tip) / 2, y0 - dir * s * 1.6, x0, y0 + dir * s * 0.4)
-      .closePath().fill({ color: pal.bone, alpha: 0.92 * pal.alpha });
-    // the heel: a swollen knuckle at the tip, with the dark socket of the hinge behind it
-    gr.ellipse(tip - s * 1.2, y1, s * 1.5, s * 1.1).fill({ color: pal.bone, alpha: pal.alpha });
-    gr.ellipse(x0 + (tip - x0) * 0.45, (y0 + y1) / 2, s * 0.7, s * 0.5)
-      .fill({ color: pal.dark, alpha: 0.5 * pal.alpha });
-  }
+  const th = Math.max(s.texel, halfWidth(0.1, f) * 0.18 * heavy);
+  s.poly([[spineAt(t0, f), y0 - th], [tip - th * 2, y1 - th], [tip, y1], [tip - th * 2, y1 + th * 1.4],
+          [spineAt(t0, f), y0 + th]], M.TOOTH);
+  s.blot(tip - th, y1, th * 1.3, pal.bone, 1);
 }
 
 /** How far past the nose the Ballistic heel reaches — shared with the strip bounds. */
 export const ballisticReach = (g: Genome) => R * (0.22 + Math.min(1, (g.claws - 1) * 0.35) * 0.08);
 
-/**
- * Nematocyst: the grafted stinging cells have moved into the venom sacs. Each sac is ringed
- * with capsules, and a duct runs from it forward to the gut, so the venom and the healing
- * read as one circuit — what goes out through the barbs comes back in.
- */
-function nematocysts(gr: Graphics, f: Form, g: Genome, t: number) {
-  const cell = hsl(118, 0.75, 0.72);
-  const duct = hsl(96, 0.7, 0.45);
-  const w = halfWidth(t, f);
-  const x = spineAt(t, f);
-  const n = 7 + Math.min(3, Math.round(g.lifesteal * 20));
-  for (const dir of [-1, 1] as const) {
-    const cy = w * dir * 0.45;
-    // the duct: a filled taper from the sac to the gut, narrowing as it goes forward
-    const tg = 0.36;
-    const gx = spineAt(tg, f), gy = halfWidth(tg, f) * dir * 0.12;
-    const s = w * 0.09;
-    gr.moveTo(x, cy - s)
-      .quadraticCurveTo((x + gx) / 2, (cy + gy) / 2 + dir * w * 0.12, gx, gy)
-      .quadraticCurveTo((x + gx) / 2, (cy + gy) / 2 + dir * w * 0.12 + s * 1.4, x, cy + s)
-      .closePath().fill({ color: duct, alpha: 0.5 });
-    // capsules on the rim of the sac, a hard core in a soft coat, like the photophores
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * TAU;
-      const px = x + Math.cos(a) * w * 0.58, py = cy + Math.sin(a) * w * 0.36;
-      gr.circle(px, py, w * 0.09).fill({ color: cell, alpha: 0.3 });
-      gr.circle(px, py, w * 0.045).fill({ color: cell, alpha: 0.9 });
-    }
-  }
-}
-
-/**
- * Urchin: the spines stand in the plate. A field of thorns across the whole back, each out
- * of a dark socket and radiating from the middle of the body the way an urchin's test does,
- * so from above the animal is a pincushion rather than a fish with a crest. Length rides the
- * armour, since the plate is what the mechanic pays the recoil in.
- */
-/** Thorn length as a multiple of the threshold plate, capped so a tank is not a starburst. */
+/** Urchin thorn length as a multiple of the threshold plate, capped so a tank is not a starburst. */
 export const urchinReach = (g: Genome) => Math.min(1.6, armourOf(g) / 11);
 
-export function urchinSpines(gr: Graphics, f: Form, pal: Palette, g: Genome, seed: number) {
-  const cx = spineAt(0.5, f);
+/**
+ * Urchin: the spines stand in the plate. Thorns out of the whole back and belly, radiating
+ * from the middle of the body the way an urchin's test does, so the animal is a pincushion
+ * rather than a fish with a crest. Length rides the armour the recoil is paid in.
+ */
+export function urchinSpines(s: Sheet, f: Form, g: Genome, seed: number) {
   const reach = urchinReach(g);
-  for (let t = 0.2; t <= 0.84; t += 0.055) {
-    const w = halfWidth(t, f);
-    const rows = Math.max(2, Math.round(w / (R * 0.1)));
-    for (let j = 0; j < rows; j++) {
-      const v = ((j + 0.5) / rows) * 2 - 1;
-      const jit = fbm(t * 31, v * 17, seed + 211, 1);
-      const x = spineAt(t, f) + (jit - 0.5) * R * 0.05;
-      const y = v * w * 0.8;
-      // radial off the body's centre, leaning back, so the rim thorns splay outward
-      const a = Math.atan2(y * 1.8, x - cx) + Math.PI * 0.08 * Math.sign(y || 1);
-      const len = w * (0.3 + jit * 0.25) * reach * (0.55 + Math.abs(v) * 0.6);
-      const base = len * 0.13;
-      const px = -Math.sin(a) * base, py = Math.cos(a) * base;
-      gr.circle(x, y, base * 1.5).fill({ color: pal.dark, alpha: 0.55 * pal.alpha });
-      gr.moveTo(x + px, y + py)
-        .lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len)
-        .lineTo(x - px, y - py)
-        .closePath().fill({ color: pal.bone, alpha: 0.92 * pal.alpha });
+  const cx = spineAt(0.5, f), cy = edgeAt(0.5, f, 0);
+  for (let t = 0.12; t <= 0.9; t += 0.06) {
+    for (const k of [-1, 1] as const) {
+      const w = halfWidth(t, f);
+      const x = spineAt(t, f), y = edgeAt(t, f, k);
+      const a = Math.atan2(y - cy, (x - cx) * 0.6);
+      const len = Math.max(s.texel * 2, w * 0.63 * reach * (0.7 + fbm(t * 31, k, seed + 211, 1) * 0.6));
+      s.line([[x, y], [x + Math.cos(a) * len, y + Math.sin(a) * len]], M.TOOTH);
     }
   }
 }
 
 /**
- * Electric Organ: the electrocytes stacked in columns down both flanks, as the torpedo
- * ray's are — pale hexagonal cells in two kidney-shaped fields behind the head, the organ
- * the shock comes out of.
+ * Electric Organ: the electrocytes stacked in columns down the flank behind the head, as the
+ * torpedo ray's are — pale cells in a field the shock comes out of.
  */
-export function electroplates(gr: Graphics, f: Form, pal: Palette) {
-  const cell = hsl(212, 0.55, 0.78);
-  for (let t = 0.24; t < 0.58; t += 0.034) {
-    const w = halfWidth(t, f);
-    const x = spineAt(t, f);
-    for (const dir of [-1, 1] as const) {
-      for (let j = 0; j < 3; j++) {
-        const y = dir * w * (0.34 + j * 0.2);
-        const r = w * 0.085;
-        gr.poly(Array.from({ length: 6 }, (_, k) => {
-          const a = (k / 6) * TAU;
-          return [x + Math.cos(a) * r, y + Math.sin(a) * r * 0.9];
-        }).flat()).fill({ color: cell, alpha: 0.42 * pal.alpha });
-      }
+export function electroplates(s: Sheet, f: Form) {
+  const pale: RGB = [200, 232, 255];
+  const step = Math.max(s.texel * 2, R * 0.08);
+  for (let x = spineAt(0.42, f); x < spineAt(0.18, f); x += step) {
+    const t = tAt(x, f);
+    for (let k = -0.5; k <= 0.55; k += 0.35) {
+      const off = (Math.round(x / step) % 2) * 0.17;
+      s.dot(x, edgeAt(t, f, k + off), pale, 0.7);
     }
   }
 }
 
 /**
- * Inflation: the puffer's skin, stubbled with prickles that lie flat until it swells — small
- * pale thorns over the whole body, and the loose pale belly the swell stretches.
+ * Inflation: the puffer's skin, stubbled with prickles that lie flat until it swells —
+ * short pale thorns off the whole outline.
  */
-export function prickles(gr: Graphics, f: Form, pal: Palette, seed: number) {
-  for (let t = 0.1; t < 0.88; t += 0.045) {
-    const w = halfWidth(t, f);
-    const rows = Math.max(3, Math.round(w / (R * 0.06)));
-    for (let j = 0; j < rows; j++) {
-      const v = ((j + 0.5) / rows) * 2 - 1;
-      const jit = fbm(t * 29, v * 13, seed + 263, 1);
-      const x = spineAt(t, f) + (jit - 0.5) * R * 0.03;
-      const y = v * w * 0.85;
-      const s = w * 0.06;
-      gr.moveTo(x + s, y).lineTo(x - s * 1.6, y + s * 0.5).lineTo(x - s * 1.6, y - s * 0.5)
-        .closePath().fill({ color: pal.bone, alpha: 0.75 * pal.alpha });
+export function prickles(s: Sheet, f: Form, seed: number) {
+  for (let t = 0.1; t < 0.9; t += 0.045) {
+    for (const k of [-1, 1] as const) {
+      if (fbm(t * 41, k, seed + 181, 1) < 0.4) continue;
+      const x = spineAt(t, f), y = edgeAt(t, f, k);
+      s.line([[x, y], [x - s.texel, y + k * Math.max(s.texel * 1.5, halfWidth(t, f) * 0.2)]], M.TOOTH);
     }
   }
 }
 
 /**
- * Ink Sac: the dark sac on the gut, glossy, with a duct forward to the funnel it fires
- * through — drawn on the midline, where a squid's sits under the mantle.
+ * Ink Sac: the dark sac on the gut, glossy, with a duct forward to where it fires — low on
+ * the body, where a squid's sits under the mantle.
  */
-export function inkSac(gr: Graphics, f: Form) {
-  const t = 0.56;
+export function inkSac(s: Sheet, f: Form) {
+  const t = 0.5;
   const w = halfWidth(t, f);
-  const x = spineAt(t, f);
-  gr.moveTo(x, -w * 0.08).lineTo(spineAt(0.32, f), -w * 0.04).lineTo(spineAt(0.32, f), w * 0.04)
-    .lineTo(x, w * 0.08).closePath().fill({ color: 0x06040a, alpha: 0.7 });
-  gr.ellipse(x, 0, w * 0.55, w * 0.34).fill({ color: 0x06040a, alpha: 0.92 });
-  gr.ellipse(x + w * 0.15, -w * 0.1, w * 0.16, w * 0.08).fill({ color: 0xffffff, alpha: 0.28 });
+  const x = spineAt(t, f), y = edgeAt(t, f, 0.3);
+  s.blot(x, y, w * 0.32, [8, 6, 14], 0.95, M.BODY);
+  s.dot(x + w * 0.1, y - w * 0.15, [120, 120, 150], 0.8);
+  const n = Math.max(2, Math.round(w * 0.8 * s.res));
+  for (let i = 0; i <= n; i++) s.dot(x + (i / n) * w * 0.9, y + (i / n) * w * 0.2, [20, 16, 30], 0.8);
 }

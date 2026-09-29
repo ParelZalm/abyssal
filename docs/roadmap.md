@@ -144,10 +144,12 @@ follows, in stages, each committed on its own:
 1. ~~**The grid.**~~ Done: `render/pixel.ts`. The canvas is created at `1 / PIXEL`
    resolution and scaled up with hard pixels, and `FramePass` quantises the finished frame
    onto a stepped palette with a Bayer dither, so every gradient bands the same way.
-2. **Creatures side-on.** A pixel painter in profile replacing the smooth top-down bake:
-   ramps, dither, a pixel outline, a lit rim, every plan and every organ's morphology. The
-   view mirrors instead of rolling when an animal turns back, and the art is baked at the
-   grid's own density, re-baked when the camera's zoom moves a tier.
+2. ~~**Creatures side-on.**~~ Done: `render/creature/bake/sheet.ts` paints per pixel in
+   profile — ramps, dither, a derived outline and rim — for every plan and every organ's
+   morphology, at the grid's own density, re-baked when the zoom moves a tier. The view
+   mirrors instead of rolling (`faceFor`) and caps its pitch (`drawnAngle`); the lure's
+   strike point follows both. Left for tuning: the per-plan proportions, and small
+   animals, which at their real size are a handful of texels.
 3. **Light.** Blooms, halos and the lure drawn as stepped pixel light rather than soft
    discs.
 4. **The water and the background.** Props, fields and particulate redrawn for the grid.

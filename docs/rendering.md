@@ -3,7 +3,7 @@
 ## The pixel grid
 
 `src/render/pixel.ts`. The whole game is drawn on one coarse grid: the canvas is created
-at `1 / PIXEL` resolution (a third of the CSS size) and the browser scales it back up with
+at `1 / PIXEL` resolution (half the CSS size) and the browser scales it back up with
 `image-rendering: pixelated`. Everything in a frame shares that grid — scaling each
 animal's art by itself would put every animal on a grid of its own, and a skinned or
 rotated one would resample its pixels at every bend. There is no MSAA and positions round
@@ -71,27 +71,31 @@ one: `place()` and `show()` on `FishView` are the only supported way to do it, a
 calls `show(seen, alpha, tint)` where it used to set `visible`, `alpha` and `tint` directly.
 
 **The invariant: the art is painted once into a texture, and swimming moves vertices, not
-geometry.** `animate(dt, thrust, beat, bank)` writes `2 x cols` floats and nothing else. No
+geometry.** `animate(dt, thrust, beat, bank)` writes `2 x cols` floats and nothing else. The
+sway is scaled by `SIDE_ON`: a fish flexes side to side, which from the side is mostly into
+the screen, and the full lateral amplitude drawn as a vertical wave reads as a dolphin kick. No
 path is re-issued and no `Graphics` is touched. Anything that changes how a creature looks
 has to go through `rebuild(genome)`, which happens on mutation, not per frame.
 
-### The shape is a spine and one width curve
+### The shape is a spine and one depth curve
 
-A body seen from above is a line from nose to tail plus a half-width at each point along
-it. `halfWidth(t, form)` is a beta curve, `t^fore * (1-t)^aft`, normalised so its peak is
+Creatures are seen side-on. A body in profile is a line from nose to tail plus a depth at
+each point along it, split about the spine by `Form.up` (a humped back over a flat belly)
+and bowed by `Form.arch`. `halfWidth(t, form)` — the name is from the view from above, and
+it is now the half-depth — is a beta curve, `t^fore * (1-t)^aft`, normalised so its peak is
 always 1 and always lands at `fore/(fore+aft)`. That normalisation is what makes the
-parameters honest — the widest point moves on its own instead of being a third number to
-keep in sync. `PLAN_FORMS` holds one `Form` per plan and `formFor(genome, plan)` bends it
-with the genome, so a mutation that changes how an animal feeds changes its profile too.
+parameters honest — the deepest point moves on its own instead of being a third number to
+keep in sync. `edgeAt(t, form, k)` gives the top (`k = -1`), spine (0) and belly (+1) at any
+point, and every painter places its part with it. `PLAN_FORMS` holds one `Form` per plan
+and `formFor(genome, plan)` bends it with the genome, so a mutation that changes how an
+animal feeds changes its profile too.
 
 A plan is three records and nothing else: its `Form` in `PLAN_FORMS`, its swim signature
 in `MOTION` (`fishview.ts`), and its art in `PLAN_ART` — arms, spines, gills, cilia, pale
-eyes, caudal scale, outline samples, smoke, and the three that carry a guardian's
-silhouette: `tail` (`caudal` fork, whale `fluke`, or squid `mantle`), `blunt` for a
-squared-off snout the width curve cannot produce, and `dorsalFin`. All three are `Record<Plan, …>`, so adding a
-plan is a data edit the compiler walks you through. `PLAN_ART` replaced eleven scattered
-`plan === …` conditionals in `fishbake.ts`; there are none left, and adding a plan no
-longer means auditing the bake for branches it might belong in.
+eyes, caudal scale, smoke, and the three that carry a guardian's silhouette: `tail`
+(`caudal` fork, whale `fluke`, or squid `mantle`), `blunt` for the sperm whale's box head
+the depth curve cannot produce, and `dorsalFin`, the shark's. All are `Record<Plan, …>`,
+so adding a plan is a data edit the compiler walks you through.
 
 Plans with `grasp` rig their arms instead of painting them: `fishbake` bakes one arm
 texture (`Baked.arm`) and leaves the arms out of the body, and `FishView` skins it onto a
@@ -103,32 +107,43 @@ simulation latches on.
 Guardians are the exception to plans being shared: each has a body nothing else wears,
 because a guardian is the animal the player is meant to recognise on sight.
 
-This replaced a hand-drawn path per body plan. That system could not interpolate between
-any two of its shapes, so growth and mutation could only ever swap one drawing for another.
+### Facing
 
-### Nothing is stroked
+A side-on animal rotates to its heading but mirrors about its own spine once that heading
+is past vertical, so its back stays up. `faceFor` decides which way it faces, with a
+hysteresis band so an animal swimming straight up does not flicker, and `drawnAngle` caps
+the drawn pitch at 60° — at a straight 90° a fish in profile stands on its tail and stops
+reading as a fish. Both live in `content/form.ts` and `Creature.face` is state of the body,
+not the view, because the lure's strike point (`sim/organs/body.ts`) has to agree with
+where the bulb is drawn.
 
-A contour is a line with a position of its own, so the moment two parts of an animal move
-across each other it draws twice and the join shows. The old jointed view did this at every
-bend, and no draw order fixes it: two rigid pieces that rotate about different points always
-reveal their shared boundary. Every shape in `fishbake.ts` and `bake/` is a fill.
+### Pixel art, and nothing is stroked
 
-What the outline used to do is done by value instead, all from the same value noise the
-water shader runs on (`noise.ts`, matching the GLSL construction in `water.ts` — an animal
-textured with a different noise than its water reads as a sticker on the scene):
+`fishbake.ts` paints on a `Sheet` (`bake/sheet.ts`): a material per pixel, at the frame's
+own density, so one texel of art is one pixel of the frame. Painters say what a pixel *is*
+— body, fin, gauze, mouth, tooth, filament — and `shade` colours it afterwards:
 
-1. **A noise-ragged edge.** The flank samples are nudged by fbm, which is what keeps a
-   parametric curve from reading as machinery.
-2. **Countershading.** A dark back narrowing to the tail, in two passes each bounded by its
-   own noise curve. This is the cue that makes a shape read as a fish from above, and it is
-   now what carries the silhouette against the water.
-3. **Mottling.** Speckle on a body-space grid, dark over the spine and pale toward the
-   belly, so one pass reads as scale on top and as counter-lighting at the edge.
+1. **A ramp.** Six hue-shifted values, outline to rim (`bake/palette.ts`); the darks lean
+   toward indigo and the lights toward cyan, so a step down the ramp is a change of colour
+   as well as of value.
+2. **Light from above.** Lit toward the top of each column and rounded by the distance to
+   the edge, pushed through the palette's pigment — a dark back over a pale belly, which is
+   countershading seen from the side — and speckled with the water's own noise.
+3. **Dither.** The same 4×4 Bayer matrix as `FramePass`, where two ramp steps meet.
+4. **A derived outline and rim.** Open water touching the animal is the darkest step; the
+   first body pixel under open water is the brightest. A fin laid over the body gets an inner
+   edge where it leaves it.
 
-Legibility was the risk here, since the contour used to carry the read at the 0.34 zoom the
-deep tiers run at. It was checked in near-black water at 7600 m: the pale flank and belly
-values hold the silhouette on their own, but only because the palette separates them hard.
-A mid-value creature would disappear.
+The rule against stroking still holds, for the reason it was made: a contour with a position
+of its own draws twice wherever two parts cross. The outline here has no position of its
+own — it is read off the finished silhouette — so it cannot double.
+
+Detail has a budget. Below 6 texels of body length an animal is a body and nothing else;
+below 12 it gets its lights but no eye, fins or mouth. At its real size a krill is four
+texels long, and an eye on it is the whole animal.
+
+Colours that are not lit by the water — eyes, light organs, venom — go on as decals, and
+every light organ also records an emitter (`Baked.lights`) for the view to hang a bloom on.
 
 ### Skinning
 
@@ -155,8 +170,16 @@ a plan cannot be added to the game without appearing there.
 
 `bakeFish` caches by a deliberately coarse key: two genomes that differ by less than a hue
 step are the same picture, so a school of forty krill is one texture. The cache is capped at
-160 entries. Baking needs a live renderer, so `setBakeRenderer` must be called before the
-first creature exists — in `Game.boot` that is before `reset()`.
+160 entries. Painting is on the CPU into a canvas; no renderer is needed.
+
+The density follows the camera (`artDensity` in `render/pixel.ts`, `zoom / PIXEL` texels per
+world unit) in tiers of a quarter octave, with hysteresis. A tier change bumps
+`artVersion`, and each view re-bakes the next time it animates: 97 creatures cold is about
+10 ms, and from the cache about 3. The resolution is then quantised in sixth-octave steps
+per animal, which keeps a species' individuals on a few shared textures.
+
+The sheet is sized generously and cropped to what was painted, held symmetric about the
+spine, so no part can be clipped by a bounds estimate.
 
 `menace` is read inside the view, so the same genome always produces the same animal.
 

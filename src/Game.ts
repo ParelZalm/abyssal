@@ -8,12 +8,11 @@ import { FINAL_GUARDIAN, placeName } from './content/zones';
 import { Input } from './input/Input';
 import { PlayerController } from './input/PlayerController';
 import { Camera } from './render/Camera';
-import { setBakeRenderer } from './render/creature/fishbake';
 import { Dread } from './render/Dread';
 import { Fx } from './render/fx';
 import { Impacts } from './render/Impacts';
 import { Ocean } from './render/ocean';
-import { FramePass, PIXEL } from './render/pixel';
+import { followZoom, FramePass, PIXEL } from './render/pixel';
 import { Scene } from './render/Scene';
 import { Scenery } from './render/scenery';
 import { Water } from './render/water';
@@ -77,7 +76,7 @@ export class Game {
     await this.app.init({
       // one GLSL program for the water, so pin the renderer to WebGL
       preference: 'webgl',
-      // The canvas is the pixel grid: a third of the CSS size, scaled back up by the
+      // The canvas is the pixel grid: half the CSS size, scaled back up by the
       // browser with hard edges (`render/pixel.ts`). No MSAA — a smoothed edge on a grid
       // this coarse is a smear, and every edge is supposed to be a stair-step — and
       // positions rounded to whole pixels, or a slow animal shimmers as it crosses them.
@@ -87,9 +86,6 @@ export class Game {
     this.app.stage.filters = [new FramePass()];
     this.app.stage.filterArea = this.app.screen;
     document.getElementById('stage')!.append(this.app.canvas);
-    // creature art is baked into textures, which needs a live renderer before the first
-    // creature exists — so this has to come before reset()
-    setBakeRenderer(this.app.renderer);
     this.water = new Water(this.app.renderer);
     this.scene = new Scene(this.water, this.camera, this.ui);
     this.input = new Input(this.app.canvas, {
@@ -225,7 +221,7 @@ export class Game {
     this.evolution = new Evolution(run, p, this, camera, fx, ui);
     this.bands = new Bands(run, p, world, this.controller, this.evolution, this, camera,
       this.dread, fx, ui);
-    this.ending = new Ending(run, p, this.bands, this.best, this, this.app.renderer, fx, ui, {
+    this.ending = new Ending(run, p, this.bands, this.best, this, fx, ui, {
       // again means the same body; a daily again means the same ocean, to try it better
       restart: () => {
         this.reset(run.choice.daily ? run.choice : { start: run.choice.start });
@@ -321,6 +317,8 @@ export class Game {
   private render(dt: number) {
     const { player: p, run, camera } = this;
     const view = camera.follow(dt, p, this.phase === 'play', run.elapsed);
+    // creature art is baked at the grid's density for this zoom; a new tier re-bakes it
+    followZoom(view.zoom);
     this.water.resize(camera.W, camera.H);
     this.ocean.update(dt, view);
     this.scenery.update(view);

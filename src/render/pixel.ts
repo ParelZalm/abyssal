@@ -8,7 +8,7 @@
  * every bend. One low-resolution frame re-grids all of it for free.
  *
  * The canvas is simply created at `1 / PIXEL` resolution and CSS scales it up with
- * `image-rendering: pixelated`. No render target of our own, and the GPU shades a ninth of
+ * `image-rendering: pixelated`. No render target of our own, and the GPU shades a quarter of
  * the pixels it used to.
  *
  * On top of that, `FramePass` quantises the finished frame onto a stepped palette with an
@@ -19,8 +19,36 @@
  */
 import { Filter, GlProgram } from 'pixi.js';
 
-/** CSS pixels per art pixel. The reference is drawn at about four; three holds more world. */
-export const PIXEL = 3;
+/**
+ * CSS pixels per art pixel. The reference is drawn at about four; at three a hatchling is
+ * thirteen art pixels long, which is too few to carry a single organ. Two keeps the grid
+ * visibly coarse and leaves a small animal room for an eye, a mouth and a fin.
+ */
+export const PIXEL = 2;
+
+/**
+ * Creature art is baked at the grid's own density, one texel per pixel of the frame, so
+ * that density follows the camera: `zoom / PIXEL` texels per world unit. It moves in tiers
+ * rather than continuously — every tier is a re-bake of everything on screen — and a tier
+ * only changes once the zoom is well past it, so an easing camera cannot flap between two.
+ */
+const STEP = 2 ** 0.25;
+let tier = Math.round(Math.log(1.3) / Math.log(STEP));
+/** Bumped whenever the art density changes; views compare it to know they are stale. */
+export let artVersion = 0;
+
+export function followZoom(zoom: number) {
+  const t = Math.log(zoom) / Math.log(STEP);
+  if (Math.abs(t - tier) > 0.6) {
+    tier = Math.round(t);
+    artVersion++;
+  }
+}
+
+/** Art texels per world unit at the current tier. */
+export function artDensity() {
+  return STEP ** tier / PIXEL;
+}
 
 const vertex = `
 attribute vec2 aPosition;

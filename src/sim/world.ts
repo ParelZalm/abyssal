@@ -1,4 +1,5 @@
 import { Container } from 'pixi.js';
+import { faceFor } from '../content/form';
 import { genomeFor, type Species } from '../content/species';
 import { BANDS, DEPTH_MAX, WORLD_HALF_W } from '../content/zones';
 import { clamp, dist2, type Rng, TAU } from '../core/util';
@@ -202,6 +203,7 @@ export class World {
       c.vy *= k;
     }
     if (c.fade < 1) c.fade = Math.min(1, c.fade + dt / FADE_IN);
+    c.face = faceFor(c.face, c.angle);
     // nothing heals while a wound is still working on it
     const wounded = c.poisonT > 0 || c.bleedT > 0;
     if (c.poisonT > 0) {

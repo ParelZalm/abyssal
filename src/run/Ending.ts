@@ -1,4 +1,3 @@
-import type { Renderer } from 'pixi.js';
 import { FAMILY_NAMES } from '../content/forms';
 import { BANDS, depthLabel } from '../content/zones';
 import type { Fx } from '../render/fx';
@@ -17,7 +16,7 @@ import type { Run } from './Run';
 export class Ending {
   constructor(private readonly run: Run, private readonly p: Creature,
               private readonly bands: Bands, private readonly best: Best,
-              private readonly flow: Flow, private readonly renderer: Renderer,
+              private readonly flow: Flow,
               private readonly fx: Fx, private readonly ui: UI,
               private readonly on: { restart(): void; title(): void }) {}
 
@@ -78,8 +77,8 @@ export class Ending {
   }
 
   /**
-   * The lineage as images: each snapshot baked the way the game bakes any body and read
-   * back off the GPU, at most eight, evenly picked with the first and the last kept — a long
+   * The lineage as images: each snapshot baked the way the game bakes any body, its pixels
+   * taken straight off the bake, at most eight, evenly picked with the first and the last kept — a long
    * run levels a dozen times and the row is about the shape of the growth, not every step.
    */
   private silhouettes(): LineageFrame[] {
@@ -93,7 +92,7 @@ export class Ending {
     for (const s of pick) {
       try {
         const baked = bakeFish(s.g, s.plan);
-        const image = this.renderer.extract.canvas(baked.texture) as HTMLCanvasElement;
+        const image = baked.canvas;
         releaseFish(baked);
         out.push({ image, stage: s.stage, size: s.g.size, label: s.label });
       } catch { /* a silhouette that cannot be read back is left out, not the whole screen */ }
