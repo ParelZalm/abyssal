@@ -68,6 +68,12 @@ Three groups of fields, and the split matters:
   spends it, and it sinks at 60 u/s² while idle. `Game` rings the body once when poise
   tops out, since nothing else says the strike is wound. All three bend the silhouette in
   `formFor` and the swim wave in `motionFor` (`fishview.ts`) as well as the paint.
+  Two NPCs are born with them (`Species.eel`, `Species.lurk`): the Ribbon Eel carries both,
+  a reef ambusher that cuts inside anything it lunges at and bites harder for having waited,
+  and the Anglerfish carries `lurk`, whose lure trap spends no poise — an angler at rest is
+  always at full poise, and a strike that already ignores size would land six and a half
+  bites. An NPC's stealth dims it to the player's eyes (`Scene`, `HIDDEN` 0.75), faint at a
+  distance and found within a few body lengths; a body felt by the ampullae is not dimmed.
   A synergy is an `Organ` whose `when` tests two fields and that carries a `name`; its
   effect hooks return true on a frame they did something, `World.fired` publishes its id
   once per run on `world.synergies`, and `Game.digest` turns it into the discovery card, so the

@@ -48,6 +48,9 @@ export interface Species {
   claws?: number;
   /** An illicium. On an animal that is not the player it is a trap: see the `lure` organ. */
   lure?: number;
+  /** Locomotion organs, the player's cards on an animal born with them (`sim/organs/`). */
+  eel?: number;
+  lurk?: number;
 
   // deep-water morphology
   photophores?: number;
@@ -117,7 +120,7 @@ export const SPECIES: Species[] = [
   { id: 'ribbon', name: 'Ribbon Eel', behavior: 'ambush', plan: 'eel',
     zone: 'sunlit', band: 'reef',
     size: [26, 44], hue: [250, 275], accent: 50, speed: 150, bite: 12,
-    nutrition: 2.1, weight: 8, jaw: 0.8, segments: 3, stealth: 0.5 },
+    nutrition: 2.1, weight: 8, jaw: 0.8, segments: 3, stealth: 0.5, eel: 1, lurk: 1 },
 
   { id: 'reefshark', name: 'Reef Shark', behavior: 'hunter', plan: 'shark',
     zone: 'sunlit', band: 'reef', bleed: 700,
@@ -205,7 +208,7 @@ export const SPECIES: Species[] = [
     zone: 'midnight', bleed: 800,
     size: [40, 66], hue: [252, 278], accent: 55, speed: 130, bite: 26,
     nutrition: 2.6, weight: 7, jaw: 1.1, glow: 0.9, armor: 2, spikes: 1, lure: 1,
-    gape: 0.7, eyeAdapt: 0.3, photophores: 0.3, sense: 520 },
+    gape: 0.7, eyeAdapt: 0.3, photophores: 0.3, sense: 520, lurk: 1 },
 
   { id: 'gulper', name: 'Gulper Eel', behavior: 'hunter', plan: 'eel',
     zone: 'midnight', bleed: 900,
@@ -350,6 +353,8 @@ export function genomeFor(sp: Species, rng: Rng): Genome {
   g.translucent = sp.translucent ?? 0;
   g.claws = sp.claws ?? 0;
   g.lure = sp.lure ?? 0;
+  g.eel = sp.eel ?? 0;
+  g.lurk = sp.lurk ?? 0;
 
   g.photophores = sp.photophores ?? 0;
   g.eyeAdapt = sp.eyeAdapt ?? 0;

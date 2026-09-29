@@ -4,7 +4,7 @@ import { sightOf } from '../content/genome';
 import { BANDS } from '../content/zones';
 import { SQUEEZE_MIN } from '../run/Bands';
 import type { Phase } from '../run/phase';
-import { feelOf } from '../sim/organs';
+import { feelOf, stealthOf } from '../sim/organs';
 import type { Creature } from '../sim/creature';
 import type { World } from '../sim/world';
 import type { UI } from '../ui/UI';
@@ -15,6 +15,13 @@ import { lightAt, type Water } from './water';
 
 /** The cast on a body the ampullae found but the eyes could not: cold, like the field. */
 const FELT_TINT = 0x9fc4ff;
+/**
+ * How much of a hidden animal's stealth the player's eyes lose it by, at a distance. Under
+ * 1 on purpose: a lurking ribbon eel at the reef can swallow a hatchling, and one that was
+ * wholly invisible until it struck would be a death with no read. At 0.8 stealth it is two
+ * fifths as clear as it would be, which is a shape to notice and not one to count on.
+ */
+const HIDDEN = 0.75;
 
 /**
  * What the player can make out this frame: which bodies show and how clearly, the ring
@@ -70,6 +77,7 @@ export class Scene {
       const r = c.radius * 2;
       const seen = Math.abs(c.x - view.x) < edgeX + r && Math.abs(c.y - view.y) < edgeY + r;
       let alpha = 1;
+      let felt = false;
       if (seen && light <= 0.75) {
         const own = c.genome.glow * 260 + c.genome.size * 3;
         const vis = clamp(1 - (d - sense - own) / (sense * 0.55), 0, 1);
@@ -80,8 +88,16 @@ export class Scene {
         const hurt = c.hp < c.hpMax * 0.5 || c.bleedT > 0 || c.poisonT > 0 || c.stun > 0;
         if (feel > 0 && alpha < 0.9 && d - c.radius < feel * (hurt ? 2 : 1)) {
           alpha = 1;
+          felt = true;
           if (tint === 0xffffff) tint = FELT_TINT;
         }
+      }
+      // an animal that hides is hidden from the player's eyes as the player's stealth hides
+      // it from theirs: faint at a distance and found up close, a few body lengths out. A
+      // body felt by its field is not found by its outline, so the ampullae see through it
+      if (seen && !felt) {
+        const gap = d - c.radius - p.radius;
+        alpha *= 1 - clamp(stealthOf(c), 0, 0.8) * HIDDEN * clamp(gap / (c.radius * 4 + 80), 0, 1);
       }
       // an off-screen view is not placed (see `World.integrate`), so it still sits wherever
       // it left the frame; reveal it without moving it and it draws there for a frame and

@@ -80,9 +80,9 @@ change *what you do*, each an entry in `sim/organs/` plus paint:
   safety is from spines and frill. The two can be taken together; if a mouth should be one
   or the other, the draft needs an exclusion rule it does not have.
 - ~~**Locomotion.**~~ Done: Anguilliform Body (`eel`), Mantle Pump (`mantle`) and Lie in
-  Wait (`lurk`), through a `swim` hook on `Creature.propel` and a `stealth` hook. No
-  species carries them yet; the Ribbon Eel and the Anglerfish are the obvious first
-  NPCs to give them to, once the player versions have been played.
+  Wait (`lurk`), through a `swim` hook on `Creature.propel` and a `stealth` hook. The Ribbon
+  Eel carries `eel` and `lurk`, the Anglerfish `lurk`, and an NPC's stealth now hides it
+  from the player's eyes at a distance.
 - ~~**Sense modes.**~~ Done: `sightOf` dims the eye with the light, Tapetum's
   `eyeAdapt` wins it back, and `electro` (Ampullae) feels the living at short range in any
   water, the wounded from twice as far. Flash Sense sits on top.

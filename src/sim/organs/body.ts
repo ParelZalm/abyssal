@@ -57,6 +57,9 @@ export const BODY: Organ[] = [
       c.angle = Math.atan2(p.y - c.y, p.x - c.x);
       c.vx += cos * c.genome.speed;
       c.vy += sin * c.genome.speed;
+      // the trap is a reflex, not the wait: an angler that lurks is always at full poise, and
+      // spending it here would make a strike that already ignores size six bites and a half
+      c.poise = 0;
       world.hit(c, p, LURE_STRIKE);
       c.biteCd = 2.5;
       c.lunge = 1.6;
