@@ -396,6 +396,12 @@ const BUILDS: { id: string; name: string; note: string; plan: Plan; depth: numbe
   { id: 'whaleshark', name: 'Whale Shark', plan: 'shark', depth: 5200,
     note: 'Synergy: ram gills past the Midnight gate. A mouth as wide as the head, and pale spots in rows across the back.',
     edit: g => { g.ram = 1; g.size = 100; g.speed = 220; g.metabolism = 0.7; g.hue = 214; g.accentHue = 200; } },
+  { id: 'smokescreen', name: 'Smoke Screen', plan: 'squid', depth: 3400,
+    note: 'Synergy: siphon + ink sac. The siphon\'s mouth is stained black, a smear back from it thinning to dots.',
+    edit: g => { g.jet = 1; g.ink = 1; g.mantle = 1; g.hue = 330; g.accentHue = 200; } },
+  { id: 'morayjaws', name: 'Moray Jaws', plan: 'eel', depth: 1500,
+    note: 'Synergy: eel body + crushing pharynx. Hooked teeth raked back in the throat — a mouth behind the mouth.',
+    edit: g => { g.eel = 1; g.crush = 1; g.jaw = 0.9; g.gape = 0.4; g.segments = 2; g.hue = 90; g.accentHue = 52; } },
 ];
 
 /** The water each form is likeliest to happen in: families ripen at different depths. */

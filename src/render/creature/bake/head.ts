@@ -76,6 +76,7 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
 
   if (sieve > 0) rakers(s, f, sieve, upper, back, lower, peak);
   if (g.crush > 0) pharynx(s, f, back);
+  if (hasSynergy(g, 'morayjaws')) throatJaw(s, nose, back, open);
   if (g.electro > 0) ampullae(s, f, pal, g);
 
   // the eye. A light-gathering eye is pale because of the tapetum behind it; past the point
@@ -146,6 +147,21 @@ function pharynx(s: Sheet, f: Form, back: Pt) {
   for (let i = 0; i < 3; i++) {
     const x = lerp(spineAt(0.03, f), back[0], (i + 0.5) / 3);
     s.ellipse(x, back[1], s.texel * 1.2, s.texel * 0.8, M.TOOTH);
+  }
+}
+
+/**
+ * Moray Jaws: the second jaw, set back in the throat — a row of hooked teeth just inside
+ * the hinge, raked backward the way pharyngeal teeth are, so the gape shows a mouth behind
+ * the mouth. Shut, it is a pale ridge at the corner of the jaw, which is all a moray shows.
+ */
+function throatJaw(s: Sheet, nose: Pt, back: Pt, open: number) {
+  const n = open * s.res >= 3 ? 4 : 2;
+  for (let i = 0; i < n; i++) {
+    const k = 0.1 + i * 0.09;
+    const x = lerp(back[0], nose[0], k), y = back[1] - open * (0.1 + k * 0.2);
+    const len = Math.max(s.texel, open * 0.28);
+    s.line([[x, y - len * 0.5], [x - len * 0.5, y + len * 0.5]], M.TOOTH);
   }
 }
 

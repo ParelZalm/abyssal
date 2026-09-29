@@ -115,6 +115,15 @@ Three groups of fields, and the split matters:
   eyes of the deep and the two biggest sunlit hunters qualify; the trench's blind animals
   do not. `Creature.kicks` counts boosts so the flash fires once per kick. A bright row
   of outward lights runs along each flank.
+  `Smoke Screen` (jet + ink sac): every boost kick puffs a cloud at the tail — `size × 1.4
+  + 90` across, 1.8 s, on `world.inks` — and every hunter within 1.6 of it drops its chase
+  and tires for 0.8 s. It does not hide the body, which is already leaving it; it breaks
+  the line behind. Once per kick through its own counter (`Creature.inked`). The siphon is
+  stained black from its opening forward, with the ink's sheen at the mouth.
+  `Moray Jaws` (eel + crushing pharynx): a bite that neither kills nor swallows a body no
+  bigger than you holds it — stunned, its bite held, carried at your speed — for 0.7 s,
+  about the crusher's slow second snap, so what was bitten stays at the mouth. Hooked
+  teeth are raked back in the throat, a pale ridge at the jaw's corner when it is shut.
   Recoil can kill:
   `Combat.land` books an attacker whose health the defender's organs took below zero. The
   paint asks `hasSynergy(g, id)` from the same file, so a combination shows on the body
@@ -194,8 +203,11 @@ count, lean)` picks without replacement from a rarity-weighted pool.
   `glare` (a `glare` hook, read in `Behaviour.nearest`, which shrinks the player's distance by
   `1 + 0.6 × glare` so hunters and prey both find it from 60% further, and in `notices`,
   which lets guardians register it smaller) paints three coals down the back; `brittle`
-  (a defender-side `taken` hook, after armour, ×1.5) crazes the skin with pale slivers.
-  One stack each.
+  (a defender-side `taken` hook, after armour, ×1.5) crazes the skin with pale slivers;
+  `veins` (Open Veins, +3 regeneration: an `onWounded` hook that opens a bleed worth a
+  tenth of every wound a second for five, half the bite again) runs dark red veins back
+  along the flank. The bleed is a trail hunters follow, and it stops the very regeneration
+  the card pays in, since nothing heals while a wound is working. One stack each.
 - `maxStacks` defaults to 2, so a run specialises without collapsing into one stat.
 
 - **The draft reads the build** (`run/prospects.ts`). `completes(g, owned, form, t)` takes

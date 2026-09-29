@@ -111,6 +111,24 @@ export function crazing(s: Sheet, f: Form, seed: number) {
 }
 
 /**
+ * Open Veins: the blood runs close under the skin — dark red veins branching back along the
+ * flank from the gills, each a wandering line of single texels, so the body reads as one
+ * that will bleed. Low on the flank and thin on purpose: a cursed mark, not a wound.
+ */
+export function veins(s: Sheet, f: Form, seed: number) {
+  const red: RGB = [150, 22, 34];
+  for (let v = 0; v < 3; v++) {
+    const t0 = 0.24 + v * 0.05;
+    const steps = Math.max(4, Math.round((spineAt(t0, f) - spineAt(0.8, f)) * s.res));
+    for (let i = 0; i <= steps; i++) {
+      const t = lerp(t0, 0.8 - v * 0.08, i / steps);
+      const k = 0.05 + v * 0.22 + fbmSigned(t * 9, v * 3.1, seed + 307) * 0.18;
+      s.dot(spineAt(t, f), edgeAt(t, f, k), red, 0.85);
+    }
+  }
+}
+
+/**
  * What shows through a body of smoke: a hard spine, ribs off it, and one opaque gut. These
  * are the only opaque things on the animal, which is what stops it reading as a pale blob —
  * a translucent shape with nothing inside it has no scale and no direction.

@@ -44,6 +44,13 @@ const DAZZLE = 1.6;
 /** Whale Shark's size floor: the Midnight gate, so ram gills only pay off on a giant. */
 const WHALE_SIZE = 96;
 
+/** Smoke Screen's puff: seconds it hangs, and how far behind it a pursuer loses you. */
+const PUFF_LIFE = 1.8;
+const PUFF_LOSE = 1.6;
+
+/** Seconds Moray Jaws holds a bitten body at the mouth — about a crusher's slow second snap. */
+const HELD = 0.7;
+
 /** Swimming fast enough that the flow alone ventilates the gills and fills the mouth. */
 const cruising = (c: Creature) => Math.hypot(c.vx, c.vy) >= c.genome.speed * 0.6;
 
@@ -223,6 +230,44 @@ export const SYNERGY_ORGANS: Organ[] = [
         fired = true;
       }
       return fired;
+    } }),
+
+  O({ id: 'smokescreen', name: 'Smoke Screen', when: g => g.jet > 0 && g.ink > 0,
+    desc: 'Siphon and ink sac. Every boost leaves a puff of ink behind you, and whatever is on your tail loses you in it.',
+    // the siphon and the sac share a duct, so the jet fires ink with the water: a small
+    // cloud at the tail on every kick. It does not hide you, since you are already leaving
+    // it; it breaks the line behind you, so a hunter that was chasing loses the thread in
+    // it. The sac's own cloud is still the hiding place, and still on its cooldown
+    onTick: (c, _dt, world) => {
+      if (c.kicks === c.inked) return false;
+      c.inked = c.kicks;
+      if (c.boosting <= 0) return false;
+      const back = c.radius * 1.2;
+      const x = c.x - Math.cos(c.angle) * back, y = c.y - Math.sin(c.angle) * back;
+      const r = c.genome.size * 1.4 + 90;
+      world.inks.push({ x, y, r, t: PUFF_LIFE });
+      world.pulses.push({ x, y, r, kind: 'ink' });
+      for (const o of world.creatures) {
+        if (!o.alive || !o.preysOn(c) || dist2(o.x, o.y, x, y) > (r * PUFF_LOSE) ** 2) continue;
+        o.chase = 0;
+        o.quarry = null;
+        o.tired = Math.max(o.tired, 0.8);
+      }
+      return true;
+    } }),
+
+  O({ id: 'morayjaws', name: 'Moray Jaws', when: g => g.eel > 0 && g.crush > 0,
+    desc: 'Eel body and crushing pharynx. A second jaw in the throat holds anything smaller that you bite, long enough to bite it again.',
+    // the moray's pharyngeal jaw: it shoots forward out of the throat, grips, and hauls the
+    // catch in, so what was bitten and not killed stays bitten. The crusher snaps slowly,
+    // and without this its prey was gone by the second snap; held, it is still at the mouth
+    onWound: (att, def, ctx) => {
+      if (ctx.fatal || ctx.whole || !def.alive || def.genome.size > att.genome.size) return false;
+      def.stun = Math.max(def.stun, HELD);
+      def.biteCd = Math.max(def.biteCd, HELD);
+      def.vx = att.vx;
+      def.vy = att.vy;
+      return true;
     } }),
 
   O({ id: 'nematocyst', name: 'Nematocyst', when: g => g.venom > 0 && g.lifesteal > 0,

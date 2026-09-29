@@ -87,6 +87,20 @@ export function organs(s: Sheet, f: Form, pal: Palette, g: Genome) {
     const x = spineAt(t, f), y = edgeAt(t, f, 0.9);
     s.poly([[x + w, y - w * 0.3], [x - w * 0.8, y], [x - w * 0.8, y + w * 0.6], [x + w * 0.4, y + w * 0.4]], M.FIN);
     s.dot(x - w * 0.7, y + w * 0.3, pal.accent, 0.9);
+    if (hasSynergy(g, 'smokescreen')) {
+      // Smoke Screen: the ink duct opens into the siphon, and it is stained black from the
+      // opening forward, thinning as it goes — decals only land on the body, so the smear
+      // is on the siphon and not in the water behind it
+      const n = Math.max(3, Math.round(w * 1.6 * s.res));
+      for (let i = 0; i <= n; i++) {
+        const k = i / n;
+        const sx = x - w * (0.75 - k * 1.3), sy = y + w * (0.3 - k * 0.15);
+        s.dot(sx, sy, INK, 1 - k * 0.5);
+        if (k < 0.6) s.dot(sx, sy + s.texel, INK, 0.8 - k);
+      }
+      // black on the siphon's shaded underside barely reads; the sac's own sheen does
+      s.dot(x - w * 0.75, y + w * 0.3 - s.texel, INK_SHEEN, 0.9);
+    }
   }
 
   // venom: the sacs show through the flank as a bright patch
@@ -183,12 +197,17 @@ export function prickles(s: Sheet, f: Form, seed: number) {
  * Ink Sac: the dark sac on the gut, glossy, with a duct forward to where it fires — low on
  * the body, where a squid's sits under the mantle.
  */
+/** The sac's ink, and the stain Smoke Screen leaves on the siphon: one black, a violet cast. */
+const INK: RGB = [8, 6, 14];
+/** The wet light on ink, which is what lets a black organ read against a dark flank. */
+const INK_SHEEN: RGB = [120, 120, 150];
+
 export function inkSac(s: Sheet, f: Form) {
   const t = 0.5;
   const w = halfWidth(t, f);
   const x = spineAt(t, f), y = edgeAt(t, f, 0.3);
-  s.blot(x, y, w * 0.32, [8, 6, 14], 0.95, M.BODY);
-  s.dot(x + w * 0.1, y - w * 0.15, [120, 120, 150], 0.8);
+  s.blot(x, y, w * 0.32, INK, 0.95, M.BODY);
+  s.dot(x + w * 0.1, y - w * 0.15, INK_SHEEN, 0.8);
   const n = Math.max(2, Math.round(w * 0.8 * s.res));
   for (let i = 0; i <= n; i++) s.dot(x + (i / n) * w * 0.9, y + (i / n) * w * 0.2, [20, 16, 30], 0.8);
 }

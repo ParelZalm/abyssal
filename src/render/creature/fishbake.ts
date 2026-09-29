@@ -23,7 +23,7 @@ import { BLOOM_TRAIL, hasSynergy, synergiesOf } from '../../sim/organs';
 import { artDensity } from '../pixel';
 import { palette, type Palette } from './bake/palette';
 import { M, shade, Sheet, type Emitter } from './bake/sheet';
-import { flank, whaleSpots, camouflage, crazing, viscera, mantle, cilia } from './bake/body';
+import { flank, whaleSpots, camouflage, crazing, veins, viscera, mantle, cilia } from './bake/body';
 import { caudalFin, fluke, mantleFins, dorsalRidge, medianFins, fins, ribbonFin, veil, bloomTrail,
          tentacles } from './bake/fins';
 import { bluntSnout, head, lureAt, lure, barbels } from './bake/head';
@@ -92,7 +92,7 @@ function key(g: Genome, plan: Plan) {
           q(g.speed, 25), q(g.metabolism, 0.4),
           q(photophoreOf(g), 0.2), q(g.eyeAdapt, 0.3), q(g.gape, 0.25), q(g.veil, 0.25),
           q(g.bulk, 0.2), q(g.barbels, 0.3), Math.min(2, g.serrate), Math.min(2, g.electro),
-          g.glare > 0 ? 1 : 0, g.brittle > 0 ? 1 : 0,
+          g.glare > 0 ? 1 : 0, g.brittle > 0 ? 1 : 0, g.veins > 0 ? 1 : 0,
           g.ink > 0 ? 1 : 0, g.discharge > 0 ? 1 : 0, g.inflate > 0 ? 1 : 0,
           g.lure > 0 ? 1 : 0, Math.min(3, g.claws),
           Math.min(3, g.coral), Math.min(3, g.frill), g.jet > 0 ? 1 : 0,
@@ -235,6 +235,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   if (hasSynergy(g, 'whaleshark')) whaleSpots(s, f, seed);
   if (g.lurk > 0) camouflage(s, f, pal, seed);
   if (g.brittle > 0) crazing(s, f, seed);
+  if (g.veins > 0) veins(s, f, seed);
   if (g.discharge > 0) electroplates(s, f);
   if (g.ink > 0) inkSac(s, f);
   if (g.mantle > 0) mantle(s, f, pal);

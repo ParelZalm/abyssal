@@ -237,6 +237,12 @@ export const TRAITS: Trait[] = [
     maxStacks: 1,
     apply: g => { g.speed *= 1.35; g.turn *= 1.25; g.brittle += 1; } }),
 
+  T({ id: 'openveins', band: 'twilight', name: 'Open Veins', rarity: 'rare', icon: 'drop', families: ['grazer'],
+    desc: '+3 health a second, regenerating. Blood that never stops moving.',
+    curse: 'Every wound you take bleeds for half again over five seconds: a trail hunters follow, and no healing while it runs.',
+    maxStacks: 1,
+    apply: g => { g.regen += 3; g.veins += 1; } }),
+
   // ------------------------------------------------------------------ apex
   // Every apex card costs something, and says so. Without a price the draft was "take the
   // rarest", which is no choice at all; the costs are chosen to fight the card's own build —

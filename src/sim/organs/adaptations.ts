@@ -1,3 +1,4 @@
+import { cut } from './effects';
 import { O, type Organ } from './types';
 
 /** Seconds of stillness a lurking body can bank. At 2, a bite hits 2.6 times as hard. */
@@ -81,4 +82,14 @@ export const CURSES: Organ[] = [
     // light enough to be fast, thin enough that a bite goes through: after armour, so
     // plate still helps and the frame is the part that shatters
     taken: (c, dmg) => dmg * (1 + c.genome.brittle * 0.5) }),
+
+  O({ id: 'veins', when: g => g.veins > 0,
+    // blood that will not clot: every wound opens a bleed worth half the bite again over its
+    // five seconds, and a bleed is the one wound anything that hunts can follow. It also
+    // stops the regeneration the card pays in, since nothing heals while a wound is working
+    // (`World.integrate`) — the gift is only worth it to a body that is not being bitten
+    onWounded: (def, att, ctx) => {
+      if (ctx.whole || ctx.dmg <= 0) return;
+      cut(def, att, ctx.dmg * 0.1 * def.genome.veins);
+    } }),
 ];

@@ -29,9 +29,10 @@ translucency, and a synergy one of them qualifies for repaints it. If a pair has
 field on one side, add a morphology field for the trait (as `serrate` was for Serrated
 Teeth) rather than thresholding a stat several cards raise.
 
-The table is done: Flash Sense came last, keyed on the `electro` field once Ampullae
-became the electroreception organ, since a threshold on `glow` and `sense` would have
-repainted the Leviathan. More pairs are for the next pass over the pool.
+Flash Sense was keyed on the `electro` field once Ampullae became the electroreception
+organ, since a threshold on `glow` and `sense` would have repainted the Leviathan. Since
+then: Smoke Screen (jet + ink sac) and Moray Jaws (eel + crushing pharynx). More pairs are
+for the next pass over the pool.
 
 Watch: a synergy with a `burn` or `boost` modifier needs no event and cannot return
 `true`, so it will never toast. Whale Shark toasts because its wake is an `onTick` that
@@ -88,8 +89,9 @@ change *what you do*, each an entry in `sim/organs/` plus paint:
   water, the wounded from twice as far. Flash Sense sits on top.
 - ~~**Costs on apex cards.**~~ Done: every apex card carries a turn, speed or metabolism
   price in its text.
-- ~~**Cursed cards.**~~ Done: Blood Lamp (+90% bite, `glare`) and Brittle Frame (speed and
-  turning, `brittle`). More curses belong here as the pool grows.
+- ~~**Cursed cards.**~~ Done: Blood Lamp (+90% bite, `glare`), Brittle Frame (speed and
+  turning, `brittle`) and Open Veins (+3 regeneration, `veins`: every wound bleeds). More
+  curses belong here as the pool grows.
 - ~~**One active organ slot.**~~ Done: Ink Sac, Electric Organ and Inflation, one at a
   time, on E or the right button.
 - ~~**Zone pools.**~~ Done: `Trait.band` replaced `minStage`. A card is offered in its band

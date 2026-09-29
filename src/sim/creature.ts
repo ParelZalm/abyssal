@@ -128,6 +128,8 @@ export class Creature {
   kicks = 0;
   /** The kick Flash Sense last fired on. */
   flashed = 0;
+  /** The boost kick Smoke Screen last puffed ink on, the same way. */
+  inked = 0;
   /** Seconds left dazzled: no steering, no bite. Flash Sense's, and held here for any other. */
   stun = 0;
   /** Seconds left inflated (the Inflation organ): too big to swallow, slow, prickly. */
