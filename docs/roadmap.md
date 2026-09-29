@@ -102,9 +102,8 @@ a small puzzle with a tell. Squid arms that can be torn free are the model to co
 
 - ~~**The anglerfish, the bait ball and shark blood.**~~ Done: see *Tactics* in
   `docs/simulation.md`.
-- ~~**Guardian tells.**~~ Done: the Great White and the Leviathan charge, the Sperm Whale
-  clicks, the squids grab. Left open: a pattern of its own for the Leviathan, which shares
-  the Great White's for now.
+- ~~**Guardian tells.**~~ Done: the Great White charges, the Sperm Whale clicks, the squids
+  grab, and the Leviathan draws the water in front of it into its mouth and snaps (`suck`).
 
 ## 7. Something survives death
 
@@ -192,6 +191,6 @@ structure.
 11. ~~Enemies that ask for tactics~~ — done.
 12. ~~Starting forms and a daily seed~~ — done.
 13. ~~The small feel wins~~ — done. What is left is marked as left open in each section:
-    a second form in a long run and how the ocean reads a transformed player (§2), a
-    Leviathan pattern of its own (§6), and more synergies and curses as the pool grows
-    (§1, §5). ~~A daily best (§7)~~ — done.
+    a second form in a long run and how the ocean reads a transformed player (§2), and more
+    synergies and curses as the pool grows (§1, §5). ~~A daily best (§7)~~ and ~~a Leviathan
+    pattern of its own (§6)~~ — done.

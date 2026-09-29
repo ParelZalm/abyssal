@@ -97,6 +97,10 @@ export class Combat {
    * cone is drawn in — chasing a speck around with a pixel-perfect hitbox is not fun.
    */
   private strike(att: Creature, def: Creature) {
+    // a drawing Leviathan bites once, when the draw ends (`Patterns.draw`): its own reach
+    // and gulp would take a body the pull has not delivered, and cutting across the cone
+    // is meant to be a way out
+    if (att.drawT > 0) return;
     if (PLAN_ART[att.species.plan].grasp > 0 && !att.isPlayer) { this.grasp(att, def); return; }
     // a rush hits what is in its line and nothing else: none of the lunge's extra reach and
     // no gulp, or a guardian that size connects from so far off its path that the dodge the

@@ -5,7 +5,7 @@ import { angleDelta, clamp, TAU } from '../core/util';
 import { organsOf, swimOf, type Organ, type SwimMods } from './organs';
 
 /** Forward drag coefficient: terminal speed works out to genome.speed × throttle. */
-const DRAG_FWD = 3.1;
+export const DRAG_FWD = 3.1;
 /** Sideways drag — a body with a keel barely slides. */
 const DRAG_LAT = 9;
 /**
@@ -144,6 +144,8 @@ export class Creature {
   /** A guardian's pattern: the tell's seconds left, the rush's, the opening's, the cooldown. */
   tellT = 0;
   rushT = 0;
+  /** Seconds left of a `suck` pattern's draw, the jaw open and the water pouring in. */
+  drawT = 0;
   exposed = 0;
   patternCd = 0;
   /** The rush's locked heading, and whether it has already found the player. */
@@ -218,11 +220,12 @@ export class Creature {
    */
   pose(hungry = false): Pose {
     const windup = this.attack === 'windup' ? 1 - this.attackT / this.attackLen
-      : this.tellT > 0 ? 0.85 : 0;
+      : this.tellT > 0 || this.drawT > 0 ? 0.85 : 0;
     const strike = this.attack === 'strike' ? this.attackT / this.attackLen
       : this.rushT > 0 ? 0.6 : this.boosting > 0 ? this.boosting / 0.4 * 0.7 : 0;
     // the jaw opens partway into the wind-up, not on its first frame: the coil comes first
-    const open = windup > 0.35 || this.attack === 'strike' || this.rushT > 0 || hungry;
+    const open = windup > 0.35 || this.attack === 'strike' || this.rushT > 0 || this.drawT > 0 ||
+      hungry;
     return { windup, strike, open };
   }
 

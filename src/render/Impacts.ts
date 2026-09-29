@@ -52,6 +52,12 @@ export class Impacts {
         fx.ring(f.x, f.y, 0xe6f2ff, f.r * 0.35);
         fx.ring(f.x, f.y, 0xe6f2ff, f.r * 0.7);
         camera.jolt(8, 14);
+      } else if (f.kind === 'draw') {
+        // water pouring into a gaping mouth: pale streaks running in, not a ring going out
+        fx.wake(f.x, f.y, f.vx ?? 0, f.vy ?? 0, 0xcfe6f0, f.r);
+      } else if (f.kind === 'snap') {
+        fx.ring(f.x, f.y, 0xff5a4a, f.r);
+        camera.jolt(9, 14);
       } else if (f.kind === 'exposed') {
         fx.ring(f.x, f.y, 0xffe28a, f.r);
       } else {
@@ -65,7 +71,9 @@ export class Impacts {
       const who = speciesById(tell);
       this.ui.toast(who.pattern === 'click'
         ? `The ${who.name} is clicking — get out from in front of it`
-        : `The ${who.name} is lining up — get out of its line, then bite its flank`);
+        : who.pattern === 'suck'
+          ? `The ${who.name} is drawing water in — boost straight out, or cut across it`
+          : `The ${who.name} is lining up — get out of its line, then bite its flank`);
     }
     for (const b of world.bites) {
       const col = b.onPlayer ? 0xff5a4a : 0xff9a7a;

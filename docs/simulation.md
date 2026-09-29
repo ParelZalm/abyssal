@@ -239,7 +239,7 @@ rest of `think`): a tell, a committed attack, and an opening. Each starts only o
 guardian already hunting the player, within 0.7 of its sense and outside its own length,
 and comes round every 6 s.
 
-- `charge` (Great White, Leviathan): 1.1 s lining up — slow, turning to face you, a red
+- `charge` (Great White): 1.1 s lining up — slow, turning to face you, a red
   ring and a tighter frame — then a 0.9 s rush at 2.4× its speed on a heading locked a
   third of a second ahead of you. The rush cannot steer and bites for 1.8 × only what is
   in its line: none of the lunge's extra reach and no gulp, which is what makes the dodge
@@ -249,6 +249,16 @@ and comes round every 6 s.
 - `click` (Sperm Whale): 1.4 s of three clicks, then a blast in a cone of 0.6 rad either
   side of its head out to 0.85 × sense that stuns the player for 1.3 s (no drive, no boost)
   and lands half a bite; then the same rush. Behind it or beside it, nothing.
+- `suck` (Leviathan): 0.9 s gaping and turning to face you, then a 1.4 s draw. It hangs
+  where it is, heading fixed, and everything smaller in a cone of 0.8 rad either side of its
+  head out to 2.2 body lengths is pulled toward the mouth — hard enough to hold a drift of
+  twice the victim's own cruise at the lips, falling to nothing at the edge — with pale
+  streaks running in and the small fish in front of it going with them. Its ordinary bite
+  is off for the draw (`Combat.strike`); when it ends the jaw snaps, biting the player for
+  2.2 × if it is within the mouth's reach, and the snap uses the bite cooldown so contacts
+  that frame cannot bite again. Cruising straight out escapes from outside half the range,
+  a boost from all but the lips, and from beside or behind it there is no pull at all. A
+  miss leaves it `exposed`, as the charge does.
 - The squids keep their arms: a grab you tear free of by boosting.
 
 The first tell from each guardian toasts its counter (`world.tellBy`); after that the

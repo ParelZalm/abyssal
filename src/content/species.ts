@@ -28,9 +28,10 @@ export interface Species {
    * A guardian's attack, with a tell before it and an opening after (`Patterns.patternStep`).
    * `charge`: it lines up, then rushes in a straight line it cannot steer, and a miss
    * leaves its flank open. `click`: three clicks, then a forward blast that stuns what is in
-   * front of it, then the rush. The squids have their arms instead.
+   * front of it, then the rush. `suck`: the jaw gapes, then draws the water in front of it
+   * into the mouth, and snaps shut on whatever arrived. The squids have their arms instead.
    */
-  pattern?: 'charge' | 'click';
+  pattern?: 'charge' | 'click' | 'suck';
 
   size: [number, number];
   hue: [number, number];
@@ -286,7 +287,7 @@ export const SPECIES: Species[] = [
     nutrition: 3.3, weight: 7, armor: 6, claws: 3, bulk: 0.9, spikes: 1,
     eyeAdapt: -0.6, barbels: 0.8, metabolism: 1.8 },
 
-  { id: 'leviathan', name: 'Leviathan', behavior: 'apex', plan: 'leviathan', pattern: 'charge',
+  { id: 'leviathan', name: 'Leviathan', behavior: 'apex', plan: 'leviathan', pattern: 'suck',
     zone: 'trenches', guardian: true,
     size: [300, 380], hue: [248, 266], accent: 158, speed: 230, bite: 88,
     nutrition: 7, weight: 1.2, jaw: 1.4, armor: 10, spikes: 2, segments: 4,
