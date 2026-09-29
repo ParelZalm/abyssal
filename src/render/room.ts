@@ -1,5 +1,5 @@
 import { Container, Sprite, Texture } from 'pixi.js';
-import { fbm } from '../core/noise';
+import { cells, fbm, fbmSigned } from '../core/noise';
 import { clamp, lerp } from '../core/util';
 import type { Terrain } from '../sim/terrain';
 import { artDensity, artVersion } from './pixel';
@@ -14,24 +14,44 @@ const MARGIN = 10;
 
 type Rgb = [number, number, number];
 
-const ROCK: Rgb = [0.2, 0.2, 0.23];
+/**
+ * Reef rock: old limestone, warm grey where it is bare. What lives on it gives it its
+ * colour — coralline algae crusting it pink and violet near the light, a green turf on
+ * every face that looks up.
+ */
+const ROCK: Rgb = [0.56, 0.5, 0.44];
+const BOULDER: Rgb = [0.56, 0.48, 0.41];
 const SAND: Rgb = [0.66, 0.55, 0.38];
-const BOULDER: Rgb = [0.3, 0.25, 0.21];
+const CRUST: Rgb = [0.86, 0.44, 0.58];
+const CRUST_DEEP: Rgb = [0.56, 0.36, 0.7];
+const TURF: Rgb = [0.4, 0.62, 0.32];
 
 /**
- * The stones a rock face is broken into, in tiles across: each is shaded as a rounded lump
- * lit from above and to the left, with a dark crack where two meet. Big enough that a stone
- * is a dozen pixels at a hatchling's zoom, small enough that a wall is many of them.
+ * The lumps a reef rock is heaped from, in tiles across: each a soft dome lit from above
+ * and to the left, with a shadowed crevice where two meet — the bulbous mass of limestone,
+ * not the cobbles of a wall. Boulders are single heads, so theirs are larger.
  */
-const STONE = 0.8;
-const BOULDER_STONE = 1.15;
+const LUMP = 1.2;
+const BOULDER_LUMP = 1.6;
+/** The pores the rock is riddled with: cells this many tiles across, about half holed. */
+const PORE = 0.2;
+/**
+ * How far from the water the coralline crust grows, in tiles — it needs the light — and the
+ * share of lumps it covers, pink or violet. A crust covers a whole lump, the way it does on a
+ * reef; scattered in patches across lumps it read as stains.
+ */
+const CRUST_REACH = 1.1;
+const PINK = 0.3;
+const VIOLET = 0.48;
+/** The tallest a tuft of turf stands off a top face, in art pixels. */
+const TUFT = 3;
 
 /**
  * How far into the rock the light reaches, in tiles, before the rock falls to shadow. The
  * face against the water is the lit part of a wall; the body of it is dark, so a wall reads
  * as a mass with a surface rather than a flat cut-out.
  */
-const REACH = 1.1;
+const REACH = 1.8;
 
 /** How far a wall's shadow falls into the water beside it, in tiles, and how dark it gets. */
 const SHADOW = 0.7;
@@ -53,9 +73,9 @@ function stepped(v: number, steps: number, px: number, py: number) {
   return clamp(Math.floor(v * steps + 0.5 + t * 0.9), 0, steps) / steps;
 }
 
-/** A lattice hash, 0..1, for placing the stones. */
-function hash(x: number, y: number, k: number) {
-  let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(k, 1274126177);
+/** A lattice hash, 0..1, for where a tuft of turf stands. */
+function hash(x: number, k: number) {
+  let h = Math.imul(x | 0, 374761393) + Math.imul(k, 1274126177);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
@@ -97,30 +117,11 @@ function distance(from: (i: number) => boolean, w: number, h: number) {
   return d;
 }
 
-/**
- * The stone a point of rock belongs to, as cellular noise: how lit its rounded face is at
- * that point, how far the point is from the crack to the next stone, and the stone's own
- * tone. Feature points are jittered on a grid `size` world units across.
- */
-function stone(x: number, y: number, size: number, seed: number) {
-  const cx = Math.floor(x / size), cy = Math.floor(y / size);
-  let f1 = Infinity, f2 = Infinity, dx = 0, dy = 0, id = 0;
-  for (let j = -1; j <= 1; j++) {
-    for (let i = -1; i <= 1; i++) {
-      const gx = cx + i, gy = cy + j;
-      const fx = (gx + 0.15 + 0.7 * hash(gx, gy, seed)) * size;
-      const fy = (gy + 0.15 + 0.7 * hash(gx, gy, seed + 1)) * size;
-      const d = Math.hypot(x - fx, y - fy);
-      if (d < f1) { f2 = f1; f1 = d; dx = x - fx; dy = y - fy; id = hash(gx, gy, seed + 2); }
-      else if (d < f2) f2 = d;
-    }
-  }
-  // a dome over the stone's own radius: its normal is what the light falls on
-  const r = size * 0.62;
+/** How lit a lump's dome is at a point, from the cellular offset to the lump's centre. */
+function dome(dx: number, dy: number, r: number) {
   const nx = clamp(dx / r, -1, 1), ny = clamp(dy / r, -1, 1);
   const nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
-  const lit = Math.max(0, nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]);
-  return { lit, crack: f2 - f1, tone: id - 0.5 };
+  return Math.max(0, nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]);
 }
 
 /**
@@ -132,8 +133,9 @@ function stone(x: number, y: number, size: number, seed: number) {
  * the collision is built from, so the rock is drawn to the pixel and not to its cells. The
  * shading is read off that mask, as a creature's is off its silhouette:
  *
- * - a rock face is broken into stones (`stone`), each a rounded lump lit from above-left
- *   with a dark crack between it and the next;
+ * - reef rock is heaped from bulbous lumps (`LUMP`), each a dome lit from above-left with a
+ *   soft crevice to the next, riddled with pores and crusted with coralline algae where the
+ *   light reaches, and turf sprouting off every face that looks up;
  * - light reaches `REACH` tiles into a wall and the rest is shadow, measured by a distance
  *   field from the water, so a wall is a mass with a lit surface;
  * - every face that looks up at open water has a lit lip, and the rest of the edge a dark
@@ -204,7 +206,10 @@ export class RoomView {
     // a lip a couple of art pixels deep reads at any density; a fixed share of a tile would
     // swell into a band at the hatchling's zoom
     const lip = 2;
-    for (let py = 0; py < h; py++) {
+    // turf is grown bottom-up, so the loop runs bottom-up: a tuft is marked in the water
+    // above a face before the loop reaches those pixels
+    const tufts = new Uint8Array(w * h);
+    for (let py = h - 1; py >= 0; py--) {
       for (let px = 0; px < w; px++) {
         const i = py * w + px;
         const k = kind[i];
@@ -216,6 +221,25 @@ export class RoomView {
         const far = clamp(Math.hypot(ex, ey) / (t.tile * 3), 0, 1);
 
         if (k === 0) {
+          // turf standing up off a top face: a pixel column a few high, where the rock is
+          // straight below and the column's own hash says it grows
+          if (py < h - 1 && kind[i + w] !== 0 && kind[i + w] !== 2) {
+            const tall = Math.floor(hash(Math.floor(wx * d), 3) * (TUFT + 2)) - 1;
+            for (let s = 0; s < tall; s++) {
+              const j = i - s * w;
+              if (j < 0 || kind[j] !== 0) break;
+              tufts[j] = 1 + s;
+            }
+          }
+          if (tufts[i]) {
+            // lighter toward the tip, the way a blade catches the light
+            const tip = stepped(0.55 + tufts[i] * 0.15, 4, px, py);
+            out[o] = Math.round(clamp(TURF[0] * tip * lit, 0, 1) * 255);
+            out[o + 1] = Math.round(clamp(TURF[1] * tip * lit, 0, 1) * 255);
+            out[o + 2] = Math.round(clamp(TURF[2] * tip * lit, 0, 1) * 255);
+            out[o + 3] = 255;
+            continue;
+          }
           // the wall's shadow on the water beside it, stepped so it bands like the rest
           const s = fromRock[i];
           if (s >= shadow) { out[o + 3] = 0; continue; }
@@ -233,23 +257,48 @@ export class RoomView {
         const edge = intoRock[i] <= 1;
         // light that reaches in from the face, and nothing past it
         const depth = clamp(intoRock[i] / reach, 0, 1);
-        const inner = 1 - 0.93 * depth ** 0.6;
+        const inner = 1 - 0.9 * depth ** 1.2;
 
-        const base = k === 2 ? SAND : k === 3 ? BOULDER : ROCK;
+        let base = k === 2 ? SAND : k === 3 ? BOULDER : ROCK;
         let v: number;
         if (k === 2) {
           // sand: fine grain and the odd pebble, lighter toward its top, shadowed less deep
           const grain = fbm(wx * 1.6, wy * 1.6, 21, 2);
           v = (0.62 + grain * 0.35 + (above ? 0.25 : 0)) * (1 - 0.55 * depth);
         } else {
-          const st = stone(wx, wy, t.tile * (k === 3 ? BOULDER_STONE : STONE), k * 7);
-          const mottle = fbm(wx / 4, wy / 4, 13, 2);
-          v = (0.3 + st.lit * 0.62 + st.tone * 0.16 + mottle * 0.12) * inner;
-          // the crack between two stones is a pixel or two of dark, at any density
-          if (st.crack * d < 1.3) v *= 0.35;
-          if (above) v = Math.max(v, 0.95);
+          const size = t.tile * (k === 3 ? BOULDER_LUMP : LUMP);
+          // warped before it is looked up, so the lumps are blobs with curved seams; straight,
+          // cellular noise draws a wall of polygon cobbles
+          const bx = wx + fbmSigned(wx / (size * 0.45), wy / (size * 0.45), 51, 2) * size * 0.3;
+          const by = wy + fbmSigned(wx / (size * 0.45), wy / (size * 0.45), 57, 2) * size * 0.3;
+          const lump = cells(bx / size, by / size, k * 7);
+          const shade = dome(lump.dx, lump.dy, 0.62);
+          // a crevice between two lumps is a soft shadow a few pixels wide, which is what
+          // rounds a lump's edge into a pillow rather than cutting it
+          const crevice = clamp((lump.f2 - lump.f1) * size * d / 5, 0, 1) ** 0.7;
+          v = (0.36 + shade * 0.62 + (lump.id - 0.5) * 0.14) * (0.4 + 0.6 * crevice) * inner;
+          // the crown of each dome catches the light hardest: a highlight, not a gradient
+          if (shade > 0.9 && crevice > 0.6) v += 0.18 * inner;
+          // pores: a scattering of small cells holed, each its own size. A hole is dark, and
+          // light from above catches its lower lip
+          const pore = cells(wx / (t.tile * PORE), wy / (t.tile * PORE), 31 + k);
+          const hole = pore.id < 0.24 ? 0.14 + pore.id : 0;
+          if (pore.f1 < hole) v *= 0.3;
+          else if (pore.f1 < hole + 0.1 && pore.dy > 0) v *= 1.25;
+          // coralline crust over whole lumps where the light reaches: pink, or violet
+          const near = intoRock[i] / (CRUST_REACH * t.tile * d);
+          const edgeOf = fbm(wx / (t.tile * 0.3), wy / (t.tile * 0.3), 41, 2) * 0.35;
+          if (near < 1 - edgeOf && lump.id < VIOLET) {
+            const c = lump.id < PINK ? CRUST : CRUST_DEEP;
+            base = [lerp(base[0], c[0], 0.85), lerp(base[1], c[1], 0.85), lerp(base[2], c[2], 0.85)];
+          }
+          if (above) {
+            // the top face carries turf; the lip is where it is thickest and lit
+            base = TURF;
+            v = Math.max(v, 0.8 + (above === 1 ? 0.2 : 0));
+          }
         }
-        if (edge && !above) v *= 0.5;
+        if (edge && !above) v *= 0.55;
         v *= 1 - far * 0.9;
 
         v = stepped(clamp(v, 0, 1.2) / 1.2, 6, px, py) * 1.2;

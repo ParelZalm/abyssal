@@ -1,5 +1,5 @@
 import { SOLID, tilesOf, type RoomTemplate, type Tank, type Tile } from '../content/tanks';
-import { fbmSigned } from '../core/noise';
+import { cells, fbmSigned } from '../core/noise';
 import { clamp, type Rng } from '../core/util';
 
 /** A body that can meet a wall: where it is and how it is moving. */
@@ -16,11 +16,16 @@ const SUB = 4;
 /**
  * How far the noise moves a wall, in the field's own units (a wall sits where the field
  * crosses 0.5). The broad octave bends a straight run of tiles into a rock face and a lone
- * boulder into a round one; the fine one roughens the edge. Much more and a two-tile gap
- * starts to close.
+ * boulder into a round one. Much more and a two-tile gap starts to close.
  */
-const BEND = 0.3;
-const ROUGH = 0.07;
+const BEND = 0.24;
+/**
+ * Reef rock is lumpy, not jagged: its outline is a run of rounded knobs, the way limestone
+ * grows and erodes. A dome over each cell of cellular noise (`KNOB_SIZE` tiles across) adds
+ * that, where a finer octave of value noise only roughened the edge into grit.
+ */
+const KNOB = 0.44;
+const KNOB_SIZE = 0.7;
 
 /**
  * One room's solid ground, in world space: which parts block, and pushing a body back out
@@ -30,7 +35,7 @@ const ROUGH = 0.07;
  * The rock is a field, not the template's squares. Each tile is a sample at its centre, 1
  * for solid and 0 for water; between centres the samples are blended with a smoothstep, and
  * noise is added on top, so a wall runs where the blend crosses one half. A corner rounds, a
- * run of tiles wanders, and a boulder is a lump. The drawing reads the field per pixel
+ * run of tiles wanders into a line of knobs, and a boulder is a lump. The drawing reads the field per pixel
  * (`RoomView`); the collision reads it once per fine cell at build.
  */
 export class Terrain {
@@ -95,8 +100,9 @@ export class Terrain {
     const bot = this.sample(i, j + 1) + (this.sample(i + 1, j + 1) - this.sample(i, j + 1)) * su;
     const s = top + (bot - top) * sv;
     const t = this.tile;
+    const knob = cells(x / (t * KNOB_SIZE), y / (t * KNOB_SIZE), 7 + this.seed);
     return s + fbmSigned(x / (t * 1.6), y / (t * 1.6), 3 + this.seed, 3) * BEND +
-      fbmSigned(x / (t * 0.4), y / (t * 0.4), 7 + this.seed, 2) * ROUGH;
+      (0.42 - knob.f1) * KNOB;
   }
 
   /**

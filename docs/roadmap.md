@@ -53,8 +53,11 @@ What it found, and what it leaves:
   felt cramped and blocky. A template is now 32 × 18, and the rock is the smooth shape the
   tiles imply, collided on quarter-tile cells, and broken into lit stones that sink into
   shadow away from the water. A room is ~50 hatchling lengths across and ~6.5 s to swim; speed is a stat now, so tune the base with the stat column (stage 5).
-- **A room bakes in ~250 ms.** Fine once a run; at every door in stage 3 it wants the
-  neighbours baked ahead, or the slide hitches.
+- **The rock is reef rock**: knobbed limestone heaped in lumps, pitted, crusted pink and
+  violet, turf on its tops.
+- **A room bakes in ~0.5 s** on a 1024-wide window, more on a big one. Fine once a run; at
+  every door in stage 3 it has to be baked ahead or off the frame (a worker, or a few rows a
+  frame), or the slide hitches.
 - Still here from the column, for the stages that replace them: the thermocline uniforms
   in the water shader, the level-up draft and hunger (stage 2), `Creature.quarry` (stage 4),
   the starting forms' depth unlock (stage 7), and the parallax scenery (stage 8).

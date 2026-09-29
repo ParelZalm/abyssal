@@ -71,16 +71,20 @@ grid, and re-baked only when the art density changes tier. Nothing about the ter
   drawn to the pixel and is the edge a body meets. `Terrain.kindAt` says what it is made
   of, through a small warp, so the seam between sand and rock wanders like the edge does.
   The first cut drew the template's squares with a noise warp on top and read as blocks.
-- **Shading is read off the mask**, as a creature's is off its silhouette. A rock face is
-  broken into stones — cellular noise, each cell a dome lit from above-left with a dark
-  crack to the next (`STONE`, 0.8 of a tile; boulders larger). Light reaches `REACH` (1.1
-  tiles) into a wall, measured by a chamfer distance field from the water, and the rest is
-  shadow, so a wall is a mass with a lit surface and only the stones near the face show.
-  Every face that looks up at open water has a lit lip, the rest of the edge a dark outline;
-  sand is grained, lighter at its top and shadowed less deep. Everything steps through the
-  Bayer screen and is lit by `lightAt`. In lit water the rock has to sit well under the
-  water colour, or it lies on the water rather than against it — the fields found the same.
-  Strata and a flat mottle were the first cut, and read as a flat cut-out.
+- **It is reef rock**, and the shading is read off the mask as a creature's is off its
+  silhouette. The rock is heaped from lumps (`LUMP`, 1.2 tiles; boulders 1.6): cellular
+  noise, warped before it is looked up so the seams curve, each cell a dome lit from
+  above-left with a highlight on its crown and a soft crevice to the next. It is riddled with
+  pores of varied size, light catching their lower lips. Coralline crust covers whole lumps
+  near the water, pink or violet; every face that looks up carries turf, and tufts of it
+  stand a few pixels off the top into the water. Light reaches `REACH` (1.8 tiles) into a
+  wall, measured by a chamfer distance field from the water, and the rest falls to shadow.
+  Sand is grained, lighter at its top and shadowed less deep. Everything steps through the
+  Bayer screen and is lit by `lightAt`.
+
+  What was tried before it: strata and a flat mottle, which read as a flat cut-out; then
+  unwarped cells with hard cracks, which read as a cobbled wall. Crust scattered in patches
+  across lumps read as stains, where a reef's crust covers a head.
 - **Walls cast into the water.** Water within `SHADOW` (0.7 tiles) of rock is darkened in
   stepped bands, which is what sits the rock in the tank. It is in the room's texture, so
   it falls on a fish swimming along a wall too.

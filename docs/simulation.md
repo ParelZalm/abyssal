@@ -271,9 +271,10 @@ shoals it buys a frame with one shoal in it and dead water everywhere else. Meas
 
 A room's rock, sand and boulders are `Terrain` (`sim/terrain.ts`). The template is authored
 in tiles, but the rock is the smooth shape they imply: each tile is a sample at its centre,
-blended between centres with a smoothstep and bent by two octaves of noise, and a wall runs
-where that field crosses one half (`Terrain.field`). A corner rounds, a straight run
-wanders, a lone boulder is a lump. The collision holds the field on cells a quarter of a
+blended between centres with a smoothstep, bent by broad noise and raised into knobs by a
+dome over cellular noise, and a wall runs where that field crosses one half
+(`Terrain.field`). A corner rounds, a straight run wanders into a line of knobs the way reef
+limestone does, a lone boulder is a lump. The collision holds the field on cells a quarter of a
 tile across (`SUB`), built once; off the grid is rock. `World.integrate` moves a body and
 then `Terrain.collide`
 pushes its circle out of every solid cell it overlaps and takes away the velocity it was
