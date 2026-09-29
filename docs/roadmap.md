@@ -162,8 +162,8 @@ follows, in stages, each committed on its own:
    (`decisions.md` has it and where to recover its code).
 5. ~~**The HUD.**~~ Done: Pixelify Sans, bundled, with font smoothing off; square corners,
    2 px frames, hard 2 px rings for every glow, one-pixel drop shadows, flat bar fills with
-   a lit top row, bevelled buttons. Left: the mutation icons are still smooth vector
-   strokes, and the danger vignette is still a soft inset.
+   a lit top row, bevelled buttons. The mutation icons are pixels, rastered per size onto
+   2 px cells, and the danger vignette is hard bands with a dithered edge.
 
 6. ~~**Motion.**~~ Done: idle levels out and hovers, pitch is capped by activity, hunters
    wind up, strike and recover with a jaw baked open for it, a wound flinches and flashes,
@@ -172,8 +172,7 @@ follows, in stages, each committed on its own:
    The design board's Motion group loops each state.
 
 What is left across the whole pass is tuning, not structure: per-plan proportions and
-palettes side-on, small animals at their real size, pixel icons, and scenery with real
-structure.
+palettes side-on, small animals at their real size, and scenery with real structure.
 
 ## Suggested order
 

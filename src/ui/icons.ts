@@ -3,8 +3,9 @@ import type { IconName } from '../content/icon';
 export type { IconName };
 
 /**
- * Abstract 24×24 stroke glyphs for mutations. They are deliberately geometric rather than
- * literal — at HUD chip size a drawing of a fin reads as a smudge, a shape reads as a mark.
+ * Abstract 24×24 stroke glyphs for mutations, as path data. They are deliberately geometric
+ * rather than literal — at HUD chip size a drawing of a fin reads as a smudge, a shape reads
+ * as a mark. Drawn as pixels (`createIcon`), never as the stroke itself.
  */
 export const ICONS: Record<IconName, string> = {
   muscle: 'M3 12c3-6 6-8 9-8s6 2 9 8c-3 6-6 8-9 8s-6-2-9-8z',
@@ -39,19 +40,70 @@ export const ICONS: Record<IconName, string> = {
   molar: 'M6 4c2 0 4 1 6 1s4-1 6-1c2 0 3 2 3 5 0 4-2 11-4 11-1 0-2-5-5-5s-4 5-5 5c-2 0-4-7-4-11 0-3 1-5 3-5z',
 };
 
-/** DOM SVG for an icon, sized in px. Rarity is carried by colour, not by style. */
+/**
+ * CSS pixels per icon pixel: the HUD's own grain — its frames, rings and shadows are all
+ * drawn 2 px at a time — so a glyph sits on the same grid as the chip around it.
+ */
+const CELL = 2;
+/**
+ * Coverage a cell needs to be lit. Under half, a 1.8-unit stroke crossing a cell on the
+ * diagonal lights both cells it touches and the line doubles; much over it and a curve's
+ * thin shoulder drops out and the glyph breaks.
+ */
+const COVER = 0.42;
+const masks = new Map<string, boolean[]>();
+
+/**
+ * The glyph as pixels: its path stroked once onto an `n`×`n` canvas, antialiased, and each
+ * cell kept or dropped on its coverage. Rastered per size rather than scaled, so every
+ * size is whole cells, and cached, since a draft or the pause sheet asks for dozens.
+ */
+function mask(name: IconName, n: number) {
+  const key = `${name}/${n}`;
+  let m = masks.get(key);
+  if (m) return m;
+  const c = document.createElement('canvas');
+  c.width = c.height = n;
+  const x = c.getContext('2d', { willReadFrequently: true })!;
+  x.scale(n / 24, n / 24);
+  // never thinner than a cell: at chip size 1.8 units is three quarters of one, and a line
+  // that covers under the threshold in most of its cells comes out as a dotted one
+  x.lineWidth = Math.max(1.8, 24 / n);
+  x.lineCap = x.lineJoin = 'round';
+  x.stroke(new Path2D(ICONS[name]));
+  const a = x.getImageData(0, 0, n, n).data;
+  m = Array.from({ length: n * n }, (_, i) => a[i * 4 + 3] / 255 > COVER);
+  masks.set(key, m);
+  return m;
+}
+
+/**
+ * DOM SVG for an icon, about `size` px square: hard pixels in `currentColor`, so rarity is
+ * still carried by colour, not by style. The mark was a smooth vector stroke and read as
+ * the one thing on screen not on the pixel grid.
+ */
 export function createIcon(name: IconName, size = 18): SVGSVGElement {
+  const n = Math.max(6, Math.round(size / CELL));
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('width', String(size));
-  svg.setAttribute('height', String(size));
-  svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '1.8');
-  svg.setAttribute('stroke-linecap', 'round');
-  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('viewBox', `0 0 ${n} ${n}`);
+  svg.setAttribute('width', String(n * CELL));
+  svg.setAttribute('height', String(n * CELL));
+  svg.setAttribute('fill', 'currentColor');
+  svg.setAttribute('shape-rendering', 'crispEdges');
+  const m = mask(name, n);
+  // one rect per run of lit cells along a row, which keeps a glyph to a few dozen nodes
+  let d = '';
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      if (!m[y * n + x]) continue;
+      let w = 1;
+      while (x + w < n && m[y * n + x + w]) w++;
+      d += `M${x} ${y}h${w}v1h${-w}z`;
+      x += w;
+    }
+  }
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', ICONS[name]);
+  path.setAttribute('d', d);
   svg.append(path);
   return svg;
 }

@@ -234,7 +234,13 @@ spine, so no part can be clipped by a bounds estimate.
 ## HUD
 
 `src/ui/` is all DOM over the canvas — `UI.ts` is the game-facing facade, `hud/`
-holds the in-play chrome, `screens/` the overlays, and `icons.ts` the stroke-glyph
-set. Nothing in the HUD is drawn on the canvas, and nothing in the game reads the DOM.
-The one coupling is `ui.gateLabel(text, screenY, screenH)`, which `Scene.draw` feeds a
-screen position computed from the seal's world depth.
+holds the in-play chrome, `screens/` the overlays, and `icons.ts` the glyph set. Nothing in
+the HUD is drawn on the canvas, and nothing in the game reads the DOM. The one coupling is
+`ui.gateLabel(text, screenY, screenH)`, which `Scene.draw` feeds a screen position computed
+from the seal's world depth.
+
+The DOM is not under `FramePass`, so it is put on the grid by hand. The glyphs are path data
+stroked once per size onto a grid of 2 px cells and kept or dropped by coverage
+(`createIcon`), the stroke never thinner than a cell, and drawn as runs of hard rects in
+`currentColor`, so rarity still colours them. The danger vignette is four hard inset bands
+and a 2 px checkerboard past the last, where it was a 160 px blur.

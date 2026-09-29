@@ -15,7 +15,7 @@ import '../style.css';
 import { baseGenome, type Genome } from '../content/genome';
 import { rgb } from '../core/util';
 import { waterColor } from '../render/water';
-import { ICONS, createIcon, type IconName } from '../ui/icons';
+import { createIcon, type IconName } from '../ui/icons';
 import type { Rarity } from '../content/traits';
 import { catalog, type DesignGroup, type DesignItem } from './catalog';
 import { followZoom } from '../render/pixel';
@@ -116,18 +116,19 @@ function deltaOf(g: Genome): string[] {
 function chip(icon: IconName, rarity: Rarity): Container {
   const c = new Container();
   const r = RARITY[rarity];
-  const box = new Graphics().roundRect(0, 0, 34, 34, 10)
+  // square and 2 px, as the HUD's own frames are since the move to the pixel grid
+  const box = new Graphics().rect(0, 0, 34, 34)
     .fill({ color: 0x061220, alpha: 0.82 })
-    .stroke({ color: r.edge, alpha: rarity === 'common' ? 0.22 : 0.5, width: 1 });
+    .stroke({ color: r.edge, alpha: rarity === 'common' ? 0.22 : 0.5, width: 2, alignment: 1 });
   if (r.glow > 0) {
-    c.addChild(new Graphics().roundRect(-4, -4, 42, 42, 13).fill({ color: r.edge, alpha: r.glow * 0.5 }));
+    c.addChild(new Graphics().rect(-4, -4, 42, 42).stroke({ color: r.edge, alpha: r.glow, width: 2 }));
   }
-  const hex = '#' + r.ink.toString(16).padStart(6, '0');
-  const mark = new Graphics().svg(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="${ICONS[icon]}"
-       fill="none" stroke="${hex}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`);
+  // the same pixels the HUD gets, in the rarity's ink instead of `currentColor`
+  const svg = createIcon(icon, 24);
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  svg.setAttribute('fill', '#' + r.ink.toString(16).padStart(6, '0'));
+  const mark = new Graphics().svg(svg.outerHTML);
   mark.position.set(5, 5);
-  mark.scale.set(1);
   c.addChild(box, mark);
   return c;
 }
