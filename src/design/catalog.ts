@@ -20,6 +20,8 @@ import { rgb, Rng } from '../core/util';
 import { waterColor } from '../render/water';
 import { FishForm, shoulderAt, SPINDLE, type Form, type FormSpec } from './fishform';
 import { protoKinds, protoScene, PROTO_W, ProtoScene } from './proto-scenery';
+import { angler, dragonfish, gulper, hatchling, jelly, lanternfish, PixelCreature, PixelScene,
+         type PixelArt } from './proto-pixel';
 
 export interface DesignItem {
   id: string;
@@ -672,8 +674,56 @@ function protoSceneryGroup(): DesignGroup {
   };
 }
 
+/**
+ * PROTOTYPE — the creature art as pixel art, in profile. Throwaway: `proto-pixel.ts` is not
+ * imported by the game. See that file's header for what it is asking.
+ */
+function protoPixelGroup(): DesignGroup {
+  const fish = (id: string, name: string, note: string, depth: number, make: () => PixelArt) => {
+    let art: PixelArt | null = null;
+    const get = () => (art ??= make());
+    return {
+      id: `px-${id}`, name, note, source: 'src/design/proto-pixel.ts', depth,
+      // one world unit per texel, so the span is the sheet and the fit is whole pixels
+      get span() { return Math.max(get().w, get().h) * 1.25; },
+      facts: { get texels() { return `${get().w}×${get().h}`; } },
+      make: () => new PixelCreature(get()),
+      animate: (view: Container, dt: number) => {
+        const c = view as PixelCreature;
+        c.update(dt);
+        c.snap();
+      },
+    } satisfies DesignItem;
+  };
+  return {
+    id: 'pixel',
+    name: '✦ pixel (proto)',
+    note: 'Creature art as pixel art in profile: ramps, dither, a pixel outline, a lit rim.',
+    items: [
+      {
+        id: 'px-scene', name: 'Midnight, on one grid',
+        note: 'Every animal and the water on the same texel grid — the reference, rebuilt.',
+        source: 'src/design/proto-pixel.ts', depth: 5000,
+        span: PixelScene.W * 0.62,
+        make: () => new PixelScene(),
+        animate: (view, dt) => {
+          const s = view as PixelScene;
+          s.animate(dt);
+          s.snap();
+        },
+      },
+      fish('angler', 'Anglerfish', 'All head: an underbite of fangs and the light it fishes with.', 5100, angler),
+      fish('dragon', 'Dragonfish', 'Belly lights, a chin barbel, and the red eye-light.', 5100, dragonfish),
+      fish('gulper', 'Gulper Eel', 'A mouth with an eel attached, ending in a pink light.', 5600, gulper),
+      fish('jelly', 'Deep Jelly', 'See-through bell over gonad rings; the bell pulses.', 3400, jelly),
+      fish('lantern', 'Lanternfish', 'Small and silver, schools — the scene\'s school is this one.', 2400, lanternfish),
+      fish('hatchling', 'Hatchling', 'The player, in lit water: the ramp has to hold in blue too.', 500, hatchling),
+    ],
+  };
+}
+
 export function catalog(): DesignGroup[] {
   return [formGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(),
           mutationGroup(), speciesGroup(), guardianGroup(), propGroup(), waterGroup(),
-          protoSceneryGroup()];
+          protoSceneryGroup(), protoPixelGroup()];
 }
