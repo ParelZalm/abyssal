@@ -42,7 +42,8 @@ export const BODY: Organ[] = [
     onTick: (c, _dt, world) => {
       if (c.isPlayer || c.biteCd > 0) return;
       const p = world.player;
-      if (!p.alive) return;
+      // an Angler brushing a fellow angler's light is not what it is fishing for
+      if (!p.alive || c.spares(p)) return;
       const b = lureBulb(c.genome, formFor(c.genome, c.species.plan));
       const k = c.genome.size / R;
       // in the view's facing frame, so the bulb is struck where it is drawn

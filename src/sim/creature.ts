@@ -8,6 +8,8 @@ import { organsOf, swimOf, type Organ, type SwimMods } from './organs';
 export const DRAG_FWD = 3.1;
 /** Sideways drag — a body with a keel barely slides. */
 const DRAG_LAT = 9;
+/** The share of its health a transformed player keeps its own kind's tolerance above (`spares`). */
+const KIN_SPARED = 0.5;
 /**
  * The speed a body keeps through a flip (`drive`). The heading reverses in a frame but the
  * water does not, so most of the way on is lost at once and the rest drags it backward for
@@ -204,7 +206,20 @@ export class Creature {
    * player arrived. Both rules live here rather than being remembered at four call sites.
    */
   preysOn(other: Creature) {
-    return hunts(this.species) && this.species.id !== other.species.id && this.canEat(other);
+    return hunts(this.species) && this.species.id !== other.species.id && this.canEat(other) &&
+      !this.spares(other);
+  }
+
+  /**
+   * Whether this animal takes that one for its own kind and leaves it be: a transformed
+   * player, drawn on the plan of the animals it became, among those animals. Only while it
+   * is whole — below half health it is a wounded one of their own, and they turn on it the
+   * way sharks turn on a bleeding shark, which is the same line the Shark's frenzy bites at.
+   * Guardians keep plans of their own, so none of them is ever fooled.
+   */
+  spares(other: Creature) {
+    return other.isPlayer && other.species.plan === this.species.plan &&
+      other.hp > other.hpMax * KIN_SPARED;
   }
   get radius() {
     return this.genome.size * 0.62;

@@ -234,6 +234,14 @@ the genome.
 - **Grants are organ magnitudes**, so the registry carries them and nothing reads a form
   by name. `frenzy` is the one organ only a form grants; the `damage` hook gained the
   defender for it.
+- **The ocean reads the plan.** A hunter drawn on the player's plan takes it for kin and
+  does not hunt it while it is above half health (`Creature.spares`, folded into
+  `preysOn`, and checked by the NPC anglerfish's lure trap, which ignores size). Below
+  half it is a wounded one of their own and fair game — the same line the Shark's frenzy
+  bites at. Kin by form: reef sharks for the Shark; barracuda, gulper, hagfish and ribbon
+  eel for the Moray; anglerfish and dragonfish for the Angler; the vampire squid for the
+  Squid; none for the Bloom, since jellies do not hunt. Guardians have plans of their own
+  and are never fooled. Each form's text says so.
 - A trait of two families that completes both transforms into the one it lists first.
 - `FishView.setPlan` swaps the plan in place; the player's `Species` is a per-run copy of
   `PLAYER_SPECIES`, since the plan lives on it.

@@ -16,7 +16,8 @@ import type { Genome } from './genome';
  * transformed player is still unmistakably the player among real sharks.
  *
  * Each also grants a mechanic, by the organ rule: the new plan is the morphology, and the
- * grant is the organ it earns. Grants are ordinary organ magnitudes, so the organ registry
+ * grant is the organ it earns. And the ocean reads the plan: hunters drawn on it take the
+ * player for kin and leave it be while it is above half health (`Creature.spares`). Grants are ordinary organ magnitudes, so the organ registry
  * carries them and nothing reads a form by name.
  */
 export type Family = 'predator' | 'sprinter' | 'lurker' | 'luminous' | 'grazer';
@@ -35,16 +36,16 @@ export const FORM_AT = 3;
 
 export const TRANSFORMS: Record<Family, Transformation> = {
   predator: { family: 'predator', name: 'Shark', plan: 'shark',
-    desc: 'Frenzy: bites on anything below half health hit 40% harder. +10% speed.',
+    desc: 'Frenzy: bites on anything below half health hit 40% harder. +10% speed. Sharks take you for one of their own, until you are below half health too.',
     apply: g => { g.frenzy += 1; g.speed *= 1.1; } },
   sprinter: { family: 'sprinter', name: 'Squid', plan: 'squid',
-    desc: 'Jet-propelled: you swim on a mantle pump, and your boost fires through a siphon.',
+    desc: 'Jet-propelled: you swim on a mantle pump, and your boost fires through a siphon. Squid leave you be while you are whole.',
     apply: g => { g.mantle = 1; g.jet += 1; } },
   lurker: { family: 'lurker', name: 'Moray', plan: 'eel',
-    desc: 'You lie in wait: stillness hides you and winds up the next bite. +20% stealth.',
+    desc: 'You lie in wait: stillness hides you and winds up the next bite. +20% stealth. Eels take you for one of their own while you are whole.',
     apply: g => { g.lurk = 1; g.stealth += 0.2; } },
   luminous: { family: 'luminous', name: 'Angler', plan: 'angler',
-    desc: 'A lure grows from your brow and draws prey to you, and your gape widens.',
+    desc: 'A lure grows from your brow and draws prey to you, and your gape widens. Anglers leave you be while you are whole, lights and all.',
     apply: g => { g.lure += 1; g.gape += 0.4; } },
   grazer: { family: 'grazer', name: 'Bloom', plan: 'jelly',
     desc: 'A drifting bell: your mouth sieves small prey from afar, and a stinging fringe guards you.',
