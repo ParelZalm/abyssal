@@ -106,7 +106,7 @@ run can be replayed or shared with `?seed=`.
 
 | | |
 | --- | --- |
-| Swim | `W` drive · `S` brake, then reverse · `A` / `D` swing the body. Or steer with the mouse: effort scales with how far away the cursor is. |
+| Swim | `W` `A` `S` `D` or the arrows swim that way on screen, diagonals included. Or steer with the mouse: effort scales with how far away the cursor is. |
 | Boost | Hold `Space`, `Shift` or left-click. A hard kick, then a wind-up to about twice cruise speed. It burns fullness. |
 | Active organ | `E` or right-click, once you have one. |
 | Pause | `P`. The pause sheet is your inventory: body stats, every organ and what it does, and the full mutation list. |

@@ -234,7 +234,8 @@ export class Creature {
   }
 
   /**
-   * One swim step from raw controls: `turnInput` is -1..1 of available turning rate and
+   * One swim step from raw controls: `turnInput` is a multiple of the available turning
+   * rate, ±1 an ordinary turn and more only for a turn-back (`drive`'s `flick`), and
    * `throttle` is the propelling force along the body axis, negative to back up. Thrust
    * surges on the tail beat, and lateral drag is far stronger than forward drag — that is
    * what makes a turn arc and a glide coast instead of the heading snapping the velocity.
@@ -242,7 +243,7 @@ export class Creature {
   propel(dt: number, turnInput: number, throttle: number) {
     const g = this.genome;
     const top = Math.max(1, g.speed);
-    const turn = clamp(turnInput, -1, 1) * this.agility() * dt;
+    const turn = turnInput * this.agility() * dt;
     this.angle += turn;
     this.bank += (clamp(dt > 0 ? turn / dt / Math.max(0.01, g.turn) : 0, -1, 1) - this.bank) *
       Math.min(1, dt * 7);
@@ -292,10 +293,19 @@ export class Creature {
     this.thrust = Math.abs(throttle);
   }
 
-  /** Steering for anything that thinks in headings rather than in keys. */
-  drive(dt: number, desired: number, throttle: number) {
+  /**
+   * Steering for anything that thinks in headings rather than in keys. `flick` is extra
+   * turning authority for a heading away from the body's, reaching `1 + flick` times the
+   * usual rate straight behind: a fish reverses with a C-start, bent double and round in a
+   * fraction of a second, not by swimming a circle. Only the player asks for it, so the
+   * chases and escapes tuned against the ordinary rate keep it.
+   */
+  drive(dt: number, desired: number, throttle: number, flick = 0) {
     const rate = this.agility() * dt;
     const want = angleDelta(this.angle, desired);
-    this.propel(dt, rate > 0 ? clamp(want / rate, -1, 1) : 0, throttle);
+    // tapered over the whole turn, not cut at the perpendicular, or the flick runs out
+    // halfway round and the back half of a reversal crawls at the ordinary rate
+    const reach = 1 + flick * (1 - Math.cos(want)) * 0.5;
+    this.propel(dt, rate > 0 ? clamp(want / rate, -reach, reach) : 0, throttle);
   }
 }

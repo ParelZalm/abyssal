@@ -20,8 +20,13 @@ a force along the body axis and lets drag do the rest:
 - **`agility()` falls with speed** — a body already moving fast cannot pivot tightly.
 - **`bank`** is the smoothed turn rate, passed to the view to lean the body.
 
-`drive(dt, desiredAngle, throttle)` wraps `propel` for anything that thinks in headings:
-the AI, and the player in mouse mode.
+`drive(dt, desiredAngle, throttle, flick)` wraps `propel` for anything that thinks in
+headings: the AI, and the player — the cursor and the keys both give a direction on the
+screen. `flick` is extra turning authority for a heading away from the body's, tapered to
+`1 + flick` straight behind: a C-start rather than a circle. Only the player passes one
+(`FLICK` in `PlayerController`, 1.5), so the chases tuned against the ordinary rate hold.
+The controller also eases throttle to 0.3 while the body points away from where it wants
+to go — full thrust through a reversal is what swung it round a loop.
 
 Side-on, two rules keep bodies looking like fish in profile:
 

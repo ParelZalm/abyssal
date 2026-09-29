@@ -119,7 +119,16 @@ screen plane — was physically right and read as the model flipping. So did the
 facing, which mirrored the body in one frame at the hysteresis edge. The body now rotates
 through its turn as it always did, and `FishView` eases a roll about the spine over 0.3 s,
 so it thins edge-on and comes back up the right way. Directional keys (left swims left)
-went in with the turn-about and were reverted with it: the tank steering stays.
+went in with the turn-about and were reverted with it.
+
+They came back on their own, over the rotating turn. Side-on, tank steering inverts: facing
+left, "right" swings the nose up, so no key meant a direction on the screen, and a reversal
+was a full-throttle loop about five body lengths deep. The keys now name a direction the
+way the cursor does, both go through `drive`, and a turn-back is fast rather than wide:
+thrust eases off while the body points away from where it is going, and the player's
+`drive` carries a `flick` of extra turning authority for headings behind it. A hatchling
+reverses in about half a second, a length from where it started. What was undone was the
+flip, not the directions; do not take the keys back to tank steering to fix a turn.
 
 ## Creatures are one deforming surface, not a chain of parts
 

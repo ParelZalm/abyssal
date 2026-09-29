@@ -1,4 +1,4 @@
-import { clamp } from '../core/util';
+import { angleDelta, clamp } from '../core/util';
 import type { Camera } from '../render/Camera';
 import type { Fx } from '../render/fx';
 import type { Run } from '../run/Run';
@@ -6,6 +6,13 @@ import { activeOf, boostModsOf, POISE_MAX, PUFF_TIME } from '../sim/organs';
 import type { Creature } from '../sim/creature';
 import type { World } from '../sim/world';
 import type { Input } from './Input';
+
+/**
+ * How much faster the player's body turns back on itself than it turns (`Creature.drive`).
+ * At 1.5 a hatchling reverses in about half a second, not the 0.95 s of the ordinary rate,
+ * which is what makes a key or a cursor thrown behind read as an answer, not a manoeuvre.
+ */
+const FLICK = 1.5;
 
 /**
  * The player's body under the player's hands: steering, the boost and what it costs, and
@@ -42,12 +49,11 @@ export class PlayerController {
     const k = input.keys;
     const left = k.has('a') || k.has('arrowleft');
     const right = k.has('d') || k.has('arrowright');
-    const ahead = k.has('w') || k.has('arrowup');
-    const astern = k.has('s') || k.has('arrowdown');
-    if (left || right || ahead || astern) input.useMouse = false;
+    const up = k.has('w') || k.has('arrowup');
+    const down = k.has('s') || k.has('arrowdown');
+    if (left || right || up || down) input.useMouse = false;
 
     let throttle = 0;
-    let turnInput = 0;
     let desired = p.angle;
 
     if (input.useMouse) {
@@ -60,16 +66,29 @@ export class PlayerController {
         throttle = clamp((d - dead) / (g.size * 1.6), 0, 1);
       }
     } else {
-      // tank mode: W drives, S brakes then backs up, A/D swing the body
-      turnInput = (right ? 1 : 0) - (left ? 1 : 0);
-      throttle = ahead ? 1 : astern ? -0.45 : 0;
+      // Keys name a direction on the screen, the same thing the cursor does: left swims
+      // left. Tank steering (A/D swinging the body) was the old scheme, and side-on it
+      // inverts — facing left, "right" pitches the nose up — so no key meant a direction.
+      const dx = (right ? 1 : 0) - (left ? 1 : 0);
+      const dy = (down ? 1 : 0) - (up ? 1 : 0);
+      if (dx || dy) {
+        desired = Math.atan2(dy, dx);
+        throttle = 1;
+      }
     }
+    // Turn first, then swim. Full thrust on a body pointed away from where it wants to go
+    // drives it round a loop several lengths across, through vertical; easing off lets drag
+    // bleed the speed that `agility` is lost to, and the lateral drag kills the slide, so a
+    // turn-back is a pivot about a length wide. Floored at 0.3, above the 0.2 under which
+    // `propel` levels the body out and would fight the turn.
+    const align = Math.cos(angleDelta(p.angle, desired));
+    throttle *= 0.3 + 0.7 * Math.max(0, align);
 
     // stunned by a sperm whale's click: no drive and no boost until it wears off
     if (p.stun > 0) {
       p.stun = Math.max(0, p.stun - dt);
       throttle = 0;
-      turnInput = 0;
+      desired = p.angle;
     }
 
     const wants = k.has('shift') || k.has(' ') || input.mouse.down;
@@ -103,8 +122,7 @@ export class PlayerController {
     const wind = sprinting ? (1.55 + 0.75 * surge * surge) * boost.wind : 1;
 
     const drive = throttle * wind;
-    if (input.useMouse) p.drive(dt, desired, drive);
-    else p.propel(dt, turnInput, drive);
+    p.drive(dt, desired, drive, FLICK);
     if (sprinting) {
       const cost = 3.2 * wind * boost.cost;
       this.run.food = Math.max(0, this.run.food - cost * dt * Math.abs(throttle));
