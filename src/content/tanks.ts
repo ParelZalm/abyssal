@@ -22,7 +22,7 @@ export interface Tank {
   depth: number;
   /**
    * World length of one tile. A tank is authored at its animal's scale — a tile about a
-   * body and a half long, which puts a 32-tile room some forty-five body lengths across — so
+   * body and two thirds long, which puts a 32-tile room some fifty body lengths across — so
    * that growing at the descent reads as the world widening rather than the body swelling.
    */
   tile: number;
@@ -47,7 +47,7 @@ export interface RoomTemplate {
 
 export const TANKS: Tank[] = [
   // the Open Water's profile: the brightest water there is, for the first room of a run
-  { id: 'nursery', name: 'Nursery Tank', depth: 520, tile: 20,
+  { id: 'nursery', name: 'Nursery Tank', depth: 520, tile: 23,
     fauna: ['bloom', 'krill', 'fry', 'anchovy'], population: 26 },
 ];
 

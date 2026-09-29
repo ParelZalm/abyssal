@@ -71,15 +71,22 @@ grid, and re-baked only when the art density changes tier. Nothing about the ter
   drawn to the pixel and is the edge a body meets. `Terrain.kindAt` says what it is made
   of, through a small warp, so the seam between sand and rock wanders like the edge does.
   The first cut drew the template's squares with a noise warp on top and read as blocks.
-- **Shading is read off the mask**, as a creature's is off its silhouette: a lit lip where a
-  face looks up at open water, a dark outline where rock meets water, rock deeper in a wall
-  darker, strata stretched sideways with a mottle over them, sand grained and lighter at
-  its top. Everything steps through the Bayer screen, lit by `lightAt` and fogged toward
-  the tank's own water. In lit water the rock has to sit well under the water colour, or it
-  lies on the water rather than against it — the fields found the same.
+- **Shading is read off the mask**, as a creature's is off its silhouette. A rock face is
+  broken into stones — cellular noise, each cell a dome lit from above-left with a dark
+  crack to the next (`STONE`, 0.8 of a tile; boulders larger). Light reaches `REACH` (1.1
+  tiles) into a wall, measured by a chamfer distance field from the water, and the rest is
+  shadow, so a wall is a mass with a lit surface and only the stones near the face show.
+  Every face that looks up at open water has a lit lip, the rest of the edge a dark outline;
+  sand is grained, lighter at its top and shadowed less deep. Everything steps through the
+  Bayer screen and is lit by `lightAt`. In lit water the rock has to sit well under the
+  water colour, or it lies on the water rather than against it — the fields found the same.
+  Strata and a flat mottle were the first cut, and read as a flat cut-out.
+- **Walls cast into the water.** Water within `SHADOW` (0.7 tiles) of rock is darkened in
+  stepped bands, which is what sits the rock in the tank. It is in the room's texture, so
+  it falls on a fish swimming along a wall too.
 - **The letterbox is more cave.** The camera fits the room and the window is rarely its
-  shape, so the view is baked with `MARGIN` (10) tiles of rock around it, darkening and
-  fogging away from the room.
+  shape, so the view is baked with `MARGIN` (10) tiles of rock around it, sinking to black
+  within three tiles of the room's edge.
 - **It draws over the bodies**, so a nose pressed into a wall goes into it: the wall circle
   is half the body's radius (`sim/world.ts`, `WALL_R`).
 

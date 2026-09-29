@@ -51,9 +51,9 @@ What it found, and what it leaves:
   turns it. Stage 4.
 - **Rooms grew, and the rock went smooth.** The first cut was 24 × 14 tiles of squares and
   felt cramped and blocky. A template is now 32 × 18, and the rock is the smooth shape the
-  tiles imply, collided on quarter-tile cells. A room is ~45 hatchling lengths across and
-  ~6 s to swim; speed is a stat now, so tune the base with the stat column (stage 5).
-- **A room bakes in ~200 ms.** Fine once a run; at every door in stage 3 it wants the
+  tiles imply, collided on quarter-tile cells, and broken into lit stones that sink into
+  shadow away from the water. A room is ~50 hatchling lengths across and ~6.5 s to swim; speed is a stat now, so tune the base with the stat column (stage 5).
+- **A room bakes in ~250 ms.** Fine once a run; at every door in stage 3 it wants the
   neighbours baked ahead, or the slide hitches.
 - Still here from the column, for the stages that replace them: the thermocline uniforms
   in the water shader, the level-up draft and hunger (stage 2), `Creature.quarry` (stage 4),
