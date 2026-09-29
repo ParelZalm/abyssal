@@ -10,10 +10,29 @@
  * layer only places and tints them.
  */
 import { Texture } from 'pixi.js';
-import type { PropKind } from '../content/zones';
-import { hash01 as h, TAU } from '../core/util';
+import { bandWater, type PropKind } from '../content/zones';
+import { hash01 as h, lerp, rgb, TAU } from '../core/util';
+import { lightAt, waterColor } from './water';
 
 export type { PropKind };
+
+/**
+ * Contrast, not colour, is what makes a landmark read — and which way the contrast runs
+ * flips with depth. In lit water a prop is a shape darker than the water behind it; in
+ * the dark tiers there is nothing behind it, so the only way to be seen is to give off
+ * the band's own light.
+ */
+export function shadeFor(depth: number, dark: number, lit: number) {
+  const deep = 1 - lightAt(depth);
+  const water = waterColor(depth);
+  const accent = bandWater(depth).accent;
+  // ramped, not squared: the middle tiers are the awkward case — too dim for a dark
+  // silhouette to carry on its own, not dark enough to be pure emission
+  const mix = deep * (0.4 + 0.6 * deep);
+  return rgb(lerp(water[0] * dark, accent[0] * lit, mix),
+             lerp(water[1] * dark, accent[1] * lit, mix),
+             lerp(water[2] * dark, accent[2] * lit, mix));
+}
 
 /** Relative size of each kind, so a mass out there is not a disc's size. */
 export const PROP_SIZE: Record<PropKind, number> = {
@@ -200,10 +219,19 @@ const PIXELS = 64;
 /** 4×4 Bayer, the frame's own dither — see `render/pixel.ts`. */
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) / 16);
 
-/** Down to `PIXELS` texels, with alpha stepped to empty, half and solid by the dither. */
-function pixelate(t: Texture): Texture {
+/**
+ * A painted canvas as pixel art: blurred by `blur` px, then brought down to `texels` on its
+ * long side with the falloff turned into dither. What a prop is made of, and what a field's
+ * parts are (`fields.ts`), so the two sit on the same grid and fade the same way.
+ */
+export function pixelArt(src: HTMLCanvasElement, texels: number, blur: number): Texture {
+  return pixelate(blurred(src, blur), texels);
+}
+
+/** Down to `texels`, with alpha stepped to empty, half and solid by the dither. */
+function pixelate(t: Texture, texels = PIXELS): Texture {
   const src = t.source.resource as HTMLCanvasElement;
-  const k = PIXELS / Math.max(src.width, src.height);
+  const k = texels / Math.max(src.width, src.height);
   const w = Math.max(1, Math.round(src.width * k)), h = Math.max(1, Math.round(src.height * k));
   const c = document.createElement('canvas');
   c.width = w; c.height = h;

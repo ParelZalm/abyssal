@@ -5,10 +5,11 @@
  */
 import { Container, Sprite } from 'pixi.js';
 import { bandWater } from '../content/zones';
-import { drifts, PROP_SIZE, propTexture, type PropKind } from './props';
-import { clamp, lerp, rgb, TAU } from '../core/util';
+import { Fields } from './fields';
+import { drifts, PROP_SIZE, propTexture, shadeFor, type PropKind } from './props';
+import { clamp, TAU } from '../core/util';
 import type { View } from './view';
-import { lightAt, waterColor } from './water';
+import { lightAt } from './water';
 
 interface Plane {
   /** Camera follow factor: below 1 sits behind you, above 1 passes in front. */
@@ -54,24 +55,6 @@ interface Placed {
   spin: number;
   /** How far this one drifts from home, in plane-local units. */
   wander: number;
-}
-
-/**
- * Contrast, not colour, is what makes a landmark read — and which way the contrast runs
- * flips with depth. In lit water a prop is a shape darker than the water behind it; in
- * the dark tiers there is nothing behind it, so the only way to be seen is to give off
- * the band's own light.
- */
-function shadeFor(depth: number, dark: number, lit: number) {
-  const deep = 1 - lightAt(depth);
-  const water = waterColor(depth);
-  const accent = bandWater(depth).accent;
-  // ramped, not squared: the middle tiers are the awkward case — too dim for a dark
-  // silhouette to carry on its own, not dark enough to be pure emission
-  const mix = deep * (0.4 + 0.6 * deep);
-  return rgb(lerp(water[0] * dark, accent[0] * lit, mix),
-             lerp(water[1] * dark, accent[1] * lit, mix),
-             lerp(water[2] * dark, accent[2] * lit, mix));
 }
 
 class PlaneLayer {
@@ -182,14 +165,17 @@ export class Scenery {
   /** In front of them: one fast plane that sweeps past the camera. */
   front = new Container();
   private layers: PlaneLayer[];
+  /** The structures that name a band, on a plane of their own between the two back ones. */
+  private fields = new Fields();
 
   constructor() {
     this.layers = PLANES.map(p => new PlaneLayer(p));
-    this.back.addChild(this.layers[0].root, this.layers[1].root);
+    this.back.addChild(this.layers[0].root, this.fields.root, this.layers[1].root);
     this.front.addChild(this.layers[2].root);
   }
 
   update(view: View) {
     for (const l of this.layers) l.update(view);
+    this.fields.update(view);
   }
 }

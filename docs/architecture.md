@@ -48,7 +48,7 @@ src/
 │   ├── Impacts.ts       the world's outbox made felt: blood, pulses, hits, a guardian's turn
 │   ├── Dread.ts         the spike and the hold behind uDread
 │   ├── water.ts         full-screen GLSL pass; also owns the depth→colour palette
-│   ├── ocean.ts  scenery.ts  props.ts  fx.ts  textures.ts  view.ts
+│   ├── ocean.ts  scenery.ts  fields.ts  props.ts  fx.ts  textures.ts  view.ts
 │   └── creature/
 │       ├── fishview.ts      one deforming mesh per creature; swims it
 │       ├── fishbake.ts      the bake cache, and paint(): the order a body is painted in
@@ -61,7 +61,9 @@ src/
 `render/scenery.ts` draws soft organic props on parallax planes — *planes*, because
 *band* now means a slice of the water column. See
 [decisions.md](decisions.md) for why the art is primitives rather than creature
-silhouettes.
+silhouettes. `render/fields.ts` stands one structure per band on a plane of its own between
+the two back ones: a clump of weed, a torn sea fan, a siphonophore in snow, a ring of
+sparks, a column of embers, a sinking ribcage (see *Fields* in `rendering.md`).
 
 ## Dependency direction
 
@@ -118,7 +120,7 @@ app.stage
 ├── water.layer    a screen-sized Sprite with the GLSL filter — shaded from world
 │                  coordinates passed in as uniforms, so it never moves or scales
 └── camera.root    a Container, scaled by zoom and translated by the camera position
-    ├── scenery.back   far parallax props
+    ├── scenery.back   far parallax props, the fields between them
     ├── ocean.world
     ├── scene.focus  the ring drawn around the player
     ├── world.glow   every creature's additive bloom, in one container so it batches

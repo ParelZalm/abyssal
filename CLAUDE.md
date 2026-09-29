@@ -23,8 +23,8 @@ browser pane attaches to it.
 
 `/design.html` (`src/design/`) lays out every drawing the game makes — every body plan,
 the morphology and stats that draw, every mutation taken once on the hatchling, all the
-species, each motion state, the background props, and the water and biome palettes — each over the real water
-colour at its own depth. It imports the shipping drawing code and is never imported by it,
+species, each motion state, the background props and each band's field, and the water and
+biome palettes — each over the real water colour at its own depth. It imports the shipping drawing code and is never imported by it,
 so it cannot drift from the game. Click a cell to focus it with its source file; the URL
 carries the whole state, so a link to one cell is a link to one design question. The
 *show* options caption the art without touching it: `labels`, `icons` (a mutation's HUD

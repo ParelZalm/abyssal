@@ -231,6 +231,27 @@ spine, so no part can be clipped by a bounds estimate.
 
 `menace` is read inside the view, so the same genome always produces the same animal.
 
+## Fields
+
+`render/fields.ts` gives each band one or two things adrift in its water, on a plane of its
+own at parallax 0.45 between the two back planes: a clump of sargassum with fronds hanging
+under it and a knot of fry (Open Water), a sea fan torn off the reef and tumbling (Reef
+Shelf), a siphonophore with snow falling past (Twilight), a ring of pulsing sparks over a
+bell (Midnight), a column of embers rising from a vent too far below to see (Abyss), and a
+ribcage sinking through the dark (Trenches). Nothing is rooted: the column has no floor, so a
+mound, a chimney or a whale fall on the bottom read as scenery from a sea bed the player
+never sees. Parts of one object have no wander of their own; the whole field drifts and
+rocks, so the object holds together and only its fronds and threads move on it.
+
+- **Placement.** Rows per band, a field in every other cell along a row (`CELL_W`), placed
+  every frame from the zoom, since the plane holds its apparent size like the others.
+- **Pixels.** Parts are painted smooth and brought down with `pixelArt` at one texel per
+  2.4 plane units, per size bucket; only far parts are blurred.
+- **Blend.** Each field has a `shade` layer (multiplied in lit water, added in the dark) and
+  a `shine` layer (added), so a silhouette darkens the water behind it by a share and a
+  flake brightens it. See `decisions.md` for why a flat tint could not work.
+- The design board's *Fields* group shows each band's field alone, through `Fields.patch`.
+
 ## HUD
 
 `src/ui/` is all DOM over the canvas — `UI.ts` is the game-facing facade, `hud/`

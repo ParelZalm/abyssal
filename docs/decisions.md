@@ -38,7 +38,7 @@ pixels.
 The old silhouette extractor lived in `silhouettes.ts` and is gone — the extraction
 trick (render a plan, keep alpha as white, blur) is no longer used.
 
-### Biome-specific scenery — prototype, not yet folded in
+### Biome-specific scenery — fields, folded in as `render/fields.ts`
 
 The bands place the same four primitives in every tier and let the biome only reweight
 them, so a tier is told apart by colour and density and not by what is in its water.
@@ -69,10 +69,32 @@ Two findings from the tuning pass:
   dim, so a prop shaded at the band's 0.16 of the water colour sits *on* the water rather
   than against it; the reef structure is at 0.05–0.07 and only then reads.
 
-Folding it into `scenery.ts` is not a port: a field is a cluster with a shared phase, and
-the band places one independent prop per hashed cell. It needs cell-level clustering (a
-cell seeds a whole field) and a phase derived from world position, or the stand's
-travelling wave and the swarm's sequence do not survive the move.
+Folding it in was not a port: a field is a cluster with a shared phase, and the band placed
+one independent prop per hashed cell. It became a plane of its own (`Fields`, parallax 0.45,
+between the two back planes) where a cell seeds a whole field and every part's phase comes
+from where it sits. What the move to play found, beyond the board:
+
+- **A plane that holds its size barely moves.** It travels `parallax / k` of the camera, and
+  zoomed out at full size the whole world is under two cells wide and a band a few hundred
+  units tall on it. A grid over the plane filled by lottery left whole bands with no field
+  anywhere; rows are laid per band instead, at least one each, a field in every other cell.
+- **A flat shade cannot be right in lit water.** The water shader's clouds swing the local
+  colour so far that the board's dark (0.05–0.07) was a black wall in the bright patches and
+  paler than the water in the shadowed ones, and no single value in between worked. In lit
+  water a field's shadows multiply — they darken what is behind them by a share, as water
+  between you and a silhouette does — and its lights (snow, bubbles, sparks) add. Per field,
+  not per plane, or a field shaded for lit water glowed grey once the camera sank past the
+  switch.
+- **The board framing lies about size.** A patch fills its cell on the board; in play at the
+  board's scale a raft of weed was half the screen. `FIELD_SCALE` 0.5 makes a field about a
+  third of a screen across.
+- **Soft falloffs are fog.** Radial gradients and blur came out of the dither as stipple; the
+  nearest parts are unblurred hard shapes with a solid core, and only distance adds blur.
+- **Nothing stands on the bottom, and one or two things is enough.** The first pass kept the
+  board's structures — a rubble mound, a vent chimney, a whale fall on the floor — and in play
+  they were scenery from a sea bed the player never sees, in a column with no floor. Every
+  field is now one or two things adrift (a torn fan, a column of embers, a sinking ribcage),
+  and the whole field drifts as one so an object never comes apart.
 
 ## Things that were tried and rejected inside the shader
 

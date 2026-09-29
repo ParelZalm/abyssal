@@ -165,9 +165,9 @@ follows, in stages, each committed on its own:
 4. ~~**The water and the background.**~~ First pass done: particulate and fx dots are a
    hard 5×5 pixel disc, and the background props are brought down to 64 texels with their
    blur turned into screen-door dither, so a plane's distance reads as dither density. The
-   water shader is left alone — `FramePass` bands it. Left: pixel-art scenery with real
-   structure (rock, kelp, vents), which is where the field prototype should land
-   (`decisions.md` has it and where to recover its code).
+   water shader is left alone — `FramePass` bands it. Since done: scenery with real
+   structure, as fields (`render/fields.ts`) — one structure per band on a plane of its own,
+   drawn as pixel art, shadows multiplied and lights added in lit water.
 5. ~~**The HUD.**~~ Done: Pixelify Sans, bundled, with font smoothing off; square corners,
    2 px frames, hard 2 px rings for every glow, one-pixel drop shadows, flat bar fills with
    a lit top row, bevelled buttons. The mutation icons are pixels, rastered per size onto
@@ -180,7 +180,7 @@ follows, in stages, each committed on its own:
    The design board's Motion group loops each state.
 
 What is left across the whole pass is tuning, not structure: per-plan proportions and
-palettes side-on, small animals at their real size, and scenery with real structure.
+palettes side-on, small animals at their real size, and the fields' own tuning by eye.
 
 ## Suggested order
 

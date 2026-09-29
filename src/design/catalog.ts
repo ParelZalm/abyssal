@@ -18,6 +18,7 @@ import { BANDS, depthLabel, zoneOf } from '../content/zones';
 import type { IconName } from '../ui/icons';
 import { rgb, Rng } from '../core/util';
 import { waterColor } from '../render/water';
+import { fieldKinds, Fields } from '../render/fields';
 
 export interface DesignItem {
   id: string;
@@ -625,6 +626,42 @@ function tierSwatch(top: number, bottom: number, accent: [number, number, number
   return c;
 }
 
+/**
+ * One band's field each: the structure the background plane stands in that band's water,
+ * built and animated by `Fields` itself. The plane scatters these half a screen apart with
+ * open water between; here each is alone, which is the question the board can answer — does
+ * the structure name the band — and not how often they come.
+ */
+function fieldGroup(): DesignGroup {
+  return {
+    id: 'fields',
+    name: 'Fields',
+    note: 'The structure each band\'s background is built around, one per band, over its own water.',
+    items: BANDS.map((band, i) => {
+      let clock = 0;
+      return {
+        id: `field-${band.id}`,
+        name: band.name,
+        note: fieldKinds(i),
+        source: 'src/render/fields.ts',
+        // a field is a patch of water, so it is framed to fill its cell
+        span: 820,
+        depth: (band.top + band.bottom) / 2,
+        facts: { parts: fieldKinds(i) },
+        make: () => {
+          const fields = new Fields();
+          const step = fields.patch(i);
+          return Object.assign(fields.root, { step });
+        },
+        animate: (view: Container, dt: number) => {
+          clock += dt;
+          (view as Container & { step(t: number): void }).step(clock);
+        },
+      };
+    }),
+  };
+}
+
 function waterGroup(): DesignGroup {
   return {
     id: 'water',
@@ -658,5 +695,5 @@ function waterGroup(): DesignGroup {
 
 export function catalog(): DesignGroup[] {
   return [planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(), speciesGroup(),
-          guardianGroup(), motionGroup(), propGroup(), waterGroup()];
+          guardianGroup(), motionGroup(), propGroup(), fieldGroup(), waterGroup()];
 }
