@@ -144,6 +144,11 @@ export class Combat {
     // a guardian's rush lands like a rush, and ends on the body it found
     const rushing = att.rushT > 0;
     if (rushing && def.isPlayer) { att.landed = true; att.rushT = 0; att.patternCd = PATTERN_CD; }
+    // a strike ends on what it hits: the jaw closes and the body goes into its recovery
+    if (att.attack === 'strike' || att.attack === 'windup') {
+      att.attack = 'recover';
+      att.attackT = att.attackLen = 0.4;
+    }
     this.land(att, def, whole, rushing ? RUSH_BITE : 1);
   }
 
@@ -168,6 +173,10 @@ export class Combat {
     def.hp -= dmg;
     def.hurt(att, 'bite');
     const fatal = def.hp <= 0;
+    // seen, not just booked: a flinch on a wound, and on a whole swallow the body goes down
+    // the throat that took it instead of simply ceasing to be drawn
+    if (fatal && whole) def.eatenBy = att;
+    else def.view.hurt();
     // what the bodies do to each other beyond the damage — recoil, venom, grip — is the
     // organs' business, and a kill is read off the wound before they run so poison cannot
     // credit a bite that already finished the job

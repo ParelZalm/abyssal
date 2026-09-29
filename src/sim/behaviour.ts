@@ -1,5 +1,5 @@
 import { hunts, rangeOf } from '../content/species';
-import type { Plan } from '../content/form';
+import { PLAN_ART, type Plan } from '../content/form';
 import { DEPTH_MAX, noticeSize, WORLD_HALF_W } from '../content/zones';
 import { angleDelta, clamp, dist2 } from '../core/util';
 import type { Combat } from './combat';
@@ -17,6 +17,34 @@ import type { World } from './world';
 const SHARKS = new Set<Plan>(['shark', 'greatshark']);
 /** Scent reach, per centimetre of the body. A 5 cm krill is barely worth crossing water for. */
 const BLOOD_REACH = 11;
+
+/**
+ * How steeply a body will climb or dive, side-on, by what it is doing. A fish in profile
+ * swims level and changes depth on a slant: one that points its nose straight up to reach
+ * something overhead reads as a stick, not a fish. Cruising, schooling and idling stay near
+ * level; the chase and the bolt may go steep, but not vertical — they climb in a zigzag of
+ * turn-abouts instead, which is what a side-on fish actually does.
+ */
+const STEEP = { calm: 0.5, scent: 0.8, chase: 1.15 };
+
+/** The heading nearest `desired` that is no steeper than `cap` from level. */
+function levelled(desired: number, cap: number, face: 1 | -1) {
+  const c = Math.cos(desired);
+  // straight up or down has no side of its own; keep the one the body already faces
+  const level = Math.abs(c) < 0.15 ? (face > 0 ? 0 : Math.PI) : c > 0 ? 0 : Math.PI;
+  return level + clamp(angleDelta(level, desired), -cap, cap);
+}
+
+/**
+ * A strike's timing, in seconds: the wind-up grows with the body, so a krill-eater snaps
+ * and a shark visibly gathers itself — the tell that makes a dodge possible. The strike is
+ * the burst, and recovery the beat after it when the hunter is slow and open.
+ */
+const WINDUP = (size: number) => clamp(0.12 + size / 480, 0.12, 0.42);
+const STRIKE = 0.32;
+const RECOVER = 0.4;
+/** The burst a strike throws the body forward with, in multiples of its top speed. */
+const STRIKE_KICK = 0.95;
 
 /**
  * What every body that is not the player decides to do each frame: flee, hunt, follow
@@ -42,9 +70,11 @@ export class Behaviour {
     c.moodT -= dt;
     c.graspCd = Math.max(0, c.graspCd - dt);
     c.scatter = Math.max(0, c.scatter - dt);
+    this.tickStrike(c, dt);
 
     // dazzled: the body hangs where the flash caught it and drifts on what it was doing
     if (c.stun > 0) {
+      c.attack = 'none';
       c.stun = Math.max(0, c.stun - dt);
       c.drive(dt, c.angle, 0);
       return;
@@ -71,6 +101,8 @@ export class Behaviour {
       }
     }
 
+    let steep = STEEP.calm;
+    let hunting = false;
     switch (c.species.behavior) {
       case 'plankton':
         desired = Math.sin(c.wander * 0.4) * 1.4 + Math.PI / 2;
@@ -94,6 +126,7 @@ export class Behaviour {
             const cut = clamp(0.75 - g.size / 120, 0.15, 0.7);
             desired = Math.atan2(c.y - threat.y, c.x - threat.x) + c.jinkSide * cut;
             throttle = 1.25;
+            steep = STEEP.chase;
             if (c.panic <= 0 && c.species.behavior === 'school') this.alarm(c);
             c.panic = 1.2;
             c.mood = 'cruise';
@@ -132,10 +165,13 @@ export class Behaviour {
           const speed = Math.max(40, Math.hypot(c.vx, c.vy));
           const lead = Math.min(1, d / speed);
           desired = Math.atan2(prey.y + prey.vy * lead - c.y, prey.x + prey.vx * lead - c.x);
+          steep = STEEP.chase;
+          hunting = true;
           if (c.species.behavior === 'ambush') {
+            // it waits, then charges once prey is close; the strike itself sets `lunge`, which
+            // is what makes it settle back afterwards rather than giving chase
             const close = dist2(c.x, c.y, prey.x, prey.y) < (sense * 0.4) ** 2;
-            throttle = close ? 1.7 : 0.1;
-            if (close) c.lunge = 1.6;
+            throttle = close ? 1.4 : 0.1;
           } else {
             // stalk, then strike: creep while far so the approach reads as intent, and only
             // open up inside striking range. Guardians keep the old steady pressure
@@ -152,6 +188,8 @@ export class Behaviour {
             // a summoned hunter gets one chase: outlast it and it is just another shark
             if (c.chase > stamina) { c.chase = 0; c.tired = 3 + Math.random() * 2; c.quarry = null; }
           }
+          const striking = this.strike(c, prey, d);
+          if (striking !== null) throttle = striking;
           break;
         }
         c.chase = Math.max(0, c.chase - dt * 2);
@@ -175,6 +213,7 @@ export class Behaviour {
               desired = toward;
               throttle = 1.1;
             }
+            steep = STEEP.scent;
             break;
           }
         }
@@ -205,12 +244,57 @@ export class Behaviour {
     const down = clamp((c.y - (bandBottom - margin)) / 160, 0, 1);
     if (up > 0) desired += angleDelta(desired, Math.PI / 2) * up;
     else if (down > 0) desired += angleDelta(desired, -Math.PI / 2) * down;
+    // a wind-up abandoned is abandoned; a strike already thrown carries on regardless
+    if (!hunting && c.attack === 'windup') c.attack = 'none';
+    // plankton and drifters are carried rather than swimming, and rise and sink as they please
+    if (c.species.behavior !== 'plankton' && c.species.behavior !== 'drift') {
+      desired = levelled(desired, steep, c.face);
+    }
     if (c.y < 120) desired = Math.PI / 2;
     else if (c.y > DEPTH_MAX - 120) desired = -Math.PI / 2;
     if (Math.abs(c.x) > WORLD_HALF_W - 200) desired = c.x > 0 ? Math.PI : 0;
 
     c.drive(dt, desired, throttle * (1 + c.panic * 0.15));
     void p;
+  }
+
+  /**
+   * Start a strike on prey in range, and say how hard to swim while one is under way: slow
+   * through the wind-up (the jaw opens and the body coils — the view reads `attack`), all
+   * out through the strike, easy in the recovery. Null when there is no strike, and the
+   * hunt's own throttle stands. Tentacled bodies strike with their arms (`Combat.grasp`),
+   * and so never wind up a bite.
+   */
+  private strike(c: Creature, prey: Creature, d: number): number | null {
+    if (PLAN_ART[c.species.plan].grasp > 0) return null;
+    if (c.attack === 'none') {
+      // measured from the mouth, as the bite is, and only on something already ahead
+      const reach = c.radius * 1.1 + prey.radius + c.genome.size * 0.45;
+      const ahead = Math.abs(angleDelta(c.angle, Math.atan2(prey.y - c.y, prey.x - c.x))) < 0.7;
+      if (!ahead || c.biteCd > 0 || d - c.radius * 0.8 > reach * 2.4) return null;
+      c.attack = 'windup';
+      c.attackT = c.attackLen = WINDUP(c.genome.size);
+    }
+    return c.attack === 'windup' ? 0.12 : c.attack === 'strike' ? 1.3 : 0.35;
+  }
+
+  /** Run a strike's clock, and throw the body forward as the wind-up gives way. */
+  private tickStrike(c: Creature, dt: number) {
+    if (c.attack === 'none' || (c.attackT -= dt) > 0) return;
+    if (c.attack === 'windup') {
+      c.attack = 'strike';
+      c.attackT = c.attackLen = STRIKE;
+      const kick = Math.max(1, c.genome.speed) * STRIKE_KICK;
+      c.vx += Math.cos(c.angle) * kick;
+      c.vy += Math.sin(c.angle) * kick;
+      // an ambusher that has struck does not strike again at once; it settles back
+      if (c.species.behavior === 'ambush') c.lunge = 1.6;
+    } else if (c.attack === 'strike') {
+      c.attack = 'recover';
+      c.attackT = c.attackLen = RECOVER;
+    } else {
+      c.attack = 'none';
+    }
   }
 
   /**

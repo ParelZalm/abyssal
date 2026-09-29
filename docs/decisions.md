@@ -111,6 +111,16 @@ Findings that shaped it:
 - **Detail needs a budget.** At the grid's real density small animals are a handful of texels,
   and an eye on a four-texel krill is the whole krill.
 
+## Turning back is a rotation and a roll, not a flip
+
+Two turns were tried after the move to side-on and both undone on sight. A one-step
+turn-about — the heading mirrored about vertical, the view squashing the body through the
+screen plane — was physically right and read as the model flipping. So did the first cut of
+facing, which mirrored the body in one frame at the hysteresis edge. The body now rotates
+through its turn as it always did, and `FishView` eases a roll about the spine over 0.3 s,
+so it thins edge-on and comes back up the right way. Directional keys (left swims left)
+went in with the turn-about and were reverted with it: the tank steering stays.
+
 ## Creatures are one deforming surface, not a chain of parts
 
 Three passes died on the same problem, in this order: a jointed chain of `Graphics` links;

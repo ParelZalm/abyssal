@@ -109,13 +109,40 @@ because a guardian is the animal the player is meant to recognise on sight.
 
 ### Facing
 
-A side-on animal rotates to its heading but mirrors about its own spine once that heading
-is past vertical, so its back stays up. `faceFor` decides which way it faces, with a
-hysteresis band so an animal swimming straight up does not flicker, and `drawnAngle` caps
-the drawn pitch at 60° — at a straight 90° a fish in profile stands on its tail and stops
-reading as a fish. Both live in `content/form.ts` and `Creature.face` is state of the body,
-not the view, because the lure's strike point (`sim/organs/body.ts`) has to agree with
-where the bulb is drawn.
+A side-on animal rotates to its heading, and once that heading is past vertical it rolls
+over about its own spine so its back ends up up. `faceFor` (`content/form.ts`) decides which
+way up it should be, with a hysteresis band so an animal swimming straight up does not roll
+back and forth; `FishView` eases `roll` toward it over `ROLL_TIME`, so the body thins
+edge-on through the middle of the roll and comes back the other way up. `Creature.face` is
+state of the body, not the view, because the lure's strike point (`sim/organs/body.ts`) has
+to agree with where the bulb is drawn.
+
+Two earlier versions were undone. A hard mirror at the hysteresis edge snapped the body
+into its mirror image in a frame, and a drawn-pitch cap at 60° jumped by the difference
+whenever the facing changed; both read as the model flipping rather than the fish turning.
+
+### Motion states
+
+`Creature.pose()` says what a body is doing beyond swimming, and `FishView.animate` owns how
+each looks — the Motion group on the design board loops every one of them:
+
+- **Idle.** Under a third of full effort the body hangs and breathes: a slow rise and fall
+  (`bob`) and the nose nodding (`sway`), both fading out as it swims.
+- **Wind-up.** Drawn back along its own axis and bunched, with the tail wave strengthened;
+  the jaw opens a third of the way in.
+- **Strike.** Stretched long and narrow, easing back as it is spent; jaw open. A boost and a
+  guardian's rush use the same pose.
+- **Bite.** The existing chomp squash, with the jaw snapped shut for it.
+- **Hurt.** `Combat.land` calls `view.hurt()`: knocked short, flashed red through `show`'s
+  tint, and blinked for its first frames.
+- **Death.** `World.remove` hands a body that died on screen to `die()` instead of
+  destroying it, and plays it out in `playDeaths`: swallowed whole (`Creature.eatenBy`) it
+  is drawn into the swallower's mouth, shrinking; otherwise it rolls belly-up, drifts to a
+  stop, sinks and fades, its lights going out first.
+
+The jaw is a second texture: every body is baked twice on identical sheets, mouth shut and
+mouth open for the strike (`head(…, attack)`), cropped to their union so the mesh can swap
+`baked.open` in without moving. The player's jaw opens when there is prey at its mouth.
 
 ### Pixel art, and nothing is stroked
 

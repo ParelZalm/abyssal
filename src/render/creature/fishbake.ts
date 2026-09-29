@@ -33,6 +33,8 @@ import { photophores, flankLights, embers } from './bake/lights';
 
 export interface Baked {
   texture: Texture;
+  /** The same animal with its mouth open, on the same strip — the attack. */
+  open: Texture;
   /** The pixels themselves, for anything that wants the picture off the GPU (the end screen). */
   canvas: HTMLCanvasElement;
   /** Front and back of the painted strip, in R units — the mesh spans exactly this. */
@@ -134,6 +136,7 @@ function evict() {
   for (const [k, b] of cache) {
     if (b.users > 0) continue;
     b.texture.destroy(true);
+    if (b.open !== b.texture) b.open.destroy(true);
     b.arm?.texture.destroy(true);
     cache.delete(k);
     if (cache.size < CACHE_MAX) return;
@@ -169,8 +172,39 @@ function paint(g: Genome, plan: Plan): Baked {
   const back = spineAt(1, f) - f.len * R * (f.fluke * 1.5 + g.veil * 0.7 + (bloom ? BLOOM_TRAIL * 1.1 : 0))
     - (rigged ? 0 : A.armLen * R * (1 + g.segments * 0.1) * 1.8) - R * 0.6;
   const halfH = Math.ceil(reachUp * res) / res;
-  const s = new Sheet(back, front, halfH, res);
+  const at = { g, f, A, pal, men, seed, smoke, bloom, rigged };
 
+  // Two pictures of the same animal on identical sheets: the mouth shut, and the mouth
+  // open for an attack. Cropped to their union, so the view can swap one texture for the
+  // other mid-strike without the strip moving under it. Below `SMALL` there is no head to
+  // open, and the second bake would be the first one again.
+  const shut = new Sheet(back, front, halfH, res);
+  const detailed = draw(shut, at, 0);
+  const gaping = detailed ? new Sheet(back, front, halfH, res) : null;
+  if (gaping) draw(gaping, at, 1);
+
+  let depth = 0;
+  for (let i = 0; i <= 40; i++) depth = Math.max(depth, halfWidth(i / 40, f));
+  const crop = union(cropOf(shut), gaping ? cropOf(gaping) : null);
+  const canvas = cut(shade(shut, pal), crop);
+  const texture = pixelTexture(canvas);
+  return { texture, open: gaping ? pixelTexture(cut(shade(gaping, pal), crop)) : texture,
+           canvas, users: 0, lights: shut.lights, depth,
+           back: back + crop.x / res, front: back + (crop.x + crop.w) / res, halfH: crop.h / 2 / res,
+           arm: rigged ? armRig(f, pal, A, g, res) : null };
+}
+
+interface Painting {
+  g: Genome; f: Form; A: PlanArt; pal: Palette; men: number; seed: number;
+  smoke: boolean; bloom: boolean; rigged: boolean;
+}
+
+/**
+ * Paint the whole animal onto `s`, back to front — this is the one place to read what a
+ * body is made of. `gape` opens the mouth, 0 shut to 1 wide. Returns whether the body was
+ * big enough to have a head worth drawing.
+ */
+function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Painting, gape: number) {
   // --- behind the body ---------------------------------------------------
   const jellyArms = A.arms > 0 && !rigged;
   if (jellyArms) tentacles(s, f, A, g);
@@ -193,8 +227,8 @@ function paint(g: Genome, plan: Plan): Baked {
   // ring of cilia on a body that small is the whole animal: it reads as a black square
   // with a hair on it. Below `SMALL` pixels of length a body is a body and its lights;
   // below `TINY` it is only a body.
-  const len = f.len * R * res;
-  if (len < TINY) return finish(s, pal, g, res, back, rigged, f, A);
+  const len = f.len * R * s.res;
+  if (len < TINY) return false;
   if (A.blunt > 0) bluntSnout(s, f, A);
 
   // --- on its skin --------------------------------------------------------
@@ -208,8 +242,7 @@ function paint(g: Genome, plan: Plan): Baked {
   if (photophoreOf(g) > 0) photophores(s, f, pal, g, seed);
   if (hasSynergy(g, 'flashsense')) flankLights(s, f, pal);
   if (g.glare > 0) embers(s, f, seed);
-
-  if (len < SMALL) return finish(s, pal, g, res, back, rigged, f, A);
+  if (len < SMALL) return false;
 
   // --- standing off it ---------------------------------------------------
   if (A.cilia) cilia(s, f);
@@ -218,27 +251,28 @@ function paint(g: Genome, plan: Plan): Baked {
   if (hasSynergy(g, 'urchin')) urchinSpines(s, f, g, seed);
   fins(s, f, g, A);
   organs(s, f, pal, g);
-  head(s, f, pal, g, A, men);
+  head(s, f, pal, g, A, men, gape);
   if (g.barbels > 0) barbels(s, f, pal, g);
   if (g.lure > 0) lure(s, f, pal, g);
-  return finish(s, pal, g, res, back, rigged, f, A);
+  return true;
 }
 
 /** Body lengths, in texels, below which detail is dropped. See `paint`. */
 const TINY = 6, SMALL = 12;
 
-function finish(s: Sheet, pal: Palette, g: Genome, res: number, back: number, rigged: boolean,
-                f: Form, A: PlanArt): Baked {
-  let depth = 0;
-  for (let i = 0; i <= 40; i++) depth = Math.max(depth, halfWidth(i / 40, f));
-  const shaded = shade(s, pal);
-  const crop = cropOf(s);
+type Crop = { x: number; y: number; w: number; h: number };
+
+function union(a: Crop, b: Crop | null): Crop {
+  if (!b) return a;
+  const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y);
+  return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
+}
+
+function cut(src: HTMLCanvasElement, c: Crop) {
   const canvas = document.createElement('canvas');
-  canvas.width = crop.w; canvas.height = crop.h;
-  canvas.getContext('2d')!.drawImage(shaded, crop.x, crop.y, crop.w, crop.h, 0, 0, crop.w, crop.h);
-  return { texture: pixelTexture(canvas), canvas, users: 0, lights: s.lights, depth,
-           back: back + crop.x / res, front: back + (crop.x + crop.w) / res, halfH: crop.h / 2 / res,
-           arm: rigged ? armRig(f, pal, A, g, res) : null };
+  canvas.width = c.w; canvas.height = c.h;
+  canvas.getContext('2d')!.drawImage(src, c.x, c.y, c.w, c.h, 0, 0, c.w, c.h);
+  return canvas;
 }
 
 function pixelTexture(canvas: HTMLCanvasElement) {

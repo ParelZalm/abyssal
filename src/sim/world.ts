@@ -142,8 +142,41 @@ export class World {
     // a culled body has to take its grip with it, or the survivor holds a ghost
     if (c.holding) this.combat.letGo(c, 0);
     if (c.heldBy) this.combat.letGo(c.heldBy, 0);
-    c.view.destroy({ children: true });
     this.creatures.splice(i, 1);
+    // a death on screen is played out rather than popped: the body is gone from the
+    // simulation this frame, and its view stays behind for its last second
+    if (!c.alive && c.view.visible) {
+      c.view.die(c.vx, c.vy, c.eatenBy !== null);
+      this.dying.push({ view: c.view, eater: c.eatenBy });
+    } else {
+      c.view.destroy({ children: true });
+    }
+  }
+
+  /** Views of the dead, playing out their deaths. Nothing about them is simulated. */
+  private dying: { view: Creature['view']; eater: Creature | null }[] = [];
+
+  private playDeaths(dt: number) {
+    for (let i = this.dying.length - 1; i >= 0; i--) {
+      const d = this.dying[i];
+      const e = d.eater;
+      const mouth = e && e.alive ? { x: e.mouthX, y: e.mouthY } : null;
+      if (d.view.dying(dt, mouth)) {
+        d.view.destroy({ children: true });
+        this.dying.splice(i, 1);
+      }
+    }
+  }
+
+  /** Whether the player has something it could eat right at its mouth — the jaw opens for it. */
+  private preyAtMouth(p: Creature) {
+    const reach = p.radius * 1.1 + p.genome.size * 0.9;
+    for (const c of this.creatures) {
+      if (!c.alive || !p.preysOn(c)) continue;
+      const r = reach + c.radius;
+      if (dist2(p.mouthX, p.mouthY, c.x, c.y) < r * r) return true;
+    }
+    return false;
   }
 
   update(dt: number) {
@@ -176,6 +209,7 @@ export class World {
     this.integrate(p, dt);
 
     this.combat.resolveContacts(dt, p);
+    this.playDeaths(dt);
   }
 
   /**
@@ -220,7 +254,8 @@ export class World {
     tickOrgans(this, c, dt);
     // creatures the camera cannot see still swim and hunt, they just skip their art
     if (!c.view.visible) return;
-    c.view.animate(dt, clamp(c.thrust, 0, 1.6), c.beat, c.bank);
+    c.view.animate(dt, clamp(c.thrust, 0, 1.6), c.beat, c.bank,
+                   c.pose(c.isPlayer && this.preyAtMouth(c)));
     c.syncView();
   }
 }

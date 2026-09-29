@@ -25,8 +25,12 @@ export function bluntSnout(s: Sheet, f: Form, A: PlanArt) {
   mass(s, [[x0, top], [x1 - r, top], [x1, top + r], [x1, bot - r * 1.6], [x1 - r * 2, bot], [x0, bot]]);
 }
 
-/** Mouth, teeth, eye and gill slit. */
-export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men: number) {
+/**
+ * Mouth, teeth, eye and gill slit. `attack` is how far the jaw is dropped for a strike, 0 to
+ * 1: the second texture every body is baked with, which the view swaps in mid-attack.
+ */
+export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men: number,
+                     attack = 0) {
   const peak = shoulderAt(f);
   const gape = Math.min(1.5, g.gape);
   const sieve = Math.min(2, g.filter);
@@ -34,13 +38,17 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
   // the mouth opens down and back from the snout. A gape walks the hinge back down the
   // body, which is what makes a gulper read as mostly mouth rather than as a big grin
   const tm = 0.02;
-  const hinge = Math.min(0.4, 0.1 * (1 + gape * 1.8 + sieve * 0.4) * (0.6 + A.mouth * 0.4));
+  const hinge = Math.min(0.42, 0.1 * (1 + gape * 1.8 + sieve * 0.4 + attack * 0.5) * (0.6 + A.mouth * 0.4));
+  // a strike opens the jaw by the head's own depth, and a big jaw opens further: an attack
+  // has to read as a mouth coming at you, even on a fish whose resting mouth is a seam
   const open = halfWidth(hinge * 0.5, f) *
-    (0.12 + Math.min(1.2, g.jaw) * 0.22 + gape * 0.55 + sieve * 0.25 + net) * Math.min(1, A.mouth + 0.3);
+    (0.12 + Math.min(1.2, g.jaw) * 0.22 + gape * 0.55 + sieve * 0.25 + net
+     + attack * (0.5 + Math.min(1.2, g.jaw) * 0.35 + gape * 0.3)) * Math.min(1, A.mouth + 0.3 + attack * 0.4);
   const nose: Pt = [spineAt(tm, f), edgeAt(tm, f, 0.15)];
   const back: Pt = [spineAt(hinge, f), edgeAt(hinge, f, 0.25)];
   const upper: Pt = [nose[0] + s.texel * 0.5, nose[1] - open * 0.35];
-  const lower: Pt = [nose[0] - s.texel * 0.5 + open * 0.2, nose[1] + open * 0.75];
+  // the lower jaw drops and juts on the strike; the upper barely moves, as a real one does
+  const lower: Pt = [nose[0] - s.texel * 0.5 + open * (0.2 + attack * 0.15), nose[1] + open * (0.75 + attack * 0.2)];
   if (open * s.res < 1.2) {
     // a mouth too small to open is a seam: one dark line from the snout to the hinge
     s.line([nose, back], M.MOUTH);
@@ -51,7 +59,9 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
   // teeth, once the jaw is worth showing: a few long fangs, or a serrated mouth's many
   // small ones — a saw has many, and that is what separates it from a bigger jaw
   const fangs = g.serrate > 0 ? 5 + Math.round(Math.min(2, g.serrate) * 3)
-    : g.jaw > 0.55 ? Math.min(7, Math.round(2 + g.jaw * 4)) : 0;
+    : g.jaw > 0.55 ? Math.min(7, Math.round(2 + g.jaw * 4))
+    // any mouth opened to strike shows some teeth: a gape with nothing in it is a hole
+    : attack > 0 ? 2 + Math.round(g.jaw * 3) : 0;
   if (fangs > 0 && open * s.res >= 2) {
     const long = g.serrate > 0 ? 0.18 : 0.42;
     for (let i = 0; i < fangs; i++) {

@@ -7,8 +7,8 @@
  * that is the whole point of the page, so keep it accurate when things move.
  */
 import { Container, Graphics, Sprite } from 'pixi.js';
-import { PLAN_FORMS, type Plan } from '../content/form';
-import { FishView } from '../render/creature/fishview';
+import { faceFor, PLAN_FORMS, type Plan } from '../content/form';
+import { FishView, REST, type Pose } from '../render/creature/fishview';
 import { FAMILY_NAMES, TRANSFORMS, type Family } from '../content/forms';
 import { baseGenome, type Genome } from '../content/genome';
 import { PROP_SIZE, propTexture, type PropKind } from '../render/props';
@@ -144,10 +144,16 @@ function formGroup(): DesignGroup {
  * parenting it into the view would transform every lamp twice.
  */
 class BoardFish extends Container {
-  readonly fish: FishView;
-  constructor(g: Genome, plan: Plan) {
+  fish: FishView;
+  constructor(private readonly g: Genome, private readonly plan: Plan) {
     super();
     this.fish = new FishView(g, plan);
+    this.addChild(this.fish.fog, this.fish.glow, this.fish);
+  }
+  /** A fresh animal in place of this one — how a death cell loops. */
+  respawn() {
+    this.fish.destroy({ children: true });
+    this.fish = new FishView(this.g, this.plan);
     this.addChild(this.fish.fog, this.fish.glow, this.fish);
   }
 }
@@ -162,6 +168,84 @@ function fishAnimate(view: Container, dt: number, beat: number) {
   const { fish } = view as BoardFish;
   fish.animate(dt, 0.7, beat, bank);
   fish.place(0, 0, Math.sin(beat * 0.23) * 0.12, 1);
+}
+
+// ------------------------------------------------------------------ motion
+
+type Act = 'idle' | 'swim' | 'turn' | 'attack' | 'hurt' | 'death';
+
+/**
+ * Each animation state a body can be in, looped on its own so it can be judged in isolation:
+ * the idle hover, the cruise, the turn-about, the strike (wind-up, lunge, bite, recovery),
+ * the flinch, and the death. The timings are the simulation's own — `Behaviour`'s strike
+ * constants and `FishView`'s — scripted here rather than waited for.
+ */
+const ACTS: Record<Act, string> = {
+  idle: 'Hangs level and breathes: a slow rise and fall, the nose nodding with it.',
+  swim: 'Cruising: the wave rides the body and the tail beats with the effort.',
+  turn: 'Turning back: rotates round through the turn and rolls over as it goes, back up.',
+  attack: 'Wind-up, lunge, bite, recovery — the jaw opens on the coil and snaps shut on the bite.',
+  hurt: 'A wound: knocked short, flashed red, blinked for a few frames.',
+  death: 'Rolls belly-up, sinks and fades. Swallowed whole, it goes down the throat instead.',
+};
+
+function actAnimate(act: Act, windup: number) {
+  let t = 0, face: 1 | -1 = 1, angle = 0, dead = false, bit = false;
+  return (view: Container, dt: number, beat: number) => {
+    const b = view as BoardFish;
+    t += dt;
+    let pose: Pose = REST, thrust = act === 'idle' || act === 'hurt' ? 0.05 : 0.7;
+    if (act === 'turn') {
+      // a half turn every two seconds, up and over at the rate a cruising body turns
+      const target = Math.floor(t / 2) % 2 ? Math.PI : 0;
+      angle += Math.max(-dt * 3.2, Math.min(dt * 3.2, target - angle));
+      face = faceFor(face, angle);
+    }
+    if (act === 'hurt' && t > 1.1) { t = 0; b.fish.hurt(); }
+    if (act === 'attack') {
+      const strike = 0.32, cycle = windup + strike + 1.4;
+      if (t > cycle) { t = 0; bit = false; }
+      if (t < windup) { pose = { windup: t / windup, strike: 0, open: t / windup > 0.35 }; thrust = 0.15; }
+      else if (t < windup + strike) {
+        pose = { windup: 0, strike: 1 - (t - windup) / strike, open: true };
+        thrust = 1.3;
+      } else if (!bit) { bit = true; b.fish.chomp(); }
+    }
+    if (act === 'death') {
+      if (!dead && t > 1) { dead = true; b.fish.die(0, 0, false); }
+      if (dead) {
+        if (b.fish.dying(dt, null)) { b.respawn(); dead = false; t = 0; }
+        return;
+      }
+    }
+    b.fish.animate(dt, thrust, beat * (thrust > 0.3 ? 1 : 0.5), 0, pose);
+    b.fish.place(0, 0, angle, face);
+    b.fish.show(true, 1, 0xffffff);
+  };
+}
+
+function motionGroup(): DesignGroup {
+  const who = ['mackerel', 'reefshark', 'anglerfish'];
+  const items: DesignItem[] = [];
+  for (const id of who) {
+    const i = SPECIES.findIndex(s => s.id === id);
+    const sp = SPECIES[i];
+    const g = genomeFor(sp, new Rng(1000 + i * 77));
+    for (const act of Object.keys(ACTS) as Act[]) {
+      items.push({
+        id: `${id}-${act}`, name: `${sp.name} · ${act}`, note: ACTS[act],
+        source: 'src/render/creature/fishview.ts', span: g.size * 3,
+        depth: (rangeOf(sp)[0] + rangeOf(sp)[1]) / 2, genome: g,
+        make: () => boardFish(g, sp.plan),
+        animate: actAnimate(act, Math.min(0.42, Math.max(0.12, 0.12 + g.size / 480))),
+      });
+    }
+  }
+  return {
+    id: 'motion', name: 'Motion',
+    note: 'Every animation state, one per cell: idle, swim, turn, attack, hurt, death.',
+    items,
+  };
 }
 
 // ------------------------------------------------------------------ silhouettes
@@ -729,6 +813,6 @@ function protoPixelGroup(): DesignGroup {
 
 export function catalog(): DesignGroup[] {
   return [formGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(),
-          mutationGroup(), speciesGroup(), guardianGroup(), propGroup(), waterGroup(),
+          mutationGroup(), speciesGroup(), guardianGroup(), motionGroup(), propGroup(), waterGroup(),
           protoSceneryGroup(), protoPixelGroup()];
 }

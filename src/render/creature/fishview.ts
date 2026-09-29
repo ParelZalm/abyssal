@@ -2,9 +2,10 @@
  * A creature seen side-on: one continuous surface that swims.
  *
  * It faces the way it swims by rotating to its heading and, once that heading is past
- * vertical, mirroring about its own spine rather than rolling — so its back is always up and
- * its lure always above its head. `face` is decided by the simulation (`faceFor`), because
- * the lure's strike point has to agree with where the light is drawn.
+ * vertical, rolling over about its own spine — so its back ends up up and its lure above its
+ * head whichever way it swims. The roll is eased, so a turn is the body rotating round and
+ * rolling as it goes, never a mirror image appearing. `face` is decided by the simulation
+ * (`faceFor`), because the lure's strike point has to agree with where the light is drawn.
  *
  * The art is painted flat and baked into a texture once per distinct genome (`fishbake.ts`).
  * That texture is skinned onto a triangle strip whose centre line is a travelling wave, so
@@ -71,6 +72,27 @@ const MOTION: Record<Plan, Motion> = {
   wraith:    { cols: 34, waves: 1.15, amp: 0.55, pulse: 0 },
 };
 
+/**
+ * What a body is doing beyond swimming, for this frame — read off the simulation's state by
+ * `Creature.pose`. The view owns how each one looks; the simulation only says which.
+ */
+export interface Pose {
+  /** How far into a strike's wind-up, 0 to 1: the body draws back and coils, jaw opening. */
+  windup: number;
+  /** How much of the strike is left, 1 as it is thrown down to 0: the lunge, stretched. */
+  strike: number;
+  /** The jaw open — a strike, a guardian's tell, or the player with prey at its mouth. */
+  open: boolean;
+}
+export const REST: Pose = { windup: 0, strike: 0, open: false };
+
+/**
+ * Seconds for a body to roll over when it turns back. It rotates through the turn as it
+ * always has; the roll only keeps its back up, and a body that snapped from one side to the
+ * other in a frame read as being mirrored rather than as swimming.
+ */
+const ROLL_TIME = 0.3;
+
 /** Columns per rigged arm. An arm is thin, so it needs length resolution and nothing else. */
 const ARM_COLS = 12;
 
@@ -123,8 +145,29 @@ export class FishView extends Container {
   private strike = 0;
   /** What the feeding pair is holding, read for its live world position; null when nothing. */
   private grip: { x: number; y: number } | null = null;
-  /** 1 facing +x, -1 mirrored. Set by `place`, applied to the scale in `animate`. */
+  /** 1 back-up heading toward +x, -1 rolled over. Set by `place`. */
   private face: 1 | -1 = 1;
+  /**
+   * How far over the body has rolled, eased toward `face`: its depth on screen is this times
+   * its own, so it thins edge-on through the middle of the roll and comes back the other
+   * way up. The eye reads that as the fish rolling, which is what it is.
+   */
+  private roll = 1;
+  /** The body's scale this frame, before the roll is applied in `place`. */
+  private sx = 1;
+  private sy = 1;
+  /** Idle hover and the strike's draw-back, in world units, applied by `place`. */
+  private bob = 0;
+  private sway = 0;
+  private recoil = 0;
+  private clock = Math.random() * 10;
+  /** A flinch, 1 as the wound lands down to 0: a recoil, a red flash, a blink. */
+  private hurtT = 0;
+  /** Which texture is on the mesh: the mouth shut, or open to strike. */
+  private gaping = false;
+  /** Set once the animal is dead and this view is playing its death. */
+  private deathT = -1;
+  private fall = { vx: 0, vy: 0, whole: false };
   /** The art density this view was baked at; a new tier means a re-bake. */
   private version = artVersion;
 
@@ -140,10 +183,24 @@ export class FishView extends Container {
     this.rebuild(g);
   }
 
-  /** Body and bloom are in different layers, so they are moved together from here. */
+  /**
+   * Body and bloom are in different layers, so they are moved together from here — and
+   * this is the one place the body's final transform is put together: its facing, the
+   * turn-about, the hover and the strike's draw-back on top of where the simulation has it.
+   */
   place(x: number, y: number, rotation: number, face: 1 | -1 = 1) {
-    this.x = x; this.y = y; this.rotation = rotation;
-    if (face !== this.face) { this.face = face; this.scale.y = Math.abs(this.scale.y) * face; }
+    this.face = face;
+    const r = rotation + this.sway;
+    const unit = this.g.size / R * this.swell;
+    // never quite a line: at the very middle of a roll the strip keeps a sliver of depth,
+    // and the sign changes there, where the difference cannot be seen
+    const roll = Math.sign(this.roll || 1) * Math.max(0.08, Math.abs(this.roll));
+    this.scale.set(unit * this.sx, unit * this.sy * roll);
+    // drawn back along the body on a wind-up — the coil before the spring. The nose points
+    // along the rotation in either facing: the mirror is about the spine, not across it
+    x -= Math.cos(r) * this.recoil;
+    y -= Math.sin(r) * this.recoil - this.bob;
+    this.x = x; this.y = y; this.rotation = rotation = r;
     this.glow.x = x; this.glow.y = y;
     // the glow layer is not rotated or mirrored with the body, so each lamp is carried
     // through the body's own transform by hand. The swim wave is left out: it moves the
@@ -164,9 +221,16 @@ export class FishView extends Container {
    * has to take all three: it is the same animal, lit from inside.
    */
   show(visible: boolean, alpha: number, tint: number) {
+    if (this.deathT >= 0) return;
     this.visible = this.glow.visible = visible;
-    this.alpha = this.glow.alpha = alpha;
-    this.tint = this.glow.tint = tint;
+    // a wound flashes the body red and blinks it for its first few frames — the one frame
+    // of feedback that says a bite landed, on whichever side of it you were
+    const h = this.hurtT;
+    const blink = h > 0.6 && Math.floor(this.clock * 30) % 2 === 0 ? 0.35 : 1;
+    this.alpha = alpha * blink;
+    this.glow.alpha = alpha;
+    this.tint = h > 0 ? mul(tint, lerpColor(0xffffff, 0xff5a4e, h * 0.85)) : tint;
+    this.glow.tint = tint;
     // the fog takes culling and distance, but not the danger tint: it is absence of light,
     // so tinting it would only make it glow in whatever colour the tint happens to be
     this.fog.visible = visible;
@@ -312,12 +376,69 @@ export class FishView extends Container {
       this.murk.alpha = Math.min(0.62, 0.3 + fogK * 0.16);
     }
 
+    this.gaping = false;
     this.pose(0, 0, 0.5, 0);
-    this.scale.set(g.size / R, g.size / R * this.face);
+    this.scale.set(g.size / R * this.sx, g.size / R * this.sy * this.face);
   }
 
   chomp() {
     this.chompT = 1;
+  }
+
+  /** A wound landed on this body. */
+  hurt() {
+    this.hurtT = 1;
+  }
+
+  /**
+   * The animal is dead: play its death from here instead of vanishing. Swallowed whole it
+   * goes down the throat that took it; otherwise it rolls belly-up, sinks and fades, the way
+   * a dead fish does. The view carries the drift it died with, since nothing simulates it.
+   */
+  die(vx: number, vy: number, whole: boolean) {
+    this.deathT = 0;
+    this.fall = { vx, vy, whole };
+    this.hurtT = 0;
+  }
+
+  /**
+   * One frame of the death; true once it has finished and the view can go. `mouth` is where
+   * the swallower's mouth is now, for a body taken whole.
+   */
+  dying(dt: number, mouth: { x: number; y: number } | null): boolean {
+    this.deathT += dt;
+    const t = this.deathT;
+    const unit = this.g.size / R;
+    if (this.fall.whole) {
+      // drawn in over a fifth of a second, shrinking as it goes down
+      const k = Math.min(1, t / 0.2);
+      if (mouth) {
+        this.x += (mouth.x - this.x) * Math.min(1, dt * 18);
+        this.y += (mouth.y - this.y) * Math.min(1, dt * 18);
+      }
+      this.scale.set(unit * (1 - k * 0.85), Math.sign(this.scale.y) * unit * (1 - k * 0.85));
+      this.alpha = 1 - k * k;
+    } else {
+      // the roll: the body narrows edge-on and comes back upside down, over a third of a
+      // second, as it drifts to a stop and starts to sink
+      const roll = Math.min(1, t / 0.35);
+      this.scale.y = unit * this.face * Math.max(0.12, Math.abs(Math.cos(roll * Math.PI)))
+        * (roll < 0.5 ? 1 : -1);
+      this.fall.vx *= Math.exp(-3 * dt);
+      this.fall.vy = this.fall.vy * Math.exp(-3 * dt) + 24 * dt;
+      this.x += this.fall.vx * dt;
+      this.y += this.fall.vy * dt;
+      this.rotation += (Math.round(this.rotation / Math.PI) * Math.PI - this.rotation) * Math.min(1, dt * 3);
+      this.alpha = 1 - Math.max(0, (t - 0.6) / 0.7);
+      this.tint = 0x8f96a4;
+      if (this.mesh && this.baked) this.mesh.texture = this.baked.texture;
+    }
+    // the lights go out first
+    this.glow.alpha = Math.max(0, 1 - t * 3);
+    this.glow.x = this.fog.x = this.x;
+    this.glow.y = this.fog.y = this.y;
+    this.fog.alpha = this.alpha;
+    return this.fall.whole ? t >= 0.2 : t >= 1.3;
   }
 
   /** Fasten the feeding tentacles on something in the world, followed live; null lets go. */
@@ -350,7 +471,7 @@ export class FishView extends Container {
     const mid = (x0 + x1) / 2, half = Math.abs(x0 - x1) / 2 || 1;
     // in the mirrored frame local y is flipped, so the bend has to be too or a mirrored
     // animal curls away from the turn it is making
-    const bend = m.pulse ? 0 : bank * d * 1.25 * this.face;
+    const bend = m.pulse ? 0 : bank * d * 1.25 * Math.sign(this.roll || 1);
     for (let j = 0; j < n; j++) {
       const s = j / (n - 1);
       const env = quintic(s);
@@ -456,16 +577,36 @@ export class FishView extends Container {
    */
   swell = 1;
 
-  animate(dt: number, thrust: number, beat: number, bank: number) {
+  animate(dt: number, thrust: number, beat: number, bank: number, act: Pose = REST) {
     if (this.version !== artVersion) this.rebuild(this.g);
+    this.clock += dt;
+    // two units of roll, back-up to back-down, over `ROLL_TIME`
+    const step = dt * 2 / ROLL_TIME;
+    this.roll = this.roll < this.face ? Math.min(this.face, this.roll + step)
+      : Math.max(this.face, this.roll - step);
+    this.hurtT = Math.max(0, this.hurtT - dt * 3.5);
     // a light organ breathes rather than flickers: a slow drift in strength, each on its own
     for (const l of this.lamps) {
       l.phase += dt * 1.6;
       l.s.alpha = Math.min(0.95, 0.3 + l.e.strength * 0.4) * (0.78 + Math.sin(l.phase) * 0.22);
     }
-    const unit = this.g.size / R * this.swell;
     let sx = 1;
     let sy = 1 - Math.abs(bank) * 0.16;
+    // Idle: a body with nothing to do hangs in the water and breathes — a slow rise and fall
+    // and the nose nodding with it. It fades out as the body puts effort in, or every
+    // cruising fish would bob like a cork.
+    const rest = 1 - Math.min(1, thrust / 0.35);
+    this.bob = Math.sin(this.clock * 1.6) * this.g.size * 0.05 * rest;
+    this.sway = Math.sin(this.clock * 1.1 + 0.7) * 0.05 * rest;
+    // the wind-up: drawn back and bunched along the body, and the tail curls harder
+    const w = act.windup;
+    this.recoil = this.g.size * 0.14 * w * w;
+    sx *= 1 - w * 0.12;
+    sy *= 1 + w * 0.08;
+    // the strike: thrown long and narrow, easing back as it spends itself
+    const k = act.strike;
+    sx *= 1 + k * 0.16;
+    sy *= 1 - k * 0.1;
     if (this.chompT > 0) {
       this.chompT = Math.max(0, this.chompT - dt * 5.5);
       // one hump: squash along the body and flare across it, then release
@@ -473,10 +614,32 @@ export class FishView extends Container {
       sx *= 1 - s * 0.3;
       sy *= 1 + s * 0.26;
     }
-    this.scale.x = unit * sx;
-    this.scale.y = unit * sy * this.face;
-    this.pose(beat, bank, thrust, dt);
+    // a flinch: knocked short for an instant
+    sx *= 1 - this.hurtT * 0.1;
+    this.sx = sx;
+    this.sy = sy;
+    // the jaw is a second texture on the same strip: open for the strike, and snapped shut
+    // for the bite itself, which is what makes the chomp read as a bite
+    const gape = act.open && this.chompT < 0.35;
+    if (gape !== this.gaping && this.mesh && this.baked) {
+      this.gaping = gape;
+      this.mesh.texture = gape ? this.baked.open : this.baked.texture;
+    }
+    this.pose(beat, bank, thrust * (1 + w * 0.9), dt);
   }
 
   get genome() { return this.g; }
+}
+
+/** Channel-wise product of two 0xRRGGBB colours — a tint applied on top of a tint. */
+function mul(a: number, b: number) {
+  const r = ((a >> 16) & 255) * ((b >> 16) & 255) / 255;
+  const g = ((a >> 8) & 255) * ((b >> 8) & 255) / 255;
+  const bl = (a & 255) * (b & 255) / 255;
+  return (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(bl);
+}
+
+function lerpColor(a: number, b: number, t: number) {
+  const ch = (s: number) => Math.round(lerp((a >> s) & 255, (b >> s) & 255, t));
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
 }

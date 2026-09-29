@@ -23,6 +23,36 @@ a force along the body axis and lets drag do the rest:
 `drive(dt, desiredAngle, throttle)` wraps `propel` for anything that thinks in headings:
 the AI, and the player in mouse mode.
 
+Side-on, two rules keep bodies looking like fish in profile:
+
+- **Idle levels out.** Under a fifth of throttle, `propel` eases the heading back toward
+  level, whichever way the body faces. Bells (`pulseEvery`) are exempt.
+- **Pitch by activity.** `Behaviour.think` runs every heading it settles on through
+  `levelled`, capped by `STEEP`: 0.5 rad cruising, schooling and idling, 0.8 on a scent,
+  1.15 in a chase or a bolt. A hunter under prey climbs on a slant, not straight up.
+  Plankton and drifters are carried, and are exempt.
+
+A turn back is still a rotation through vertical — the one-step turn-about about the
+vertical axis was tried and undone (see `decisions.md`); the view rolls the body over on
+the way instead.
+
+### Strikes
+
+A hunter does not simply swim into its prey. `Behaviour.strike` runs a small state machine
+on `Creature.attack`, started on prey already ahead of it and inside 2.4 × its bite reach:
+
+1. **Wind-up** (`WINDUP`, 0.12 s for a small body up to 0.42 s for a big one): throttle
+   drops to 0.12 while it keeps aiming. This is the tell — the view coils the body and
+   opens the jaw — and it grows with size, so a shark visibly gathers itself.
+2. **Strike** (0.32 s): a kick of 0.95 × top speed along the heading and full throttle.
+   A bite ends it early.
+3. **Recover** (0.4 s): easy throttle, jaw shut.
+
+Contacts still bite at any time; the strike is the approach. Tentacled bodies never wind
+up — they strike with their arms (`Combat.grasp`). An ambusher's `lunge` is now set by the
+strike, which is what makes it settle back afterwards. Guardians' tells and rushes read the
+same way to the view through `Creature.pose`.
+
 ## Perception and behaviour
 
 `Behaviour.think(c, dt, player)` runs per creature, per frame, and is the whole AI:

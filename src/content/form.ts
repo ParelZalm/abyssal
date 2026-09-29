@@ -421,29 +421,14 @@ export function edgeAt(t: number, f: Form, k: number) {
 }
 
 /**
- * Which way a side-on animal faces: 1 toward +x, -1 toward -x. It mirrors rather than
- * rolls when it turns back, so its back stays up — and it only mirrors once the heading is
- * well past vertical, or an animal swimming straight up flickers between the two.
+ * Which way up a side-on animal is: 1 with its back toward -y while heading toward +x, -1
+ * rolled over for heading toward -x — so its back stays up whichever way it swims. It only
+ * changes once the heading is well past vertical, or an animal swimming straight up would
+ * roll back and forth; the view eases the roll (`FishView`), so there is no snap.
  */
 export function faceFor(prev: 1 | -1, angle: number): 1 | -1 {
   const c = Math.cos(angle);
   return c < -0.2 ? -1 : c > 0.2 ? 1 : prev;
-}
-
-/** The steepest a side-on body is drawn, either way from level. */
-const MAX_PITCH = Math.PI / 3;
-
-/**
- * The angle a side-on body is drawn at. The heading is the simulation's and can point
- * anywhere; drawn at a straight 90° a fish in profile stands on its tail and stops reading as
- * a fish at all, so the drawing only climbs or dives so far and the swim does the rest.
- */
-export function drawnAngle(angle: number, face: 1 | -1) {
-  const level = face > 0 ? 0 : Math.PI;
-  let d = (angle - level) % (Math.PI * 2);
-  if (d > Math.PI) d -= Math.PI * 2;
-  if (d < -Math.PI) d += Math.PI * 2;
-  return level + Math.max(-MAX_PITCH, Math.min(MAX_PITCH, d));
 }
 
 /** Position along the spine at t. The nose is +x: the animal faces the way it swims. */

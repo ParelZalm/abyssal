@@ -1,6 +1,5 @@
-import { FishView } from '../render/creature/fishview';
+import { FishView, type Pose } from '../render/creature/fishview';
 import { maxHp, type Genome } from '../content/genome';
-import { drawnAngle } from '../content/form';
 import { hunts, type Species } from '../content/species';
 import { angleDelta, clamp, TAU } from '../core/util';
 import { organsOf, swimOf, type Organ, type SwimMods } from './organs';
@@ -20,6 +19,17 @@ export class Creature {
    * strike point is measured from it and has to agree with where the light is drawn.
    */
   face: 1 | -1 = 1;
+  /**
+   * A hunter's strike, as a small state machine (`Behaviour.strike`): a wind-up that slows
+   * and coils with the jaw opening, the strike that throws the body at its prey, and a
+   * recovery. `attackT` counts down the current step; `attackLen` is the step's length, so
+   * the view can read how far through it the body is.
+   */
+  attack: 'none' | 'windup' | 'strike' | 'recover' = 'none';
+  attackT = 0;
+  attackLen = 1;
+  /** Set on a body swallowed whole, to what swallowed it — the view follows it down. */
+  eatenBy: Creature | null = null;
   hp: number; hpMax: number;
   alive = true;
   view: FishView;
@@ -192,7 +202,22 @@ export class Creature {
     return this.genome.size * 0.62;
   }
   syncView() {
-    this.view.place(this.x, this.y, drawnAngle(this.angle, this.face), this.face);
+    this.view.place(this.x, this.y, this.angle, this.face);
+  }
+
+  /**
+   * What the view should be doing this frame beyond swimming: a strike's wind-up and lunge,
+   * a guardian's tell and rush, a boost, and whether the jaw is open. `hungry` is the
+   * player's own anticipation — prey at its mouth — which only the world can see.
+   */
+  pose(hungry = false): Pose {
+    const windup = this.attack === 'windup' ? 1 - this.attackT / this.attackLen
+      : this.tellT > 0 ? 0.85 : 0;
+    const strike = this.attack === 'strike' ? this.attackT / this.attackLen
+      : this.rushT > 0 ? 0.6 : this.boosting > 0 ? this.boosting / 0.4 * 0.7 : 0;
+    // the jaw opens partway into the wind-up, not on its first frame: the coil comes first
+    const open = windup > 0.35 || this.attack === 'strike' || this.rushT > 0 || hungry;
+    return { windup, strike, open };
   }
 
   /** The fade as an alpha, eased at both ends so an arrival has no edges. */
@@ -247,6 +272,13 @@ export class Creature {
     this.vy += fy * accel * dt;
     const idle = Math.abs(throttle) < 0.1;
     if (idle && m.sink > 0) this.vy += m.sink * dt;
+    // Side-on, a body with nothing to do levels out: fish hang horizontal, nose neither up
+    // nor down, and one left pitched at the angle of its last turn looks broken rather than
+    // at rest. A bell is the exception — it hangs whichever way its pulse left it.
+    if (Math.abs(throttle) < 0.2 && m.pulseEvery <= 0) {
+      const level = Math.cos(this.angle) >= 0 ? 0 : Math.PI;
+      this.angle += angleDelta(this.angle, level) * Math.min(1, dt * 1.4);
+    }
 
     let fwd = this.vx * fx + this.vy * fy;
     let lat = -this.vx * fy + this.vy * fx;
