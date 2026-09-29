@@ -1,7 +1,7 @@
 import { biteDamage } from '../content/genome';
 import { angleDelta } from '../core/util';
 import type { Fx } from '../render/fx';
-import { activeOf, biteRateOf, boostModsOf, fire, POISE_MAX, primaryOf, PUFF_TIME } from '../sim/organs';
+import { activeOf, biteRateOf, boostModsOf, fire, POISE_MAX, primaryOf, PUFF_TIME, strikeOf } from '../sim/organs';
 import { shrugChance, type Creature } from '../sim/creature';
 import type { World } from '../sim/world';
 import type { Input } from './Input';
@@ -32,9 +32,10 @@ const LUNGE_RETREAT = 0.25;
 /** Seconds between strikes before organs bend it — the base of the HUD's rate. */
 const ATTACK_EVERY = 0.4;
 /**
- * The player's shots, once a primary has replaced the bite: tiles a second — faster than any
- * hostile's, so a duel is the player's to win — and tiles of reach, Isaac's six and a half,
- * about a fifth of a room. The recoil is the kick back off each, a share of top speed.
+ * The player's shots — the spit every larva hatches with, and the primaries that replace it:
+ * tiles a second — faster than any hostile's, so a duel is the player's to win — and tiles of
+ * reach, Isaac's six and a half, about a fifth of a room. The recoil is the kick back off
+ * each, a share of top speed. What makes a lunge harder (the Siphon Jet) makes a shot faster.
  */
 export const SHOT_SPEED = 7;
 export const SHOT_RANGE = 6.5;
@@ -108,14 +109,19 @@ export class PlayerController {
     const prim = primaryOf(p);
     const bite = biteDamage(g);
     return {
-      damage: prim ? bite * prim.mult : bite,
+      damage: prim ? bite * prim.mult : bite * strikeOf(p),
       rate: 1 / biteRateOf(p, ATTACK_EVERY),
       // the bite's reach is `Combat.strike`'s, from the head, and the lunge carries it on
       range: prim ? SHOT_RANGE : (p.radius * 1.1 + g.size * 0.45) / tile,
-      shotSpeed: prim ? SHOT_SPEED : null,
+      shotSpeed: prim ? this.shotSpeed() : null,
       speed: g.speed / tile,
       armour: shrugChance(g),
     };
+  }
+
+  /** Tiles a second the body's shots fly. */
+  private shotSpeed() {
+    return SHOT_SPEED * boostModsOf(this.p).kick;
   }
 
   steer(dt: number) {
@@ -195,7 +201,7 @@ export class PlayerController {
       p.kick(STRIKE);
       const a = Math.atan2(ay, ax);
       for (const off of prim.fan) {
-        this.world.fire(p, prim.shot, p.biteX, p.biteY, a + off, SHOT_SPEED, SHOT_RANGE, prim.mult);
+        this.world.fire(p, prim.shot, p.biteX, p.biteY, a + off, this.shotSpeed(), SHOT_RANGE, prim.mult);
       }
       const top = Math.max(1, p.genome.speed);
       p.vx -= ax * top * RECOIL;

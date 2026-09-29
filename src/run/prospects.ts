@@ -1,5 +1,5 @@
 import { formDue, MAX_FORMS, type Family, type Transformation } from '../content/forms';
-import type { Genome } from '../content/genome';
+import { biteDamage, type Genome } from '../content/genome';
 import { SYNERGIES, synergiesOf } from '../sim/organs';
 import { TRAITS, type Trait } from '../content/traits';
 
@@ -51,6 +51,16 @@ export function leanOf(g: Genome, owned: Trait[], forms: readonly Transformation
     return 1.15;
   }
   return 1;
+}
+
+/**
+ * Whether taking `t` makes the body hit harder — a bigger hit, or poison left in it. Taken
+ * on a copy, like `completes`, so a card's numbers are never read by name.
+ */
+export function hitsHarder(g: Genome, t: Trait) {
+  const after = { ...g };
+  t.apply(after);
+  return biteDamage(after) > biteDamage(g) * 1.001 || after.venom > g.venom;
 }
 
 /** Something the run was one card short of, and the card. */

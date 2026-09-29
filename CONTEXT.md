@@ -99,8 +99,9 @@ the silhouette, and counted toward a transformation. Either **passive**, always 
 effect, or **active**, filling the one active slot and fired by hand.
 _Avoid_: trait, evolution token, upgrade
 
-**Primary** — what the strike on the arrows does: the bite, until a ranged mutation replaces
-it for good with a shot. One is carried at a time.
+**Primary** — what the strike on the arrows does: the spit every larva hatches with, until a
+mutation replaces it — another shot, or the bite, which comes back only as a mutation found
+from the reef down. One is carried at a time.
 _Avoid_: weapon, main attack
 
 **Charge** — a room cleared, counted toward the active mutation's next use. Each active

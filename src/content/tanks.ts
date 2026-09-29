@@ -36,9 +36,12 @@ export interface Tank {
    */
   hostiles: Record<string, number>;
   /**
-   * How a hostile's health is scaled here. Health rides a body's size by a power over one,
-   * and each tank's animals are bigger than the last's by more than the larva's bite grows,
-   * so without it the deep tank's fights would take twice the strikes the nursery's do.
+   * How a hostile's health is scaled here: the difficulty curve, Isaac's. A larva that has
+   * found no damage kills the nursery's hostiles in three to five shots, the reef's in five
+   * to nine and the deep's in ten to twenty, since its own spit grows only with its size
+   * (×1.1 at each descent) and the animals are bigger again. The pedestals are what close
+   * the gap — a treasure room and the boss's in each tank — so a build that found its damage
+   * has the deep in hand, and one that did not has it barely.
    */
   hostileHp: number;
   /**
@@ -94,7 +97,7 @@ export const TANKS: Tank[] = [
   { id: 'nursery', name: 'Nursery Tank', depth: 3200, tile: 23,
     fauna: ['bloom', 'krill', 'fry', 'anchovy'], population: 26,
     hostiles: { mackerel: 3, archerfish: 3, pufferfish: 2, nettle: 2 },
-    hostileHp: 1, pace: 1, boss: 'mantisshrimp' },
+    hostileHp: 0.55, pace: 1, boss: 'mantisshrimp' },
   // at 1.8 times the nursery's scale, the larva's growth at the descent: the Reef Shelf's
   // water, a shade less dark, and its animals
   { id: 'reef', name: 'Reef Tank', depth: 2600, tile: 41,
@@ -106,7 +109,7 @@ export const TANKS: Tank[] = [
   { id: 'deep', name: 'Deep Tank', depth: 5200, tile: 74,
     fauna: ['driftsnow', 'lanternfish', 'hatchetfish', 'bristlemouth'], population: 24,
     hostiles: { barracuda: 2, gulper: 1, vampiresquid: 3, anglerfish: 2, siphon: 2 },
-    hostileHp: 0.6, pace: 3.2, boss: 'giantsquid' },
+    hostileHp: 1.1, pace: 3.2, boss: 'giantsquid' },
 ];
 
 export const ROOMS: RoomTemplate[] = [

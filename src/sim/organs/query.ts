@@ -67,6 +67,13 @@ export function primaryOf(c: Creature) {
   return c.organs.find(o => o.primary)?.primary?.(c.genome) ?? null;
 }
 
+/** What the strike's bite is worth, as a multiple of a bite: 1 with no melee primary. */
+export function strikeOf(c: Creature) {
+  let m = 1;
+  for (const o of c.organs) if (o.strike) m = o.strike(c.genome, m);
+  return m;
+}
+
 /** Whether a hit on this body is turned aside entirely right now. */
 export function guardedOf(c: Creature) {
   return c.organs.some(o => o.guard?.(c));

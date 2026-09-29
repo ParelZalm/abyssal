@@ -106,6 +106,12 @@ export interface Organ {
    * since a deal's variant of a primary is the same organ, turned up.
    */
   primary?: (g: Genome) => { shot: ShotKind; fan: readonly number[]; mult: number };
+  /**
+   * What the bite the strike lands is worth, as a multiple of `biteDamage` — the melee
+   * primary's hook, since a body with no shot primary strikes with its mouth. Only the
+   * player's strike reads it; an organ's blow and an animal's bite are their own.
+   */
+  strike?: (g: Genome, base: number) => number;
   /** Whether a hit on this body is turned aside entirely right now. */
   guard?: (c: Creature) => boolean;
 

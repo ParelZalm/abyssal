@@ -47,7 +47,11 @@ export interface Species {
   /**
    * A boss's fight, when a tank is built around this animal (`sim/bosses.ts`): the mantis
    * shrimp's punch, the Great White's charge, the Giant Squid's grab. And its health, set
-   * outright: a boss is fought in hearts and strikes, not on its body's scale.
+   * outright: a boss is fought in hearts and strikes, not on its body's scale. Its armour is
+   * flat off every shot, so a boss's is kept to two or three: at the Great White's old five a
+   * larva's spit did a fifth of itself, and the fight was over three hundred shots. Tuned to
+   * about 40, 75 and 115 shots of a larva that found no damage, and a third of that for one
+   * that doubled it — under half, since the armour comes off a bigger shot too.
    */
   boss?: 'punch' | 'charge' | 'grab';
   bossHp?: number;
@@ -128,9 +132,9 @@ export const SPECIES: Species[] = [
   // the nursery's boss: a mantis shrimp in the rock, the animal whose club breaks aquarium
   // glass. Its punch is the fastest strike in the sea, and the water it leaves boils
   { id: 'mantisshrimp', name: 'Mantis Shrimp', behavior: 'apex', plan: 'mantis',
-    zone: 'sunlit', band: 'reef', guardian: true, boss: 'punch', bossHp: 220,
+    zone: 'sunlit', band: 'reef', guardian: true, boss: 'punch', bossHp: 200,
     size: [36, 44], hue: [132, 150], accent: 18, speed: 170, bite: 20,
-    nutrition: 3, weight: 1, armor: 3, claws: 2, segments: 4, finSize: 0.8, sense: 600 },
+    nutrition: 3, weight: 1, armor: 2, claws: 2, segments: 4, finSize: 0.8, sense: 600 },
 
   // the nursery's other hostiles. Each is the animal that already does what its role does:
   // an archerfish shoots water at what it wants, a puffer bristles, a nettle stings by being
@@ -193,10 +197,10 @@ export const SPECIES: Species[] = [
   // `formFor` turns jaw into cheek, and cheek is a wider head. A great white bites like
   // this and is still a cone all the way back to the gills.
   { id: 'greatwhite', name: 'Great White', behavior: 'apex', plan: 'greatshark', pattern: 'charge',
-    boss: 'charge', bossHp: 380,
+    boss: 'charge', bossHp: 420,
     zone: 'sunlit', guardian: true, bleed: 200,
     size: [115, 155], hue: [208, 220], accent: 200, speed: 260, bite: 52,
-    nutrition: 4, weight: 1.4, jaw: 0.5, armor: 5, finSize: 1.3,
+    nutrition: 4, weight: 1.4, jaw: 0.5, armor: 2, finSize: 1.3,
     sense: 900, metabolism: 1.6 },
 
   // ---------------------------------------------------------------- Twilight Zone
@@ -236,10 +240,10 @@ export const SPECIES: Species[] = [
     nutrition: 2.2, weight: 8, jaw: 0.7, finSize: 0.7, sense: 560 },
 
   { id: 'giantsquid', name: 'Giant Squid', behavior: 'apex', plan: 'longsquid',
-    boss: 'grab', bossHp: 520,
+    boss: 'grab', bossHp: 700,
     zone: 'twilight', guardian: true, bleed: 300,
     size: [160, 210], hue: [340, 356], accent: 20, speed: 200, bite: 58,
-    nutrition: 4.5, weight: 1.4, jaw: 1.0, armor: 4, segments: 3, finSize: 1.5,
+    nutrition: 4.5, weight: 1.4, jaw: 1.0, armor: 3, segments: 3, finSize: 1.5,
     sense: 1100, eyeAdapt: 1.1, veil: 0.5, glow: 0.3 },
 
   // ---------------------------------------------------------------- Midnight Zone

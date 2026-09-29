@@ -87,8 +87,9 @@ window, so what organs did on a boost kick — Ballistic's ram, Flash Sense, Smo
 puff, a bait ball scattering — they now do on a strike, and the boost modifiers scale its
 shove.
 
-**A ranged primary** (Archer Spit, Spine Volley; `Organ.primary`) fires the strike instead
-of biting with it: its shots leave from `biteX`/`biteY` down the aim, the body is pushed
+**A ranged primary** (Archer Spit, which every larva hatches with, and Spine Volley;
+`Organ.primary`) fires the strike instead of biting with it — only the Lunging Bite brings the
+bite back, at `strikeOf` (twice) its damage: its shots leave from `biteX`/`biteY` down the aim, the body is pushed
 back a little rather than forward, and `Combat.strike` lands no bite while one is carried.
 The player's shots are `World.shots` like a hostile's, looking for anything alive but the
 player; one lands as `Combat.hit` at its share of a bite, carries a little of its way into

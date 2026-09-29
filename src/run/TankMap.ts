@@ -1,5 +1,5 @@
 import { generateMap, OPPOSITE, STEP, type MapRoom, type Side } from '../content/map';
-import { ROOMS, tankIndex, type RoomTemplate } from '../content/tanks';
+import { ROOMS, TANK_ORDER, tankIndex, type RoomTemplate } from '../content/tanks';
 import { clamp, Rng } from '../core/util';
 import type { Camera } from '../render/Camera';
 import { DecorView, placeDecor } from '../render/decor';
@@ -58,8 +58,8 @@ const SHOP_MUTATION = 15;
 
 /** What the tank asks of the run's other systems. */
 export interface TankHooks {
-  /** A mutation for a treasure room's pedestal or a shop. */
-  offer: (rng: Rng) => Trait | null;
+  /** A mutation for a treasure room's pedestal, a shop, or the boss's. */
+  offer: (rng: Rng, boss?: boolean) => Trait | null;
   /** The deal room's deal and curse. */
   deals: (rng: Rng) => { deal: Trait | null; curse: Trait | null };
   /** Pay for a pedestal's good and hand it over; false when it cannot be paid. */
@@ -303,12 +303,28 @@ export class TankMap {
     if (seal) this.open(this.current, seal[0]);
     if (c.map.type === 'boss') {
       // Isaac's trapdoor: a drain in the floor where the boss was, down to the next tank
-      c.drain = t.standAt(t.cx, t.cy, t.tile * 2, t.tile * 2) ?? { x: t.cx, y: t.cy };
+      const drain = c.drain = t.standAt(t.cx, t.cy, t.tile * 2, t.tile * 2) ?? { x: t.cx, y: t.cy };
+      const prize = this.prize(c, t, drain);
       this.ui.toast(seal ? 'The drain is open — and a red door, a deal beyond it'
-        : 'The drain is open — swim down into it');
+        : prize ? 'The drain is open — and the boss left a mutation' : 'The drain is open — swim down into it');
     } else {
       this.ui.toast('The room is clear — the doors open');
     }
+  }
+
+  /**
+   * The boss's pedestal, Isaac's boss item: a mutation, free, beside the drain, so every tank
+   * pays out twice — its treasure room and its boss — whatever the map dealt. None past the
+   * last boss, where the drain is the way out and nothing would be carried anywhere.
+   */
+  private prize(c: Cell, t: Terrain, drain: { x: number; y: number }) {
+    if (tankIndex(this.run.tank.id) >= TANK_ORDER.length - 1) return false;
+    const trait = this.hooks.offer(new Rng(c.seed ^ 0xb055_1e7), true);
+    if (!trait) return false;
+    const at = this.spots(t, 4).find(s => Math.hypot(s.x - drain.x, s.y - drain.y) > t.tile * SPACING);
+    if (!at) return false;
+    c.pedestals = [{ x: at.x, y: at.y, good: { kind: 'mutation', trait }, price: null }];
+    return true;
   }
 
   /** Open a door shut on its own, from both sides, and let what is behind it be seen. */

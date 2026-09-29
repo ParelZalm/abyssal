@@ -284,15 +284,27 @@ swollen (`Organ.guard`) — a third of a hit cannot be taken off hearts.
 
 ## Primaries
 
-The strike on the arrows is the **primary**, one slot like the active. With none it is the
-bite. **Archer Spit** fires one jet of water for 0.8 of a bite; **Spine Volley** a fan of
-three spines a quarter radian apart, 0.45 each (`Organ.primary`, `sim/organs/body.ts`). Each
-is the nursery's own hostile's weapon, and each replaces the other and the bite for good. A
-shot flies 7 tiles a second — faster than any hostile's — for 6.5 tiles (`SHOT_SPEED`,
-`SHOT_RANGE` in `PlayerController`), and lands as a blow (`Combat.hit`), never a swallow, so
-what it kills is left as a carcass for the mouth. The strike's kick still opens its window,
-so the organs that answer a strike answer a shot. The body paints it: a water sac under the
-jaw for the spit, a rack of loose quills for the volley (`bake/organs.ts`).
+The strike on the arrows is the **primary**, one slot like the active. Every larva hatches
+with **Archer Spit** (`HATCHED` in `run/starts.ts`, taken through `Evolution.hatch` so the
+pedestals never deal it): one jet of water for a whole hit, the unit the other primaries are
+written in. **Spine Volley** fires a fan of three spines a quarter radian apart, 0.45 each
+(`Organ.primary`, `sim/organs/body.ts`). The **Lunging Bite** (`fangs`, a reef card) is the
+mouth back: the strike lunges and bites for twice a shot (`Organ.strike`, read by
+`Combat.bite`), and what it kills is swallowed. Each replaces the others.
+
+Why the spit is the start: a room's every hostile hurts by touch, so a larva that had to bite
+stood inside all of them to land anything, and the nursery was a brawl it lost. Isaac opens
+ranged; the bite is the risk a build takes later, for the most damage the arrows throw and
+the belly it feeds.
+
+A shot flies 7 tiles a second — faster than any hostile's, and faster again with the Siphon
+Jet, which lunges a bite harder — for 6.5 tiles (`SHOT_SPEED`, `SHOT_RANGE` in
+`PlayerController`), and lands as a blow (`Combat.hit`), never a swallow, so what it kills is
+left as a carcass for the mouth. The strike's kick still opens its window, so the organs that
+answer a strike answer a shot. The body paints it: a water sac under the jaw for the spit, a
+rack of loose quills for the volley (`bake/organs.ts`), a wider jaw for the bite. The cards
+say *damage* where they once said *bite*: every hit the body lands is `biteDamage` times its
+primary's share.
 
 ## The stat column
 
@@ -367,8 +379,16 @@ shrimp; the Reef at 41, the Great White; the Deep at 74, the Giant Squid. Each t
 last times the descent's growth, 1.8, so a room is the same number of body lengths across in
 every tank. What swims in a tank takes its `pace` — the tile's ratio to the nursery's — on its
 species' speed, so a room takes as long to cross; its hostiles take `hostileHp` on their
-health, since health rides size by a power over one and the larva's bite does not; a boss
-takes the root of the pace and its own health (`Species.bossHp`).
+health; a boss takes the root of the pace and its own health (`Species.bossHp`).
+
+**The curve is Isaac's.** `hostileHp` (0.55, 0.8, 1.1) is set so a larva that has found no
+damage kills the nursery's hostiles in three to five shots, the reef's in five to nine and the
+deep's in ten to twenty, and its bosses in about 40, 75 and 115; a build that doubled its
+damage takes under half that. The larva's own spit grows only with its size, ×1.1 a descent,
+so the difference is the pedestals: the treasure room's, and the **boss's** — a free mutation
+beside the drain in every tank but the last (`TankMap.prize`), leaning ×3 toward a card that
+hits harder (`hitsHarder` in `prospects.ts`), as Isaac's boss items are mostly stat ups. A
+boss's armour is kept to two or three, since it comes off every shot flat.
 
 **The descent** (`Game.descend`). The boss room's clear opens a drain in its floor
 (`TankMap.clear`, drawn by `DrainView`); swimming into it takes the next tank: the body and

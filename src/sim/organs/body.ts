@@ -88,22 +88,32 @@ export const BODY: Organ[] = [
 ];
 
 const SPIT_FAN = [0];
+/**
+ * The lunging bite against a shot. It has to be worth coming close for: a room's every
+ * hostile hurts by touch, so a mouth is the whole body inside what can hit it. At twice a
+ * shot, and swallowing what it kills — which a shot never does — the risk buys the most
+ * damage the arrows can throw.
+ */
+const FANG_MULT = 2;
 const VOLLEY_FAN = [-0.24, 0, 0.24];
 const STORM_FAN = [-0.3, -0.15, 0, 0.15, 0.3];
 
 /**
- * The primaries: the strike fired rather than bitten. The spit is one shot hard enough to be
- * most of a bite; the volley three, spread a quarter of a radian, each under half — more
- * damage in all at a crowd, less on one target unless it is close enough for the fan to
- * land whole.
+ * The primaries: what the strike is. The spit — every larva's, from the hatch — is one shot
+ * for a whole hit, the unit the rest are measured in; the volley three, spread a quarter of a
+ * radian, each under half — more damage in all at a crowd, less on one target unless it is
+ * close enough for the fan to land whole. The fangs fire nothing: the strike is the lunge and
+ * the bite again, for twice a shot.
  */
 export const PRIMARIES: Organ[] = [
   O({ id: 'spit', when: g => g.spit > 0,
-    primary: () => ({ shot: 'spit', fan: SPIT_FAN, mult: 0.8 }) }),
+    primary: () => ({ shot: 'spit', fan: SPIT_FAN, mult: 1 }) }),
   // Quill Storm (a deal) is the volley at two: five spines, the fan no wider, so the middle
   // three still land together on one target
   O({ id: 'volley', when: g => g.volley > 0,
     primary: g => ({ shot: 'spine', fan: g.volley >= 2 ? STORM_FAN : VOLLEY_FAN, mult: 0.45 }) }),
+  O({ id: 'fangs', when: g => g.fangs > 0,
+    strike: (_g, base) => base * FANG_MULT }),
 ];
 
 /** Organs only a transformation grants. */

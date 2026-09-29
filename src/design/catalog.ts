@@ -31,7 +31,8 @@ import { priceCanvas } from '../render/pickups';
 import { glyphCanvas } from '../render/glyphs';
 import { HOVER } from '../run/TankMap';
 import { SHOT_RANGE, SHOT_SPEED as PLAYER_SHOT_SPEED } from '../input/PlayerController';
-import { primaryOf, organsOf } from '../sim/organs';
+import { primaryOf, organsOf, strikeOf } from '../sim/organs';
+import { HATCHED } from '../run/starts';
 import { shotTexture, SHOT_GLOW } from '../render/shots';
 import { glowTexture } from '../render/textures';
 import {
@@ -1044,10 +1045,11 @@ function roleGroup(): DesignGroup {
 
 // ------------------------------------------------------------------ pedestals and power
 
-/** The larva, as `Game.reset` hatches it: see-through, pale and big-eyed. */
+/** The larva, as `Game.reset` hatches it: see-through, pale and big-eyed, and spitting. */
 function larva(): Genome {
   const g = baseGenome();
   g.hue = 255; g.accentHue = 196; g.smoke = 1; g.pale = 1; g.eyeSize = 1.5;
+  for (const id of HATCHED) TRAITS.find(t => t.id === id)!.apply(g);
   return g;
 }
 
@@ -1084,7 +1086,7 @@ function pedestalsItem(id: string, name: string, note: string, stands: Omit<Pede
  */
 function statColumnCanvas() {
   const rows: [Parameters<typeof glyphCanvas>[0], string][] = [
-    ['teeth', '6.9'], ['pulse', '2.50'], ['ring', '0.7'], ['bolt', '—'], ['tail', '6.5'], ['shield', '0%'],
+    ['teeth', '6.9'], ['pulse', '2.50'], ['ring', '6.5'], ['bolt', '7.0'], ['tail', '6.5'], ['shield', '0%'],
   ];
   const c = document.createElement('canvas');
   c.width = 44; c.height = rows.length * 10 + 2;
@@ -1112,15 +1114,16 @@ function powerGroup(): DesignGroup {
       `${t.name} on its plinth: the glyph in its rarity's colour, lit, bobbing`,
       [{ good: { kind: 'mutation', trait: t }, price: null }], 60);
   };
+  // the larva hatches with the spit, so its cell is the larva as it is
   const primary = (id: string) => {
     const t = TRAITS.find(x => x.id === id)!;
     const g = larva();
-    t.apply(g);
+    if (!HATCHED.includes(id)) t.apply(g);
     const prim = primaryOf({ organs: organsOf(g), genome: g } as never)!;
     return {
       id: `primary-${id}`, name: t.name, note: t.desc,
       source: 'src/sim/organs/body.ts', span: 110, depth: tank.depth, genome: g,
-      facts: { shot: prim.shot, fan: prim.fan.length, 'share of a bite': prim.mult,
+      facts: { shot: prim.shot, fan: prim.fan.length, 'share of a shot': prim.mult,
         speed: PLAYER_SHOT_SPEED, range: SHOT_RANGE },
       make: () => new RoleCell(g, 'wraith'),
       animate: (() => {
@@ -1139,15 +1142,38 @@ function powerGroup(): DesignGroup {
       })(),
     } satisfies DesignItem;
   };
+  // the Lunging Bite fires nothing: the larva throws itself forward and back on the same beat
+  const bite = (): DesignItem => {
+    const t = TRAITS.find(x => x.id === 'fangs')!;
+    const g = larva();
+    t.apply(g);
+    return {
+      id: 'primary-fangs', name: t.name, note: t.desc,
+      source: 'src/sim/organs/body.ts', span: 110, depth: tank.depth, genome: g,
+      facts: { shot: 'none', 'share of a shot': strikeOf({ organs: organsOf(g), genome: g } as never) },
+      make: () => new RoleCell(g, 'wraith'),
+      animate: (() => {
+        let t0 = 0;
+        return (view: Container, dt: number, beat: number) => {
+          t0 = (t0 + dt) % 0.6;
+          const strike = t0 < 0.2 ? 1 - t0 / 0.2 : 0;
+          const fish = (view as RoleCell).fish.fish;
+          fish.animate(dt, 0.2, beat, 0, { windup: 0, strike, open: strike > 0 });
+          fish.place(strike * g.size * 0.6, 0, 0, 1);
+          fish.show(true, 1, 0xffffff);
+        };
+      })(),
+    };
+  };
   return {
     id: 'power', name: 'Pedestals & power',
-    note: 'The treasure room\'s pedestal at each rarity, the stat column, and each ranged primary firing.',
+    note: 'The treasure room\'s pedestal at each rarity, the stat column, and each primary: the spit the larva hatches with, the volley, and the bite.',
     items: [
       pedestal('muscle'), pedestal('inflate'), pedestal('apexjaw'),
       { id: 'stat-column', name: 'stat column', note: 'damage, rate, range, shot speed, speed, armour — a hatchling\'s',
         source: 'src/ui/hud/StatColumn.ts', span: 70, depth: tank.depth,
         make: () => spriteCell(statColumnCanvas(), 1) },
-      primary('archerspit'), primary('spinevolley'),
+      primary('archerspit'), primary('spinevolley'), bite(),
     ],
   };
 }

@@ -6,10 +6,13 @@ import type { Fx } from '../render/fx';
 import type { Creature } from '../sim/creature';
 import type { UI } from '../ui/UI';
 import { recordForm, recordTrait } from './codex';
-import { completes, leanOf } from './prospects';
+import { completes, hitsHarder, leanOf } from './prospects';
 import type { Flow } from './phase';
 import type { Run } from './Run';
-import type { Start } from './starts';
+import { HATCHED, type Start } from './starts';
+
+/** How much likelier a card that hits harder is on the boss's pedestal. */
+const BOSS_LEAN = 3;
 
 /**
  * How the body changes: dealing and taking a mutation, the starting form, and the
@@ -23,13 +26,13 @@ export class Evolution {
               private readonly fx: Fx, private readonly ui: UI) {}
 
   /**
-   * A starting form: its traits taken the ordinary way, quietly — no toast, no ring, no
-   * draft phase — and then the body's own tweaks.
+   * A starting form: what every body hatches with and then its own traits, taken the ordinary
+   * way, quietly — no toast, no ring, no draft phase — and then the body's own tweaks.
    */
   hatch(s: Start) {
     const { run, p } = this;
     const g = p.genome;
-    for (const id of s.traits) {
+    for (const id of [...HATCHED, ...s.traits]) {
       const t = TRAITS.find(x => x.id === id)!;
       t.apply(g);
       run.taken.set(t.id, (run.taken.get(t.id) ?? 0) + 1);
@@ -42,14 +45,17 @@ export class Evolution {
 
   /**
    * A mutation for a pedestal, from the tank's pool, leaning toward what the build would
-   * finish (`prospects.ts`). Null when the pool has run dry.
+   * finish (`prospects.ts`). Null when the pool has run dry. The boss's leans toward damage
+   * as well, as Isaac's boss items are mostly the stat ups: the next tank's hostiles are
+   * tougher by more than the body grows, and this is the pedestal every run is sure of.
    */
-  offer(rng: Rng): Trait | null {
+  offer(rng: Rng, boss = false): Trait | null {
     const { run, p } = this;
     const owned = run.takenTraits();
     const counts = familyCounts(owned);
     return dealMutations(rng, run.tank.id, run.taken, 1,
-      t => leanOf(p.genome, owned, run.forms, counts, t))[0] ?? null;
+      t => leanOf(p.genome, owned, run.forms, counts, t)
+        * (boss && hitsHarder(p.genome, t) ? BOSS_LEAN : 1))[0] ?? null;
   }
 
   /** The deal room's deal and curse, from what the run has not maxed. */

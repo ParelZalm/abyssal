@@ -58,7 +58,7 @@ export const TRAITS: Trait[] = [
     apply: g => { g.turn *= 1.3; g.finSize += 0.35; } }),
 
   T({ id: 'jaw', name: 'Hinged Jaw', rarity: 'common', icon: 'jaw', families: ['predator'],
-    desc: '+45% bite. Swallow things that should not fit.',
+    desc: '+45% damage. Swallow things that should not fit.',
     apply: g => { g.bite *= 1.45; g.jaw += 0.3; } }),
 
   T({ id: 'scales', name: 'Ganoid Scales', rarity: 'common', icon: 'scale',
@@ -95,7 +95,7 @@ export const TRAITS: Trait[] = [
 
   // ------------------------------------------------------------------ rare
   T({ id: 'gullet', name: 'Distensible Gullet', rarity: 'rare', icon: 'gullet', families: ['predator'],
-    desc: '+20% bite, and carcasses are swallowed from 40% further.',
+    desc: '+20% damage, and carcasses are swallowed from 40% further.',
     maxStacks: 2,
     apply: g => { g.bite *= 1.2; g.jaw += 0.55; g.gulp *= 1.4; } }),
 
@@ -116,7 +116,7 @@ export const TRAITS: Trait[] = [
     apply: g => { g.stealth += 0.4; g.armor -= 1; g.translucent += 0.5; } }),
 
   T({ id: 'mass', name: 'Gigantism', rarity: 'rare', icon: 'mass',
-    desc: '+22% size: a harder bite and a bigger body to hit, and a belly 25% slower to fill.',
+    desc: '+22% size: harder hits and a bigger body to hit, and a belly 25% slower to fill.',
     apply: g => { g.size *= 1.22; g.metabolism *= 1.25; g.speed *= 0.94; } }),
 
   T({ id: 'streamline', tank: 'nursery', name: 'Fusiform Body', rarity: 'rare', icon: 'blade', families: ['sprinter'],
@@ -124,7 +124,7 @@ export const TRAITS: Trait[] = [
     apply: g => { g.speed *= 1.12; g.metabolism *= 0.82; g.size *= 0.92; } }),
 
   T({ id: 'serrate', tank: 'reef', name: 'Serrated Teeth', rarity: 'rare', icon: 'teeth', families: ['predator'],
-    desc: '+85% bite. Wounds that do not close.',
+    desc: '+85% damage. Wounds that do not close.',
     apply: g => { g.bite *= 1.85; g.jaw += 0.25; g.serrate += 1; } }),
 
   T({ id: 'segments', tank: 'reef', name: 'Segmented Trunk', rarity: 'rare', icon: 'gill', families: ['lurker'],
@@ -132,7 +132,7 @@ export const TRAITS: Trait[] = [
     apply: g => { g.turn *= 1.3; g.armor += 2; g.segments += 2; } }),
 
   T({ id: 'rete', tank: 'deep', name: 'Rete Mirabile', rarity: 'rare', icon: 'bolt', families: ['predator', 'sprinter'],
-    desc: '+14% speed, +25% bite. Warm muscle in cold water.',
+    desc: '+14% speed, +25% damage. Warm muscle in cold water.',
     apply: g => { g.speed *= 1.14; g.bite *= 1.25; g.metabolism *= 1.1; } }),
 
   T({ id: 'algae', tank: 'nursery', name: 'Symbiotic Algae', rarity: 'rare', icon: 'glow', families: ['grazer', 'luminous'],
@@ -145,17 +145,17 @@ export const TRAITS: Trait[] = [
     apply: g => { g.lifesteal += 0.06; g.armor += 1; } }),
 
   T({ id: 'vacuum', tank: 'nursery', name: 'Vacuum Feeding', rarity: 'rare', icon: 'funnel', families: ['grazer'],
-    desc: '+15% bite, and carcasses are swallowed from 80% further. Inhale whatever lies close.',
+    desc: '+15% damage, and carcasses are swallowed from 80% further. Inhale whatever lies close.',
     apply: g => { g.gulp *= 1.8; g.bite *= 1.15; } }),
 
   // ------------------------------------------------------------------ diet
   // Each one is worse at something on purpose: the card is a choice of what to hunt.
   T({ id: 'rakers', tank: 'nursery', name: 'Gill Rakers', rarity: 'rare', icon: 'sieve', families: ['grazer'],
-    desc: 'Sieve the water: small prey is drawn in from twice as far, but a bite on anything you cannot swallow whole does 40%.',
+    desc: 'Sieve the water: small prey is drawn in from twice as far, but every shot, and every bite that does not swallow, does 40%.',
     apply: g => { g.filter += 1; g.metabolism *= 0.92; } }),
 
   T({ id: 'pharynx', tank: 'reef', name: 'Crushing Pharynx', rarity: 'rare', icon: 'molar', families: ['predator'],
-    desc: 'Armour and spines mean nothing to your bite, but it closes 80% slower.',
+    desc: 'Armour and spines mean nothing to your hits, but you strike 80% slower.',
     maxStacks: 1,
     apply: g => { g.crush += 1; g.bite *= 1.15; } }),
 
@@ -173,13 +173,13 @@ export const TRAITS: Trait[] = [
     apply: g => { g.mantle += 1; } }),
 
   T({ id: 'lurk', tank: 'reef', name: 'Lie in Wait', rarity: 'rare', icon: 'crouch', families: ['lurker'],
-    desc: 'Hold still to fade and wind up: the next bite hits up to 2.6× as hard. You sink when idle and swim 20% slower.',
+    desc: 'Hold still to fade and wind up: the next hit lands up to 2.6× as hard. You sink when idle and swim 20% slower.',
     maxStacks: 1,
     apply: g => { g.lurk += 1; g.speed *= 0.8; g.metabolism *= 0.85; } }),
 
   // ---------------------------------------------------- reef organs (rare)
   T({ id: 'beak', tank: 'reef', name: 'Parrot Beak', rarity: 'common', icon: 'jaw', families: ['grazer'],
-    desc: '+30% bite, and it chews through 2 points of armour.',
+    desc: '+30% damage, and your hits go through 2 points of armour.',
     apply: g => { g.bite *= 1.3; g.jaw += 0.2; g.pen += 2; } }),
 
   T({ id: 'coral', tank: 'reef', name: 'Coral Encrustation', rarity: 'common', icon: 'scale',
@@ -187,7 +187,7 @@ export const TRAITS: Trait[] = [
     apply: g => { g.coral += 1; g.speed *= 0.94; } }),
 
   T({ id: 'venom', tank: 'reef', name: 'Venom Barbs', rarity: 'rare', icon: 'spike', families: ['lurker'],
-    desc: 'Bites leave poison: 2.5 damage a second for four seconds.',
+    desc: 'Your hits leave poison: 2.5 damage a second for four seconds.',
     maxStacks: 3,
     apply: g => { g.venom += 1; g.bite *= 1.1; } }),
 
@@ -196,12 +196,12 @@ export const TRAITS: Trait[] = [
     apply: g => { g.lure += 1; g.gulp *= 1.25; g.sense *= 1.15; g.glow += 0.3; } }),
 
   T({ id: 'claws', tank: 'reef', name: 'Pincer Claws', rarity: 'rare', icon: 'blade', families: ['predator'],
-    desc: '+35% bite, and a strike holds what it hits.',
+    desc: '+35% damage, and what you hit is held.',
     maxStacks: 2,
     apply: g => { g.claws += 1; g.bite *= 1.35; } }),
 
   T({ id: 'siphon', tank: 'reef', name: 'Siphon Jet', rarity: 'rare', icon: 'funnel', families: ['sprinter'],
-    desc: 'Every strike lunges 40% harder.',
+    desc: 'Your shots fly 40% faster, and a bite lunges 40% harder.',
     maxStacks: 2,
     apply: g => { g.jet += 1; g.turn *= 1.08; } }),
 
@@ -219,7 +219,7 @@ export const TRAITS: Trait[] = [
     apply: g => { g.ink = 1; g.discharge = 0; g.inflate = 0; } }),
 
   T({ id: 'electric', tank: 'deep', name: 'Electric Organ', rarity: 'rare', icon: 'shock', families: ['predator'],
-    desc: 'Active (Space): a shock that hits everything around you for 70% of a bite and stuns it. Recharges in 1 room. Replaces your active organ.',
+    desc: 'Active (Space): a shock that hits everything around you for 70% of a shot and stuns it. Recharges in 1 room. Replaces your active organ.',
     maxStacks: 1,
     apply: g => { g.discharge = 1; g.ink = 0; g.inflate = 0; } }),
 
@@ -229,23 +229,30 @@ export const TRAITS: Trait[] = [
     apply: g => { g.inflate = 1; g.ink = 0; g.discharge = 0; } }),
 
   // -------------------------------------------------------------- primaries
-  // What the strike on the arrows is. One slot, like the active: taking one gives up the
-  // bite for good — a ranged kill is never swallowed, so the mouth becomes a way to eat
-  // carcasses and nothing else — and replaces the other. Each is the nursery's own hostile's
-  // weapon, grown by the larva that was shot at with it.
+  // What the strike on the arrows is. One slot, like the active, and each replaces the others.
+  // Every larva hatches with the spit (`HATCHED` in `run/starts.ts`), because a room is a
+  // dozen hostiles' worth of touch and a mouth is the worst way into one; the volley is its
+  // nursery rival, and the bite comes back only as the Lunging Bite, from the reef down, for
+  // a build that has the hearts or the plate to stand inside a fight. A shot never swallows,
+  // so what it kills is a carcass for the mouth.
   T({ id: 'archerspit', tank: 'nursery', name: 'Archer Spit', rarity: 'rare', icon: 'drop',
-    desc: 'Your strike becomes a jet of water, fired the way you aim, for 80% of a bite. Kills leave carcasses. Replaces your bite.',
+    desc: 'Your strike is a jet of water, fired the way you aim. Kills leave carcasses. Every larva hatches with it.',
     maxStacks: 1,
-    apply: g => { g.spit = 1; g.volley = 0; g.eyeSize += 0.3; } }),
+    apply: g => { g.spit = 1; g.volley = 0; g.fangs = 0; g.eyeSize += 0.3; } }),
 
   T({ id: 'spinevolley', tank: 'nursery', name: 'Spine Volley', rarity: 'rare', icon: 'spike',
-    desc: 'Your strike becomes a fan of three spines, each 45% of a bite. Kills leave carcasses. Replaces your bite.',
+    desc: 'Your strike becomes a fan of three spines, each 45% of a shot. Kills leave carcasses. Replaces your strike.',
     maxStacks: 1,
-    apply: g => { g.volley = 1; g.spit = 0; } }),
+    apply: g => { g.volley = 1; g.spit = 0; g.fangs = 0; } }),
+
+  T({ id: 'fangs', tank: 'reef', name: 'Lunging Bite', rarity: 'rare', icon: 'teeth', families: ['predator'],
+    desc: 'Your strike becomes a lunge and a bite for twice a shot, and what it kills is swallowed whole. Close enough to bite is close enough to be hit. Replaces your strike.',
+    maxStacks: 1,
+    apply: g => { g.fangs = 1; g.spit = 0; g.volley = 0; g.jaw += 0.35; } }),
 
   // ---------------------------------------------------------------- cursed
   T({ id: 'bloodlamp', tank: 'deep', name: 'Blood Lamp', rarity: 'rare', icon: 'glow', families: ['predator'],
-    desc: '+90% bite. A furnace of a body.',
+    desc: '+90% damage. A furnace of a body.',
     curse: 'You shine: everything finds you from 60% further, and no hostile is ever slow to find you.',
     maxStacks: 1,
     apply: g => { g.bite *= 1.9; g.glare += 1; g.glow += 0.8; } }),
@@ -277,7 +284,7 @@ export const TRAITS: Trait[] = [
     apply: g => { g.speed *= 1.45; g.turn *= 1.2; } }),
 
   T({ id: 'devourer', name: 'Devourer’s Jaw', rarity: 'apex', icon: 'gullet', families: ['predator'],
-    desc: '+120% bite, and carcasses are swallowed from twice as far. A Hinged Jaw with nothing held back.',
+    desc: '+120% damage, and carcasses are swallowed from twice as far. A Hinged Jaw with nothing held back.',
     deal: 2, maxStacks: 1,
     apply: g => { g.bite *= 2.2; g.jaw += 0.6; g.gulp *= 2; } }),
 
@@ -287,14 +294,14 @@ export const TRAITS: Trait[] = [
     apply: g => { g.armor += 8; g.speed *= 0.95; } }),
 
   T({ id: 'archereye', name: 'Archer’s Eye', rarity: 'apex', icon: 'eye',
-    desc: 'Your strike becomes a jet of water for 140% of a bite. Archer Spit, never missing its weight. Replaces your bite.',
+    desc: 'Your strike becomes a jet of water for 175% of a shot. Archer Spit, never missing its weight. Replaces your strike.',
     deal: 2, maxStacks: 1,
-    apply: g => { g.spit = 1; g.volley = 0; g.bite *= 1.75; g.eyeSize += 0.5; } }),
+    apply: g => { g.spit = 1; g.volley = 0; g.fangs = 0; g.bite *= 1.75; g.eyeSize += 0.5; } }),
 
   T({ id: 'quillstorm', name: 'Quill Storm', rarity: 'apex', icon: 'spike',
-    desc: 'Your strike becomes a fan of five spines, each 45% of a bite. Spine Volley, emptied all at once. Replaces your bite.',
+    desc: 'Your strike becomes a fan of five spines, each 45% of a shot. Spine Volley, emptied all at once. Replaces your strike.',
     deal: 2, maxStacks: 1,
-    apply: g => { g.volley = 2; g.spit = 0; } }),
+    apply: g => { g.volley = 2; g.spit = 0; g.fangs = 0; } }),
 
   // ------------------------------------------------------------------ apex
   // Every apex card costs something, and says so. Without a price the draft was "take the
@@ -305,7 +312,7 @@ export const TRAITS: Trait[] = [
     apply: g => { g.electro += 1; g.sense *= 1.3; g.metabolism *= 1.12; } }),
 
   T({ id: 'apexjaw', tank: 'deep', name: 'Apex Predator', rarity: 'apex', icon: 'teeth', families: ['predator'],
-    desc: '+110% bite, +14% size, but −18% turning. Nothing here outranks you, and it turns like it.',
+    desc: '+110% damage, +14% size, but −18% turning. Nothing here outranks you, and it turns like it.',
     apply: g => { g.bite *= 2.1; g.size *= 1.14; g.jaw += 0.5; g.spikes += 1; g.turn *= 0.82; } }),
 
   T({ id: 'carapace', tank: 'deep', name: 'Plated Carapace', rarity: 'apex', icon: 'shield',
@@ -317,7 +324,7 @@ export const TRAITS: Trait[] = [
     apply: g => { g.speed *= 1.34; g.turn *= 1.22; g.metabolism *= 1.2; } }),
 
   T({ id: 'titanjaw', tank: 'deep', name: 'Titan Jaws', rarity: 'apex', icon: 'gullet', families: ['predator'],
-    desc: '+60% bite, +60% gulp reach, +8% size, but −15% turning. A mouth with a body attached.',
+    desc: '+60% damage, +60% gulp reach, +8% size, but −15% turning. A mouth with a body attached.',
     apply: g => { g.bite *= 1.6; g.gulp *= 1.6; g.size *= 1.08; g.jaw += 0.45; g.turn *= 0.85; } }),
 
   T({ id: 'abyssalheart', tank: 'deep', name: 'Abyssal Heart', rarity: 'apex', icon: 'pulse',
@@ -329,7 +336,7 @@ export const TRAITS: Trait[] = [
     apply: g => { g.speed *= 1.2; g.metabolism *= 0.7; g.ram += 1; } }),
 
   T({ id: 'neurotoxin', tank: 'deep', name: 'Neurotoxin', rarity: 'apex', icon: 'drop', families: ['lurker'],
-    desc: 'Venom that keeps working: 8 damage a second and +20% bite, but a belly 12% slower to fill. Toxin is costly to make.',
+    desc: 'Venom that keeps working: 8 damage a second and +20% damage, but a belly 12% slower to fill. Toxin is costly to make.',
     apply: g => { g.venom += 2.2; g.bite *= 1.2; g.metabolism *= 1.12; } }),
 
   T({ id: 'deeplantern', tank: 'deep', name: 'Deep Lantern', rarity: 'apex', icon: 'glow', families: ['luminous'],
@@ -337,11 +344,11 @@ export const TRAITS: Trait[] = [
     apply: g => { g.lure += 2; g.sense *= 1.4; g.glow += 0.7; g.gulp *= 1.2; g.speed *= 0.88; } }),
 
   T({ id: 'mantis', tank: 'deep', name: 'Mantis Strike', rarity: 'apex', icon: 'bolt', families: ['predator'],
-    desc: '+70% bite and a strike that stops prey dead, but −10% speed. Clubs are dead weight in a swim.',
+    desc: '+70% damage and hits that stop prey dead, but −10% speed. Clubs are dead weight in a swim.',
     apply: g => { g.claws += 2; g.bite *= 1.7; g.speed *= 0.9; } }),
 
   T({ id: 'leviathanblood', tank: 'deep', name: 'Leviathan Blood', rarity: 'apex', icon: 'mass',
-    desc: '+18% size, +5 armour, +30% bite, but a belly 20% slower to fill. Something ancient in the veins.',
+    desc: '+18% size, +5 armour, +30% damage, but a belly 20% slower to fill. Something ancient in the veins.',
     apply: g => { g.size *= 1.18; g.armor += 5; g.bite *= 1.3; g.metabolism *= 1.2; } }),
 ];
 

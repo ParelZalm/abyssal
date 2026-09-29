@@ -3,7 +3,7 @@ import { armourOf, biteDamage } from '../content/genome';
 import { angleDelta, clamp, dist2 } from '../core/util';
 import type { Creature, Hurt } from './creature';
 import type { Blood } from './events';
-import { armourAgainst, biteRateOf, damageOf, gulpOf, primaryOf, takenOf, wound } from './organs';
+import { armourAgainst, biteRateOf, damageOf, gulpOf, primaryOf, strikeOf, takenOf, wound } from './organs';
 import { EXPOSED_TAKEN, PATTERN_CD, RUSH_BITE } from './patterns';
 import type { World } from './world';
 
@@ -154,22 +154,24 @@ export class Combat {
       att.vx += Math.cos(att.angle) * surge;
       att.vy += Math.sin(att.angle) * surge;
     }
-    const whole = this.swallows(att, def);
+    // a guardian's rush lands like a rush; the player's strike at what its primary makes it
+    const rushing = att.rushT > 0;
+    const mult = att.isPlayer ? strikeOf(att) : rushing ? RUSH_BITE : 1;
+    const whole = this.swallows(att, def, mult);
     // a bite into a bait ball glances off the wall of bodies: the mouth that could have
     // gulped one goes on gulping, but one that has to tear cannot pick a target out of it
     if (!whole && this.balled(def)) {
       if (att.isPlayer) this.world.glanced = true;
       return;
     }
-    // a guardian's rush lands like a rush, and ends on the body it found
-    const rushing = att.rushT > 0;
+    // a rush ends on the body it found
     if (rushing && def.isPlayer) { att.landed = true; att.rushT = 0; att.patternCd = PATTERN_CD; }
     // a strike ends on what it hits: the jaw closes and the body goes into its recovery
     if (att.attack === 'strike' || att.attack === 'windup') {
       att.attack = 'recover';
       att.attackT = att.attackLen = 0.4;
     }
-    this.land(att, def, whole, rushing ? RUSH_BITE : 1);
+    this.land(att, def, whole, mult);
   }
 
   /**
@@ -194,9 +196,9 @@ export class Combat {
    * every grab a death with nothing to struggle against — and an inflated body is two and a
    * half times too wide for the mouth that would have taken it.
    */
-  private swallows(att: Creature, def: Creature) {
+  private swallows(att: Creature, def: Creature, mult: number) {
     if (def.isPlayer) return false;
-    if (att.isPlayer) return !def.species.guardian && this.damage(att, def, 1) >= def.hp;
+    if (att.isPlayer) return !def.species.guardian && this.damage(att, def, mult) >= def.hp;
     return !att.holding && att.swallowSize > def.genome.size * 2 * (def.puffT > 0 ? 2.5 : 1);
   }
 

@@ -19,9 +19,17 @@ export interface Start {
   tweak?: (g: Genome) => void;
 }
 
+/**
+ * What every body hatches with, before its start's own: the spit. A room hurts by touch from
+ * every hostile in it, so the mouth — the column's weapon — made the first tank a brawl the
+ * larva lost; Isaac's opening is a ranged one, and the bite is a mutation for later (the
+ * Lunging Bite). Taken the ordinary way, so the pedestals never deal it again.
+ */
+export const HATCHED = ['archerspit'];
+
 export const STARTS: Start[] = [
   { id: 'hatchling', name: 'Hatchling', unlock: 0, traits: [],
-    desc: 'Nothing yet. Every other body is a deviation from this one.' },
+    desc: 'Nothing yet but the spit. Every other body is a deviation from this one.' },
   { id: 'wrasse', name: 'Reef Wrasse', unlock: 1, traits: ['beak'],
     desc: 'Hatches with a parrot beak: plated prey is food from the first room.',
     tweak: g => { g.hue = 168; g.accentHue = 40; } },

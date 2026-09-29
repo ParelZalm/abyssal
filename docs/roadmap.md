@@ -250,6 +250,28 @@ What it found, and what it leaves:
 - Not done: a wreck on its side as an obstacle, which wants a tile of its own in the
   templates; bottom-dwellers (crabs, shrimp) that walk the floor; per-tank rock colour.
 
+## Balance: a ranged start and Isaac's curve
+
+Done after stage 8, from playing it: a melee start was the game's hardest matchup, since a
+room's every hostile hurts by touch. Every larva now hatches with Archer Spit, at a whole hit
+a shot (it was 0.8 of a bite); the bite comes back as the Lunging Bite, a reef card, for twice
+a shot and the swallow. Hostile health follows Isaac's curve instead of cancelling the size
+difference between tanks (`hostileHp` 0.55, 0.8, 1.1), the bosses' armour is down to two or
+three and their health set to match (200, 420, 700), and a boss leaves a mutation by the drain,
+leaning toward damage. The cards say damage, not bite; the Siphon Jet speeds shots too. The
+board's *Pedestals & power* group has the bite beside the two shots, and the larva spitting.
+
+What it found, and what it leaves:
+
+- **Flat armour broke the bosses.** A Great White at armour 5 took two thirds off every spit,
+  and the fight was ~330 spits, the Giant Squid's ~160; nothing had been tuned against a
+  ranged primary.
+- **The nursery took two to three times Isaac's shots.** A mackerel was ten spits or eight
+  bites; it is five spits now, an archerfish three.
+- Gill Rakers' 40% now reads on every shot, which makes it a trap for a ranged body; the
+  grazer card wants rethinking. There is still no card that raises the attack rate — Isaac's
+  most common kind — and one would want a body part to show it.
+
 ## Later
 
 Bomb fish and secret rooms; tanks four and five (the sperm whale, the colossal squid, the

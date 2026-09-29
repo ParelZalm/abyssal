@@ -295,7 +295,7 @@ export class Game {
   private makeTank() {
     const { run, world, player: p, camera, fx, ui, pockets, evolution, controller, belly } = this;
     return new TankMap(run, world, p, camera, this.layers, fx, ui, {
-      offer: rng => evolution.offer(rng),
+      offer: (rng, boss) => evolution.offer(rng, boss),
       deals: rng => evolution.deals(rng),
       // pay, then hand over: a mutation is taken, anything else goes where a pickup would
       buy: s => {
