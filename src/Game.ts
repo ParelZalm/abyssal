@@ -448,7 +448,8 @@ export class Game {
     this.pedestals.update(this.tank.pedestals, this.tank.room.tile * HOVER, view.zoom, view.t);
     this.drain.update(this.tank.drain, view.zoom, view.t);
     const dread = this.scene.draw(view, this.world, p, this.phase, this.dread,
-      [...this.tank.lights, ...this.shots.lights, ...this.pedestals.lights, ...this.drain.lights]);
+      [...this.tank.lights, ...this.shots.lights, ...this.pedestals.lights, ...this.drain.lights,
+        ...this.fx.lights]);
     this.lighting.render(this.camera);
     if ((this.phase === 'play' || this.phase === 'draft') && !this.tank.sliding) {
       // round the room, not the camera: just after a slide the camera is still panning off

@@ -70,6 +70,15 @@ export class Impacts {
         fx.burst(f.x, f.y, SHOT_GLOW[f.shot].color, 4, 50, 1.6);
       } else if (f.kind === 'splash' && f.shot) {
         fx.burst(f.x, f.y, SHOT_GLOW[f.shot].color, 6, 70, 1.8);
+      } else if (f.kind === 'impact' && f.shot) {
+        // a shot into a body: the shot's colour thrown back off it and a little on through,
+        // a tight bright ring where it went in, and a flash of light on what it hit
+        const col = SHOT_GLOW[f.shot].color;
+        const vx = f.vx ?? 0, vy = f.vy ?? 0;
+        fx.spray(f.x, f.y, -vx, -vy, col, 7, 150, 1.8, 0.9);
+        fx.spray(f.x, f.y, vx, vy, 0xfff4e0, 4, 110, 1.4, 0.45);
+        fx.ring(f.x, f.y, 0xfff4e0, f.r * 2.2);
+        fx.flash(f.x, f.y, col, f.r * 14, 0.9, 0.12);
       } else if (f.kind === 'bubbles') {
         // the air stone: a ring going out and a spray of bubbles rising through it
         fx.ring(f.x, f.y, 0xdff4ff, f.r);
@@ -103,9 +112,18 @@ export class Impacts {
     for (const b of world.bites) {
       const col = b.onPlayer ? 0xff5a4a : 0xff9a7a;
       fx.burst(b.x, b.y, col, b.fatal ? 22 : 8, b.fatal ? 220 : 120, b.fatal ? 3.6 : 2.4);
-      if (b.onPlayer) camera.jolt(b.amount * 0.5, 14);
+      if (b.onPlayer) {
+        camera.jolt(b.amount * 0.5, 14);
+        // the larva's own light goes red for a beat: in a dark room the hit is seen by its glow
+        fx.flash(b.x, b.y, 0xff3a2e, b.size * 5, 0.9, 0.22);
+        this.dread.startle(0.35);
+      }
       if (b.byPlayer) {
+        // the struck body lit from its own middle, warm, so the flinch (`FishView.hurt`) is
+        // seen however dark the corner it was hit in; a kill lights the room round it
+        fx.flash(b.x, b.y, 0xffe6c8, b.size * (b.fatal ? 5 : 2.6), b.fatal ? 1 : 0.75, b.fatal ? 0.3 : 0.14);
         fx.ring(b.x, b.y, 0xfff0d4, player.radius * (b.fatal ? 1.5 : 0.9));
+        if (b.fatal) fx.ring(b.x, b.y, 0xffc89a, b.size * 1.2);
         camera.jolt(b.fatal ? 6 : 3, 11);
         camera.stop(b.fatal ? 0.075 : 0.045);
       }

@@ -1,6 +1,7 @@
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { dotTexture } from './textures';
 import { TAU } from '../core/util';
+import type { Light } from './lighting';
 
 interface P {
   node: Sprite | Graphics;
@@ -25,6 +26,8 @@ interface P {
 export class Fx {
   layer = new Container();
   private live: P[] = [];
+  /** Light thrown for a moment — a hit, a kill — and gone: world units, seconds. */
+  private flashes: { x: number; y: number; r: number; color: number; a: number; t: number; max: number }[] = [];
   private dots: Sprite[] = [];
   private rings: Graphics[] = [];
 
@@ -50,6 +53,41 @@ export class Fx {
         life: 0, max: 0.5 + Math.random() * 0.7, grow: 0, spread: 1, lift: -26, peak: 0.85,
         baseScale: s.scale.x });
     }
+  }
+
+  /**
+   * Debris thrown one way: `count` dots along (`dx`, `dy`), fanned `spread` radians either side
+   * of it. What a hit sprays off the body it landed on, where a `burst` would say nothing about
+   * which way the blow was going.
+   */
+  spray(x: number, y: number, dx: number, dy: number, color: number, count: number, power: number,
+        size: number, spread: number) {
+    const base = Math.atan2(dy, dx);
+    for (let i = 0; i < count; i++) {
+      const s = this.takeDot(size * (0.4 + Math.random() * 0.8), color, 0.95);
+      s.x = x; s.y = y;
+      const a = base + (Math.random() - 0.5) * 2 * spread;
+      const v = power * (0.45 + Math.random() * 0.8);
+      this.live.push({ node: s, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+        life: 0, max: 0.22 + Math.random() * 0.3, grow: 0, spread: 1, lift: -10, peak: 0.95,
+        baseScale: s.scale.x });
+    }
+  }
+
+  /**
+   * A light at (`x`, `y`) for `max` seconds, falling off fast: the frame is dark and made by
+   * its lights (*Art direction*), so the loudest thing a hit can do is light what it hit.
+   */
+  flash(x: number, y: number, color: number, r: number, a = 1, max = 0.16) {
+    this.flashes.push({ x, y, r, color, a, t: 0, max });
+  }
+
+  /** The flashes still burning, for the lighting pass. */
+  get lights(): Light[] {
+    return this.flashes.map(f => {
+      const k = 1 - f.t / f.max;
+      return { x: f.x, y: f.y, r: f.r * (0.7 + 0.3 * k), color: f.color, a: f.a * k * k };
+    });
   }
 
   /**
@@ -97,6 +135,8 @@ export class Fx {
   }
 
   update(dt: number) {
+    for (const f of this.flashes) f.t += dt;
+    this.flashes = this.flashes.filter(f => f.t < f.max);
     for (let i = this.live.length - 1; i >= 0; i--) {
       const p = this.live[i];
       p.life += dt;

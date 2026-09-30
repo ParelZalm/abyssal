@@ -12,6 +12,7 @@ import { tick as tickOrgans, type Organ } from './organs';
 import { Patterns } from './patterns';
 import { Spawner } from './spawn';
 import type { Terrain } from './terrain';
+import { surfaceGap } from './hull';
 
 /** Seconds a body takes to resolve out of the water. */
 const FADE_IN = 0.9;
@@ -312,11 +313,15 @@ export class World {
       s.x += s.vx * dt;
       s.y += s.vy * dt;
       let spent = s.t > s.life || !t || t.solidAt(s.x, s.y);
+      let struck = false;
       if (!spent && s.by.isPlayer) {
+        // while a room holds the player in, its shots are for what holds it: a shoal of fry
+        // between the larva and a mackerel soaked up every shot aimed through it
+        const fight = !!t?.locked;
         for (const c of this.creatures) {
-          const r = s.r + c.radius * 0.6;
-          if (!c.alive || dist2(s.x, s.y, c.x, c.y) > r * r) continue;
-          spent = true;
+          if (!c.alive || c.isPlayer || (fight && !c.hostile)) continue;
+          if (surfaceGap(c, s.x, s.y) > s.r) continue;
+          spent = struck = true;
           // no chomp: the mouth that fired it is a room away
           this.combat.hit(p, c, s.mult, false);
           // a shot carries its way on into what it hit, a little, so a hit is felt
@@ -336,7 +341,10 @@ export class World {
       }
       if (!spent) continue;
       this.shots.splice(i, 1);
-      this.pulses.push({ x: s.x, y: s.y, r: s.r * 3, kind: 'splash', shot: s.kind });
+      // a shot that found a body is an impact, with the way it was going; one that found rock
+      // or ran out is a splash
+      this.pulses.push({ x: s.x, y: s.y, r: s.r * 3, kind: struck ? 'impact' : 'splash', shot: s.kind,
+        vx: struck ? s.vx : undefined, vy: struck ? s.vy : undefined });
     }
   }
 

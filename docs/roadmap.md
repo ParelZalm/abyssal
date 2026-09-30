@@ -272,6 +272,15 @@ What it found, and what it leaves:
   grazer card wants rethinking. There is still no card that raises the attack rate — Isaac's
   most common kind — and one would want a body part to show it.
 
+## Hitboxes and hits
+
+Done next, from playing it: hitboxes are the body as drawn (`sim/hull.ts`), not a circle a
+third of a size across at its middle — a mackerel is now hit from nose to tail root, where it
+was hit across a third of its length — and while a room is locked the player's shots and bite
+pass through its fauna. A hit whitens the body, knocks it along the blow, lights it and sprays
+the shot back off it; a kill lights the room round it. An idle larva still lasts about nine and
+a half seconds in a room of four, so contact on the whole body did not make a room deadlier.
+
 ## Later
 
 Bomb fish and secret rooms; tanks four and five (the sperm whale, the colossal squid, the

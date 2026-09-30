@@ -251,7 +251,7 @@ export class Creature {
     this.hp -= halves;
     this.invuln = INVULN;
     this.hurt(by, how);
-    this.view.hurt();
+    this.view.hurt(this.x - by.x, this.y - by.y);
     return halves;
   }
 

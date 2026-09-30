@@ -92,8 +92,19 @@ shove.
 bite back, at `strikeOf` (twice) its damage: its shots leave from `biteX`/`biteY` down the aim, the body is pushed
 back a little rather than forward, and `Combat.strike` lands no bite while one is carried.
 The player's shots are `World.shots` like a hostile's, looking for anything alive but the
-player; one lands as `Combat.hit` at its share of a bite, carries a little of its way into
-what it hit, and never swallows. The kick still opens its window.
+player — and while a room is locked, only for its hostiles, so a shoal in the line of fire
+does not soak up the fight's shots; the bite takes the same rule. One lands as `Combat.hit`
+at its share of a bite, carries a little of its way into what it hit, and never swallows.
+The kick still opens its window.
+
+**Hitboxes are the drawn body** (`sim/hull.ts`): the spine of `formFor`, sampled nose to tail
+root with the outline's half-height at each point, in the facing frame the body is drawn in,
+joined into tapered capsules. `surfaceGap(c, x, y)` is what a player's shot, the player's bite
+and a hostile's touch measure. It replaced a circle at the middle a third of a size across,
+which a darter is 2.2 sizes long around and an eel 4.2: a shot at a mackerel's head passed
+through, and so did a mackerel's head on the larva. The tail fan and fins are left out, as
+Isaac's hitboxes sit a little inside the sprite; a drifter's touch keeps the old circle
+beside the hull for its tentacles. The player's own hitbox is still its middle, small.
 
 ## Perception and behaviour
 

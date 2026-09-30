@@ -6,6 +6,7 @@ import type { Blood } from './events';
 import { armourAgainst, biteRateOf, damageOf, gulpOf, primaryOf, strikeOf, takenOf, wound } from './organs';
 import { EXPOSED_TAKEN, PATTERN_CD, RUSH_BITE } from './patterns';
 import type { World } from './world';
+import { surfaceGap } from './hull';
 
 /** A school holds as a bait ball with this many of its own kind packed around a body. */
 const BALL_N = 6;
@@ -115,10 +116,12 @@ export class Combat {
     // the player bites on the arrows, not on contact: only a strike that is out lands, from
     // wherever it reaches, and nothing is pulled in — swimming into prey is not eating it
     if (att.isPlayer) {
-      // a body with a primary fires its strike and bites nothing with it (`World.fly`)
+      // a body with a primary fires its strike and bites nothing with it (`World.fly`); in a
+      // fight it bites what the fight is with, as its shots do
       if (att.attack !== 'strike' || primaryOf(att)) return;
-      const r = att.radius * 1.1 + def.radius + att.genome.size * 0.45;
-      if (dist2(att.biteX, att.biteY, def.x, def.y) <= r * r) this.bite(att, def);
+      if (!def.hostile && this.world.terrain?.locked) return;
+      // the reach is to the body as drawn, so a bite at a long animal's head or tail lands
+      if (surfaceGap(def, att.biteX, att.biteY) <= att.radius * 1.1 + att.genome.size * 0.45) this.bite(att, def);
       return;
     }
     // a rush hits what is in its line and nothing else: none of the lunge's extra reach and
@@ -220,7 +223,7 @@ export class Combat {
     // seen, not just booked: a flinch on a wound, and on a whole swallow the body goes down
     // the throat that took it instead of simply ceasing to be drawn
     if (fatal && whole) def.eatenBy = att;
-    else def.view.hurt();
+    else def.view.hurt(def.x - att.x, def.y - att.y);
     // what the bodies do to each other beyond the damage — recoil, venom, grip — is the
     // organs' business, and a kill is read off the wound before they run so poison cannot
     // credit a bite that already finished the job
@@ -248,8 +251,11 @@ export class Combat {
 
   /** A hostile's body against the player's. */
   private touch(att: Creature, p: Creature) {
+    // the body as drawn, against the player's middle and a little of it — a mackerel's head
+    // on the larva used to be out of its reach, a circle at its middle being all that hurt.
+    // The old circle stays beside it for a drifter, whose tentacles trail outside the bell
     const r = att.radius * 0.7 + p.radius * 0.5;
-    if (dist2(att.x, att.y, p.x, p.y) > r * r) return;
+    if (surfaceGap(att, p.x, p.y) > p.radius * 0.35 && dist2(att.x, att.y, p.x, p.y) > r * r) return;
     const got = this.hitPlayer(att, p, att.species.role === 'drifter' ? 'touch' : 'bite');
     // a dash ends on what it found
     if (got && att.attack === 'strike') {

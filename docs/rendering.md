@@ -281,8 +281,14 @@ each looks — the Motion group on the design board loops every one of them:
 - **Strike.** Stretched long and narrow, easing back as it is spent; jaw open. A boost and a
   guardian's rush use the same pose.
 - **Bite.** The existing chomp squash, with the jaw snapped shut for it.
-- **Hurt.** `Combat.land` calls `view.hurt()`: knocked short, flashed red through `show`'s
-  tint, and blinked for its first frames.
+- **Hurt.** `Combat.land` calls `view.hurt(dx, dy)` with the way the blow was going: the
+  drawn body is knocked along it and back, bunched, white for its first ~80 ms (the skin's
+  `uFlash` — a tint only multiplies, and red on a dark animal in a dark room barely showed),
+  then red through `show`'s tint, fading. It no longer blinks, which hid the body in the
+  frames meant to show the hit. `Impacts` lights it: every hit the player lands throws a
+  short warm light on the body (`Fx.flash`, drawn by the lighting pass), a kill a bigger one
+  and a second ring, a shot's impact sprays its colour back off the body (`Fx.spray`), and a
+  hit on the player lights it red and startles the frame.
 - **Death.** `World.remove` hands a body that died on screen to `die()` instead of
   destroying it, and plays it out in `playDeaths`: swallowed whole (`Creature.eatenBy`) it
   is drawn into the swallower's mouth, shrinking; otherwise it rolls belly-up, drifts to a

@@ -110,6 +110,14 @@ const ARM_COLS = 12;
  */
 const SIDE_ON = 0.45;
 
+/**
+ * The flinch: how far a blow knocks the drawn body along it at its peak, in body sizes, and
+ * how much of it the body is white before it turns red — about the first 80 ms, while the
+ * hit's light is at its brightest.
+ */
+const KNOCK = 0.18;
+const HURT_WHITE = 0.72;
+
 export class FishView extends Container {
   /**
    * The additive bloom, deliberately NOT a child of this container. Every creature's
@@ -168,8 +176,11 @@ export class FishView extends Container {
   private sway = 0;
   private recoil = 0;
   private clock = Math.random() * 10;
-  /** A flinch, 1 as the wound lands down to 0: a recoil, a red flash, a blink. */
+  /** A flinch, 1 as the wound lands down to 0: knocked along the blow, a flash, then red. */
   private hurtT = 0;
+  /** Which way the last blow was going, as a unit vector: the flinch throws the drawn body along it. */
+  private knockX = 0;
+  private knockY = 0;
   /** Which texture is on the mesh: the mouth shut, or open to strike. */
   private gaping = false;
   /** Set once the animal is dead and this view is playing its death. */
@@ -208,6 +219,10 @@ export class FishView extends Container {
     // drawn back along the heading on a wind-up — the coil before the spring
     x -= Math.cos(heading) * this.recoil;
     y -= Math.sin(heading) * this.recoil - this.bob;
+    // knocked along the blow, and back: the view only, the body's own shove is the sim's
+    const knock = this.hurtT * this.hurtT * this.g.size * KNOCK;
+    x += this.knockX * knock;
+    y += this.knockY * knock;
     this.x = x; this.y = y; this.rotation = r;
     this.glow.x = x; this.glow.y = y;
     // the glow layer is not rotated or mirrored with the body, so each lamp is carried
@@ -231,13 +246,14 @@ export class FishView extends Container {
   show(visible: boolean, alpha: number, tint: number) {
     if (this.deathT >= 0) return;
     this.visible = this.glow.visible = visible;
-    // a wound flashes the body red and blinks it for its first few frames — the one frame
-    // of feedback that says a bite landed, on whichever side of it you were
+    // a wound turns the body white for its first few frames (the skin's `uFlash`), lit by
+    // the light the hit threw (`Impacts`), and then red, fading. It used to blink at once,
+    // which hid the body in the very frames that were meant to show the hit land
     const h = this.hurtT;
-    const blink = h > 0.6 && Math.floor(this.clock * 30) % 2 === 0 ? 0.35 : 1;
-    this.alpha = alpha * blink;
+    this.alpha = alpha;
     this.glow.alpha = alpha;
-    this.tint = h > 0 ? mul(tint, lerpColor(0xffffff, 0xff5a4e, h * 0.85)) : tint;
+    this.tint = h > HURT_WHITE ? 0xffffff
+      : h > 0 ? mul(tint, lerpColor(0xffffff, 0xff5a4e, (h / HURT_WHITE) * 0.85)) : tint;
     this.glow.tint = tint;
     // the fog takes culling and distance, but not the danger tint: it is absence of light,
     // so tinting it would only make it glow in whatever colour the tint happens to be
@@ -419,9 +435,12 @@ export class FishView extends Container {
     this.chompT = 1;
   }
 
-  /** A wound landed on this body. */
-  hurt() {
+  /** A wound landed on this body, from a blow going (`dx`, `dy`) — any length; none is no knock. */
+  hurt(dx = 0, dy = 0) {
     this.hurtT = 1;
+    const d = Math.hypot(dx, dy);
+    this.knockX = d > 0 ? dx / d : 0;
+    this.knockY = d > 0 ? dy / d : 0;
   }
 
   /**
@@ -690,8 +709,9 @@ export class FishView extends Container {
       sx *= 1 - s * 0.3;
       sy *= 1 + s * 0.26;
     }
-    // a flinch: knocked short for an instant
-    sx *= 1 - this.hurtT * 0.1;
+    // a flinch: knocked short and bunched for an instant, keeping its volume
+    sx *= 1 - this.hurtT * 0.2;
+    sy *= 1 + this.hurtT * 0.12;
     this.sx = sx;
     this.sy = sy;
     // the jaw is a second texture on the same strip: open for the strike, and snapped shut
@@ -706,6 +726,7 @@ export class FishView extends Container {
       u.uBeat = beat;
       u.uClock = this.clock;
       u.uFlip = this.flipT;
+      u.uFlash = this.hurtT > HURT_WHITE ? 0.9 * ((this.hurtT - HURT_WHITE) / (1 - HURT_WHITE)) ** 0.5 : 0;
       this.skin.uniforms.update();
     }
     this.pose(beat, bank, thrust * (1 + w * 0.9), dt);
