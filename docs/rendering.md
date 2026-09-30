@@ -144,12 +144,26 @@ is smooth, and `FramePass` steps and dithers it onto the grid with everything el
 ## The drop-in and the drain
 
 The drop-in (`render/dropin.ts`) is the one view of a tank from outside the glass, drawn in
-screen space over everything and on the pixel grid with the frame: a near-black gallery, the
-tank as the room's proportions lit in bands from a lamp over it (the water its `Tank.depth`
-holds, lifted toward the lamp), a cone of the lamp's light, rock mounds in gravel along the
-floor, the frame and the lit rim. The animal is its own `FishView`, falling nose down under a
-gravity in tank widths, splashing (a spray of square drops and an ellipse on the surface),
-slowing and levelling as it sinks. Fades in from black and out into the room.
+screen space over everything and on the pixel grid with the frame: a brick gallery wall the
+tank's light falls on, a lamp hung low over the water, a riveted frame, glare on the glass,
+an air line bubbling, and the stand the tank sits on.
+
+Inside the glass is the tank's own art, not a drawing of it. `DIORAMA` (`content/tanks.ts`)
+is a rockscape template — open water to the top, rock banked against both panes, a bommie on
+the sand, mirrored in every other tank — painted by `RoomView` (with no margin: the tank
+ends at its glass) and by `DecorView` from the tank's decoration set, at one texel to a
+frame pixel for the tank's width. Over it goes a baked water with the lamp's cone and rays
+stepped through the Bayer screen, a shade that darkens toward the sand the way a room falls
+off from what glows, and the lamp's light added over the rock. Terrain off its grid is rock,
+so the template's top edge grows a rim half a tile deep; the waterline is drawn below it
+(`RIM`) and the rim is masked off.
+
+The bake is some 50–200 ms depending on the window, so it is done ahead: over the title for
+the first tank, and 2 ms a frame of play for the next one. A drop-in asked for before its
+tank is baked holds black until it is. The animal is its own `FishView` at the room's scale,
+carrying its pool of light; it falls from above the screen in a fixed time, splashes (square
+drops, a wavelet running out each way, the air it took down), and levels as it sinks. The
+view pushes in toward it as it fades to black, and fades up on the room.
 
 The drain (`DrainView` in `render/pedestals.ts`) is a pixel-map grate in the boss room's
 floor with a pulsing cold light rising out of it: once the boss is dead it is the brightest

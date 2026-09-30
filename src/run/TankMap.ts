@@ -186,7 +186,11 @@ export class TankMap {
     return this.cells.findIndex(c => c.map.gx === m.gx + dx && c.map.gy === m.gy + dy);
   }
 
-  /** Put the player in the start room, with the camera on it. */
+  /**
+   * Put the player in the start room, with the camera on it. The room's rock is not baked
+   * here — that is half a second, and a click on Hatch would sit on it before anything moved —
+   * but a little each frame under the drop-in (`warm`).
+   */
   begin() {
     const t = this.room;
     this.p.x = t.cx;
@@ -195,8 +199,16 @@ export class TankMap {
       const at = t.openSpot(new Rng(this.run.seed), this.p.genome.size);
       if (at) { this.p.x = at.x; this.p.y = at.y; }
     }
-    this.enter(this.current);
+    this.enter(this.current, false);
     this.camera.hold(t.x0, t.y0, t.width, t.height);
+  }
+
+  /** Bake the room the player is in until `deadline`; true once it can be shown. */
+  warm(deadline: number) {
+    const { view } = this.viewsOf(this.current);
+    view.prepare(deadline);
+    if (view.ready) view.update();
+    return view.ready;
   }
 
   /**
@@ -204,11 +216,11 @@ export class TankMap {
    * was left lying in it, its fauna, and — the first time a fight room is entered — its
    * hostiles, with the doors shut behind the player until they are dead.
    */
-  private enter(i: number) {
+  private enter(i: number, bake = true) {
     const c = this.cells[i];
     const t = this.terrainOf(i);
     const { view, decor } = this.viewsOf(i);
-    view.update();
+    if (bake) view.update();
     this.layers.rock.removeChildren();
     this.layers.decor.removeChildren();
     this.layers.glow.removeChildren();
@@ -451,12 +463,13 @@ export class TankMap {
   }
 
   /** The rooms' views for this frame: the current room's, and the next one's during a slide. */
-  draw(t: number) {
+  /** Pose the room's views; `bake` false leaves an unbaked current room to `warm`. */
+  draw(t: number, bake = true) {
     const rooms = this.slide ? [this.slide.from, this.slide.to] : [this.current];
     for (const i of rooms) {
       const { view, decor } = this.viewsOf(i);
       // the room being slid into may still be baking; it is finished on arrival (`enter`)
-      if (i === this.current || view.ready) view.update();
+      if ((bake && i === this.current) || view.ready) view.update();
       decor.update(t);
     }
   }

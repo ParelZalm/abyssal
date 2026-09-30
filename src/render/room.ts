@@ -98,7 +98,7 @@ function gateTexture(vertical: boolean): Texture {
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) / 16);
 
 /** A value quantised to `steps` levels through the Bayer screen, so a ramp bands as pixel art. */
-function stepped(v: number, steps: number, px: number, py: number) {
+export function stepped(v: number, steps: number, px: number, py: number) {
   const t = BAYER[(py & 3) * 4 + (px & 3)] - 0.5;
   return clamp(Math.floor(v * steps + 0.5 + t * 0.9), 0, steps) / steps;
 }
@@ -176,9 +176,12 @@ export class RoomView {
   /**
    * `density` pins the bake to a density of its own instead of following the camera's tier:
    * the design board runs at a mid-run tier for the animals, and a room baked there would
-   * show coarser rock than it plays with.
+   * show coarser rock than it plays with. `margin` is the rock baked past the room's edge,
+   * in tiles: the drop-in's tank ends at its glass, and would pay three times the pixels
+   * for a letterbox it never shows.
    */
-  constructor(private readonly terrain: Terrain, private readonly density?: number) {
+  constructor(private readonly terrain: Terrain, private readonly density?: number,
+              private readonly margin = MARGIN) {
     this.root.addChild(this.sprite);
     for (const side of terrain.doors) {
       const r = terrain.doorRect(side);
@@ -248,9 +251,10 @@ export class RoomView {
   private *bake(): Generator<void> {
     const t = this.terrain;
     const d = this.density ?? artDensity();
-    const worldW = (t.cols + MARGIN * 2) * t.tile, worldH = (t.rows + MARGIN * 2) * t.tile;
+    const m = this.margin;
+    const worldW = (t.cols + m * 2) * t.tile, worldH = (t.rows + m * 2) * t.tile;
     const w = Math.ceil(worldW * d), h = Math.ceil(worldH * d);
-    const ox = t.x0 - MARGIN * t.tile, oy = t.y0 - MARGIN * t.tile;
+    const ox = t.x0 - m * t.tile, oy = t.y0 - m * t.tile;
     const px2w = 1 / d;
 
     // the kind of every pixel, read off the terrain's own field so the edge drawn is the

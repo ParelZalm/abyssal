@@ -52,6 +52,12 @@ const CLEAR_DROP = 0.4;
  * crosses a room in the same time.
  */
 const GROWTH = 1.8;
+/**
+ * Milliseconds a frame gives the start room's bake under the drop-in: the rest of a frame
+ * at sixty with the drop-in drawn. Held in the black before the room, when nothing moves,
+ * it takes whatever is left in one go.
+ */
+const WARM_MS = 8;
 const CLEAR_DROPS: [PickupKind | 'item', number][] = [
   ['shell', 45], ['heart', 22], ['key', 15], ['item', 12], ['chest', 6],
 ];
@@ -370,9 +376,17 @@ export class Game {
     // a couple of frames of slow motion on a landed bite, so the hit registers
     dt = this.camera.slow(dt);
     this.fx.update(dt);
+    const { W, H } = this.camera;
+    if (this.phase === 'title') {
+      // the title sits idle over the first tank: bake its view from the gallery meanwhile,
+      // and the room behind the title a slice at a time rather than in the page's first frame
+      this.dropIn.prepare(this.run.tank, W, H, performance.now() + 4);
+      this.tank.warm(performance.now() + 4);
+    }
     if (this.phase === 'dropin') {
       if (this.input.anyPress) { this.input.anyPress = false; this.dropIn.skip(); }
-      if (!this.dropIn.update(dt, this.camera.W, this.camera.H)) {
+      const ready = this.tank.warm(this.dropIn.dark ? Infinity : performance.now() + WARM_MS);
+      if (!this.dropIn.update(dt, W, H, ready)) {
         this.phase = 'play';
         this.ui.hud.setChrome(true);
         this.ui.caption(null);
@@ -399,6 +413,9 @@ export class Game {
       this.run.tick(dt);
       this.dread.update(dt, this.world.hunted);
       this.impacts.hints(this.world, dt);
+      // and the next tank's, a little at a time, so the descent's drop-in starts at once
+      const next = TANK_ORDER[tankIndex(this.run.tank.id) + 1];
+      if (next) this.dropIn.prepare(tankById(next), W, H, performance.now() + 2);
     }
     this.render(dt);
   }
@@ -442,7 +459,8 @@ export class Game {
     followZoom(view.zoom);
     this.water.resize(camera.W, camera.H);
     this.ocean.update(dt, view);
-    this.tank.draw(view.t);
+    // under the drop-in and the title the room is baked a slice a frame (`warm`), not all at once here
+    this.tank.draw(view.t, this.phase !== 'dropin' && this.phase !== 'title');
     this.pickups.update(this.world.pickups, view.zoom, view.t);
     this.shots.update(this.world.shots, view.zoom);
     this.pedestals.update(this.tank.pedestals, this.tank.room.tile * HOVER, view.zoom, view.t);

@@ -397,10 +397,11 @@ codex's `tanks` raised, and the drop-in played. Past the last tank there is no n
 is won, on the *Released* screen, with the lineage.
 
 **The drop-in** (`render/dropin.ts`) plays at the start of every run and at every descent,
-3.6 s, any key skipping to its end: a dark gallery, the tank lit from a lamp in the water it
-holds, gravel and rock heaped along its floor, the animal falling from above into a splash,
-sinking and swimming down, and the view going into the glass. The phase is `dropin` while
-it runs; the HUD is hidden and the tank's name is captioned over it.
+3.6 s, any key skipping to its end: a dark gallery, the tank's own rock and growth lit from a
+lamp hung over it, the animal falling from above into a splash, sinking and swimming down,
+and the view pushing in through the glass. The phase is `dropin` while it runs; the HUD is
+hidden and the tank's name is captioned over it. It starts on the frame it is asked for: the
+start room's bake runs under it (below).
 
 **Starting forms** (`run/starts.ts`) are one per tank reached (`Codex.tanks`): the Hatchling,
 the Reef Wrasse once a run has reached the reef, the Squid Paralarva once one has reached the
@@ -426,7 +427,10 @@ holds still, carrying the player to just inside the facing door.
 **Baking ahead.** A room takes about half a second to bake, so the rooms next door bake a
 few milliseconds a frame (`RoomView.prepare`, a generator run to a deadline), the one behind
 the nearest door first, and whatever is left bakes under the slide. A crossing's worst
-frame is about 20 ms. Starting a run bakes the start room at once.
+frame is about 20 ms. Starting a run does not bake the start room in the click: `begin`
+leaves it, and `TankMap.warm` bakes it 8 ms a frame under the drop-in, which holds in the
+black before the room until it is done (about a second in, well before it would end). The
+room behind the title is baked the same way.
 
 **The minimap** (`ui/hud/Minimap.ts`) draws the rooms seen so far inside the tank's outline —
 visited ones solid, the ones seen through a door dim, the current one lit — with a glyph on

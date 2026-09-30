@@ -540,6 +540,37 @@ export const ROOMS: RoomTemplate[] = [
   },
 ];
 
+/**
+ * The tank as the drop-in shows it from outside the glass: not a room but an aquarium's
+ * rockscape, open water to the top so the animal has a surface to fall through, rock
+ * banked against both panes and a bommie on the sand. Never dealt; `render/dropin.ts`
+ * paints it with the rooms' own rock and decoration, so what is seen from the gallery is
+ * what is swum in.
+ */
+export const DIORAMA: RoomTemplate = {
+  id: 'diorama', tank: 'any', types: [],
+  rows: [
+    '................................',
+    '................................',
+    '................................',
+    '#...............................',
+    '##............................##',
+    '###...........................##',
+    '###..........................###',
+    '####.........................###',
+    '#######......................###',
+    '####.........................###',
+    '###.................o.......####',
+    '##.......####......ooo.......###',
+    '##......######..............####',
+    '#=.......####.......=====..=####',
+    '#===......##....=========oo=====',
+    '#=====o..====..====oo===========',
+    '#=======oooo====================',
+    '################################',
+  ],
+};
+
 export const tankById = (id: string) => TANKS.find(t => t.id === id)!;
 
 /** A template's tiles, row-major. */

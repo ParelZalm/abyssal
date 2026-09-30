@@ -1224,13 +1224,16 @@ function economyGroup(): DesignGroup {
 
 // ------------------------------------------------------------------ bosses and the descent
 
-/** The drop-in in a cell: drawn at a 320 × 200 screen, centred on the cell. */
+/** The drop-in in a cell: drawn at a 320 × 200 screen, centred on the cell, and cut to it. */
 class DropInCell extends Container {
   readonly drop = new DropIn();
   constructor() {
     super();
-    this.addChild(this.drop.root);
+    // the animal falls from above the screen, which a cell would otherwise show
+    const screen = new Graphics().rect(-160, -100, 320, 200).fill(0xffffff);
+    this.addChild(this.drop.root, screen);
     this.drop.root.position.set(-160, -100);
+    this.drop.root.mask = screen;
   }
 }
 
