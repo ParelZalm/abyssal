@@ -168,6 +168,22 @@ thrust eases off while the body points away from where it is going, and the play
 reverses in about half a second, a length from where it started. What was undone was the
 flip, not the directions; do not take the keys back to tank steering to fix a turn.
 
+## The aim points the body, and the swim is strokes
+
+Stage 1 kept the body level for an attack up or down and moved the bite above or below the
+head (`aimY`), because a fish pointed straight up stands on its tail. It read as the larva
+spitting out of its cheek, and it left the turn — the thing side-on bodies do best — with
+nothing to do in a fight. Every arrow now points the body: nose-down at the drawn pitch cap
+(`drawnAngle`, so it never stands on its tail), a flip for left and right, and nothing thrown
+until it points. The pivot is the price of a new aim, which is what makes aiming a skill
+rather than a key. The earlier rule is in the history; do not bring back `aimY` to make a
+vertical shot instant — tune `PIVOT` instead.
+
+The steady swim went at the same time, for strokes: a kick and a glide at the same average
+speed. A steady thrust reached cruise and sat there, which read as a sprite on a rail and
+gave a dodge no answer to the key. Shots carry half the body's velocity, as Isaac's tears
+do, so the swim aims as well as the arrows.
+
 ## Creatures are one deforming surface, not a chain of parts
 
 Three passes died on the same problem, in this order: a jointed chain of `Graphics` links;

@@ -19,8 +19,8 @@ that finishes it.
 - **6–8 rooms a tank**, one screen each, side-on, a fixed camera that slides between
   rooms. One start, one treasure, one shop, one boss, at least three fights; a deal room
   may open after the boss. The minimap is drawn inside the tank's outline.
-- **Controls.** WASD swims, no boost. Arrows attack in four directions; the body stays
-  level for up and down. Space fires the active mutation, E takes what the player is beside
+- **Controls.** WASD swims, no boost. Arrows attack in four directions, and each points
+  the body — nose-down to shoot down; shots lean with the swim. Space fires the active mutation, E takes what the player is beside
   (a pedestal's good, an item lying loose), Q uses the held item.
 - **Hits.** Half a heart each, a boss's a whole one, ~0.8 s of invulnerability. Armour is
   a chance to shrug one off, capped near 40%.

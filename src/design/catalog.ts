@@ -31,7 +31,10 @@ import { paintMap, priceCanvas } from '../render/pickups';
 import { POT_COLOURS, POT_MAP } from '../render/pots';
 import { glyphCanvas } from '../render/glyphs';
 import { HOVER } from '../run/TankMap';
-import { SHOT_RANGE, SHOT_SPEED as PLAYER_SHOT_SPEED } from '../input/PlayerController';
+import {
+  AIM_LEAN, AIM_TOL, BURST_TIME, PIVOT, SHOT_RANGE, SHOT_SPEED as PLAYER_SHOT_SPEED, SNAP, STRIKE,
+  STROKE_EVERY,
+} from '../input/PlayerController';
 import { primaryOf, organsOf, strikeOf } from '../sim/organs';
 import { HATCHED } from '../run/starts';
 import { shotGlow, shotTexture } from '../render/shots';
@@ -44,7 +47,7 @@ import type { Role, ShotKind, Species } from '../content/species';
 import { Texture } from 'pixi.js';
 import { speciesById } from '../content/species';
 import type { IconName } from '../ui/icons';
-import { rgb, Rng } from '../core/util';
+import { angleDelta, rgb, Rng } from '../core/util';
 import { waterColor } from '../render/water';
 import { fieldKinds, Fields } from '../render/fields';
 
@@ -185,10 +188,80 @@ function motionGroup(): DesignGroup {
       });
     }
   }
+  items.push(larvaStroke(), larvaAim());
   return {
     id: 'motion', name: 'Motion',
-    note: 'Every animation state, one per cell: idle, swim, turn, attack, hurt, death.',
+    note: 'Every animation state, one per cell: idle, swim, turn, attack, hurt, death — and the larva\'s own two, the stroke and the aim.',
     items,
+  };
+}
+
+/**
+ * The player's swim is strokes, on `PlayerController`'s clock: the tail snapped through one
+ * sweep, the body bunched and thrown long, then a glide. The cell carries it across and back
+ * so the surge and the sag can be seen as well as the snap.
+ */
+function larvaStroke(): DesignItem {
+  const g = larva();
+  let t = 0, cd = 0, burst = 0, beat = 0, x = 0, v = 0, dir: 1 | -1 = 1;
+  const span = g.size * 6;
+  return {
+    id: 'larva-stroke', name: 'Larva · stroke',
+    note: 'The swim in strokes: a kick every 0.3 s, the tail snapped through a sweep and the body thrown long, then a glide.',
+    source: 'src/input/PlayerController.ts', span, depth: tankById('nursery').depth, genome: g,
+    make: () => boardFish(g, 'wraith'),
+    animate: (view: Container, dt: number) => {
+      const b = view as BoardFish;
+      t += dt; cd -= dt;
+      if (cd <= 0) { cd = STROKE_EVERY; burst = 1; v += g.size * 3.2; }
+      beat += dt * (9 + SNAP * burst);
+      burst = Math.max(0, burst - dt / BURST_TIME);
+      v *= Math.exp(-3.1 * dt);
+      x += v * dir * dt;
+      if (x * dir > span * 0.32) { dir = dir > 0 ? -1 : 1; v = 0; }
+      b.fish.animate(dt, 0.7, beat, 0, { ...REST, burst });
+      b.fish.place(x, 0, dir > 0 ? 0 : Math.PI, dir);
+      b.fish.show(true, 1, 0xffffff);
+    },
+  };
+}
+
+/**
+ * The aim is a pivot: each arrow in turn — right, down, left, up — flips or pitches the body
+ * to it at the controller's rate, and the shot goes only once it points there, from the
+ * drawn mouth. The same steps `PlayerController.aimAt` and `steer` take, on the same numbers.
+ */
+function larvaAim(): DesignItem {
+  const g = larva();
+  const AIMS: [number, number][] = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+  let t = 0, face: 1 | -1 = 1, angle = 0, bank = 0, cd = 0, strike = 0, beat = 0;
+  const prim = primaryOf({ organs: organsOf(g), genome: g } as never)!;
+  return {
+    id: 'larva-aim', name: 'Larva · aim',
+    note: 'Every arrow points the body: a flip for left and right, nose-down or nose-up at the drawn cap, and no shot until it points.',
+    source: 'src/input/PlayerController.ts', span: g.size * 4.5, depth: tankById('nursery').depth, genome: g,
+    make: () => new RoleCell(g, 'wraith', false),
+    animate: (view: Container, dt: number) => {
+      const cell = view as RoleCell;
+      const fish = cell.fish.fish;
+      t += dt; cd -= dt; beat += dt * 6;
+      const [ax, ay] = AIMS[Math.floor(t / 0.9) % AIMS.length];
+      if (ax && (ax > 0 ? 1 : -1) !== face) { face = ax > 0 ? 1 : -1; angle = Math.PI - angle; }
+      const hold = ax ? (ax > 0 ? 0 : Math.PI) : Math.atan2(ay, face * AIM_LEAN);
+      const rate = PIVOT * g.turn * dt;
+      const turn = Math.max(-rate, Math.min(rate, angleDelta(angle, hold)));
+      angle += turn;
+      bank += ((dt > 0 ? Math.max(-1, Math.min(1, turn / dt / g.turn)) : 0) - bank) * Math.min(1, dt * 7);
+      if (cd <= 0 && Math.abs(angleDelta(angle, hold)) < AIM_TOL) {
+        cd = 0.4; strike = 1;
+        cell.fire(prim.shot, prim.fan.map(o => Math.atan2(ay, ax) + o), g.size * 0.5);
+      }
+      strike = Math.max(0, strike - dt / STRIKE);
+      cell.fly(dt, PLAYER_SHOT_SPEED * tankById('nursery').tile);
+      fish.animate(dt, 0.2, beat, bank, { windup: 0, strike, open: strike > 0 });
+      fish.place(0, 0, angle, face);
+      fish.show(true, 1, 0xffffff);
+    },
   };
 }
 

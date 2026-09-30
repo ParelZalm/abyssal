@@ -318,15 +318,17 @@ export class World {
 
   /**
    * Put a shot in the water from (`x`, `y`), heading `a` at `speed` tiles a second, to fly
-   * `range` tiles, worth `mult` of a bite if the player fired it. Nothing fires outside a
-   * room: a shot's size, speed and range are all in the room's tiles.
+   * `range` tiles, worth `mult` of a bite if the player fired it, carrying (`cvx`, `cvy`) world
+   * units a second of the shooter's own way on — Isaac's tears, which leave with some of his
+   * walk. Nothing fires outside a room: a shot's size, speed and range are all in the room's
+   * tiles.
    */
   fire(by: Creature, kind: ShotKind, x: number, y: number, a: number, speed: number,
-       range = speed * SHOT_LIFE, mult = 1) {
+       range = speed * SHOT_LIFE, mult = 1, cvx = 0, cvy = 0) {
     const t = this.terrain;
     if (!t) return;
     const v = speed * t.tile;
-    this.shots.push({ kind, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: SHOT_R * t.tile,
+    this.shots.push({ kind, x, y, vx: Math.cos(a) * v + cvx, vy: Math.sin(a) * v + cvy, r: SHOT_R * t.tile,
       t: 0, life: range / speed, mult, by });
     this.pulses.push({ x, y, r: by.radius * 0.6, kind: 'shot', shot: kind, hostile: !by.isPlayer });
   }

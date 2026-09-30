@@ -67,20 +67,38 @@ same way to the view through `Creature.pose`.
 ### The player's strike
 
 The player does not bite on contact. The arrows throw a strike one of four ways
-(`PlayerController.strike`): left and right turn the body to face it, up and down leave it
-level and move the bite above or below the head (`Creature.aimY`, read by `biteX`/`biteY`),
-since a fish pointed straight up stands on its tail. The strike is out for 0.2 s and the
-bite lands on whatever is in reach while it is (`Combat.strike`); nothing is pulled in by a
-gulp, so swimming into prey is not eating it. Strikes come every `ATTACK_EVERY` (0.4 s)
-bent by the organs' `biteRate`, which is the HUD's rate.
+(`PlayerController.strike`), and **every arrow points the body**: left and right flip it
+on the spot (`aimAt`), up and down pitch it nose-up or nose-down on the side it already
+faces — held a hair off vertical (`AIM_LEAN`) so the level-out and the flip still know
+which side it is on, and drawn at the pitch cap. Nothing is thrown until the body points
+within `AIM_TOL` (0.3 rad) of the aim, and it pivots there at `PIVOT` (3) times its turn
+rate, a constant rate rather than an ease: level to down costs a hatchling about 0.1 s, a
+climb into a dive twice that, and a flip nothing. So a new aim has a price, a held one does
+not, and fins that turn faster aim faster. The strike leaves from the mouth as it is drawn
+(`biteX`/`biteY`, at `drawnAngle`), not where the heading would put it. It is out for 0.2 s
+and the bite lands on whatever is in reach while it is (`Combat.strike`); nothing is pulled
+in by a gulp, so swimming into prey is not eating it. Strikes come every `ATTACK_EVERY`
+(0.4 s) bent by the organs' `biteRate`, which is the HUD's rate.
 
 While an arrow is held, and for `HOLD_FACE` after, the body **strafes** (`Creature.strafe`):
-it stays level and facing the attack and moves toward WASD whichever way that is, with even
-drag in every direction and backing away held to 0.6 of top speed — a fish sculls, it does
-not swim tail first. That is Isaac's walk one way, shoot the other, and it is what kiting
-is. A strike thrown against the direction of the swim keeps only a quarter of its lunge:
-at full strength each strike at a pursuer threw the body back into it, and a held arrow
-while retreating stood still.
+it holds the aim's heading and moves toward WASD whichever way that is, with even drag in
+every direction and backing away from where it points held to 0.6 of top speed — a fish
+sculls, it does not swim tail first (`Creature.backing`, smooth in the angle). That is
+Isaac's walk one way, shoot the other, and it is what kiting is. A strike thrown against the
+direction of the swim keeps only a quarter of its lunge: at full strength each strike at a
+pursuer threw the body back into it, and a held arrow while retreating stood still.
+
+**The swim is strokes** (`PlayerController.stroke`): a kick every `STROKE_EVERY` (0.3 s)
+that drag bleeds into a glide, over a steady `CRUISE` (0.3) share of the old thrust, which
+`drive`, `propel` and `strafe` take as `power`. The kick is sized from the drag so the
+average is still the speed stat — measured, a held key averages the same 116 as the steady
+swim did — while the body surges to about 1.1 of it and sags to 0.4. A fresh press or a new
+direction strokes at once once `STROKE_GAP` (0.16 s) has passed, so a dodge answers the key.
+Swimming free, the kick goes down the nose and waits for the body to point within
+`STROKE_ALIGN` of the swim: turn, then kick. Strafing, it goes down the swim, cut by the
+backpedal. Each stroke sets `Creature.burst`, which the view reads through `pose` to bunch
+the body and throw it long, drives the tail through one sweep (`SNAP`), and puffs wake off
+the tail. A bell pulses on its own clock and takes none.
 
 The lunge goes through the boost's old seam, `Creature.kick`: it opens the same surge
 window, so what organs did on a boost kick — Ballistic's ram, Flash Sense, Smoke Screen's
@@ -89,8 +107,10 @@ shove.
 
 **A ranged primary** (Archer Spit, which every larva hatches with, and Spine Volley;
 `Organ.primary`) fires the strike instead of biting with it — only the Lunging Bite brings the
-bite back, at `strikeOf` (twice) its damage: its shots leave from `biteX`/`biteY` down the aim, the body is pushed
-back a little rather than forward, and `Combat.strike` lands no bite while one is carried.
+bite back, at `strikeOf` (twice) its damage: its shots leave from `biteX`/`biteY` down the aim
+carrying half the body's own velocity (`SHOT_CARRY`) — Isaac's tears, which lean with his
+walk, so a shot fired right while swimming up drifts up — the body is pushed back a little
+rather than forward, and `Combat.strike` lands no bite while one is carried.
 The player's shots are `World.shots` like a hostile's, looking for anything alive but the
 player — and while a room is locked, only for its hostiles, so a shoal in the line of fire
 does not soak up the fight's shots; the bite takes the same rule. One lands as `Combat.hit`

@@ -1,6 +1,7 @@
 import { FishView, type Pose } from '../render/creature/fishview';
 import { armourOf, maxHp, type Genome } from '../content/genome';
 import { hunts, type Species } from '../content/species';
+import { drawnAngle } from '../content/form';
 import { angleDelta, clamp, TAU } from '../core/util';
 import { guardedOf, organsOf, swimOf, type Organ, type SwimMods } from './organs';
 
@@ -74,11 +75,11 @@ export class Creature {
   attackT = 0;
   attackLen = 1;
   /**
-   * Which way the player's strike reaches, while one is out. Side-on the body stays level
-   * for an attack up or down, so `aimY` moves the bite above or below the head rather than
-   * pointing the body there (`biteX`, `biteY`). Zero for everything else.
+   * 1 as a stroke of the player's swim is thrown, down to 0 as the glide takes over
+   * (`PlayerController`): the view snaps the tail and throws the body long on it. Zero for
+   * everything else, which swims on a steady thrust.
    */
-  aimY = 0;
+  burst = 0;
   /**
    * Whether this animal hunts the player on sight, whatever else is in the water — a room's
    * hostile rather than its fauna (`CONTEXT.md`). It takes the player as its quarry whenever
@@ -303,9 +304,13 @@ export class Creature {
   get mouthX() { return this.x + Math.cos(this.angle) * this.radius * 0.8; }
   get mouthY() { return this.y + Math.sin(this.angle) * this.radius * 0.8; }
 
-  /** Where a bite lands from: the mouth, or above or below the head for a strike up or down. */
-  get biteX() { return this.aimY ? this.x + this.face * this.radius * 0.45 : this.mouthX; }
-  get biteY() { return this.aimY ? this.y + this.aimY * this.radius * 0.7 : this.mouthY; }
+  /**
+   * Where a strike leaves from: the mouth as it is drawn, at the capped pitch (`drawnAngle`)
+   * rather than the heading. A body aimed straight down is drawn nose-down at the cap, and a
+   * shot that left from where the heading put the mouth came out of its cheek.
+   */
+  get biteX() { return this.x + Math.cos(drawnAngle(this.angle, this.face)) * this.face * this.radius * 0.8; }
+  get biteY() { return this.y + Math.sin(drawnAngle(this.angle, this.face)) * this.face * this.radius * 0.8; }
 
   /** Effective reach: a distensible gullet lets you swallow above your weight. */
   get swallowSize() {
@@ -378,7 +383,7 @@ export class Creature {
     // the jaw opens partway into the wind-up, not on its first frame: the coil comes first
     const open = windup > 0.35 || this.attack === 'strike' || this.rushT > 0 || this.drawT > 0 ||
       hungry;
-    return { windup, strike, open };
+    return { windup, strike, open, burst: this.burst };
   }
 
   /** The fade as an alpha, eased at both ends so an arrival has no edges. */
@@ -397,11 +402,12 @@ export class Creature {
   /**
    * One swim step from raw controls: `turnInput` is a multiple of the available turning
    * rate, ±1 an ordinary turn and more only for a hard one (`drive`'s `flick`), and
-   * `throttle` is the propelling force along the body axis, negative to back up. Thrust
+   * `throttle` is the propelling force along the body axis, negative to back up, and `power`
+   * scales only the push it makes — the player's strokes carry the rest of it. Thrust
    * surges on the tail beat, and lateral drag is far stronger than forward drag — that is
    * what makes a turn arc and a glide coast instead of the heading snapping the velocity.
    */
-  propel(dt: number, turnInput: number, throttle: number) {
+  propel(dt: number, turnInput: number, throttle: number, power = 1) {
     const g = this.genome;
     const top = Math.max(1, g.speed);
     const turn = turnInput * this.agility() * dt;
@@ -429,7 +435,7 @@ export class Creature {
     }
     // a stroke pushes; backing up is a steady scull, not a beat
     const stroke = (throttle > 0 ? 0.62 + 0.62 * Math.max(0, Math.sin(this.beat)) : 1) * m.stroke;
-    const accel = top * DRAG_FWD * throttle * stroke;
+    const accel = top * DRAG_FWD * throttle * stroke * power;
     this.vx += fx * accel * dt;
     this.vy += fy * accel * dt;
     const idle = Math.abs(throttle) < 0.1;
@@ -456,24 +462,30 @@ export class Creature {
   }
 
   /**
-   * Swimming while holding a facing: the body stays level and turned the way `face` says,
-   * and moves toward (`dx`, `dy`) whichever way that is — the player's swim while an attack
-   * is held, Isaac's walk-one-way-shoot-the-other. Drag is the same in every direction
-   * here, since a body swimming sideways to its keel is the whole point; backing away is
-   * held to `BACKPEDAL` of top speed.
+   * Swimming while holding a facing: the body turns to `hold`, level on its facing unless
+   * told otherwise, and moves toward (`dx`, `dy`) whichever way it points — the player's swim
+   * while an attack is held, Isaac's walk-one-way-shoot-the-other. Given a `pivot` in radians
+   * a second it turns at that constant rate rather than easing, so the time the player's aim
+   * costs is the angle it is thrown through. Drag is the same in every
+   * direction here, since a body swimming sideways to its keel is the whole point; backing
+   * away from where it points is held to `BACKPEDAL` of top speed.
    */
-  strafe(dt: number, dx: number, dy: number, throttle: number) {
+  strafe(dt: number, dx: number, dy: number, throttle: number,
+         hold = this.face > 0 ? 0 : Math.PI, pivot = 0, power = 1) {
     const g = this.genome;
     const top = Math.max(1, g.speed);
-    const level = this.face > 0 ? 0 : Math.PI;
-    this.angle += angleDelta(this.angle, level) * Math.min(1, dt * 12);
-    this.bank += -this.bank * Math.min(1, dt * 7);
+    const want = angleDelta(this.angle, hold);
+    const turn = pivot > 0 ? clamp(want, -pivot * dt, pivot * dt) : want * Math.min(1, dt * 12);
+    this.angle += turn;
+    // the body curls into a pivot the way it curls into a turn, so a snapped aim reads as a
+    // flex of the whole animal rather than a sprite rotated on its centre
+    const curl = pivot > 0 && dt > 0 ? clamp(turn / dt / Math.max(0.01, g.turn), -1, 1) : 0;
+    this.bank += (curl - this.bank) * Math.min(1, dt * 7);
     const n = Math.hypot(dx, dy);
     const speed = Math.hypot(this.vx, this.vy);
     this.beat += dt * (3.4 + throttle * 5.5 + (speed / top) * 3.5);
     if (n > 0) {
-      const back = dx * this.face < 0 ? BACKPEDAL : 1;
-      const accel = top * DRAG_FWD * throttle * back * this.swim.stroke;
+      const accel = top * DRAG_FWD * throttle * this.backing(dx / n, dy / n, hold) * this.swim.stroke * power;
       this.vx += (dx / n) * accel * dt;
       this.vy += (dy / n) * accel * dt;
     }
@@ -483,6 +495,11 @@ export class Creature {
     this.thrust = n > 0 ? throttle : 0;
   }
 
+  /** The share of a strafing push kept swimming (`ux`, `uy`) while pointed along `hold`. */
+  backing(ux: number, uy: number, hold: number) {
+    return 1 - (1 - BACKPEDAL) * Math.max(0, -(ux * Math.cos(hold) + uy * Math.sin(hold)));
+  }
+
   /**
    * Steering for anything that thinks in headings rather than in keys. A heading across to
    * the other side is a flip; what is left is pitch, and `flick` is extra turning authority
@@ -490,7 +507,7 @@ export class Creature {
    * widest — a dive thrown into a climb snaps like a C-start rather than swimming an arc.
    * Only the player asks for it, so the chases tuned against the ordinary rate keep it.
    */
-  drive(dt: number, desired: number, throttle: number, flick = 0) {
+  drive(dt: number, desired: number, throttle: number, flick = 0, power = 1) {
     // Turning back is a flip, in one step: the heading mirrored about vertical keeps its climb
     // or dive and swaps its side. Only on a heading clearly across — the same 0.2 band
     // `faceFor` holds a facing with — or a body swimming near vertical would flip on every
@@ -506,6 +523,6 @@ export class Creature {
     // tapered over the whole turn, not cut at the perpendicular, or the flick runs out
     // halfway round and the back half of a hard turn crawls at the ordinary rate
     const reach = 1 + flick * (1 - Math.cos(want)) * 0.5;
-    this.propel(dt, rate > 0 ? clamp(want / rate, -reach, reach) : 0, throttle);
+    this.propel(dt, rate > 0 ? clamp(want / rate, -reach, reach) : 0, throttle, power);
   }
 }

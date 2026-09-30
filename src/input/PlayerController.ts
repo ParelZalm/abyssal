@@ -2,7 +2,7 @@ import { biteDamage } from '../content/genome';
 import { angleDelta } from '../core/util';
 import type { Fx } from '../render/fx';
 import { activeOf, biteRateOf, boostModsOf, fire, POISE_MAX, primaryOf, PUFF_TIME, strikeOf } from '../sim/organs';
-import { shrugChance, type Creature } from '../sim/creature';
+import { DRAG_FWD, shrugChance, type Creature } from '../sim/creature';
 import type { World } from '../sim/world';
 import type { Input } from './Input';
 
@@ -20,7 +20,7 @@ const FLICK = 6;
  * after it, and the kick, as a share of top speed. Short and hard, because a room is a
  * dozen body lengths across and a lunge that carries three of them is a dash, not a bite.
  */
-const STRIKE = 0.2;
+export const STRIKE = 0.2;
 const RECOVER = 0.14;
 const LUNGE = 0.95;
 /**
@@ -48,6 +48,44 @@ const RECOIL = 0.18;
  * the body back to its swim the frame the key comes up, and the lunge happens tail first.
  */
 const HOLD_FACE = 0.25;
+/**
+ * The aim is a pivot. Every arrow points the body — up and down as well, nose-up or nose-down
+ * at the drawn cap — and nothing is thrown until it points within `AIM_TOL` of the aim, so a
+ * new aim costs the angle it is thrown through at `PIVOT` times the body's turn rate: level to
+ * straight down in about 0.1 s for a hatchling, a climb into a dive twice that, and a flip
+ * left or right nothing at all. Fins that turn faster aim faster. `AIM_LEAN` keeps a vertical
+ * aim a hair on the facing's side of vertical, where the level-out and the flip both still
+ * know which side the body is on; drawn, it is the cap either way.
+ */
+export const PIVOT = 3;
+export const AIM_TOL = 0.3;
+export const AIM_LEAN = 0.25;
+/**
+ * The swim is strokes: a kick every `STROKE_EVERY`, bled off by drag into a glide, over a
+ * steady `CRUISE` share of the old thrust. The kick is sized so the average holds the speed
+ * stat — a stroke's average push in `propel` is 0.82 of the thrust, and a kick J every T
+ * against drag k averages J / kT — so the body surges to about 1.1 of its speed and sags
+ * to 0.4 rather than gliding along at one. A fresh press or a new direction strokes at once
+ * if `STROKE_GAP` has passed, which is what makes a dodge a dodge; a body turning waits to
+ * point before it kicks, since the kick goes down its nose.
+ */
+const CRUISE = 0.3;
+export const STROKE_EVERY = 0.3;
+const STROKE_GAP = 0.16;
+const STROKE_KICK = (1 - CRUISE) * 0.82 * DRAG_FWD * STROKE_EVERY;
+const STROKE_ALIGN = 0.7;
+/**
+ * How long a stroke's snap lasts on the body, and how fast its tail sweeps through it: the
+ * beat is driven half a wave, one sweep of the tail, while the snap decays.
+ */
+export const BURST_TIME = 0.18;
+export const SNAP = (2 * Math.PI) / BURST_TIME;
+/**
+ * The share of the body's own velocity a shot carries off. Isaac's tears lean with his walk,
+ * and a shot fired right while swimming up drifts up with it: the swim aims as well as the
+ * arrows do. Half keeps a strafed volley on its line more than off it.
+ */
+const SHOT_CARRY = 0.5;
 
 /** The stat column: what the body's attack and swim come to, in the room's own units. */
 export interface Stats {
@@ -81,6 +119,14 @@ export class PlayerController {
   private attackCd = 0;
   /** Seconds left facing the last attack; while it runs the body strafes. */
   private faceT = 0;
+  /** The heading the last aim wants the body at, and that aim's direction on the arrows. */
+  private holdA = 0;
+  /** Seconds until the next stroke of the swim, and the direction the last one was asked for. */
+  private strokeCd = 0;
+  private swimX = 0;
+  private swimY = 0;
+  /** A start or a change of direction waiting for the body to point, to stroke at once. */
+  private fresh = false;
   /** Whether a lurking body was wound to full last frame, so the cue fires on the edge. */
   private poised = false;
 
@@ -141,15 +187,13 @@ export class PlayerController {
 
     this.attackCd = Math.max(0, this.attackCd - dt);
     this.tickStrike(dt);
-    if (aim && this.attackCd <= 0 && p.attack === 'none') {
-      const away = dx * aim[0] < 0 || dy * aim[1] < 0;
-      this.strike(aim[0], aim[1], away ? LUNGE_RETREAT : LUNGE);
-    }
+    if (aim) this.holdA = this.aimAt(aim[0], aim[1]);
     this.faceT = aim ? HOLD_FACE : Math.max(0, this.faceT - dt);
 
     const moving = dx !== 0 || dy !== 0;
-    if (this.faceT > 0 || p.attack !== 'none') {
-      p.strafe(dt, dx, dy, moving ? 1 : 0);
+    const holding = this.faceT > 0 || p.attack !== 'none';
+    if (holding) {
+      p.strafe(dt, dx, dy, moving ? 1 : 0, this.holdA, PIVOT * p.genome.turn, CRUISE);
     } else {
       const desired = moving ? Math.atan2(dy, dx) : p.angle;
       // Turn first, then swim. Full thrust on a body pointed away from where it wants to go
@@ -157,7 +201,15 @@ export class PlayerController {
       // to, so a hard turn pivots. Floored at 0.3, above the 0.2 under which `propel` levels
       // the body out and would fight the turn, and the 0.1 under which `drive` will not flip.
       const align = Math.cos(angleDelta(p.angle, desired));
-      p.drive(dt, desired, moving ? 0.3 + 0.7 * Math.max(0, align) : 0, FLICK);
+      p.drive(dt, desired, moving ? 0.3 + 0.7 * Math.max(0, align) : 0, FLICK, CRUISE);
+    }
+    this.stroke(dt, dx, dy, holding);
+
+    // thrown once the body points down the aim: the pivot is the price of a new one
+    if (aim && this.attackCd <= 0 && p.attack === 'none' &&
+        Math.abs(angleDelta(p.angle, this.holdA)) < AIM_TOL) {
+      const away = dx * aim[0] < 0 || dy * aim[1] < 0;
+      this.strike(aim[0], aim[1], away ? LUNGE_RETREAT : LUNGE);
     }
 
     this.fireActive();
@@ -181,30 +233,80 @@ export class PlayerController {
   }
 
   /**
-   * Throw a strike one of the four ways. Left and right turn the body to face it; up and
-   * down leave it level and reach the bite above or below the head, since a fish pointed
-   * straight up stands on its tail. The bite itself is `Combat`'s: it lands on whatever is
-   * in reach while the strike is out, and ends the strike when it does.
+   * The heading an aim wants, turning the body to its side first: left and right are a flip
+   * on the spot, the way `drive` turns back, and up and down pitch it on the side it already
+   * faces. `PlayerController.steer` pivots it there.
+   */
+  private aimAt(ax: number, ay: number) {
+    const p = this.p;
+    if (ax && (ax > 0 ? 1 : -1) !== p.face) {
+      p.face = ax > 0 ? 1 : -1;
+      p.angle = Math.PI - p.angle;
+    }
+    return ax ? (ax > 0 ? 0 : Math.PI) : Math.atan2(ay, p.face * AIM_LEAN);
+  }
+
+  /**
+   * A stroke of the swim, when one is due: a kick down the nose — or down the swim, for a body
+   * strafing — that drag bleeds into a glide, with the tail snapped through a sweep and a
+   * puff of wake. A bell pulses on its own clock in `propel` and takes none.
+   */
+  private stroke(dt: number, dx: number, dy: number, holding: boolean) {
+    const p = this.p;
+    this.strokeCd = Math.max(0, this.strokeCd - dt);
+    if (p.burst > 0) {
+      p.beat += dt * SNAP * p.burst;
+      p.burst = Math.max(0, p.burst - dt / BURST_TIME);
+    }
+    const n = Math.hypot(dx, dy);
+    if (!n || p.swim.pulseEvery > 0) { this.swimX = this.swimY = 0; return; }
+    const ux = dx / n, uy = dy / n;
+    if (ux * this.swimX + uy * this.swimY < 0.5) this.fresh = true;
+    this.swimX = ux; this.swimY = uy;
+    if (this.strokeCd > 0 && !(this.fresh && this.strokeCd <= STROKE_EVERY - STROKE_GAP)) return;
+    let kx = ux, ky = uy, share = 1;
+    if (holding) {
+      share = p.backing(ux, uy, this.holdA);
+    } else {
+      kx = Math.cos(p.angle); ky = Math.sin(p.angle);
+      if (kx * ux + ky * uy < STROKE_ALIGN) return;
+    }
+    const kick = Math.max(1, p.genome.speed) * STROKE_KICK * p.swim.stroke * share;
+    p.vx += kx * kick;
+    p.vy += ky * kick;
+    p.burst = 1;
+    this.strokeCd = STROKE_EVERY;
+    this.fresh = false;
+    const back = p.radius * 1.2;
+    for (let i = 0; i < 4; i++) {
+      this.fx.wake(
+        p.x - kx * back, p.y - ky * back,
+        -kx * kick * (0.3 + Math.random() * 0.3) + (Math.random() - 0.5) * 60,
+        -ky * kick * (0.3 + Math.random() * 0.3) + (Math.random() - 0.5) * 60,
+        0xcdf6e6, p.radius * (0.18 + Math.random() * 0.16));
+    }
+  }
+
+  /**
+   * Throw a strike one of the four ways, down the aim the body is pointed along. The bite
+   * itself is `Combat`'s: it lands on whatever is in reach of the mouth while the strike is
+   * out, and ends the strike when it does.
    */
   private strike(ax: number, ay: number, lunge: number) {
     const p = this.p;
-    if (ax) {
-      p.face = ax > 0 ? 1 : -1;
-      p.angle = ax > 0 ? 0 : Math.PI;
-    }
-    p.aimY = ay;
     p.attack = 'strike';
     p.attackT = p.attackLen = STRIKE;
     this.attackCd = biteRateOf(p, ATTACK_EVERY);
     const prim = primaryOf(p);
     if (prim) {
-      // fired, not bitten: from the mouth, or above or below the head, down the aim. The kick
+      // fired, not bitten: from the mouth, down the aim, leaning with the swim. The kick
       // still opens its window, so what organs do on a strike they do on a shot; the body is
       // pushed back a little rather than thrown forward
       p.kick(STRIKE);
       const a = Math.atan2(ay, ax);
       for (const off of prim.fan) {
-        this.world.fire(p, prim.shot, p.biteX, p.biteY, a + off, this.shotSpeed(), SHOT_RANGE, prim.mult);
+        this.world.fire(p, prim.shot, p.biteX, p.biteY, a + off, this.shotSpeed(), SHOT_RANGE, prim.mult,
+          p.vx * SHOT_CARRY, p.vy * SHOT_CARRY);
       }
       const top = Math.max(1, p.genome.speed);
       p.vx -= ax * top * RECOIL;
@@ -233,7 +335,6 @@ export class PlayerController {
       p.attackT = p.attackLen = RECOVER;
     } else {
       p.attack = 'none';
-      p.aimY = 0;
     }
   }
 

@@ -87,6 +87,8 @@ export interface Pose {
   strike: number;
   /** The jaw open — a strike, a guardian's tell, or the player with prey at its mouth. */
   open: boolean;
+  /** How much of a swim stroke is left, 1 as it is kicked down to 0: only the player's. */
+  burst?: number;
 }
 export const REST: Pose = { windup: 0, strike: 0, open: false };
 
@@ -750,6 +752,15 @@ export class FishView extends Container {
     const k = act.strike;
     sx *= 1 + k * 0.16;
     sy *= 1 - k * 0.1;
+    // a swim stroke: bunched for an instant as the tail snaps, then thrown long while the
+    // kick carries it, and settled by the time the glide has bled it off
+    const b = act.burst ?? 0;
+    if (b > 0) {
+      const q = 1 - b;
+      const bunch = Math.max(0, 1 - q / 0.3), shoot = Math.sin(q * Math.PI);
+      sx *= 1 - bunch * 0.12 + shoot * 0.16;
+      sy *= 1 + bunch * 0.1 - shoot * 0.08;
+    }
     if (this.chompT > 0) {
       this.chompT = Math.max(0, this.chompT - dt * 5.5);
       // one hump: squash along the body and flare across it, then release
@@ -777,7 +788,8 @@ export class FishView extends Container {
       u.uFlash = this.hurtT > HURT_WHITE ? 0.9 * ((this.hurtT - HURT_WHITE) / (1 - HURT_WHITE)) ** 0.5 : 0;
       this.skin.uniforms.update();
     }
-    this.pose(beat, bank, thrust * (1 + w * 0.9), dt);
+    // the stroke's tail sweeps wider than the cruise's: the snap is what the eye reads as a kick
+    this.pose(beat, bank, thrust * (1 + w * 0.9) + b * 0.7, dt);
   }
 
   private skinWith(texture: Baked['texture']) {
