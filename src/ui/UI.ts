@@ -36,8 +36,9 @@ export class UI {
     this.hud.caption(text);
   }
 
-  toast(text: string) {
-    this.hud.showToast(text);
+  /** A line along the bottom; `boss` for a guardian's tell or set piece. */
+  toast(text: string, tone: 'boss' | null = null) {
+    this.hud.showToast(text, tone);
   }
 
   discovery(name: string, desc: string, first: boolean) {

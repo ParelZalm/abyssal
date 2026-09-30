@@ -1,3 +1,4 @@
+import { div } from '../dom/element';
 import type { HudState } from '../types';
 import { ActiveSlot } from './ActiveSlot';
 import { DangerIndicator } from './DangerIndicator';
@@ -32,21 +33,24 @@ export class Hud {
   private readonly captionEl = document.createElement('div');
 
   constructor() {
-    // wrapper stays layout-neutral; children keep their absolute positions under #ui
+    // wrapper stays layout-neutral; the stacks keep their absolute positions under #ui
     this.element.style.display = 'contents';
+    // Each region is one stack, so what shares a corner pushes its neighbour along instead of
+    // landing on it: pinned one by one, the mutations sat over the minimap, the toast over the
+    // boss bar, the synergy card over the pedestal's. The transient pieces go on the end
+    // nearest the middle of the screen, where their reserved space pushes nothing.
+    const stack = (where: string, ...parts: HTMLElement[]) => {
+      const s = div(`hud-stack ${where}`);
+      s.append(...parts);
+      return s;
+    };
     this.element.append(
-      this.status.element,
-      this.traits.element,
-      this.run.element,
-      this.toast.element,
       this.danger.element,
-      this.active.element,
-      this.discovery.element,
-      this.minimap.element,
-      this.stats.element,
-      this.offer.element,
+      stack('top-left', this.status.element, this.stats.element),
+      stack('top-centre', this.run.element, this.offer.element, this.discovery.element),
+      stack('top-right', this.minimap.element, this.traits.element),
+      stack('bottom-centre', this.toast.element, this.boss.element, this.active.element),
       this.item.element,
-      this.boss.element,
       this.captionEl,
     );
     this.captionEl.className = 'caption';
@@ -84,8 +88,8 @@ export class Hud {
     this.boss.update(s.boss);
   }
 
-  showToast(text: string) {
-    this.toast.show(text);
+  showToast(text: string, tone: 'boss' | null = null) {
+    this.toast.show(text, tone);
   }
 
   showDiscovery(name: string, desc: string, first: boolean) {

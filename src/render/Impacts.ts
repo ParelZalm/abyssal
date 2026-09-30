@@ -134,12 +134,13 @@ export class Impacts {
             ? `The ${who.name} is clicking — get out from in front of it`
             : who.pattern === 'suck'
               ? `The ${who.name} is drawing water in — boost straight out, or cut across it`
-              : `The ${who.name} is lining up — get out of its line, then strike it while it is spent`);
+              : `The ${who.name} is lining up — get out of its line, then strike it while it is spent`,
+        'boss');
     }
     const cue = world.cue;
     if (cue && !this.toldCue.has(cue)) {
       this.toldCue.add(cue);
-      this.ui.toast(CUES[cue]);
+      this.ui.toast(CUES[cue], 'boss');
     }
     for (const b of world.bites) {
       const col = b.onPlayer ? 0xff5a4a : 0xff9a7a;
@@ -182,7 +183,7 @@ export class Impacts {
     world.noticedBy = null;
     this.dread.startle();
     this.camera.jolt(7, 13);
-    this.ui.toast(`${who.name} has seen you`);
+    this.ui.toast(`${who.name} has seen you`, 'boss');
   }
 }
 

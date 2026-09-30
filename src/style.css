@@ -15,7 +15,18 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #01060d; col
 #stage canvas { display: block; image-rendering: pixelated; }
 #ui { position: fixed; inset: 0; pointer-events: none; }
 
-.hud { position: absolute; left: 18px; top: 16px; width: 270px; display: grid; gap: 8px;
+/* the HUD's regions, each a stack its pieces flow down (or up) — see Hud.ts */
+.hud-stack { position: absolute; display: flex; flex-direction: column; pointer-events: none; }
+.hud-stack.top-left { left: 18px; top: 16px; align-items: flex-start; gap: 22px; }
+.hud-stack.top-right { right: 16px; top: 16px; align-items: flex-end; gap: 10px; }
+/* the centre stacks span the width rather than sit at 50%, which would cap them at half of it.
+   The top one is kept clear of the corners on both sides — the status panel's 270 px and its
+   margin — so it stays centred, and its cards narrow to fit on a small window */
+.hud-stack.top-centre { left: 300px; right: 300px; top: 14px; align-items: center; gap: 6px; }
+.hud-stack.top-centre > * { max-width: 100%; }
+.hud-stack.bottom-centre { left: 0; right: 0; bottom: 22px; align-items: center; gap: 12px; }
+
+.hud { width: 270px; display: grid; gap: 8px;
   background: var(--panel); border: 2px solid var(--edge); border-radius: 0; padding: 12px 14px; }
 /* No backdrop-filter on in-play chrome: the canvas under it changes every frame, so each
    blurred box is a full re-blur per frame — one per mutation chip, which is why frame rate
@@ -31,7 +42,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #01060d; col
 .food > i { background: #9fe07c; }
 .xp > i { background: #6f9dff; }
 
-.minimap { position: absolute; right: 16px; top: 16px; pointer-events: none; }
+.minimap { pointer-events: none; }
 .minimap canvas { image-rendering: pixelated; display: block; }
 .hearts { display: flex; gap: 3px; flex-wrap: wrap; }
 .hearts canvas, .counter canvas { image-rendering: pixelated; display: block; }
@@ -40,7 +51,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #01060d; col
   letter-spacing: .04em; }
 .stat-row b { color: var(--ink); font-weight: 600; }
 
-.traits { position: absolute; right: 18px; top: 16px; width: 176px;
+.traits { width: 176px;
   display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 .chip { position: relative; width: 34px; height: 34px; display: grid; place-items: center;
   border-radius: 0; background: var(--panel); border: 2px solid var(--edge);
@@ -170,12 +181,20 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 @keyframes gate-breathe { 0%, 100% { opacity: .72; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .gate > span { animation: none; } }
 
-.toast { position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%);
-  font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent);
+.toast { font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent);
   opacity: 0; transition: opacity .3s; white-space: nowrap;
   background: var(--panel); border: 2px solid var(--edge); border-radius: 0;
   padding: 9px 20px; }
 .toast.on { opacity: 1; }
+/* a guardian's tell, read mid-fight out of the corner of the eye: bigger, in sentence case
+   rather than tracked capitals, wrapped to two balanced lines instead of one long bar, and
+   in the boss bar's red just under it so it reads as the boss's */
+.toast.boss { max-width: min(440px, 100%); white-space: normal; text-wrap: balance;
+  text-align: center; font-size: 16px; line-height: 1.35; letter-spacing: .03em;
+  text-transform: none; color: #ffd6cc; border-color: rgba(216, 56, 74, .5);
+  padding: 9px 18px; text-shadow: 0 2px 0 rgba(0,0,0,.7);
+  /* the room shows through a little: it is often laid over the floor the fight is on */
+  background: rgba(6, 18, 32, .68); }
 /* danger: the frame's edge closing in, stepped like everything else on the pixel grid —
    hard bands where the vignette was a 160 px blur, and past the last band a 2 px
    checkerboard, the same screen-door dither the far props fade by */
@@ -189,16 +208,15 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
 
 /* run strip: score, clock, chain — kept to the top edge and translucent so it never sits on prey */
-.run { position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; gap: 14px;
-  min-width: 260px; font-size: 11px; letter-spacing: .08em; color: var(--dim);
+.run { display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; gap: 14px;
+  min-width: min(260px, 100%); font-size: 11px; letter-spacing: .08em; color: var(--dim);
   text-shadow: 0 2px 0 rgba(0,0,0,.8); font-variant-numeric: tabular-nums; }
 .run > b { font-size: 22px; font-weight: 300; color: var(--ink); letter-spacing: .06em;
   text-align: center; }
 .run > b.bump { animation: score-bump .35s ease-out; }
 .run-time { text-align: right; }
 .run-best.beaten { color: #ffc270; }
-.combo { grid-column: 1 / -1; justify-self: center; width: 220px; display: grid; gap: 4px;
+.combo { grid-column: 1 / -1; justify-self: center; width: 220px; max-width: 100%; display: grid; gap: 4px;
   text-align: center; font-size: 14px; font-weight: 600; text-transform: uppercase; color: #ffc270;
   opacity: 0; transition: opacity .2s; }
 .combo.on { opacity: 1; }
@@ -264,8 +282,7 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 .btn.ghost:disabled:hover { border-color: var(--edge); color: var(--ink); }
 
 /* the active organ: one slot, bottom centre, filling back up as it recovers */
-.active { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 8px; padding: 7px 12px 7px 10px; overflow: hidden;
+.active { display: flex; align-items: center; gap: 8px; padding: 7px 12px 7px 10px; overflow: hidden;
   border-radius: 0; background: var(--panel); border: 2px solid var(--edge); color: var(--dim);
   font-size: 11px; letter-spacing: .1em; text-transform: uppercase; pointer-events: none; }
 .active[hidden] { display: none; }
@@ -293,7 +310,7 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 .card .mark canvas { image-rendering: pixelated; }
 
 /* the stat column: Isaac's left edge, under the status panel, one mark and number a row */
-.stats-col { position: absolute; left: 18px; top: 190px; display: grid; gap: 4px;
+.stats-col { display: grid; gap: 4px;
   font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink);
   text-shadow: 0 2px 0 rgba(0,0,0,.8); pointer-events: none; }
 .stats-col .stat { display: flex; align-items: center; gap: 8px; }
@@ -301,10 +318,9 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 
 /* the pedestal's mutation, read before it is taken: a card at the top, clear of the floor
    the pedestal stands on */
-.offer { position: absolute; left: 50%; top: 52px; transform: translateX(-50%);
-  display: grid; justify-items: center; gap: 6px; pointer-events: none; }
+.offer { display: grid; justify-items: center; gap: 6px; pointer-events: none; }
 .offer[hidden] { display: none; }
-.offer .card { cursor: default; width: 260px; }
+.offer .card { cursor: default; width: 260px; max-width: 100%; }
 .offer .card:hover { transform: none; }
 .offer .how.deal { color: #ff8f84; }
 .offer .how { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--dim);
@@ -329,11 +345,11 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 @media (prefers-reduced-motion: reduce) { .bar.low { animation: none; box-shadow: 0 0 0 2px rgba(255,90,74,.8); } }
 
 /* a synergy's own card: under the run strip, green like the draft's completing light */
-.discovery { position: absolute; left: 50%; top: 64px; transform: translate(-50%, -8px); width: 320px;
+.discovery { transform: translateY(-8px); width: 320px;
   padding: 12px 16px 13px; border-radius: 0; text-align: center; pointer-events: none;
   background: var(--panel); border: 2px solid rgba(200,255,154,.45);
   box-shadow: 0 0 0 2px rgba(200,255,154,.16); opacity: 0; transition: opacity .35s, transform .35s; }
-.discovery.on { opacity: 1; transform: translate(-50%, 0); }
+.discovery.on { opacity: 1; transform: none; }
 .discovery .kicker { display: block; font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
   color: #c8ff9a; }
 .discovery h3 { margin: 4px 0 2px; font-size: 17px; font-weight: 600; color: var(--ink); }
@@ -347,8 +363,7 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 .lineage-cell > span { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
 
 /* the boss's health along the bottom, Isaac's bar */
-.boss-bar { position: absolute; left: 50%; bottom: 70px; transform: translateX(-50%);
-  width: min(420px, 60vw); display: grid; gap: 4px; justify-items: center; pointer-events: none;
+.boss-bar { width: min(420px, 60vw); display: grid; gap: 4px; justify-items: center; pointer-events: none;
   font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: #ffb8a8;
   text-shadow: 0 2px 0 rgba(0,0,0,.8); }
 .boss-bar[hidden] { display: none; }
