@@ -6,7 +6,7 @@ import type { UI } from '../ui/UI';
 import type { Camera } from './Camera';
 import type { Dread } from './Dread';
 import type { Fx } from './fx';
-import { SHOT_GLOW } from './shots';
+import { shotGlow } from './shots';
 import { lightAt, waterColor } from './water';
 
 /**
@@ -67,13 +67,13 @@ export class Impacts {
         fx.burst(f.x, f.y, 0xa8e05a, 8, f.r, 2);
       } else if (f.kind === 'shot' && f.shot) {
         // the muzzle: a puff of the shot's colour where it left the mouth
-        fx.burst(f.x, f.y, SHOT_GLOW[f.shot].color, 4, 50, 1.6);
+        fx.burst(f.x, f.y, shotGlow(f.shot, !!f.hostile).color, 4, 50, 1.6);
       } else if (f.kind === 'splash' && f.shot) {
-        fx.burst(f.x, f.y, SHOT_GLOW[f.shot].color, 6, 70, 1.8);
+        fx.burst(f.x, f.y, shotGlow(f.shot, !!f.hostile).color, 6, 70, 1.8);
       } else if (f.kind === 'impact' && f.shot) {
         // a shot into a body: the shot's colour thrown back off it and a little on through,
         // a tight bright ring where it went in, and a flash of light on what it hit
-        const col = SHOT_GLOW[f.shot].color;
+        const col = shotGlow(f.shot, !!f.hostile).color;
         const vx = f.vx ?? 0, vy = f.vy ?? 0;
         fx.spray(f.x, f.y, -vx, -vy, col, 7, 150, 1.8, 0.9);
         fx.spray(f.x, f.y, vx, vy, 0xfff4e0, 4, 110, 1.4, 0.45);

@@ -292,9 +292,10 @@ function pixelTexture(canvas: HTMLCanvasElement) {
 }
 
 /**
- * The painted extent plus the one-pixel outline, held symmetric about the spine: the mesh
- * spans ±halfH around its centre line, so a crop that is not centred would shift the art
- * off the line it swims about.
+ * The painted extent plus the one-pixel outline and one texel of open water past it, held
+ * symmetric about the spine: the mesh spans ±halfH around its centre line, so a crop that is
+ * not centred would shift the art off the line it swims about. The water is for the skin,
+ * which draws a carcass's rim there (`living.ts`) and has nothing to draw on past the crop.
  */
 function cropOf(s: Sheet) {
   let x0 = s.w, x1 = -1, y0 = s.h, y1 = -1;
@@ -305,8 +306,8 @@ function cropOf(s: Sheet) {
   }
   if (x1 < 0) return { x: 0, y: 0, w: s.w, h: s.h };
   const cy = s.h / 2;
-  const half = Math.min(cy, Math.max(cy - y0, y1 + 1 - cy) + 1);
-  const x = Math.max(0, x0 - 1), w = Math.min(s.w, x1 + 2) - x;
+  const half = Math.min(cy, Math.max(cy - y0, y1 + 1 - cy) + 2);
+  const x = Math.max(0, x0 - 2), w = Math.min(s.w, x1 + 3) - x;
   return { x, y: Math.round(cy - half), w, h: Math.round(half * 2) };
 }
 

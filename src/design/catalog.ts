@@ -33,7 +33,7 @@ import { HOVER } from '../run/TankMap';
 import { SHOT_RANGE, SHOT_SPEED as PLAYER_SHOT_SPEED } from '../input/PlayerController';
 import { primaryOf, organsOf, strikeOf } from '../sim/organs';
 import { HATCHED } from '../run/starts';
-import { shotTexture, SHOT_GLOW } from '../render/shots';
+import { shotGlow, shotTexture } from '../render/shots';
 import { glowTexture } from '../render/textures';
 import {
   CHARGE_RECOVER, CHARGE_WIND, DASH_TIME, SHOT_SPEED, SPIT_RECOVER, SPIT_WIND, SPOKES, SWELL,
@@ -906,12 +906,15 @@ const ROLE_NOTES: Record<Role, string> = {
   drifter: 'Comes on slowly by the shortest water; the touch is the attack.',
 };
 
-/** A role cell: the body, and the shots it throws, which fly out and are spent as in play. */
+/**
+ * A role cell: the body, and the shots it throws, which fly out and are spent as in play —
+ * in a hostile's colours, or the player's for a primary on the larva.
+ */
 class RoleCell extends Container {
   readonly fish: BoardFish;
   readonly shots = new Container();
   readonly blooms = new Container();
-  constructor(g: Genome, plan: Plan) {
+  constructor(g: Genome, plan: Plan, private readonly hostile = true) {
     super();
     this.fish = boardFish(g, plan);
     this.addChild(this.blooms, this.fish, this.shots);
@@ -921,16 +924,16 @@ class RoleCell extends Container {
   /** Shots out along `angles`, from `r` off the centre. */
   fire(kind: ShotKind, angles: number[], r: number) {
     for (const a of angles) {
-      const s = new Sprite(shotTexture(kind));
+      const s = new Sprite(shotTexture(kind, this.hostile));
       s.anchor.set(0.5);
       s.scale.set(SHOT_PX);
       s.rotation = kind === 'bolt' ? 0 : a;
       const b = new Sprite(glowTexture());
       b.anchor.set(0.5);
       b.blendMode = 'add';
-      b.tint = SHOT_GLOW[kind].color;
+      b.tint = shotGlow(kind, this.hostile).color;
       b.alpha = 0.6;
-      b.width = b.height = 26;
+      b.width = b.height = this.hostile ? 36 : 26;
       this.shots.addChild(s);
       this.blooms.addChild(b);
       this.flights.push({ a, d: r, t: 0, s, b });
@@ -1018,23 +1021,29 @@ function roleGroup(): DesignGroup {
       animate: roleAnimate(sp, g, tank.tile),
     };
   });
+  // each kind twice, a hostile's beside the player's: the pair is the contrast to judge
   for (const kind of Object.keys(SHOT_SPEED) as ShotKind[]) {
-    items.push({
-      id: `shot-${kind}`, name: `shot · ${kind}`, note: `${SHOT_SPEED[kind]} tiles a second; spent on rock or a body`,
-      source: 'src/render/shots.ts', span: 16, depth: tank.depth,
-      make: () => {
-        const c = new Container();
-        const b = new Sprite(glowTexture());
-        b.anchor.set(0.5);
-        b.blendMode = 'add';
-        b.tint = SHOT_GLOW[kind].color;
-        b.width = b.height = 14;
-        const s = new Sprite(shotTexture(kind));
-        s.anchor.set(0.5);
-        c.addChild(b, s);
-        return c;
-      },
-    });
+    for (const hostile of [true, false]) {
+      items.push({
+        id: hostile ? `shot-${kind}` : `shot-${kind}-yours`,
+        name: `shot · ${kind}${hostile ? '' : ' · yours'}`,
+        note: hostile ? `${SHOT_SPEED[kind]} tiles a second; spent on rock or a body`
+          : 'the same kind fired by the player, in the water\'s colours',
+        source: 'src/render/shots.ts', span: 16, depth: tank.depth,
+        make: () => {
+          const c = new Container();
+          const b = new Sprite(glowTexture());
+          b.anchor.set(0.5);
+          b.blendMode = 'add';
+          b.tint = shotGlow(kind, hostile).color;
+          b.width = b.height = hostile ? 20 : 14;
+          const s = new Sprite(shotTexture(kind, hostile));
+          s.anchor.set(0.5);
+          c.addChild(b, s);
+          return c;
+        },
+      });
+    }
   }
   return {
     id: 'roles', name: 'Hostile roles',
@@ -1125,7 +1134,7 @@ function powerGroup(): DesignGroup {
       source: 'src/sim/organs/body.ts', span: 110, depth: tank.depth, genome: g,
       facts: { shot: prim.shot, fan: prim.fan.length, 'share of a shot': prim.mult,
         speed: PLAYER_SHOT_SPEED, range: SHOT_RANGE },
-      make: () => new RoleCell(g, 'wraith'),
+      make: () => new RoleCell(g, 'wraith', false),
       animate: (() => {
         let t0 = 0;
         return (view: Container, dt: number, beat: number) => {
@@ -1151,7 +1160,7 @@ function powerGroup(): DesignGroup {
       id: 'primary-fangs', name: t.name, note: t.desc,
       source: 'src/sim/organs/body.ts', span: 110, depth: tank.depth, genome: g,
       facts: { shot: 'none', 'share of a shot': strikeOf({ organs: organsOf(g), genome: g } as never) },
-      make: () => new RoleCell(g, 'wraith'),
+      make: () => new RoleCell(g, 'wraith', false),
       animate: (() => {
         let t0 = 0;
         return (view: Container, dt: number, beat: number) => {

@@ -118,6 +118,15 @@ const SIDE_ON = 0.45;
 const KNOCK = 0.18;
 const HURT_WHITE = 0.72;
 
+/**
+ * A carcass glows red: a rim of it round the silhouette (the skin's `uRim`), a bloom and a
+ * light. Dimmed grey and floating among the rock and the decoration, a kill left to be eaten
+ * was lost in the room; red is the colour nothing alive in the water is drawn in but blood.
+ * It comes up once the roll is done, and throbs slowly, the way a light that is not a lamp does.
+ */
+const EMBER = 0xff2a1e;
+const EMBER_IN = 0.4;
+
 export class FishView extends Container {
   /**
    * The additive bloom, deliberately NOT a child of this container. Every creature's
@@ -144,6 +153,8 @@ export class FishView extends Container {
   private lamps: { s: Sprite; e: Emitter; phase: number }[] = [];
   /** A tight, hot centre inside the halo — the halo alone reads as fog, not as a light. */
   private core = new Sprite(glowTexture());
+  /** A carcass's red bloom (`EMBER`); hidden while the body lives. */
+  private ember = new Sprite(glowTexture());
   private mesh: MeshSimple | null = null;
   /** The shader the strip is drawn with: sub-pixel sampling and displaced fins (`living.ts`). */
   private skin: LivingSkin | null = null;
@@ -191,11 +202,13 @@ export class FishView extends Container {
 
   constructor(private g: Genome, private plan: Plan = 'darter') {
     super();
-    for (const s of [this.aura, this.halo, this.core]) {
+    for (const s of [this.aura, this.halo, this.core, this.ember]) {
       s.anchor.set(0.5);
       s.blendMode = 'add';
     }
-    this.glow.addChild(this.aura, this.halo, this.core);
+    this.ember.tint = EMBER;
+    this.ember.visible = false;
+    this.glow.addChild(this.aura, this.halo, this.core, this.ember);
     this.murk.anchor.set(0.5);
     this.fog.addChild(this.murk);
     this.rebuild(g);
@@ -270,6 +283,11 @@ export class FishView extends Container {
     if (!this.visible || this.glow.alpha <= 0.02) return;
     const a = this.glow.alpha;
     const R = this.g.size * 0.62;
+    // a carcass's own lights are out; what is left is the ember
+    if (this.ember.visible) {
+      out.push({ x: this.glow.x, y: this.glow.y, r: R * 3, color: EMBER, a: this.ember.alpha * a });
+      return;
+    }
     const own = Math.max(this.g.glow, this.g.pale * 0.6);
     if (own > 0.05) out.push({ x: this.glow.x, y: this.glow.y, r: R * (3 + own * 5),
       color: this.halo.tint as number, a: Math.min(1, own) * a });
@@ -452,6 +470,8 @@ export class FishView extends Container {
     this.deathT = 0;
     this.fall = { vx, vy, whole };
     this.hurtT = 0;
+    // a carcass swallowed goes down the throat without its rim; its ember fades with the rest
+    this.deadSkin(0);
   }
 
   /**
@@ -471,10 +491,36 @@ export class FishView extends Container {
     this.alpha = 1;
     this.tint = 0x8f96a4;
     if (roll >= 1 && this.mesh && this.baked) this.skinWith(this.baked.texture);
-    this.glow.alpha = Math.max(0, 1 - this.deathT * 3);
+    // the body's own lights go out over the roll, and then the ember comes up in their place
+    const lit = Math.min(1, Math.max(0, (this.deathT - 0.35) / EMBER_IN));
+    if (lit > 0 && !this.ember.visible) {
+      for (const s of [this.aura, this.halo, this.core]) s.visible = false;
+      for (const { s } of this.lamps) s.visible = false;
+      this.ember.visible = true;
+    }
+    const throb = 0.85 + 0.15 * Math.sin(this.deathT * 2.4 + this.clock);
+    this.glow.alpha = this.ember.visible ? 1 : Math.max(0, 1 - this.deathT * 3);
+    this.ember.alpha = lit * throb * 0.55;
+    this.ember.width = this.g.size * 2.2;
+    this.ember.height = this.g.size * 1.3;
+    this.ember.y = bob;
+    this.deadSkin(lit * throb);
     this.glow.x = this.fog.x = x;
     this.glow.y = this.fog.y = y;
     this.fog.alpha = 0;
+  }
+
+  /**
+   * The skin of a dead body: its carcass rim, 0 to 1, and no hit flash. `animate` is what
+   * clears the flash, and a dead body is no longer animated, so a kill by a blow stayed
+   * white for as long as the carcass lay there.
+   */
+  private deadSkin(rim: number) {
+    if (!this.skin) return;
+    const u = this.skin.uniforms.uniforms;
+    u.uRim = rim;
+    u.uFlash = 0;
+    this.skin.uniforms.update();
   }
 
   /**

@@ -137,6 +137,15 @@ is smooth, and `FramePass` steps and dithers it onto the grid with everything el
   role's tell, and a pose in the dark is not a tell; the light is what makes it one.
 - **Shots light the room.** Each carries a light and a bloom (`render/shots.ts`), the bolt
   the most since it is light; a shot has to be seen coming in a dark room.
+- **Whose shot it is comes before its kind.** The player's shots are the water's cool
+  colours; a hostile's are hot red (`HOSTILE_COLOURS`), with a larger bloom that throbs and a
+  stronger light, and its muzzle, splash and impact are red too (`Pulse.hostile`). One
+  palette per kind made a spitter's spit the larva's own, and half the hits in a fight came
+  out of shots that read as the player's.
+- **A carcass glows red.** One texel of red just outside its silhouette (the skin's `uRim`),
+  a red bloom and a red light, coming up once the roll is done. Tinted dim and floating among
+  the rock, a kill left to be eaten was lost in the room. The bake's crop keeps a texel of
+  water past the outline for the rim to be drawn on (`cropOf`).
 - The water shader still adds the player's colour to the water around it (`uPool`), now at
   the body's world position rather than the screen's centre, since the camera holds the
   room and no longer follows.

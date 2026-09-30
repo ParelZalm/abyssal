@@ -37,4 +37,6 @@ export interface Pulse {
   vx?: number; vy?: number;
   /** What was fired or spent, for a `shot`, a `splash` or an `impact`. */
   shot?: ShotKind;
+  /** Whether a hostile fired it, rather than the player: the two are coloured apart. */
+  hostile?: boolean;
 }

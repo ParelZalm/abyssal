@@ -301,7 +301,7 @@ export class World {
     const v = speed * t.tile;
     this.shots.push({ kind, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: SHOT_R * t.tile,
       t: 0, life: range / speed, mult, by });
-    this.pulses.push({ x, y, r: by.radius * 0.6, kind: 'shot', shot: kind });
+    this.pulses.push({ x, y, r: by.radius * 0.6, kind: 'shot', shot: kind, hostile: !by.isPlayer });
   }
 
   /**
@@ -350,6 +350,7 @@ export class World {
       // a shot that found a body is an impact, with the way it was going; one that found rock
       // or ran out is a splash
       this.pulses.push({ x: s.x, y: s.y, r: s.r * 3, kind: struck ? 'impact' : 'splash', shot: s.kind,
+        hostile: !s.by.isPlayer,
         vx: struck ? s.vx : undefined, vy: struck ? s.vy : undefined });
     }
   }
@@ -398,7 +399,7 @@ export class World {
       const s = this.shots[i];
       if (s.by.isPlayer || dist2(x, y, s.x, s.y) > r * r) continue;
       this.shots.splice(i, 1);
-      this.pulses.push({ x: s.x, y: s.y, r: s.r * 3, kind: 'splash', shot: s.kind });
+      this.pulses.push({ x: s.x, y: s.y, r: s.r * 3, kind: 'splash', shot: s.kind, hostile: true });
     }
     this.pulses.push({ x, y, r, kind: 'bubbles' });
   }

@@ -34,33 +34,64 @@ export const SHOT_MAPS: Record<ShotKind, readonly string[]> = {
   ],
 };
 
+/**
+ * Whose shot it is decides its colour before its kind does. The player's are the water's own
+ * cool colours; a hostile's are hot red, Isaac's red tears against his blue ones. Both were
+ * one palette per kind, and a spitter's spit was the larva's own: in a fight half the hits
+ * came out of shots that read as the player's.
+ */
 export const SHOT_COLOURS: Record<ShotKind, Palette> = {
   spit: { x: '#9ad8ff', h: '#f0fbff', d: '#4a90d0', o: '#10284a' },
   spine: { x: '#e6d8b8', h: '#fff8ea', d: '#a08c6a', o: '#2e2216' },
   bolt: { x: '#7affd8', h: '#eafff8', d: '#2aa88a', o: '#0a3a30' },
 };
+export const HOSTILE_COLOURS: Record<ShotKind, Palette> = {
+  spit: { x: '#ff3b30', h: '#ffe0b0', d: '#b3101c', o: '#2a0206' },
+  spine: { x: '#ff6a2a', h: '#fff0c0', d: '#b8300c', o: '#2a0a02' },
+  bolt: { x: '#ff2e6a', h: '#ffd8e4', d: '#a80a3c', o: '#2a0212' },
+};
 
 /**
  * What each kind throws on the dark as it flies: its colour, and how strongly it lights the
  * room. A shot has to be seen coming in a dark room, so every one carries a light, and the
- * one that is light — the bolt — carries the most.
+ * one that is light — the bolt — carries the most. A hostile's carries more than the
+ * player's of the same kind: it is the one that has to be seen.
  */
 export const SHOT_GLOW: Record<ShotKind, { color: number; a: number }> = {
   spit: { color: 0x9ad8ff, a: 0.55 },
   spine: { color: 0xffe2b0, a: 0.35 },
   bolt: { color: 0x7affd8, a: 0.9 },
 };
+export const HOSTILE_GLOW: Record<ShotKind, { color: number; a: number }> = {
+  spit: { color: 0xff3b30, a: 0.8 },
+  spine: { color: 0xff6a2a, a: 0.7 },
+  bolt: { color: 0xff2e6a, a: 1 },
+};
 
-const textures = new Map<ShotKind, Texture>();
-export function shotTexture(kind: ShotKind) {
-  let t = textures.get(kind);
+export function shotGlow(kind: ShotKind, hostile: boolean) {
+  return (hostile ? HOSTILE_GLOW : SHOT_GLOW)[kind];
+}
+
+const textures = new Map<string, Texture>();
+export function shotTexture(kind: ShotKind, hostile = false) {
+  const key = hostile ? `${kind}!` : kind;
+  let t = textures.get(key);
   if (!t) {
-    t = Texture.from(paintMap(SHOT_MAPS[kind], SHOT_COLOURS[kind]));
+    t = Texture.from(paintMap(SHOT_MAPS[kind], (hostile ? HOSTILE_COLOURS : SHOT_COLOURS)[kind]));
     t.source.scaleMode = 'nearest';
-    textures.set(kind, t);
+    textures.set(key, t);
   }
   return t;
 }
+
+/**
+ * A hostile shot's bloom, over the player's: larger, and throbbing at a beat no light in a
+ * room has, because a steady light is what the eye stops seeing first — against a room of
+ * lamps and the player's own shots, movement is what the corner of the eye still catches.
+ */
+const HOSTILE_BLOOM = 10;
+const PLAYER_BLOOM = 7;
+const THROB = 16;
 
 /**
  * The shots in flight, drawn from `World.shots` each frame: a sprite turned along its line,
@@ -93,15 +124,16 @@ export class ShotView {
       const k = shots[i];
       s.visible = b.visible = !!k;
       if (!k) continue;
-      const glow = SHOT_GLOW[k.kind];
-      s.texture = shotTexture(k.kind);
+      const hostile = !k.by.isPlayer;
+      const glow = shotGlow(k.kind, hostile);
+      s.texture = shotTexture(k.kind, hostile);
       s.position.set(k.x, k.y);
       s.rotation = k.kind === 'bolt' ? 0 : Math.atan2(k.vy, k.vx);
       s.scale.set(px);
       b.position.set(k.x, k.y);
-      b.width = b.height = k.r * 7;
+      b.width = b.height = k.r * (hostile ? HOSTILE_BLOOM : PLAYER_BLOOM);
       b.tint = glow.color;
-      b.alpha = 0.6;
+      b.alpha = hostile ? 0.75 + 0.25 * Math.sin(k.t * THROB) : 0.6;
       this.lights.push({ x: k.x, y: k.y, r: k.r * 10, color: glow.color, a: glow.a });
     }
   }

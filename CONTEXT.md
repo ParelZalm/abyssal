@@ -88,8 +88,8 @@ _Avoid_: guardian
 wounding when it would have killed; a carcass is swallowed by reaching it. Size alone
 does not decide it, a ranged kill never swallows, and a boss is never swallowed.
 
-**Carcass** — what a kill leaves when it is not swallowed. It rolls belly-up and floats
-where it died, and stays until the room is left.
+**Carcass** — what a kill leaves when it is not swallowed. It rolls belly-up, floats
+where it died ringed in a red glow, and stays until the room is left.
 _Avoid_: gulp (the stat), devour
 
 ## What you carry

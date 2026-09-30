@@ -14,6 +14,10 @@
  * - **The hit flash.** A wound turns the body white for a few frames (`uFlash`). A tint only
  *   multiplies, so it can darken a body toward red but never lift it, and the red flash it
  *   was is barely a change on a dark animal in a dark room.
+ * - **The carcass rim.** A body left dead is ringed with one texel of hot red just outside
+ *   its silhouette (`uRim`), where the texel is empty and one beside it is not. Outside, not
+ *   on, the art's own outline: a dead body is tinted down, and red laid over a dim edge read
+ *   as brown. The crop leaves a texel of water past the outline for it (`cropOf` in `fishbake.ts`).
  * - **Displacement.** Single texels of the art are moved by whole texels, the way a pixel
  *   animator nudges pixels between frames: a one-texel nub runs back along each fin's edge a
  *   column at a time, the tail's tip steps a texel on the beat, and now and then a lone nub
@@ -62,6 +66,8 @@ uniform float uRipple;
 uniform float uSoft;
 uniform float uFlip;
 uniform float uFlash;
+uniform float uRim;
+uniform vec3 uRimColor;
 
 float hash(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
 
@@ -127,6 +133,14 @@ void main() {
   finalColor = c * vColor;
   // a hit: the body goes white for a few frames. Premultiplied, so white is the alpha
   finalColor.rgb = mix(finalColor.rgb, vec3(finalColor.a), uFlash);
+  // a carcass's rim, decided per texel like the nubs, and never tinted: the tint is what dims
+  // the dead body, and the rim is there to be seen on it
+  if (uRim > 0.0 && c.a < 0.5) {
+    vec2 t = floor(p);
+    float n = max(max(texel(t + vec2(1.0, 0.0)).a, texel(t - vec2(1.0, 0.0)).a),
+                  max(texel(t + vec2(0.0, 1.0)).a, texel(t - vec2(0.0, 1.0)).a));
+    if (n > 0.5) finalColor = vec4(uRimColor, 1.0) * (uRim * vColor.a);
+  }
 }
 `;
 
@@ -159,6 +173,9 @@ export function livingSkin(texture: Texture, body: number): LivingSkin {
     uFlip: { value: 0, type: 'f32' },
     // a hit's white flash, 0..1 (`FishView.hurt`)
     uFlash: { value: 0, type: 'f32' },
+    // a carcass's red outline, 0 off to 1 full (`FishView.lie`)
+    uRim: { value: 0, type: 'f32' },
+    uRimColor: { value: new Float32Array([1, 0.16, 0.12]), type: 'vec3<f32>' },
   });
   const shader = Object.assign(
     new Shader({ glProgram: program, resources: { uTexture: texture.source, living: uniforms } }),

@@ -134,6 +134,7 @@ export class Scene {
     this.shine.length = 0;
     p.view.shine(this.shine);
     for (const c of world.creatures) c.view.shine(this.shine);
+    for (const c of world.carcasses) c.view.shine(this.shine);
     for (const l of this.shine) lit.add(l);
     for (const c of world.creatures) {
       if (!c.hostile || !c.alive || !c.view.visible) continue;
