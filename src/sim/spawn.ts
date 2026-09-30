@@ -1,5 +1,5 @@
 import { speciesById, type Role, type Species } from '../content/species';
-import type { Tank } from '../content/tanks';
+import { TEMPO, type Tank } from '../content/tanks';
 import { type Rng, TAU } from '../core/util';
 import type { Creature } from './creature';
 import { glareOf, stealthOf } from './organs';
@@ -70,7 +70,7 @@ export class Spawner {
     c.hold = room.waterRange;
     c.hostile = true;
     c.hp = c.hpMax = sp.bossHp ?? c.hpMax;
-    c.genome.speed *= Math.sqrt(tank.pace);
+    c.genome.speed *= Math.sqrt(tank.pace) * TEMPO;
     c.angle = player.x < c.x ? Math.PI : 0;
     c.face = player.x < c.x ? -1 : 1;
     c.roleCd = 1.5;
@@ -170,8 +170,8 @@ export class Spawner {
   private place(room: Terrain, sp: Species, x: number, y: number, tank: Tank) {
     if (!room.clearAt(x, y, sp.size[1] * 0.4)) return null;
     const c = this.world.add(sp, x, y);
-    // a room takes as long to cross in every tank
-    c.genome.speed *= tank.pace;
+    // a room takes as long to cross in every tank, at the game's tempo
+    c.genome.speed *= tank.pace * TEMPO;
     // the room's water is where its animals keep to: the species' own depth range would
     // steer them into the rock above or below
     c.hold = room.waterRange;

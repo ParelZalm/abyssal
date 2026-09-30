@@ -302,7 +302,7 @@ stood inside all of them to land anything, and the nursery was a brawl it lost. 
 ranged; the bite is the risk a build takes later, for the most damage the arrows throw and
 the belly it feeds.
 
-A shot flies 7 tiles a second — faster than any hostile's, and faster again with the Siphon
+A shot flies 9 tiles a second — faster than any hostile's, and faster again with the Siphon
 Jet, which lunges a bite harder — for 10 tiles, a third of a room (`SHOT_SPEED`, `SHOT_RANGE` in
 `PlayerController`), and lands as a blow (`Combat.hit`), never a swallow, so what it kills is
 left as a carcass for the mouth. The strike's kick still opens its window, so the organs that
@@ -383,8 +383,9 @@ reef's five (coral heads, an arch, a lagoon, shelves, a boulder channel) and the
 shrimp; the Reef at 41, the Great White; the Deep at 74, the Giant Squid. Each tile is the
 last times the descent's growth, 1.8, so a room is the same number of body lengths across in
 every tank. What swims in a tank takes its `pace` — the tile's ratio to the nursery's — on its
-species' speed, so a room takes as long to cross; its hostiles take `hostileHp` on their
-health; a boss takes the root of the pace and its own health (`Species.bossHp`).
+species' speed, so a room takes as long to cross, and the game's `TEMPO` (1.25) on top, which
+the larva hatches with too; its hostiles take `hostileHp` on their
+health; a boss takes the root of the pace, the tempo, and its own health (`Species.bossHp`).
 
 **The curve is Isaac's.** `hostileHp` (0.55, 0.8, 1.1) is set so a larva that has found no
 damage kills the nursery's hostiles in three to five shots, the reef's in five to nine and the

@@ -15,7 +15,7 @@ import type { Price } from './Pockets';
 import type { Run } from './Run';
 
 /** Seconds the camera takes to slide from one room to the next, Isaac's quick pan. */
-const SLIDE = 0.35;
+const SLIDE = 0.25;
 /**
  * Milliseconds a frame may spend baking the rooms next door, out of a 16 ms budget, and during
  * a slide, when the world is still and the frame has little else to do.

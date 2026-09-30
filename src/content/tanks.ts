@@ -89,6 +89,16 @@ export const TANK_NAMES: Record<TankId, string> = {
   nursery: 'Nursery Tank', reef: 'Reef Tank', deep: 'Deep Tank',
 };
 
+/**
+ * The game's tempo: how much faster than its authored speed everything swims — the larva at
+ * the hatch, and every animal a room spawns, on top of the tank's `pace`. One number rather
+ * than a new speed on every species, so the chases and the dodges tuned against each other
+ * keep their ratios; a room is some five seconds across at a cruise rather than six and a half. The
+ * timings that go with it — the player's shots and cadence, the roles' cooldowns, the slide —
+ * were brought down beside it by hand.
+ */
+export const TEMPO = 1.25;
+
 export const TANKS: Tank[] = [
   // the Twilight's water: dark and cool, the look of the references, with the light pooled
   // around what glows in it

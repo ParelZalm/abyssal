@@ -22,7 +22,7 @@ export const CHARGE_WIND = (size: number) => clamp(0.4 + size / 250, 0.4, 0.8);
 export const DASH = 2.1;
 export const DASH_TIME = 0.4;
 export const CHARGE_RECOVER = 0.7;
-const CHARGE_CD: [number, number] = [0.9, 1.6];
+const CHARGE_CD: [number, number] = [0.7, 1.3];
 
 /**
  * The spitter. It keeps the player between `NEAR` and `FAR` tiles off — backing off when
@@ -34,7 +34,7 @@ const FAR = 8;
 const SPIT_RANGE = 11;
 export const SPIT_WIND = 0.55;
 export const SPIT_RECOVER = 0.3;
-const SPIT_CD: [number, number] = [1.7, 2.6];
+const SPIT_CD: [number, number] = [1.4, 2.1];
 /** How far ahead of the player a shot is aimed, in seconds of its swim. Short of a full lead, so a steady swim is still a dodge. */
 const LEAD = 0.25;
 
@@ -45,7 +45,7 @@ const LEAD = 0.25;
  */
 export const TURRET_WIND = 0.8;
 export const TURRET_RECOVER = 0.5;
-const TURRET_BEAT: [number, number] = [2.4, 3.0];
+const TURRET_BEAT: [number, number] = [2.0, 2.5];
 export const SPOKES = 8;
 /** How far past its size a turret swells at the end of the tell. */
 export const SWELL = 0.5;
@@ -62,8 +62,11 @@ export const STEALTH_DELAY = 1.5;
 /** The drifter: it comes on steadily by the shortest water, and the touch is the attack. */
 const DRIFT_THROTTLE = 0.85;
 
-/** Shot speeds, in tiles a second. The player swims about five. */
-export const SHOT_SPEED = { spit: 5.6, spine: 4.2, bolt: 3.6 } as const;
+/**
+ * Shot speeds, in tiles a second. The player cruises about six at the game's tempo, so a spit
+ * is just outswum and a bolt easily: a shot is dodged across its line, not fled down it.
+ */
+export const SHOT_SPEED = { spit: 7, spine: 5.25, bolt: 4.5 } as const;
 
 /**
  * The hostiles' brains. A hostile does not live in the room the way its fauna does — it has

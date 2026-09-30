@@ -29,8 +29,12 @@ const LUNGE = 0.95;
  * away stood still: kiting — the thing that makes a room a fight — could not be done.
  */
 const LUNGE_RETREAT = 0.25;
-/** Seconds between strikes before organs bend it — the base of the HUD's rate. */
-const ATTACK_EVERY = 0.4;
+/**
+ * Seconds between strikes before organs bend it — the base of the HUD's rate. Three a
+ * second: at the game's tempo a room's hostiles close faster, and a larva that answered at
+ * two and a half was out-traded by a pair of them.
+ */
+const ATTACK_EVERY = 0.33;
 /**
  * The player's shots — the spit every larva hatches with, and the primaries that replace it:
  * tiles a second — faster than any hostile's, so a duel is the player's to win — and tiles of
@@ -40,7 +44,7 @@ const ATTACK_EVERY = 0.4;
  * the kick back off each, a share of top speed. What makes a lunge harder (the Siphon Jet)
  * makes a shot faster.
  */
-export const SHOT_SPEED = 7;
+export const SHOT_SPEED = 9;
 export const SHOT_RANGE = 10;
 const RECOIL = 0.18;
 /**
@@ -70,10 +74,17 @@ export const AIM_LEAN = 0.25;
  * point before it kicks, since the kick goes down its nose.
  */
 const CRUISE = 0.3;
-export const STROKE_EVERY = 0.3;
-const STROKE_GAP = 0.16;
+export const STROKE_EVERY = 0.25;
+const STROKE_GAP = 0.13;
 const STROKE_KICK = (1 - CRUISE) * 0.82 * DRAG_FWD * STROKE_EVERY;
 const STROKE_ALIGN = 0.7;
+/**
+ * Extra drag once the keys are let go, on top of the water's. Left to the water alone the
+ * body coasted some two tiles after every release, which read as ice rather than a fish
+ * holding station; with it the stop is about a tile, Isaac's. Not while a strike's lunge or
+ * a blow's knockback is carrying it, which are meant to travel.
+ */
+const BRAKE = 4;
 /**
  * How long a stroke's snap lasts on the body, and how fast its tail sweeps through it: the
  * beat is driven half a wave, one sweep of the tail, while the snap decays.
@@ -204,6 +215,11 @@ export class PlayerController {
       p.drive(dt, desired, moving ? 0.3 + 0.7 * Math.max(0, align) : 0, FLICK, CRUISE);
     }
     this.stroke(dt, dx, dy, holding);
+    if (!moving && p.attack === 'none' && p.invuln <= 0) {
+      const k = Math.exp(-BRAKE * dt);
+      p.vx *= k;
+      p.vy *= k;
+    }
 
     // thrown once the body points down the aim: the pivot is the price of a new one
     if (aim && this.attackCd <= 0 && p.attack === 'none' &&

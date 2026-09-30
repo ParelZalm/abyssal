@@ -184,6 +184,17 @@ speed. A steady thrust reached cruise and sat there, which read as a sprite on a
 gave a dodge no answer to the key. Shots carry half the body's velocity, as Isaac's tears
 do, so the swim aims as well as the arrows.
 
+## The tempo is one number over everything that swims
+
+The game was sped up by `TEMPO` (1.25, `content/tanks.ts`) on the larva's hatch speed and on
+every spawned animal's, over the tank's `pace`, rather than by raising speeds species by
+species: the chases, the charger's close and the spitter's band were all tuned against each
+other, and one factor keeps their ratios. It is a speed and not a time scale on the frame,
+so the tells, the grace and the recoveries — the windows a fight is read in — stayed where
+they were, and the cooldowns between attacks, the shots, the player's cadence and the room
+slide were brought down beside it by hand. The larva's form reads speed (`formFor`'s
+`drive`), so it hatches a shade slimmer in the tail; that is the stat showing, not drift.
+
 ## Creatures are one deforming surface, not a chain of parts
 
 Three passes died on the same problem, in this order: a jointed chain of `Graphics` links;

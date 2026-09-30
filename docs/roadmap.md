@@ -53,7 +53,7 @@ What it found, and what it leaves:
 - **Rooms grew, and the rock went smooth.** The first cut was 24 × 14 tiles of squares and
   felt cramped and blocky. A template is now 32 × 18, and the rock is the smooth shape the
   tiles imply, collided on quarter-tile cells, and broken into lit stones that sink into
-  shadow away from the water. A room is ~50 hatchling lengths across and ~6.5 s to swim; speed is a stat now, so tune the base with the stat column (stage 5).
+  shadow away from the water. A room is ~50 hatchling lengths across and ~6.5 s to swim (~5 s since `TEMPO`); speed is a stat now, so tune the base with the stat column (stage 5).
 - **The rock is reef rock**: knobbed limestone heaped in lumps, pitted, crusted pink and
   violet, turf on its tops.
 - **A room bakes in ~0.5 s** on a 1024-wide window, more on a big one. Fine once a run; at
@@ -104,7 +104,7 @@ What it found, and what it leaves:
 
 Done: `content/map.ts` deals a 7–8 room map from the seed with the types on dead ends;
 `run/TankMap.ts` runs it — rooms edge to edge in the world, entered with their fauna and, the
-first time, their hostiles behind shut doors, cleared when those are dead, and a 0.35 s slide
+first time, their hostiles behind shut doors, cleared when those are dead, and a 0.25 s slide
 between rooms with the world held still. Doors are carved through the middle of each side
 with a neighbour and shut as a solid gate band with a grate drawn across. The minimap sits
 top right, in the tank's outline. Six more nursery templates, eight in all, each tagged with

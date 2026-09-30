@@ -78,7 +78,7 @@ not, and fins that turn faster aim faster. The strike leaves from the mouth as i
 (`biteX`/`biteY`, at `drawnAngle`), not where the heading would put it. It is out for 0.2 s
 and the bite lands on whatever is in reach while it is (`Combat.strike`); nothing is pulled
 in by a gulp, so swimming into prey is not eating it. Strikes come every `ATTACK_EVERY`
-(0.4 s) bent by the organs' `biteRate`, which is the HUD's rate.
+(0.33 s) bent by the organs' `biteRate`, which is the HUD's rate.
 
 While an arrow is held, and for `HOLD_FACE` after, the body **strafes** (`Creature.strafe`):
 it holds the aim's heading and moves toward WASD whichever way that is, with even drag in
@@ -88,15 +88,16 @@ Isaac's walk one way, shoot the other, and it is what kiting is. A strike thrown
 direction of the swim keeps only a quarter of its lunge: at full strength each strike at a
 pursuer threw the body back into it, and a held arrow while retreating stood still.
 
-**The swim is strokes** (`PlayerController.stroke`): a kick every `STROKE_EVERY` (0.3 s)
+**The swim is strokes** (`PlayerController.stroke`): a kick every `STROKE_EVERY` (0.25 s)
 that drag bleeds into a glide, over a steady `CRUISE` (0.3) share of the old thrust, which
 `drive`, `propel` and `strafe` take as `power`. The kick is sized from the drag so the
-average is still the speed stat — measured, a held key averages the same 116 as the steady
-swim did — while the body surges to about 1.1 of it and sags to 0.4. A fresh press or a new
-direction strokes at once once `STROKE_GAP` (0.16 s) has passed, so a dodge answers the key.
+average is still the speed stat — measured at the stroke's first cut, a held key averaged
+the same 116 as the steady swim did — while the body surges to about 1.1 of it and sags to 0.4. A fresh press or a new
+direction strokes at once once `STROKE_GAP` (0.13 s) has passed, so a dodge answers the key.
 Swimming free, the kick goes down the nose and waits for the body to point within
 `STROKE_ALIGN` of the swim: turn, then kick. Strafing, it goes down the swim, cut by the
-backpedal. Each stroke sets `Creature.burst`, which the view reads through `pose` to bunch
+backpedal. Let go, the body takes `BRAKE` on top of the water's drag and stops in about a tile
+rather than coasting two, except while a lunge or a blow's knockback carries it. Each stroke sets `Creature.burst`, which the view reads through `pose` to bunch
 the body and throw it long, drives the tail through one sweep (`SNAP`), and puffs wake off
 the tail. A bell pulses on its own clock and takes none.
 
@@ -401,7 +402,7 @@ player whatever the sizes, and false against anything else: a bite on a passing 
 strike, and a boss that ate its way out of its own tell had none. Hostiles do not regenerate.
 
 **Shots** are `World.shots`: straight, one speed (`SHOT_SPEED`, in tiles a second — the
-player swims about five), a reach of 0.16 tiles, spent on rock, on the player — landed or
+player cruises about six), a reach of 0.16 tiles, spent on rock, on the player — landed or
 not; a shot breaks on a body in its grace rather than passing through — or after five
 seconds. A hit is half a heart through `takeHit` like any other. Firing and breaking are
 published as `shot` and `splash` pulses for `Impacts`. A shot's flight is its range over its

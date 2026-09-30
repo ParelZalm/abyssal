@@ -4,7 +4,7 @@ import { Rng } from './core/util';
 import { familyCounts } from './content/forms';
 import { baseGenome, type Genome } from './content/genome';
 import { speciesById, type Species } from './content/species';
-import { TANK_ORDER, tankById, tankIndex } from './content/tanks';
+import { TANK_ORDER, tankById, tankIndex, TEMPO } from './content/tanks';
 import { Input } from './input/Input';
 import { PlayerController } from './input/PlayerController';
 import { Camera } from './render/Camera';
@@ -250,6 +250,7 @@ export class Game {
     this.drain = new DrainView();
 
     const g: Genome = baseGenome();
+    g.speed *= TEMPO;
     // a larva: see-through, spine and gut showing, near white with a lavender cast, and
     // big-eyed (`docs/media/reference/`)
     g.hue = this.rng.range(245, 265);

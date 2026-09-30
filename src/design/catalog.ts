@@ -15,7 +15,7 @@ import { PROP_SIZE, propTexture, type PropKind } from '../render/props';
 import { genomeFor, rangeOf, SPECIES } from '../content/species';
 import { TRAITS, type Rarity, type Trait } from '../content/traits';
 import { BANDS, zoneOf } from '../content/zones';
-import { ROOMS, tankById, TANKS } from '../content/tanks';
+import { ROOMS, tankById, TANKS, TEMPO } from '../content/tanks';
 import { PIXEL } from '../render/pixel';
 import { RoomView } from '../render/room';
 import { DECOR_KINDS, DECOR_SETS, DecorView, placeDecor, type DecorKind, type Grow, type Piece } from '../render/decor';
@@ -207,7 +207,7 @@ function larvaStroke(): DesignItem {
   const span = g.size * 6;
   return {
     id: 'larva-stroke', name: 'Larva · stroke',
-    note: 'The swim in strokes: a kick every 0.3 s, the tail snapped through a sweep and the body thrown long, then a glide.',
+    note: 'The swim in strokes: a kick every quarter second, the tail snapped through a sweep and the body thrown long, then a glide.',
     source: 'src/input/PlayerController.ts', span, depth: tankById('nursery').depth, genome: g,
     make: () => boardFish(g, 'wraith'),
     animate: (view: Container, dt: number) => {
@@ -1131,6 +1131,7 @@ function roleGroup(): DesignGroup {
 /** The larva, as `Game.reset` hatches it: see-through, pale and big-eyed, and spitting. */
 function larva(): Genome {
   const g = baseGenome();
+  g.speed *= TEMPO;
   g.hue = 255; g.accentHue = 196; g.smoke = 1; g.pale = 1; g.eyeSize = 1.5;
   for (const id of HATCHED) TRAITS.find(t => t.id === id)!.apply(g);
   return g;
