@@ -14,6 +14,7 @@ import { Impacts } from './render/Impacts';
 import { Ocean } from './render/ocean';
 import { followZoom, FramePass, PIXEL } from './render/pixel';
 import { PickupView, SPRITES } from './render/pickups';
+import { TellView } from './render/tells';
 import { PotView } from './render/pots';
 import { PromptView } from './render/prompt';
 import { ShotView } from './render/shots';
@@ -93,6 +94,7 @@ export class Game {
   /** The tank the run is in: its map, the room the player is in, the doors, the slide. */
   tank!: TankMap;
   private pickups!: PickupView;
+  private tells!: TellView;
   private pots!: PotView;
   private shots!: ShotView;
   private pedestals!: PedestalsView;
@@ -232,6 +234,7 @@ export class Game {
     this.camera.over.removeChildren();
     this.tank?.destroy();
     this.pickups?.destroy();
+    this.tells?.destroy();
     this.pots?.destroy();
     this.shots?.destroy();
     this.pedestals?.destroy();
@@ -243,6 +246,7 @@ export class Game {
     this.rng = new Rng(seed);
     this.ocean = new Ocean(this.rng);
     this.pickups = new PickupView();
+    this.tells = new TellView();
     this.pots = new PotView();
     this.shots = new ShotView();
     this.pedestals = new PedestalsView();
@@ -275,7 +279,7 @@ export class Game {
     // one draw: they are the light, and the dark must not fall on them. The E prompt goes
     // last, over them all, since the dark must not swallow it either
     this.camera.over.addChild(layers.glow, this.drain.glow, this.pedestals.glow, this.pickups.glow,
-      this.shots.glow, world.glow, this.prompt.root);
+      this.shots.glow, world.glow, this.tells.root, this.prompt.root);
     this.app.stage.addChild(this.water.layer, this.camera.root, this.lighting.sprite,
       this.camera.over, this.dropIn.root);
 
@@ -479,6 +483,7 @@ export class Game {
     // under the drop-in and the title the room is baked a slice a frame (`warm`), not all at once here
     this.tank.draw(view.t, this.phase !== 'dropin' && this.phase !== 'title');
     this.pickups.update(this.world.pickups, view.zoom, view.t);
+    this.tells.update(this.world.creatures, view.zoom, view.t);
     this.pots.update(this.world.pots, view.zoom);
     this.shots.update(this.world.shots, view.zoom);
     this.pedestals.update(this.tank.pedestals, this.tank.room.tile * HOVER, view.zoom, view.t);
@@ -487,7 +492,7 @@ export class Game {
     this.prompt.update(within, view.zoom, view.t);
     const dread = this.scene.draw(view, this.world, p, this.phase, this.dread,
       [...this.tank.lights, ...this.shots.lights, ...this.pedestals.lights, ...this.pots.lights, ...this.drain.lights,
-        ...this.fx.lights]);
+        ...this.pickups.lights, ...this.fx.lights]);
     this.lighting.render(this.camera);
     if ((this.phase === 'play' || this.phase === 'draft') && !this.tank.sliding) {
       // round the room, not the camera: just after a slide the camera is still panning off

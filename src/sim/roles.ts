@@ -13,12 +13,18 @@ import type { World } from './world';
  * The charger. It closes at a little over half its speed — slower than the player, so it can
  * be outswum and has to be dodged rather than fled — and inside `DASH_RANGE` with a clear
  * line it stops, turns square on and winds up, then goes along that line at `DASH` times its
- * speed and cannot steer. The wind-up is the tell; a miss leaves it recovering, side-on and
- * slow, which is the opening.
+ * speed and cannot steer. The wind-up is the tell, and a bar over it fills through it
+ * (`render/tells.ts`); a miss leaves it recovering, side-on and slow, which is the opening.
+ *
+ * The wind-up ends in `CHARGE_LOCK` with the line fixed and the bar flashing full. It used to
+ * track the player to the instant it went, which at the game's tempo made a dash from two
+ * tiles off a hit nothing could answer: whatever the player did in the wind-up, the line
+ * followed. Locked, a sidestep once the bar is full is always a dodge.
  */
 const CHARGE_CLOSE = 0.55;
 const DASH_RANGE = 6;
-export const CHARGE_WIND = (size: number) => clamp(0.4 + size / 250, 0.4, 0.8);
+export const CHARGE_WIND = (size: number) => clamp(0.5 + size / 250, 0.5, 0.9);
+export const CHARGE_LOCK = 0.3;
 export const DASH = 2.1;
 export const DASH_TIME = 0.4;
 export const CHARGE_RECOVER = 0.7;
@@ -61,6 +67,16 @@ export const STEALTH_DELAY = 1.5;
 
 /** The drifter: it comes on steadily by the shortest water, and the touch is the attack. */
 const DRIFT_THROTTLE = 0.85;
+
+/**
+ * How far a charger is through its wind-up, for the bar over it: `fill` 0 to 1 through the
+ * tracking part, and `locked` once the line is fixed. Null for anything not winding up a charge.
+ */
+export function chargeOf(c: Creature): { fill: number; locked: boolean } | null {
+  if (c.species.role !== 'charger' || c.attack !== 'windup') return null;
+  const done = c.attackLen - c.attackT;
+  return { fill: Math.min(1, done / Math.max(0.01, c.attackLen - CHARGE_LOCK)), locked: c.attackT <= CHARGE_LOCK };
+}
 
 /**
  * Shot speeds, in tiles a second. The player cruises about six at the game's tempo, so a spit
@@ -114,9 +130,9 @@ export class Roles {
     const d = Math.sqrt(dist2(c.x, c.y, p.x, p.y));
     if (this.tick(c, dt)) {
       if (c.attack === 'windup') {
-        // square on to the player through the whole wind-up, and the line is locked as it ends
-        c.aimA = Math.atan2(p.y - c.y, p.x - c.x);
-        c.drive(dt, c.aimA, 0.15, 1);
+        // square on to the player through the wind-up, and held on the line for its last beat
+        if (c.attackT > CHARGE_LOCK) c.aimA = Math.atan2(p.y - c.y, p.x - c.x);
+        c.drive(dt, c.aimA, c.attackT > CHARGE_LOCK ? 0.15 : 0, 1);
       } else if (c.attack === 'strike') {
         // committed: the heading is the one it wound up on, and the speed is held
         const v = Math.max(1, c.genome.speed) * DASH;
@@ -132,7 +148,7 @@ export class Roles {
     }
     const sees = t.clearLine(c.x, c.y, p.x, p.y);
     if (sees && d < DASH_RANGE * t.tile && c.roleCd <= 0) {
-      this.begin(c, 'windup', CHARGE_WIND(c.genome.size));
+      this.begin(c, 'windup', CHARGE_WIND(c.genome.size) + CHARGE_LOCK);
       c.aimA = Math.atan2(p.y - c.y, p.x - c.x);
       return;
     }

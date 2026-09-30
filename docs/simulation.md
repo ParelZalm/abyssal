@@ -377,8 +377,12 @@ in every tank.
 
 - **Charger** — closes at a little over half its speed, slower than the player, so it is
   dodged rather than fled; inside six tiles with a clear line it turns square on, winds up
-  (0.4–0.8 s by size) and dashes along the line it ended on at 2.1× its speed for 0.4 s, which
-  it cannot steer. A dash ends on what it hits.
+  (0.5–0.9 s by size, tracking the player) and then holds still for `CHARGE_LOCK` (0.3 s)
+  with its line fixed, and dashes along that line at 2.1× its speed for 0.4 s, which it
+  cannot steer. A dash ends on what it hits. A bar over it (`render/tells.ts`, read through
+  `chargeOf`) fills through the tracking part and flashes red once the line is locked: that
+  flash is the moment a sidestep is always a dodge. It tracked to the instant it went before,
+  which at the game's tempo was a hit nothing could answer.
 - **Spitter** — holds four to eight tiles off: backs away when crowded, closes when out of
   range or sight, and otherwise drifts across the player's line. With a line and inside
   eleven tiles it stops, pitches toward the player as far as a side-on fish will, and after

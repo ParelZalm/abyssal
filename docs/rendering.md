@@ -135,6 +135,15 @@ is smooth, and `FramePass` steps and dithers it onto the grid with everything el
   its own (`PRESENCE` in `Scene`), so a room's threats can be found outside the larva's
   pool, and it flares warm and wider through a wind-up (`TELL`). The wind-up pose is every
   role's tell, and a pose in the dark is not a tell; the light is what makes it one.
+- **A charger's wind-up has a bar.** A pixel bar over the body (`render/tells.ts`, in the
+  layer over the dark with the E prompt) fills amber as it winds up and flashes red and
+  white while its line is locked. The pose and the light say something is coming; the bar
+  says when.
+- **A pickup lying loose stands in a beam and turns.** A shaft of its colour falls on it from
+  above (`beamTexture`), its light pools round it, and it turns on the spot like Isaac's coin,
+  its width stepping through whole art pixels and its back a shade darker (`PickupView`). A
+  bloom alone was one more glow in a room full of them, and drops were swum past. A chest
+  does not turn.
 - **Shots light the room.** Each carries a light and a bloom (`render/shots.ts`), the bolt
   the most since it is light; a shot has to be seen coming in a dark room.
 - **Whose shot it is comes before its kind.** The player's shots are the water's cool

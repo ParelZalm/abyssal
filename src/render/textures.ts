@@ -48,3 +48,30 @@ export function glowTexture(): Texture {
     [1, 'rgba(255,255,255,0)'],
   ]));
 }
+
+let beam: Texture | null = null;
+/**
+ * A shaft of light falling onto something from above: nothing at its top, narrow there and
+ * widening as it comes down, brightest at its foot where it lands. Anchored at its foot.
+ */
+export function beamTexture(): Texture {
+  if (beam) return beam;
+  const W = 16, H = 64;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d')!;
+  const img = ctx.createImageData(W, H);
+  for (let y = 0; y < H; y++) {
+    const down = y / (H - 1);
+    const half = (0.4 + 0.6 * down) * W / 2;
+    for (let x = 0; x < W; x++) {
+      const off = Math.abs(x + 0.5 - W / 2) / half;
+      const a = off < 1 ? down ** 1.6 * (1 - off * off) : 0;
+      const i = (y * W + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+      img.data[i + 3] = Math.round(a * 255);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return (beam = Texture.from(c));
+}

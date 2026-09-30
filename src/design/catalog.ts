@@ -39,8 +39,11 @@ import { primaryOf, organsOf, strikeOf } from '../sim/organs';
 import { HATCHED } from '../run/starts';
 import { shotGlow, shotTexture } from '../render/shots';
 import { glowTexture } from '../render/textures';
+import { BAR_OVER, ChargeBar } from '../render/tells';
+import { PickupView } from '../render/pickups';
+import type { Pickup } from '../sim/world';
 import {
-  CHARGE_RECOVER, CHARGE_WIND, DASH_TIME, SHOT_SPEED, SPIT_RECOVER, SPIT_WIND, SPOKES, SWELL,
+  CHARGE_LOCK, CHARGE_RECOVER, CHARGE_WIND, DASH_TIME, SHOT_SPEED, SPIT_RECOVER, SPIT_WIND, SPOKES, SWELL,
   TURRET_RECOVER, TURRET_WIND,
 } from '../sim/roles';
 import type { Role, ShotKind, Species } from '../content/species';
@@ -923,6 +926,22 @@ function spriteCell(canvas: HTMLCanvasElement, px: number): Container {
   return c;
 }
 
+/** A drop laid out on the board through the room's own `PickupView`, on the board's clock. */
+class PickupsCell extends Container {
+  private readonly view = new PickupView();
+  private t = 0;
+  private readonly laid: Pickup[] = (['heart', 'shell', 'key', 'pellet', 'snail', 'chest'] as const)
+    .map((kind, i) => ({ kind, x: (i - 2.5) * 14, y: 4, vx: 0, vy: 0, t: 0 }));
+  constructor() {
+    super();
+    this.addChild(this.view.root, this.view.glow);
+  }
+  tick(dt: number) {
+    this.t += dt;
+    this.view.update(this.laid, 2 / SHOT_PX, this.t);
+  }
+}
+
 /**
  * Health and what the belly passes: the pickups as they lie in the water, the HUD's row of
  * containers in each state, and a carcass at rest — each from the code that draws it in play.
@@ -947,6 +966,13 @@ function healthGroup(): DesignGroup {
         span: 14, depth: tank.depth, make: () => spriteCell(spriteCanvas('heart'), 1) },
       { id: 'pickup-shell', name: 'shell', note: 'a pickup: the currency', source: 'src/render/pickups.ts',
         span: 14, depth: tank.depth, make: () => spriteCell(spriteCanvas('shell'), 1) },
+      {
+        id: 'pickups-lying', name: 'pickups lying loose',
+        note: 'as a room shows a drop: each turning on the spot, a shaft of light falling on it, and its light pooled round it',
+        source: 'src/render/pickups.ts', span: 90, depth: tank.depth,
+        make: () => new PickupsCell(),
+        animate: (view: Container, dt: number) => (view as PickupsCell).tick(dt),
+      },
       { id: 'hearts', name: 'heart containers', note: 'the HUD row: full, full, half, empty', source: 'src/ui/hud/Hearts.ts',
         span: 40, depth: tank.depth, make: heartRow },
       {
@@ -988,10 +1014,13 @@ class RoleCell extends Container {
   readonly fish: BoardFish;
   readonly shots = new Container();
   readonly blooms = new Container();
+  /** The charge bar, for a charger's cell. */
+  readonly bar = new ChargeBar();
   constructor(g: Genome, plan: Plan, private readonly hostile = true) {
     super();
     this.fish = boardFish(g, plan);
-    this.addChild(this.blooms, this.fish, this.shots);
+    this.bar.root.visible = false;
+    this.addChild(this.blooms, this.fish, this.shots, this.bar.root);
   }
   private flights: { a: number; d: number; t: number; s: Sprite; b: Sprite }[] = [];
 
@@ -1033,7 +1062,7 @@ class RoleCell extends Container {
  */
 function roleAnimate(sp: Species, g: Genome, tile: number) {
   const role = sp.role!;
-  const wind = role === 'charger' ? CHARGE_WIND(g.size) : role === 'turret' ? TURRET_WIND
+  const wind = role === 'charger' ? CHARGE_WIND(g.size) + CHARGE_LOCK : role === 'turret' ? TURRET_WIND
     : role === 'spitter' ? SPIT_WIND : 0;
   const strike = role === 'charger' ? DASH_TIME : 0.12;
   const recover = role === 'charger' ? CHARGE_RECOVER : role === 'turret' ? TURRET_RECOVER : SPIT_RECOVER;
@@ -1068,6 +1097,11 @@ function roleAnimate(sp: Species, g: Genome, tile: number) {
       const out = g.size * 1.6;
       const k = t < wind ? 0 : t < wind + strike ? (t - wind) / strike : Math.max(0, 1 - (t - wind - strike) / (recover + 1.2));
       x = out * k - out * 0.5;
+      // the bar over it through the wind-up, as `TellView` stands it: filling, then locked
+      cell.bar.root.visible = t < wind;
+      if (t < wind) {
+        cell.bar.set(x, -g.size * BAR_OVER, t / (wind - CHARGE_LOCK), t >= wind - CHARGE_LOCK, SHOT_PX, t);
+      }
     }
     if (role === 'turret') {
       fish.swell = 1 + SWELL * (t < wind ? t / wind : t < wind + strike ? 1

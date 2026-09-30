@@ -1,6 +1,7 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 import type { Pickup, PickupKind } from '../sim/world';
-import { glowTexture } from './textures';
+import { beamTexture, glowTexture } from './textures';
+import type { Light } from './lighting';
 
 /**
  * Pixel maps for what the player collects, one character per art pixel: `#` outline,
@@ -137,44 +138,77 @@ export const PICKUP_GLOW: Record<PickupKind, number> = {
 };
 
 /**
+ * How a pickup lying loose says it is there to be had: it turns on the spot like Isaac's coin,
+ * once every `SPIN` seconds or so, and a shaft of light falls on it from above, `BEAM` art
+ * pixels tall. A bloom alone read as one more glowing thing in a room full of them — anemone
+ * tips, lamps, a hostile's shots — and a drop was swum past; nothing else in the water turns
+ * or stands in a beam. A chest stays still: it is a box on the floor, not a token.
+ */
+const SPIN = 2.2;
+const BEAM = 44;
+
+/**
  * The pickups lying in a room, drawn from `World.pickups` each frame: a sprite per pickup,
- * bobbing a little where it lies, and a faint bloom in `glow` for the layer above the dark.
- * Sized in art pixels rather than world units — at every tank's zoom a heart is the same
- * handful of pixels, the way the HUD's is.
+ * bobbing and turning where it lies, its light pooled round it (`lights`), and a bloom and a
+ * beam in `glow` for the layer above the dark. Sized in art pixels rather than world units —
+ * at every tank's zoom a heart is the same handful of pixels, the way the HUD's is.
  */
 export class PickupView {
   readonly root = new Container();
   readonly glow = new Container();
+  readonly lights: Light[] = [];
   private sprites: Sprite[] = [];
   private blooms: Sprite[] = [];
+  private beams: Sprite[] = [];
 
   update(pickups: readonly Pickup[], zoom: number, t: number) {
     // one art pixel is PIXEL CSS pixels, which is 2 / zoom world units
     const px = 2 / zoom;
+    this.lights.length = 0;
     while (this.sprites.length < pickups.length) {
       const s = new Sprite();
       s.anchor.set(0.5, 1);
       this.root.addChild(s);
       this.sprites.push(s);
+      // the beam under the bloom, both additive in the one layer, so they batch
+      const r = new Sprite(beamTexture());
+      r.anchor.set(0.5, 1);
+      r.blendMode = 'add';
       const b = new Sprite(glowTexture());
       b.anchor.set(0.5);
       b.blendMode = 'add';
-      this.glow.addChild(b);
+      this.glow.addChild(r, b);
+      this.beams.push(r);
       this.blooms.push(b);
     }
     for (let i = 0; i < this.sprites.length; i++) {
-      const s = this.sprites[i], b = this.blooms[i];
+      const s = this.sprites[i], b = this.blooms[i], r = this.beams[i];
       const k = pickups[i];
-      s.visible = b.visible = !!k;
+      s.visible = b.visible = r.visible = !!k;
       if (!k) continue;
-      s.texture = spriteTexture(k.kind);
+      const tex = s.texture = spriteTexture(k.kind);
       const bob = Math.sin(t * 2.4 + i) * px * 0.8;
       s.position.set(k.x, k.y + 3 - Math.abs(bob));
-      s.scale.set(px);
+      // The turn is the width going through zero and coming back mirrored — the back is a
+      // shade darker, so it reads as a side turned away rather than the art flipping — in whole
+      // art pixels, so it narrows on the grid instead of resampling across it, and never quite
+      // to nothing, or the pickup blinks out twice a turn.
+      const turn = k.kind === 'chest' ? 1 : Math.cos(t * (Math.PI * 2 / SPIN) + i * 1.7);
+      const w = tex.width;
+      const across = Math.max(1, Math.round(Math.abs(turn) * w)) / w;
+      s.scale.set(px * across * (turn < 0 ? -1 : 1), px);
+      s.tint = turn < 0 ? 0xa8aec0 : 0xffffff;
+      const colour = PICKUP_GLOW[k.kind];
       b.position.set(k.x, k.y - px * 4);
       b.width = b.height = px * 22;
-      b.tint = PICKUP_GLOW[k.kind];
+      b.tint = colour;
       b.alpha = 0.45;
+      r.position.set(k.x, k.y + 3);
+      r.width = px * 12;
+      r.height = px * BEAM;
+      r.tint = colour;
+      r.alpha = 0.3 + Math.sin(t * 1.3 + i * 2.1) * 0.06;
+      this.lights.push({ x: k.x, y: k.y - px * 4, r: px * 20, color: colour, a: 0.5 });
     }
   }
 
