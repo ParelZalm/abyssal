@@ -28,12 +28,12 @@ const FIGHT_HOSTILES: [number, number] = [3, 4];
 const DRAIN_REACH = 0.6;
 /**
  * A pedestal — the treasure room's, a shop's goods, a deal: how high over its plinth what it offers
- * hangs, and how near the player has to swim to read it and to take it, in tiles. Stands
- * sit `SPACING` tiles apart at the least.
+ * hangs, and how near the player has to swim to it to read it and take it on E, in tiles. One
+ * reach for both, so the card on the HUD is always what E would take. Stands sit `SPACING`
+ * tiles apart at the least; between two in reach, E takes the nearer, whose card is showing.
  */
 export const HOVER = 1.4;
-const READ = 3;
-const TAKE = 0.7;
+const REACH = 3;
 const SPACING = 3.2;
 /** How near a locked door the player has to come for a key to go into it, in tiles past the body. */
 const LOCK_REACH = 1.2;
@@ -265,13 +265,6 @@ export class TankMap {
     const c = this.cell;
     const t = this.room;
     if (t.locked && !this.world.creatures.some(o => o.hostile && o.alive)) this.clear();
-    for (const s of c.pedestals ?? []) {
-      if (!s.good) continue;
-      const r = this.p.radius + t.tile * TAKE;
-      if (Math.hypot(this.p.x - s.x, this.p.y - (s.y - t.tile * HOVER)) < r && this.hooks.buy(s)) {
-        s.good = null;
-      }
-    }
     const drain = c.drain;
     if (drain && Math.hypot(this.p.x - drain.x, this.p.y - drain.y) < this.p.radius + t.tile * DRAIN_REACH) {
       c.drain = null;
@@ -480,16 +473,23 @@ export class TankMap {
   /** The current room's pedestals, if it has any. */
   get pedestals(): readonly Pedestal[] { return this.slide ? [] : this.cell.pedestals ?? []; }
 
-  /** The pedestal the player is close enough to read, nearest first, or null. */
+  /** The pedestal the player is close enough to read and take, nearest first, or null. */
   get offered(): Pedestal | null {
     const t = this.room;
-    let best: Pedestal | null = null, bd = t.tile * READ;
+    let best: Pedestal | null = null, bd = t.tile * REACH;
     for (const s of this.pedestals) {
       if (!s.good) continue;
       const d = Math.hypot(this.p.x - s.x, this.p.y - (s.y - t.tile * HOVER));
       if (d < bd) { bd = d; best = s; }
     }
     return best;
+  }
+
+  /** E at a pedestal: pay for its good and take it. False when it cannot be paid. */
+  take(s: Pedestal): boolean {
+    if (!s.good || !this.hooks.buy(s)) return false;
+    s.good = null;
+    return true;
   }
 
   /** What the current room's decoration lights it with. */

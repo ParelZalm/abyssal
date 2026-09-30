@@ -53,8 +53,8 @@ export interface HudState {
   /** The stat column. */
   stats: Stats;
   /**
-   * What is on the pedestal the player is beside: the good and its price, what taking it would
-   * finish, and whether the codex has it.
+   * What E would take now, a pedestal's good or an item lying loose: the good and its price,
+   * what taking it would finish, and whether the codex has it.
    */
   offer: { good: Good; price: Price | null; note: string | null; isNew: boolean } | null;
 }

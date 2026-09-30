@@ -54,7 +54,7 @@ export class TitleScreen implements Component {
       keysLine([kbd('W'), kbd('A'), kbd('S'), kbd('D'), ' swim  ·  ', kbd('←'), kbd('↑'),
         kbd('→'), kbd('↓'), ' strike that way']),
       keysLine([
-        kbd('Space'), ' active mutation  ·  ', kbd('E'), ' item  ·  ',
+        kbd('Space'), ' active mutation  ·  ', kbd('E'), ' take  ·  ', kbd('Q'), ' item  ·  ',
         kbd('P'), ' pause  ·  ', kbd('M'), ' sound',
       ]),
       ...(codex.tanks > 0 ? [forms] : []),

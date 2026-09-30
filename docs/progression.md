@@ -42,8 +42,8 @@ Three groups of fields, and the split matters:
   (below half health, bleeding, poisoned or dazzled) from twice that. A body found by feel
   and not by sight is drawn in a cold cast (`FELT_TINT`) so the two read differently.
   Pores pepper the snout.
-  The three **active** organs fill one slot the player fires by hand — E or the right
-  button — on a cooldown kept by `PlayerController.fireActive`. An `active` record on the organ gives
+  The three **active** organs fill one slot the player fires by hand — Space — on a
+  cooldown kept by `PlayerController.fireActive`. An `active` record on the organ gives
   its name, HUD glyph, cooldown and `fire(c, world)`, and `activeOf` takes the first; the
   cards clear the other two fields when taken, so the slot is always one. A press is
   consumed whether or not it fired. `Ink Sac` (12 s) leaves a cloud of `3 × size + 200` on
@@ -206,9 +206,12 @@ rarity, icon, description, an optional home `tank`, and an `apply` that mutates 
   card says what taking it would finish (`Evolution.finishes`); an undiscovered synergy is
   announced but not named.
 - **Taking one.** Beside the pedestal the mutation's card is shown at the top of the screen
-  (`ui/hud/OfferCard.ts`, the draft's card in `ui/hud/cards.ts`); swimming into the mutation
-  takes it (`Evolution.take`). There is no screen and no pause: Isaac's pedestal is walked
-  onto.
+  (`ui/hud/OfferCard.ts`, the draft's card in `ui/hud/cards.ts`) and a key cap with E on it
+  hangs over the good (`render/prompt.ts`); pressing E takes it (`TankMap.take`,
+  `Evolution.take`). The reach to read it and to take it is one, three tiles from the good
+  (`REACH`), so the card is always what E would take, and between two stands the nearer is
+  meant. There is no screen and no pause. Swimming into it once took it, as Isaac's pedestal
+  is walked onto; now it is taken only on purpose.
 - **Every apex card costs something**, and its text says so; **cursed cards** carry a
   `curse`, the price in red on its own line (the mechanics in `sim/organs/adaptations.ts`),
   and are offered only in the deal room, beside the deal mutations (*The economy*).
@@ -243,13 +246,15 @@ Roadmap stage 6: shells, keys and items, the shop and the deal room (`run/Pocket
 
 - **Pickups** are `World.pickups`: a half heart, a shell, a key, a chest, or an item. The
   player takes one by touch, if `World.takes` lets it — `Pockets.takes`, which holds a chest
-  back until there is a key for it. `Pockets.collect` does the rest: shells and keys counted
+  back until there is a key for it and never lets an item go by touch: an item is taken on
+  E, within 1.2 tiles past the body (`Pockets.nearItem`, `pickUp`), under the same prompt
+  and card as a pedestal's good, so a swap is always meant. `Pockets.collect` does the rest: shells and keys counted
   on the run, a chest opened for a key and spilling two or three pickups, an item put in the
-  pocket (one already there is dropped, and lies 1.5 s before it can be taken back).
+  pocket (one already there is dropped, and lies 1.5 s before E will take it back).
 - **A cleared room drops** two times in five (`CLEAR_DROP`, in `Game`), where the fight was:
   shells 45, a half heart 22, a key 15, an item 12, a chest 6. The roll is the room's own
   seed.
-- **Items** are one in the pocket, used on E (`Pockets.use`): the Food Pellet mends a heart,
+- **Items** are one in the pocket, used on Q (`Pockets.use`), Isaac's pocket key: the Food Pellet mends a heart,
   the Air Stone bursts (`World.burst`: everything within four tiles shoved out and stunned,
   every hostile shot inside broken), the Nerite Snail cures venom and bleeding. One that
   would do nothing is kept, and says so.
@@ -259,8 +264,8 @@ Roadmap stage 6: shells, keys and items, the shop and the deal room (`run/Pocket
   against with a key it opens (`TankMap.open`).
 - **The shop** stands three goods and a mutation on pedestals across its floor: three of a
   half heart (3 shells), the snail (3), the pellet (4), the air stone (5) and a key (5), and
-  a mutation from the tank's pool for 15. Swimming into one pays and takes it; one that
-  cannot be paid says its price.
+  a mutation from the tank's pool for 15. E beside one pays and takes it; one that cannot
+  be paid says its price.
 - **The deal room.** Half of all tanks have one (`DEAL_CHANCE`, rolled with the map): a room
   off the boss room in a cell that touches nothing else, its door sealed (`'seal'`, a red
   grate) until the boss room is cleared, and not on the minimap until then. It stands a

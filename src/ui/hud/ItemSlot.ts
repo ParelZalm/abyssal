@@ -14,7 +14,7 @@ export class ItemSlot {
 
   constructor() {
     const key = document.createElement('kbd');
-    key.textContent = 'E';
+    key.textContent = 'Q';
     this.mark.className = 'mark';
     this.element.append(this.mark, key, this.name);
     this.element.hidden = true;

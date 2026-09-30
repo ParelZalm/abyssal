@@ -8,8 +8,13 @@ import type { Run } from './Run';
 
 /** How far the Air Stone's bubbles reach, in tiles. */
 const BURST = 4;
-/** Seconds an item dropped from the pocket lies before it can be taken back, so a swap is not a loop. */
+/** Seconds an item dropped from the pocket lies before E will take it back, so the prompt is not on it at once. */
 const SWAP_GRACE = 1.5;
+/**
+ * How near an item lying loose has to be for E to take it, in tiles past the body. Wider than
+ * the touch a heart is swum into with: an item is only ever taken on purpose.
+ */
+const ITEM_REACH = 1.2;
 /** Seconds between two "you cannot" toasts — a price or a lock touched every frame. */
 const NAG = 2.5;
 
@@ -40,11 +45,36 @@ export class Pockets {
     this.nagT = Math.max(0, this.nagT - dt);
   }
 
-  /** Whether the player can take this now: a chest wants a key. Nags once when it cannot. */
+  /**
+   * Whether swimming into this takes it: an item is never taken by touch, only on E
+   * (`nearItem`, `pickUp`), and a chest wants a key. Nags once when a chest cannot be opened.
+   */
   takes(k: Pickup) {
+    if (isItem(k.kind)) return false;
     if (k.kind !== 'chest' || this.run.keys > 0) return true;
     this.nag('A chest — it takes a key');
     return false;
+  }
+
+  /** The item lying nearest the player within E's reach, or null. */
+  nearItem(): Pickup | null {
+    const { p, world } = this;
+    let best: Pickup | null = null, bd = p.radius + (world.terrain?.tile ?? 23) * ITEM_REACH;
+    for (const k of world.pickups) {
+      // the moment the world waits too, so an item passed by the belly is seen leaving it
+      if (!isItem(k.kind) || k.t < 0.5) continue;
+      const d = Math.hypot(k.x - p.x, k.y - p.y);
+      if (d < bd) { bd = d; best = k; }
+    }
+    return best;
+  }
+
+  /** E beside an item lying loose: off the floor and into the pocket. */
+  pickUp(k: Pickup) {
+    const i = this.world.pickups.indexOf(k);
+    if (i < 0) return;
+    this.world.pickups.splice(i, 1);
+    this.collect(k);
   }
 
   /** Something picked up off the floor, or handed over by a shop. */
@@ -77,7 +107,7 @@ export class Pockets {
     if (had) {
       this.world.drop(had, p.x, p.y, -p.face * 50, -30, SWAP_GRACE);
     }
-    if (!had) this.ui.toast(`${ITEMS[item].name} — press E to use it`);
+    if (!had) this.ui.toast(`${ITEMS[item].name} — press Q to use it`);
   }
 
   /** A chest opened: two or three things out of it, thrown up and apart. */
@@ -103,7 +133,7 @@ export class Pockets {
     return 'shell';
   }
 
-  /** E: use the item in the pocket. One that would do nothing is kept, and says so. */
+  /** Q: use the item in the pocket. One that would do nothing is kept, and says so. */
   use() {
     const { run, p, world } = this;
     const item = run.item;

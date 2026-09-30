@@ -39,7 +39,9 @@ export const RARITY_COLOUR: Record<Rarity, { css: string; hex: number }> = {
 };
 
 /** Cells across a mutation's glyph over its pedestal: a little over the HUD's chip. */
-const GLYPH = 14;
+export const GLYPH = 14;
+/** Art pixels a good bobs up and down over its plinth. */
+export const BOB = 2;
 
 let plinthTex: Texture | null = null;
 function plinthTexture() {
@@ -124,7 +126,7 @@ export class PedestalsView {
       if (!good) return;
       const mutation = good.kind === 'mutation' ? good.trait : null;
       const colour = good.kind === 'mutation' ? RARITY_COLOUR[good.trait.rarity].hex : PICKUP_GLOW[good.pickup];
-      const y = s.y - hover + Math.sin(t * 1.8 + i) * px * 2;
+      const y = s.y - hover + Math.sin(t * 1.8 + i) * px * BOB;
       v.good.texture = good.kind === 'mutation' ? glyphTexture(good.trait.icon, good.trait.rarity)
         : spriteTexture(good.pickup);
       v.good.position.set(s.x, y);

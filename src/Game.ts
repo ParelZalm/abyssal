@@ -13,9 +13,10 @@ import { Fx } from './render/fx';
 import { Impacts } from './render/Impacts';
 import { Ocean } from './render/ocean';
 import { followZoom, FramePass, PIXEL } from './render/pixel';
-import { PickupView } from './render/pickups';
+import { PickupView, SPRITES } from './render/pickups';
+import { PromptView } from './render/prompt';
 import { ShotView } from './render/shots';
-import { DrainView, PedestalsView } from './render/pedestals';
+import { BOB, DrainView, GLYPH, PedestalsView } from './render/pedestals';
 import { DropIn } from './render/dropin';
 import { Lighting, lightTexture } from './render/lighting';
 import { Scene } from './render/Scene';
@@ -27,12 +28,12 @@ import { Evolution } from './run/Evolution';
 import { Belly } from './run/Belly';
 import type { Phase } from './run/phase';
 import { COMBO_WINDOW, comboMult, Run } from './run/Run';
-import { HOVER, TankMap, type RoomLayers } from './run/TankMap';
+import { HOVER, TankMap, type Good, type Pedestal, type RoomLayers } from './run/TankMap';
 import { Pockets } from './run/Pockets';
 import { startById } from './run/starts';
 import { SYNERGIES } from './sim/organs';
 import { Creature } from './sim/creature';
-import { World, type PickupKind } from './sim/world';
+import { World, type Pickup, type PickupKind } from './sim/world';
 import type { RunChoice } from './ui/screens/TitleScreen';
 import { UI } from './ui/UI';
 
@@ -93,6 +94,7 @@ export class Game {
   private pickups!: PickupView;
   private shots!: ShotView;
   private pedestals!: PedestalsView;
+  private prompt!: PromptView;
   private drain!: DrainView;
   /** The drop-in: the tank from outside the glass, at every descent and every run's start. */
   private readonly dropIn = new DropIn();
@@ -230,6 +232,7 @@ export class Game {
     this.pickups?.destroy();
     this.shots?.destroy();
     this.pedestals?.destroy();
+    this.prompt?.destroy();
     this.drain?.destroy();
 
     const seed = choice.seed ?? ((Math.random() * 2 ** 32) >>> 0);
@@ -239,6 +242,7 @@ export class Game {
     this.pickups = new PickupView();
     this.shots = new ShotView();
     this.pedestals = new PedestalsView();
+    this.prompt = new PromptView();
     this.drain = new DrainView();
 
     const g: Genome = baseGenome();
@@ -263,9 +267,10 @@ export class Game {
       layers.rock,
     );
     // the blooms go above the lighting, in one additive layer of their own that batches as
-    // one draw: they are the light, and the dark must not fall on them
+    // one draw: they are the light, and the dark must not fall on them. The E prompt goes
+    // last, over them all, since the dark must not swallow it either
     this.camera.over.addChild(layers.glow, this.drain.glow, this.pedestals.glow, this.pickups.glow,
-      this.shots.glow, world.glow);
+      this.shots.glow, world.glow, this.prompt.root);
     this.app.stage.addChild(this.water.layer, this.camera.root, this.lighting.sprite,
       this.camera.over, this.dropIn.root);
 
@@ -273,6 +278,7 @@ export class Game {
     this.dread = new Dread();
     this.input.wantActive = false;
     this.input.wantItem = false;
+    this.input.wantInteract = false;
     this.controller = new PlayerController(this.input, p, world, fx);
     this.belly = new Belly(run, p, world, fx, ui);
     const pockets = this.pockets = new Pockets(run, p, world, fx, ui);
@@ -408,7 +414,8 @@ export class Game {
       this.belly.update(dt);
       this.pockets.update(dt);
       if (this.input.wantItem) this.pockets.use();
-      this.input.wantItem = false;
+      if (this.input.wantInteract) this.interact();
+      this.input.wantItem = this.input.wantInteract = false;
       this.camera.settle(dt);
       this.run.tick(dt);
       this.dread.update(dt, this.world.hunted);
@@ -465,6 +472,8 @@ export class Game {
     this.shots.update(this.world.shots, view.zoom);
     this.pedestals.update(this.tank.pedestals, this.tank.room.tile * HOVER, view.zoom, view.t);
     this.drain.update(this.tank.drain, view.zoom, view.t);
+    const within = this.phase === 'play' && !this.tank.sliding ? this.within() : null;
+    this.prompt.update(within, view.zoom, view.t);
     const dread = this.scene.draw(view, this.world, p, this.phase, this.dread,
       [...this.tank.lights, ...this.shots.lights, ...this.pedestals.lights, ...this.drain.lights,
         ...this.fx.lights]);
@@ -493,7 +502,7 @@ export class Game {
       active: this.controller.active(),
       stats: this.controller.stats(this.tank.room.tile),
       boss: this.bossState(),
-      offer: this.offer(),
+      offer: this.offer(within),
       map: this.tank.minimap(), mapVersion: this.tank.version,
     });
   }
@@ -504,12 +513,38 @@ export class Game {
     return b ? { name: b.species.name, hp: Math.max(0, b.hp / b.hpMax) } : null;
   }
 
-  /** The pedestal the player is beside, for the HUD's card. */
-  private offer() {
+  /**
+   * What E would take now: the pedestal the player is beside, or else an item lying in reach —
+   * and where its good is drawn from and how far it stands over that, in art pixels, for the
+   * prompt over it.
+   */
+  private within(): { good: Good; price: Pedestal['price']; x: number; y: number; lift: number;
+                      pedestal: Pedestal | null; pickup: Pickup | null } | null {
     const s = this.tank.offered;
-    if (!s?.good || this.phase !== 'play') return null;
-    const trait = s.good.kind === 'mutation' ? s.good.trait : null;
-    return { good: s.good, price: s.price, note: trait && this.evolution.finishes(trait),
+    if (s?.good) {
+      const tall = s.good.kind === 'mutation' ? GLYPH : SPRITES[s.good.pickup].length;
+      return { good: s.good, price: s.price, x: s.x, y: s.y - this.tank.room.tile * HOVER,
+        lift: tall / 2 + BOB, pedestal: s, pickup: null };
+    }
+    const k = this.pockets.nearItem();
+    if (!k) return null;
+    // a pickup is drawn from its foot, which `PickupView` sets 3 under where it lies
+    return { good: { kind: 'pickup', pickup: k.kind }, price: null, x: k.x, y: k.y + 3,
+      lift: SPRITES[k.kind].length, pedestal: null, pickup: k };
+  }
+
+  /** E: take what the player is beside, paying for a pedestal's good. */
+  private interact() {
+    const w = this.within();
+    if (w?.pedestal) this.tank.take(w.pedestal);
+    else if (w?.pickup) this.pockets.pickUp(w.pickup);
+  }
+
+  /** What E would take, for the HUD's card. */
+  private offer(w: ReturnType<Game['within']>) {
+    if (!w) return null;
+    const trait = w.good.kind === 'mutation' ? w.good.trait : null;
+    return { good: w.good, price: w.price, note: trait && this.evolution.finishes(trait),
       isNew: !!trait && !this.run.codex.traits[trait.id] };
   }
 }

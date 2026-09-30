@@ -46,7 +46,8 @@ _Avoid_: prop, scenery
 room's mutation, and each of a shop's or a deal room's goods, at its price.
 
 **Pickup** — anything lying loose in a room that is collected by swimming into it: a
-half heart, a shell, a key, an item, or a chest, which takes a key and spills pickups.
+half heart, a shell, a key, or a chest, which takes a key and spills pickups — and an item,
+which is taken only on E, as a pedestal's good is.
 Pickups drop from cleared rooms, from chests and from the belly.
 
 **Descent** — moving from one tank to the next, bigger one, down the **drain** the boss room

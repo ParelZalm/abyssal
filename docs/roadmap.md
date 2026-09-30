@@ -20,7 +20,8 @@ that finishes it.
   rooms. One start, one treasure, one shop, one boss, at least three fights; a deal room
   may open after the boss. The minimap is drawn inside the tank's outline.
 - **Controls.** WASD swims, no boost. Arrows attack in four directions; the body stays
-  level for up and down. Space fires the active mutation, E the held item.
+  level for up and down. Space fires the active mutation, E takes what the player is beside
+  (a pedestal's good, an item lying loose), Q uses the held item.
 - **Hits.** Half a heart each, a boss's a whole one, ~0.8 s of invulnerability. Armour is
   a chance to shrug one off, capped near 40%.
 - **Swallowing.** A bite that would kill swallows instead; so does reaching a carcass.
@@ -180,7 +181,7 @@ What it found, and what it leaves:
 ## 6. ~~The economy~~
 
 Done: pickups for keys, chests and three items (`content/items.ts`); `run/Pockets.ts` for
-shells, keys and the pocket, used on E; a cleared room's drop (two in five); doors that take
+shells, keys and the pocket, used on Q; a cleared room's drop (two in five); doors that take
 a key (the shop's, and past the nursery the treasure room's) and the deal room's seal, both
 `Terrain.shut`; the shop — three goods at 3–5 shells and a mutation at 15; the deal room in
 half of all tanks, sealed beside the boss room until it is cleared, with a deal mutation for
