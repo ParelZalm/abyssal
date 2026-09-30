@@ -121,6 +121,28 @@ const KNOCK = 0.18;
 const HURT_WHITE = 0.72;
 
 /**
+ * A thud against rock (`bump`): seconds it rings for, and how many half-swings it makes in
+ * that — squashed against the rock, sprung long off it, and settling — so a big body reads as
+ * heavy and elastic rather than stopped. `BUMP_SQUASH` is the squash at a full-weight thud,
+ * `BUMP_REEL` the turn off a blow at the end of the body, in radians.
+ */
+const BUMP_TIME = 0.45;
+const BUMP_SWINGS = 3;
+const BUMP_SQUASH = 0.24;
+const BUMP_REEL = 0.22;
+
+/**
+ * Tucking into a crack (`nestle`): seconds it plays for; how far the body sinks back into it
+ * and comes up again, in sizes; how much narrower it squeezes; and the tail's wriggle, radians
+ * and swings — a larva working itself into the rock rather than a sprite turned on end.
+ */
+const NESTLE_TIME = 0.55;
+const NESTLE_DIP = 0.22;
+const NESTLE_SQUEEZE = 0.16;
+const NESTLE_WRIGGLE = 0.14;
+const NESTLE_SWINGS = 5;
+
+/**
  * A carcass glows red: a rim of it round the silhouette (the skin's `uRim`), a bloom and a
  * light. Dimmed grey and floating among the rock and the decoration, a kill left to be eaten
  * was lost in the room; red is the colour nothing alive in the water is drawn in but blood.
@@ -194,6 +216,15 @@ export class FishView extends Container {
   /** Which way the last blow was going, as a unit vector: the flinch throws the drawn body along it. */
   private knockX = 0;
   private knockY = 0;
+  /** A thud against rock, 1 as it lands down to 0; how hard, how nose-on, and which way it turns the body. */
+  private bumpT = 0;
+  private bumpK = 0;
+  private bumpAlong = 0;
+  private bumpTip = 0;
+  /** The turn a thud gives the body this frame, radians, applied by `place`. */
+  private reel = 0;
+  /** Tucking into a crack, 1 as it starts down to 0 (`nestle`). */
+  private nestT = 0;
   /** Which texture is on the mesh: the mouth shut, or open to strike. */
   private gaping = false;
   /** Set once the animal is dead and this view is playing its death. */
@@ -221,14 +252,22 @@ export class FishView extends Container {
    * this is the one place the body's final transform is put together: its facing, the
    * pitch, the hover and the strike's draw-back on top of where the simulation has it.
    */
-  place(x: number, y: number, heading: number, face: 1 | -1 = 1) {
+  place(x: number, y: number, heading: number, face: 1 | -1 = 1, upright = 0) {
     this.face = face;
     // a view that first appears facing -x is already turned, not flipping
     if (!this.placed) { this.placed = true; this.facing = face; }
     // The mirror is in the strip, so the frame only pitches. The pitch is the same climb or
     // dive either way round, which as a rotation is its negative in the mirrored frame.
-    const pitch = drawnAngle(heading, face) * face;
-    const r = pitch * this.facing + this.sway;
+    const pitch = drawnAngle(heading, face, upright) * face;
+    let r = pitch * this.facing + this.sway + this.reel;
+    if (this.nestT > 0) {
+      // worked into the crack: sunk back down its length and up again, the tail wriggling
+      const e = 1 - this.nestT;
+      const dip = Math.sin(e * Math.PI) * this.g.size * NESTLE_DIP;
+      x -= Math.cos(r) * this.facing * dip;
+      y -= Math.sin(r) * this.facing * dip;
+      r += Math.sin(e * Math.PI * NESTLE_SWINGS) * NESTLE_WRIGGLE * this.nestT;
+    }
     const unit = this.g.size / R * this.swell;
     this.scale.set(unit * this.sx, unit * this.sy);
     // drawn back along the heading on a wind-up — the coil before the spring
@@ -456,6 +495,25 @@ export class FishView extends Container {
   }
 
   /** A wound landed on this body, from a blow going (`dx`, `dy`) — any length; none is no knock. */
+  /**
+   * The body met rock (`World.meetRock`): `k` how hard, 0 to 1; `along` 1 for nose- or tail-on
+   * and 0 for a flank laid on it, which is the axis it squashes on; `tip` which way and how far
+   * from its middle the blow landed, which turns it off the rock.
+   */
+  bump(k: number, along: number, tip: number) {
+    // a harder thud over a ringing one takes over; a lighter one is lost in it
+    if (this.bumpT * this.bumpK > k) return;
+    this.bumpT = 1;
+    this.bumpK = k;
+    this.bumpAlong = along;
+    this.bumpTip = tip;
+  }
+
+  /** The body has tucked itself into a crack (`PlayerController.nook`): the settle. */
+  nestle() {
+    this.nestT = 1;
+  }
+
   hurt(dx = 0, dy = 0) {
     this.hurtT = 1;
     const d = Math.hypot(dx, dy);
@@ -771,6 +829,26 @@ export class FishView extends Container {
     // a flinch: knocked short and bunched for an instant, keeping its volume
     sx *= 1 - this.hurtT * 0.2;
     sy *= 1 + this.hurtT * 0.12;
+    // a thud: flattened against the rock along the axis that met it, sprung long off it and
+    // settling, each swing smaller — keeping its volume, or it reads as the art shrinking
+    // squeezed into a crack: narrower across and drawn out along, for the moment it takes
+    this.nestT = Math.max(0, this.nestT - dt / NESTLE_TIME);
+    if (this.nestT > 0) {
+      const s = Math.sin((1 - this.nestT) * Math.PI);
+      sx *= 1 + s * NESTLE_SQUEEZE * 0.5;
+      sy *= 1 - s * NESTLE_SQUEEZE;
+    }
+    this.bumpT = Math.max(0, this.bumpT - dt / BUMP_TIME);
+    this.reel = 0;
+    if (this.bumpT > 0) {
+      const e = 1 - this.bumpT;
+      const ring = this.bumpT * this.bumpT * Math.cos(e * Math.PI * BUMP_SWINGS) * this.bumpK;
+      const on = this.bumpAlong, flat = 1 - on;
+      sx *= 1 - ring * BUMP_SQUASH * on + ring * BUMP_SQUASH * 0.5 * flat;
+      sy *= 1 + ring * BUMP_SQUASH * 0.6 * on - ring * BUMP_SQUASH * flat;
+      // turned off the rock and swinging back through it: a head that hit the wall reels
+      this.reel = this.bumpTip * BUMP_REEL * this.bumpK * this.bumpT * Math.cos(e * Math.PI * (BUMP_SWINGS - 1));
+    }
     this.sx = sx;
     this.sy = sy;
     // the jaw is a second texture on the same strip: open for the strike, and snapped shut

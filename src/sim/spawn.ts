@@ -1,3 +1,4 @@
+import { PLAN_FORMS } from '../content/form';
 import { speciesById, type Role, type Species } from '../content/species';
 import { TEMPO, type Tank } from '../content/tanks';
 import { type Rng, TAU } from '../core/util';
@@ -59,11 +60,16 @@ export class Spawner {
   boss(room: Terrain, tank: Tank, player: Creature) {
     const sp = speciesById(tank.boss);
     let best: { x: number; y: number } | null = null, bd = -1;
-    for (let k = 0; k < 40; k++) {
-      const at = room.openSpot(this.rng, sp.size[1] * 0.5);
-      if (!at) continue;
-      const d = Math.hypot(at.x - player.x, at.y - player.y);
-      if (d > bd) { bd = d; best = at; }
+    // water round it for its whole hull where the room has it, which it does not always for a
+    // body a third of the room long; otherwise the middle's, and the hull is pushed clear
+    for (const clear of [sp.size[1] * PLAN_FORMS[sp.plan].len * 0.55, sp.size[1] * 0.5]) {
+      for (let k = 0; k < 40; k++) {
+        const at = room.openSpot(this.rng, clear);
+        if (!at) continue;
+        const d = Math.hypot(at.x - player.x, at.y - player.y);
+        if (d > bd) { bd = d; best = at; }
+      }
+      if (best) break;
     }
     if (!best) return null;
     const c = this.world.add(sp, best.x, best.y);

@@ -136,10 +136,13 @@ export const SPECIES: Species[] = [
     nutrition: 2.0, weight: 11, jaw: 0.4, sense: 480 },
 
   // the nursery's boss: a mantis shrimp in the rock, the animal whose club breaks aquarium
-  // glass. Its punch is the fastest strike in the sea, and the water it leaves boils
+  // glass. Its punch is the fastest strike in the sea, and the water it leaves boils. Sized to
+  // its den: the mantis plan is nearly four of its sizes long, so this is some four tiles of
+  // armour, a body the room can hold and the larva can get round. At 36-44 it was six and a
+  // half, a fifth of the den across, and could not turn in it without its hull in the rock
   { id: 'mantisshrimp', name: 'Mantis Shrimp', behavior: 'apex', plan: 'mantis',
     zone: 'sunlit', band: 'reef', guardian: true, boss: 'punch', bossHp: 200,
-    size: [36, 44], hue: [132, 150], accent: 18, speed: 170, bite: 20,
+    size: [22, 25], hue: [132, 150], accent: 18, speed: 170, bite: 20,
     nutrition: 3, weight: 1, armor: 2, claws: 2, segments: 4, finSize: 0.8, sense: 600 },
 
   // the nursery's other hostiles. Each is the animal that already does what its role does:
@@ -201,11 +204,13 @@ export const SPECIES: Species[] = [
   // animal to show for it. Menace is already maxed by jaw, bite and bulk without it.
   // Slate rather than the reef shark's blue, and a much lower jaw than the bite implies:
   // `formFor` turns jaw into cheek, and cheek is a wider head. A great white bites like
-  // this and is still a cone all the way back to the gills.
+  // this and is still a cone all the way back to the gills. Sized to the reef's rooms as the
+  // mantis shrimp is to its den: some seven tiles nose to tail, a fifth of the room. At
+  // 115-155 it was eleven, and its hull was in the rock for as long as it was out of it
   { id: 'greatwhite', name: 'Great White', behavior: 'apex', plan: 'greatshark', pattern: 'charge',
     boss: 'charge', bossHp: 420,
     zone: 'sunlit', guardian: true, bleed: 200,
-    size: [115, 155], hue: [208, 220], accent: 200, speed: 260, bite: 52,
+    size: [78, 92], hue: [208, 220], accent: 200, speed: 260, bite: 52,
     nutrition: 4, weight: 1.4, jaw: 0.5, armor: 2, finSize: 1.3,
     sense: 900, metabolism: 1.6 },
 

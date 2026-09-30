@@ -97,6 +97,14 @@ export const SNAP = (2 * Math.PI) / BURST_TIME;
  * arrows do. Half keeps a strafed volley on its line more than off it.
  */
 const SHOT_CARRY = 0.5;
+/**
+ * In a cleft the body stands on its tail, facing up the crack (`nook`): it swims up and down
+ * it facing out, backing in, and fires up it on the up arrow as it would anywhere. `NOOK_IN`
+ * is the seconds it takes to stand up, and `NOOK_OUT` to lie back down swimming out; a
+ * sideways aim lays it down too, since a crack has no sideways to face.
+ */
+export const NOOK_IN = 0.25;
+export const NOOK_OUT = 0.18;
 
 /** The stat column: what the body's attack and swim come to, in the room's own units. */
 export interface Stats {
@@ -140,6 +148,8 @@ export class PlayerController {
   private fresh = false;
   /** Whether a lurking body was wound to full last frame, so the cue fires on the edge. */
   private poised = false;
+  /** Whether the body was in a cleft last frame, so the tuck plays on the way in. */
+  private nooked = false;
 
   constructor(private readonly input: Input, private readonly p: Creature,
               private readonly world: World, private readonly fx: Fx) {}
@@ -202,7 +212,10 @@ export class PlayerController {
     this.faceT = aim ? HOLD_FACE : Math.max(0, this.faceT - dt);
 
     const moving = dx !== 0 || dy !== 0;
-    const holding = this.faceT > 0 || p.attack !== 'none';
+    const nook = this.nook(dt, aim);
+    // tucked in, it holds its face up the crack whatever it swims, as a held aim does
+    if (nook && this.faceT <= 0 && p.attack === 'none') this.holdA = Math.atan2(-1, p.face * AIM_LEAN);
+    const holding = this.faceT > 0 || p.attack !== 'none' || nook;
     if (holding) {
       p.strafe(dt, dx, dy, moving ? 1 : 0, this.holdA, PIVOT * p.genome.turn, CRUISE);
     } else {
@@ -246,6 +259,26 @@ export class PlayerController {
         -p.vy * 0.22 + (Math.random() - 0.5) * 40,
         0xcdf6e6, p.radius * (0.16 + Math.random() * 0.14));
     }
+  }
+
+  /**
+   * The body in a cleft: stood up along the crack (`Creature.upright`), and on the way in the
+   * tuck — the settle and a few bubbles squeezed out past it. Whether it is in one.
+   */
+  private nook(dt: number, aim: readonly [number, number] | null) {
+    const p = this.p, t = this.world.terrain;
+    const inside = !!t && p.alive && t.cleftAt(p.x, p.y);
+    const stand = inside && !(aim && aim[0] !== 0);
+    p.upright = stand ? Math.min(1, p.upright + dt / NOOK_IN) : Math.max(0, p.upright - dt / NOOK_OUT);
+    if (inside && !this.nooked) {
+      p.view.nestle();
+      for (let i = 0; i < 5; i++) {
+        this.fx.wake(p.x + (Math.random() - 0.5) * p.radius, p.y - p.radius * 0.6,
+          (Math.random() - 0.5) * 30, -50 - Math.random() * 60, 0xcdf6e6, p.radius * (0.12 + Math.random() * 0.14));
+      }
+    }
+    this.nooked = inside;
+    return inside;
   }
 
   /**

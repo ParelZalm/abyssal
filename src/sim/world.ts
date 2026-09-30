@@ -12,7 +12,7 @@ import { primaryOf, tick as tickOrgans, type Organ } from './organs';
 import { Patterns } from './patterns';
 import { Spawner } from './spawn';
 import type { Terrain } from './terrain';
-import { surfaceGap } from './hull';
+import { collideHull, surfaceGap } from './hull';
 
 /** Seconds a body takes to resolve out of the water. */
 const FADE_IN = 0.9;
@@ -23,6 +23,17 @@ const FADE_IN = 0.9;
  * room draws over it.
  */
 const WALL_R = 0.5;
+/**
+ * A boss meets the rock with its whole hull (`collideHull`), and comes off it: `BOUNCE` of the
+ * speed it arrived at is given back, away from the rock, when that was over `THUD` tiles a
+ * second — below it, it is a body leaning on a wall, not one meeting it. `THUD_HARD` tiles a
+ * second is a thud at full weight: the body's squash, the grit off the rock and the jolt.
+ */
+const BOUNCE = 0.45;
+const THUD = 1.5;
+const THUD_HARD = 12;
+/** Seconds after one thud before the next is felt, so a body skidding along a wall does not stutter. */
+const THUD_GAP = 0.25;
 /** How fast a pickup settles, and how much of its drift the water takes a second. */
 const SINK = 70;
 const SETTLE = 2.2;
@@ -573,6 +584,28 @@ export class World {
     this.combat.hit(att, def, mult);
   }
 
+  /**
+   * A boss against its room: the hull held out of the rock, and a body that arrived at speed
+   * thrown back off it — squashed against it, reeling off it, grit knocked loose. What the
+   * boss's brain reads the rock through (`onRock`), since its nose is tiles from its middle.
+   */
+  private meetRock(c: Creature, t: Terrain, dt: number) {
+    c.thud = Math.max(0, c.thud - dt);
+    const b = collideHull(c, t);
+    c.onRock = !!b;
+    if (!b) return;
+    c.rockNx = b.nx;
+    c.rockNy = b.ny;
+    if (b.speed < THUD * t.tile) return;
+    c.vx += b.nx * b.speed * BOUNCE;
+    c.vy += b.ny * b.speed * BOUNCE;
+    if (c.thud > 0) return;
+    c.thud = THUD_GAP;
+    const k = Math.min(1, b.speed / (THUD_HARD * t.tile));
+    c.view.bump(0.35 + 0.65 * k, b.along, b.tip);
+    if (k > 0.3) this.pulses.push({ x: b.x, y: b.y, r: c.radius * (0.3 + 0.4 * k), kind: 'dust' });
+  }
+
   /** A blow on the player from something that is not a body's touch: a boss's burst. */
   hitPlayer(att: Creature, how: Hurt) {
     this.combat.hitPlayer(att, this.player, how);
@@ -581,7 +614,8 @@ export class World {
   private integrate(c: Creature, dt: number) {
     c.x += c.vx * dt;
     c.y = clamp(c.y + c.vy * dt, 30, DEPTH_MAX);
-    this.terrain?.collide(c, c.radius * WALL_R);
+    if (c.species.boss && this.terrain) this.meetRock(c, this.terrain, dt);
+    else this.terrain?.collide(c, c.radius * WALL_R);
     c.biteCd = Math.max(0, c.biteCd - dt);
     c.invuln = Math.max(0, c.invuln - dt);
     c.boosting = Math.max(0, c.boosting - dt);

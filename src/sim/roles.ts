@@ -2,6 +2,7 @@ import type { Role } from '../content/species';
 import { angleDelta, clamp, dist2, TAU } from '../core/util';
 import type { Creature } from './creature';
 import { Flow } from './flow';
+import { noseReach } from './hull';
 import { stealthOf } from './organs';
 import type { Terrain } from './terrain';
 import type { World } from './world';
@@ -288,7 +289,9 @@ function pitched(aim: number, face: 1 | -1, cap: number) {
  */
 export function clearHeading(t: Terrain | null, c: Creature, desired: number): number {
   if (!t) return desired;
-  const reach = c.radius * 0.7 + t.tile * 0.7 + Math.hypot(c.vx, c.vy) * 0.2;
+  // a boss's nose is tiles ahead of its middle, and it is the nose that meets the rock
+  const front = c.species.boss ? Math.max(c.radius * 0.7, noseReach(c)) : c.radius * 0.7;
+  const reach = front + t.tile * 0.7 + Math.hypot(c.vx, c.vy) * 0.2;
   const free = (a: number) => {
     const cx = Math.cos(a), cy = Math.sin(a);
     return !t.solidAt(c.x + cx * reach, c.y + cy * reach) &&

@@ -127,7 +127,7 @@ export class Impacts {
       this.toldBy.add(tell);
       const who = speciesById(tell);
       this.ui.toast(who.boss === 'punch'
-        ? `The ${who.name} is cocking its club — get out of its line; after three it tires`
+        ? `The ${who.name} is cocking its club — when the bar flashes, get off the spot; after three it tires`
         : who.boss === 'grab'
           ? `The ${who.name} is spreading its arms — keep out of reach, or swim hard to tear free`
           : who.pattern === 'click'

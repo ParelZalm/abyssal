@@ -2,6 +2,7 @@ import { PLAN_ART } from '../content/form';
 import { angleDelta, clamp, dist2, TAU } from '../core/util';
 import { Creature, DRAG_FWD } from './creature';
 import { Flow } from './flow';
+import { depthOf, noseOf, noseReach } from './hull';
 import { clearHeading } from './roles';
 import type { Terrain } from './terrain';
 import type { World } from './world';
@@ -11,18 +12,29 @@ import type { World } from './world';
 
 /**
  * The mantis shrimp's punch. It sidles at `SIDLE` tiles off, then cocks its club — the
- * tell, `PUNCH_WIND` — and throws itself `PUNCH_REACH` tiles down the line it cocked on in
- * `PUNCH_TIME`, too fast to dodge once thrown. Where the club lands the water boils: a
- * burst `CAVITATION` tiles across that is the hit, whether the body touched or not. Three
- * punches and it rests, spent (`REST`), and takes blows half again as hard. Under half its
- * health each burst throws a ring of spray as well.
+ * tell, `PUNCH_WIND`, `FOLLOW_WIND` for the second and third of a combo — tracking the player
+ * until the last `PUNCH_LOCK` of it, when the line and the spot on it are fixed and the bar
+ * over it flashes. Then it throws itself down that line to the spot, up to `PUNCH_REACH`
+ * tiles from its club, in `PUNCH_TIME`, too fast to dodge once thrown. Where the club lands
+ * the water boils: a burst `CAVITATION` tiles across that is the hit, whether the body
+ * touched or not. Three punches and it rests, spent (`REST`), and takes blows half again as
+ * hard. Under half its health each burst throws a ring of spray as well.
+ *
+ * It used to track to the instant it threw, down a fixed three and a half tiles into a burst
+ * three across: wherever the player went through the tell the line followed, and the burst
+ * covered more water than a larva crosses in the throw, so every punch landed and the cleft
+ * was never reached. Locked, the lock and the throw are half a second in which a larva at a
+ * cruise is three tiles off the spot — a punch is always dodged by moving, and never by
+ * waiting.
  */
-const SIDLE: [number, number] = [2.5, 4.5];
-const PUNCH_RANGE = 5.5;
-const PUNCH_WIND = 0.6;
-const PUNCH_REACH = 3.5;
+const SIDLE: [number, number] = [3.5, 5.5];
+const PUNCH_RANGE = 6;
+export const PUNCH_WIND = 0.75;
+const FOLLOW_WIND = 0.5;
+export const PUNCH_LOCK = 0.3;
+const PUNCH_REACH = 4;
 const PUNCH_TIME = 0.16;
-const CAVITATION = 1.5;
+const CAVITATION = 2;
 const COMBO = 3;
 const BETWEEN = 0.35;
 const REST = 2.2;
@@ -61,11 +73,6 @@ const LOB_REST = 0.6;
 const LOB_EVERY = 2;
 const AWAY = 5;
 const LOB_CD = 2.5;
-/**
- * The share of a body's radius that meets a wall (`World`'s `WALL_R`): what decides whether
- * it fits a gap.
- */
-const WALL = 0.5;
 
 /**
  * The Great White's charge. It circles `CIRCLE` tiles off, then turns square on and holds —
@@ -197,22 +204,29 @@ export class Bosses {
     c.unseen = reach ? 0 : c.unseen + dt;
     if (c.move === 'lob') { this.lob(c, dt, p, t); return; }
     if (c.attack === 'windup') {
-      // cocked: square on and still, and the line is the one it ends on
-      c.aimA = aim;
-      c.drive(dt, aim, 0.12, 1);
+      // cocked: square on and still, following the player until the lock, and then not:
+      // the line and the spot on it are the ones the club is thrown at
+      if (c.attackT > PUNCH_LOCK) {
+        c.aimA = aim;
+        c.aimD = clamp(d * t.tile - noseReach(c), t.tile * 0.5, PUNCH_REACH * t.tile);
+      }
+      c.drive(dt, c.aimA, c.attackT > PUNCH_LOCK ? 0.12 : 0, 1);
+      if (c.attackT <= PUNCH_LOCK) { c.vx *= Math.exp(-8 * dt); c.vy *= Math.exp(-8 * dt); }
       if ((c.attackT -= dt) <= 0) this.begin(c, 'strike', PUNCH_TIME);
       return;
     }
     if (c.attack === 'strike') {
-      const v = PUNCH_REACH * t.tile / PUNCH_TIME;
+      const v = c.aimD / PUNCH_TIME;
       c.angle = c.aimA;
       c.face = Math.cos(c.aimA) >= 0 ? 1 : -1;
       c.vx = Math.cos(c.aimA) * v;
       c.vy = Math.sin(c.aimA) * v;
       c.thrust = 1.6;
       if ((c.attackT -= dt) > 0) return;
-      // thrown down a gap it does not fit, the punch ends with its head jammed in the rock
-      if (this.pinched(c, c.aimA, t)) this.wedge(c);
+      // thrown down a gap it does not fit, the punch ends with its head jammed in the rock:
+      // the crack ahead of the club, or the club on rock after a larva in a narrow place —
+      // which is the one at the mouth of a cleft, where its lips flare too wide to pinch
+      if (this.pinched(c, c.aimA, t) || (c.onRock && this.narrow(t, p.x, p.y, depthOf(c)))) this.wedge(c);
       else this.cavitate(c, p, t);
       return;
     }
@@ -231,7 +245,7 @@ export class Bosses {
     if (c.roleCd <= 0 && c.volley === 0) {
       // the urchin, in its turn, for a player kept out of reach, and for one it cannot punch
       // after without jamming itself again
-      const hiding = c.wary > 0 && this.narrow(t, p.x, p.y, c.radius * WALL);
+      const hiding = c.wary > 0 && this.narrow(t, p.x, p.y, depthOf(c));
       // and only with the water clear over it: from under a ledge it swims out first
       if ((hiding || c.rounds >= LOB_EVERY || c.unseen > AWAY) && this.arc(c, p, t)) {
         c.move = 'lob';
@@ -244,7 +258,7 @@ export class Bosses {
       }
     }
     if (c.roleCd <= 0 && reach) {
-      this.begin(c, 'windup', PUNCH_WIND);
+      this.begin(c, 'windup', c.volley === 0 ? PUNCH_WIND : FOLLOW_WIND);
       if (c.volley === 0) this.tell(c);
       return;
     }
@@ -252,7 +266,7 @@ export class Bosses {
     // of a larva in a narrow place, it stands off at the far edge instead, and leaves the
     // mouth of the cleft free: a larva rained out of it has to have a way out
     const [near, far] = SIDLE;
-    const off = c.wary > 0 && this.narrow(t, p.x, p.y, c.radius * WALL);
+    const off = c.wary > 0 && this.narrow(t, p.x, p.y, depthOf(c));
     let a: number;
     if (off) a = aim + (d < far + 1 ? Math.PI : (Math.sin(c.wander * 0.5) >= 0 ? 1 : -1) * Math.PI / 2);
     else if (!sees || d > far) a = this.way(c, p, t, sees);
@@ -264,9 +278,9 @@ export class Bosses {
   /** Where the club lands, the water boils: the hit, a burst, and under half health a ring of spray. */
   private cavitate(c: Creature, p: Creature, t: Terrain) {
     const w = this.world;
-    const x = c.mouthX + Math.cos(c.aimA) * c.radius * 0.4;
-    const y = c.mouthY + Math.sin(c.aimA) * c.radius * 0.4;
-    const r = CAVITATION * t.tile;
+    const nose = noseOf(c);
+    const x = nose.x, y = nose.y;
+    const r = CAVITATION * t.tile / 2;
     w.pulses.push({ x, y, r, kind: 'bubbles' });
     if (dist2(x, y, p.x, p.y) < (r + p.radius * 0.5) ** 2) w.hitPlayer(c, 'bite');
     if (c.hp < c.hpMax * 0.5) {
@@ -281,13 +295,13 @@ export class Bosses {
 
   /**
    * Whether a gap too narrow for the body lies straight ahead along `a`: open water half a
-   * tile past the front of its wall circle, with rock close on both sides of it. What a punch
-   * down a cleft ends on.
+   * tile past its nose, with rock close on both sides of it within its depth. What a punch
+   * down a cleft ends on — the hull stops the head at the cleft's lips.
    */
   private pinched(c: Creature, a: number, t: Terrain) {
-    const r = c.radius * WALL;
-    const k = r + t.tile * 0.5;
-    const x = c.x + Math.cos(a) * k, y = c.y + Math.sin(a) * k;
+    const r = depthOf(c);
+    const nose = noseOf(c);
+    const x = nose.x + Math.cos(a) * t.tile * 0.5, y = nose.y + Math.sin(a) * t.tile * 0.5;
     if (t.solidAt(x, y)) return false;
     const nx = -Math.sin(a) * r, ny = Math.cos(a) * r;
     return t.solidAt(x + nx, y + ny) && t.solidAt(x - nx, y - ny);
@@ -303,8 +317,10 @@ export class Bosses {
     const w = this.world;
     this.pin(c, WEDGED);
     c.volley = 0;
-    w.pulses.push({ x: c.mouthX, y: c.mouthY, r: c.radius * 0.8, kind: 'dust' });
+    const nose = noseOf(c);
+    w.pulses.push({ x: nose.x, y: nose.y, r: c.radius * 0.8, kind: 'dust' });
     w.pulses.push({ x: c.x, y: c.y, r: c.radius * 1.6, kind: SPENT_PULSE });
+    c.view.bump(1, 1, 0);
     w.cue = 'wedged';
   }
 
@@ -318,7 +334,8 @@ export class Bosses {
       // nose down in the sand, digging, a puff of it thrown up now and again
       c.drive(dt, c.face > 0 ? 1.1 : Math.PI - 1.1, 0.1, 1);
       if (Math.random() < dt * 5) {
-        this.world.pulses.push({ x: c.mouthX, y: c.mouthY, r: c.radius * 0.5, kind: 'dust' });
+        const nose = noseOf(c);
+        this.world.pulses.push({ x: nose.x, y: nose.y, r: c.radius * 0.5, kind: 'dust' });
       }
       if ((c.attackT -= dt) > 0) return;
       this.hurl(c, p, t);
@@ -411,9 +428,8 @@ export class Bosses {
       c.vx = Math.cos(c.aimA) * v;
       c.vy = Math.sin(c.aimA) * v;
       c.thrust = 1.6;
-      // rock ahead ends a rush: the snout meets it and the body stops, as the collision would
-      const ahead = c.radius * 0.9 + t.tile * 0.3;
-      const wall = t.solidAt(c.x + Math.cos(c.aimA) * ahead, c.y + Math.sin(c.aimA) * ahead);
+      // rock ahead ends a rush: the snout meets it and the hull stops the body
+      const wall = this.rockAhead(c, c.aimA, t);
       if ((c.attackT -= dt) > 0 && !wall && !c.landed) return;
       c.attack = 'none';
       if (c.landed) { c.roleCd = this.cd(CHARGE_CD); return; }
@@ -455,11 +471,24 @@ export class Bosses {
     c.drive(dt, clearHeading(t, c, a), 0.6);
   }
 
+  /**
+   * Whether the snout has met rock along `a`: the hull pressed on rock that faces the line
+   * (`World.meetRock`), or rock just past the nose.
+   */
+  private rockAhead(c: Creature, a: number, t: Terrain) {
+    const ca = Math.cos(a), sa = Math.sin(a);
+    if (c.onRock && ca * c.rockNx + sa * c.rockNy < -0.5) return true;
+    const nose = noseOf(c), k = t.tile * 0.3;
+    return t.solidAt(nose.x + ca * k, nose.y + sa * k);
+  }
+
   /** Rock ended the rush: a thump off the snout, and the shark dazed and drifting. */
   private daze(c: Creature) {
     const w = this.world;
-    w.pulses.push({ x: c.mouthX, y: c.mouthY, r: c.radius, kind: 'blast' });
-    w.pulses.push({ x: c.mouthX, y: c.mouthY, r: c.radius * 0.5, kind: 'dust' });
+    const nose = noseOf(c);
+    w.pulses.push({ x: nose.x, y: nose.y, r: c.radius, kind: 'blast' });
+    w.pulses.push({ x: nose.x, y: nose.y, r: c.radius * 0.5, kind: 'dust' });
+    c.view.bump(1, 1, 0);
     this.spent(c, DAZED);
     w.cue = 'dazed';
   }
@@ -519,8 +548,7 @@ export class Bosses {
       c.vx = 0;
       c.vy = -v;
       c.thrust = 1.6;
-      const ahead = c.radius * 0.9 + tile * 0.3;
-      const roof = t.solidAt(c.x, c.y - ahead);
+      const roof = this.rockAhead(c, -Math.PI / 2, t);
       if ((c.attackT -= dt) > 0 && !roof && !c.landed) return;
       c.attack = 'none';
       c.move = '';
@@ -677,7 +705,8 @@ export class Bosses {
     c.vx = Math.cos(back) * v;
     c.vy = Math.sin(back) * v;
     c.roleCd = 0.8;
-    this.world.pulses.push({ x: c.mouthX, y: c.mouthY, r: c.radius * 0.8, kind: 'dust' });
+    const nose = noseOf(c);
+    this.world.pulses.push({ x: nose.x, y: nose.y, r: c.radius * 0.8, kind: 'dust' });
   }
 
   private begin(c: Creature, step: Creature['attack'], len: number) {
@@ -721,13 +750,15 @@ function floorUnder(t: Terrain, x: number, y: number) {
 }
 
 /**
- * A boss's charge bar, where its move has one (`TellView`): the breach's lurk, filling, then
- * flashing once the line is locked.
+ * A boss's charge bar, where its move has one (`TellView`): the punch's cocking and the
+ * breach's lurk, filling, then flashing once the line is locked.
  */
 export function lockOf(c: Creature): { fill: number; locked: boolean } | null {
-  if (c.move !== 'breach' || c.attack !== 'windup') return null;
+  if (c.attack !== 'windup') return null;
+  const lock = c.move === 'breach' ? BREACH_LOCK : c.move === '' && c.species.boss === 'punch' ? PUNCH_LOCK : 0;
+  if (!lock) return null;
   const done = c.attackLen - c.attackT;
-  return { fill: Math.min(1, done / Math.max(0.01, c.attackLen - BREACH_LOCK)), locked: c.attackT <= BREACH_LOCK };
+  return { fill: Math.min(1, done / Math.max(0.01, c.attackLen - lock)), locked: c.attackT <= lock };
 }
 
 /**

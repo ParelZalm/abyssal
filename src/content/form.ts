@@ -455,16 +455,30 @@ export function faceFor(prev: 1 | -1, angle: number): 1 | -1 {
  * its tail has no profile left to read.
  */
 const MAX_PITCH = 0.96;
+/**
+ * A body tucked in a crack stands on its tail after all (`Creature.upright`): in a cleft
+ * there is no open water to read a climb against, and a larva held at the cap lay across the
+ * crack with its head in the rock. Upright, the pitch is stretched by this and clamped at
+ * vertical, so the player's up and down aims — a quarter off vertical toward the facing
+ * (`AIM_LEAN`), which the stretch takes past vertical — are drawn straight up and straight
+ * down, and a pivot between them passes through level without a jump.
+ */
+const UPRIGHT_STRETCH = 1.25;
 
 /**
  * The rotation of a body's facing frame: a body point `(x, y)` in R units, nose +x and back
  * -y, lands at `rotate((x * face, y), drawnAngle(angle, face))`. The pitch is eased toward
  * `MAX_PITCH` rather than clamped, so a cruising body is drawn at its true heading and only
  * a steep one is held back — a clamp jumps by the difference whenever the facing changes.
+ * `upright`, 0 to 1, eases it from that to standing straight (`UPRIGHT_STRETCH`).
  */
-export function drawnAngle(angle: number, face: 1 | -1) {
+export function drawnAngle(angle: number, face: 1 | -1, upright = 0) {
   const pitch = Math.atan2(Math.sin(angle), Math.cos(angle) * face);
-  return face * MAX_PITCH * Math.tanh(pitch / MAX_PITCH);
+  const capped = MAX_PITCH * Math.tanh(pitch / MAX_PITCH);
+  if (upright <= 0) return face * capped;
+  const w = quintic(Math.min(1, upright));
+  const straight = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch * UPRIGHT_STRETCH));
+  return face * (capped + (straight - capped) * w);
 }
 
 /** Position along the spine at t. The nose is +x: the animal faces the way it swims. */

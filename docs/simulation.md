@@ -342,6 +342,21 @@ body's radius (`WALL_R`): the radius is half a body length, and side-on a fish i
 thin, so a full-radius circle held it a head's length off every floor. The nose goes a
 little into the rock, which the room draws over the bodies to hide.
 
+A boss is several tiles of armour side-on, and a circle at its middle let the club, the snout
+and the tail fan swim through the walls, so a boss holds its whole hull out of the rock
+instead (`collideHull`, `World.meetRock`): each of the hull's nine samples pushed out as a
+circle of its half-depth, the body carried with it. A sample already inside the rock backs the
+body out along its own length, away from the buried end, and no step corrects more than 0.4
+of a tile — pushed out whole through the nearest face, a Great White a third of its room long
+was thrown through the thin side of a wall and out of the room. A boss that arrives at over
+1.5 tiles a second comes off the rock with 0.45 of that speed and a thud (`FishView.bump`):
+squashed along the axis that met the rock, sprung off it and settling in three swings, turned
+off it by a blow at its end, with grit off the rock over a third of full weight. Its brain
+reads the rock through `Creature.onRock` and the hull's nose (`noseOf`, `noseReach`,
+`depthOf`), since the nose is tiles from its middle. The bosses are sized to fit their rooms
+with it: the mantis shrimp some four tiles long, the Great White seven (they were six and a
+half and eleven, and the Great White's hull was in the rock as long as it was out).
+
 **Doors.** A room is built with the sides that have a neighbour (`Terrain.doors`): each is
 carved, tiles turned to water from the edge inward along its band until the middle reaches
 the room's own water, and off the grid the field is water straight out through it, so the
@@ -419,12 +434,19 @@ A tank is built around one (`Tank.boss`), fought in its boss room and fitted to 
 before anything else. Each fight is the roles' state machine on `Creature.attack` — so the
 tell is the wind-up pose and `Scene`'s warm light — and a boss that has missed is `exposed`
 for a moment and takes blows half again as hard (`EXPOSED_TAKEN`), as the column's guardians
-did. A boss's hit is a whole heart. The first tell of each names its answer (`World.tellBy`).
+did. A boss's hit is a whole heart, and its body hurts by touch — except while it is spent,
+dazed, wedged or snagged: that is the opening, and a larva that bites has to be against it to
+take it. The first tell of each names its answer (`World.tellBy`).
 
-- **The mantis shrimp's punch** (nursery). It sidles 2.5–4.5 tiles off, then cocks its club
-  for 0.6 s and throws itself 3.5 tiles down that line in 0.16 s. Where the club lands the
-  water boils: a burst 1.5 tiles across that is the hit, touch or not. Three punches and it
-  rests, spent, for 2.2 s. Under half health each burst throws a ring of spray.
+- **The mantis shrimp's punch** (nursery). It sidles 3.5–5.5 tiles off, then cocks its club
+  for 0.75 s (0.5 s for the second and third of a combo), tracking the player until the last
+  0.3 s, when the line and the spot on it lock under the charge bar (`lockOf`). Then it throws
+  itself down the line to the spot, up to four tiles from its club, in 0.16 s. Where the club
+  lands the water boils: a burst two tiles across that is the hit, touch or not. Three punches
+  and it rests, spent, for 2.2 s. Under half health each burst throws a ring of spray. It used
+  to track to the throw, down a fixed 3.5 tiles into a burst three across, and every punch
+  landed: locked, the lock and the throw are half a second in which a larva at a cruise is
+  three tiles off the spot, so a punch is dodged by moving and never by waiting.
 - **The Great White's charge** (reef). It circles six tiles off, turns square on and holds
   for a second, and rushes the line at 2.4× its speed for up to a second — rock ends it, the
   snout meeting the wall. A miss in open water leaves it spent for 1.2 s. Under half health
@@ -443,8 +465,14 @@ first-time toast that names the answer (`Impacts`).
 
 - **Mantis shrimp: wedged, and the urchin.** Its boss room is its own, `nursery-den`: two flats
   of rock with a *cleft* down each (`|` in a template), a crack 0.62 of a tile across that the
-  larva fits and the shrimp does not. A punch that ends with water straight ahead and rock
-  either side of it (`Bosses.pinched`) jams its head in: 3.5 s stuck, no burst. Freed, it is
+  larva fits and the shrimp's hull does not. A punch that ends with water straight ahead of
+  its nose and rock either side of it within its depth (`Bosses.pinched`), or with its club on
+  rock after a larva in a narrow place — the mouth of a cleft, where the lips flare too wide
+  to pinch — jams its head in: 3.5 s stuck, no burst. In a cleft the larva stands on its tail
+  facing up the crack (`PlayerController.nook`, `Creature.upright`, which lifts `drawnAngle`'s
+  pitch cap for the drawing, the hitbox and the mouth alike): it backs in and out facing out,
+  fires up it on the up arrow, lies down again for a sideways aim, and tucks itself in on the
+  way (`FishView.nestle`). Freed, it is
   wary for 12 s — it stands off a larva in a narrow place and lobs an urchin instead of
   punching after it. The urchin is dug up through a 1 s tell and thrown (`World.lob`, a shot
   with `heavy`) to the top of an arc a tile under whatever roofs the player's column; there

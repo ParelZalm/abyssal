@@ -265,6 +265,9 @@ export class Combat {
 
   /** A hostile's body against the player's. */
   private touch(att: Creature, p: Creature) {
+    // a spent boss — dazed, wedged, snagged, resting — is the opening, and a larva that bites
+    // has to be against it to take it: its body hurting then made the fight's one answer a hit
+    if (att.species.boss && att.exposed > 0) return;
     // the body as drawn, against the player's middle and a little of it — a mackerel's head
     // on the larva used to be out of its reach, a circle at its middle being all that hurt.
     // The old circle stays beside it for a drifter, whose tentacles trail outside the bell

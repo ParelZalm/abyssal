@@ -32,7 +32,8 @@ const KNOB_SIZE = 0.7;
  * blend crosses one half 0.31 of a tile from the cleft's middle, so the crack is 0.62 of a
  * tile across. That is the width that matters, and it is a narrow one: at the nursery's
  * scale it is two or three collision cells, which a larva's wall circle passes through and
- * the mantis shrimp's, four and more across, never does. Along the cleft the sample holds,
+ * the mantis shrimp's hull, some three cells deep at its shallowest adult, never does
+ * (`collideHull`). Along the cleft the sample holds,
  * so it stays open to its end.
  */
 const CLEFT = 0.352;
@@ -250,6 +251,11 @@ export class Terrain {
       return this.field(this.x0 + (i + 0.5) * this.cell, this.y0 + (j + 0.5) * this.cell) > 0.5;
     }
     return this.fine[j * this.fineCols + i] === 1;
+  }
+
+  /** Whether a point is in a cleft: the narrow water the larva fits and a boss does not. */
+  cleftAt(x: number, y: number) {
+    return this.at(Math.floor((x - this.x0) / this.tile), Math.floor((y - this.y0) / this.tile)) === 'cleft';
   }
 
   solidAt(x: number, y: number) {

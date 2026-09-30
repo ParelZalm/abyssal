@@ -93,6 +93,8 @@ export class Creature {
    */
   roleCd = 0;
   aimA = 0;
+  /** How far down its locked line a boss's punch is thrown, world units: to where the player was. */
+  aimD = 0;
   /**
    * A boss squid's arms torn free by what it held, and how many of those its brain has
    * answered (`Bosses.torn`). Counted by `Combat.grasp`, which is where a catch breaks loose.
@@ -115,6 +117,21 @@ export class Creature {
   pinY = 0;
   wary = 0;
   unseen = 0;
+  /**
+   * A boss's hull against the room (`World.integrate`, `collideHull`): whether it was on rock
+   * last step, the way out of it, and seconds before another thud may be felt — a body
+   * pressed along a wall meets it every frame, and only the arrival is a thud.
+   */
+  onRock = false;
+  rockNx = 0;
+  rockNy = 0;
+  thud = 0;
+  /**
+   * How far the body stands straight up or down, 0 to 1, where its pitch is otherwise drawn
+   * at a cap (`drawnAngle`): the player tucked in a cleft (`PlayerController.nook`). The
+   * hitbox and the mouth stand with the drawing.
+   */
+  upright = 0;
   /** Seconds the player cannot be hit for; see `takeHit`. */
   invuln = 0;
   /** Whether the last blow on the player was shrugged off, for the view to say so. An event. */
@@ -323,8 +340,8 @@ export class Creature {
    * rather than the heading. A body aimed straight down is drawn nose-down at the cap, and a
    * shot that left from where the heading put the mouth came out of its cheek.
    */
-  get biteX() { return this.x + Math.cos(drawnAngle(this.angle, this.face)) * this.face * this.radius * 0.8; }
-  get biteY() { return this.y + Math.sin(drawnAngle(this.angle, this.face)) * this.face * this.radius * 0.8; }
+  get biteX() { return this.x + Math.cos(drawnAngle(this.angle, this.face, this.upright)) * this.face * this.radius * 0.8; }
+  get biteY() { return this.y + Math.sin(drawnAngle(this.angle, this.face, this.upright)) * this.face * this.radius * 0.8; }
 
   /** Effective reach: a distensible gullet lets you swallow above your weight. */
   get swallowSize() {
@@ -381,7 +398,7 @@ export class Creature {
     return this.genome.size * 0.62;
   }
   syncView() {
-    this.view.place(this.x, this.y, this.angle, this.face);
+    this.view.place(this.x, this.y, this.angle, this.face, this.upright);
   }
 
   /**

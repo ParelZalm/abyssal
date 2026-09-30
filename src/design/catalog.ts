@@ -32,15 +32,15 @@ import { POT_COLOURS, POT_MAP } from '../render/pots';
 import { glyphCanvas } from '../render/glyphs';
 import { HOVER } from '../run/TankMap';
 import {
-  AIM_LEAN, AIM_TOL, BURST_TIME, PIVOT, SHOT_RANGE, SHOT_SPEED as PLAYER_SHOT_SPEED, SNAP, STRIKE,
-  STROKE_EVERY,
+  AIM_LEAN, AIM_TOL, BURST_TIME, NOOK_IN, NOOK_OUT, PIVOT, SHOT_RANGE, SHOT_SPEED as PLAYER_SHOT_SPEED, SNAP,
+  STRIKE, STROKE_EVERY,
 } from '../input/PlayerController';
 import { primaryOf, organsOf, strikeOf } from '../sim/organs';
 import { HATCHED } from '../run/starts';
 import { shotGlow, shotTexture } from '../render/shots';
 import { glowTexture } from '../render/textures';
 import { BAR_OVER, ChargeBar } from '../render/tells';
-import { BREACH_LOCK, DRAW_TIME, LOB_WIND, LURK, SNAGGED, SPACING, WEDGED } from '../sim/bosses';
+import { BREACH_LOCK, DRAW_TIME, LOB_WIND, LURK, PUNCH_WIND, SNAGGED, SPACING, WEDGED } from '../sim/bosses';
 import { PickupView } from '../render/pickups';
 import type { Pickup } from '../sim/world';
 import {
@@ -51,7 +51,7 @@ import type { FiredKind, Role, ShotKind, Species } from '../content/species';
 import { Texture } from 'pixi.js';
 import { speciesById } from '../content/species';
 import type { IconName } from '../ui/icons';
-import { angleDelta, rgb, Rng } from '../core/util';
+import { angleDelta, lerp, rgb, Rng } from '../core/util';
 import { waterColor } from '../render/water';
 import { fieldKinds, Fields } from '../render/fields';
 
@@ -201,10 +201,10 @@ function motionGroup(): DesignGroup {
       });
     }
   }
-  items.push(larvaStroke(), larvaAim());
+  items.push(larvaStroke(), larvaAim(), larvaNook());
   return {
     id: 'motion', name: 'Motion',
-    note: 'Every animation state, one per cell: idle, swim, turn, attack, hurt, death — and the larva\'s own two, the stroke and the aim.',
+    note: 'Every animation state, one per cell: idle, swim, turn, attack, hurt, death — and the larva\'s own three, the stroke, the aim and the nook.',
     items,
   };
 }
@@ -273,6 +273,66 @@ function larvaAim(): DesignItem {
       cell.fly(dt, PLAYER_SHOT_SPEED * tankById('nursery').tile);
       fish.animate(dt, 0.2, beat, bank, { windup: 0, strike, open: strike > 0 });
       fish.place(0, 0, angle, face);
+      fish.show(true, 1, 0xffffff);
+    },
+  };
+}
+
+/**
+ * The larva in a cleft, on `PlayerController.nook`'s timings: down into the crack nose first,
+ * turned about and stood up the moment it is in (`Creature.upright`) with the tuck
+ * (`FishView.nestle`), backed down it facing out, a couple of shots up it, and out again,
+ * lying back down as it clears the lips. The crack is the nursery's, 0.62 of a tile across.
+ */
+function larvaNook(): DesignItem {
+  const g = larva();
+  const tile = tankById('nursery').tile;
+  const gap = tile * 0.62, lip = -g.size * 0.4;
+  const prim = primaryOf({ organs: organsOf(g), genome: g } as never)!;
+  let t = 0, face: 1 | -1 = 1, angle = Math.PI / 2, upright = 0, inside = false, strike = 0, shots = 0, beat = 0;
+  const CYCLE = 4.4;
+  return {
+    id: 'larva-nook', name: 'Larva · nook',
+    note: 'In a cleft the larva stands on its tail facing up the crack, backs in and out facing out, and fires up it on the up arrow. It tucks itself in on the way.',
+    source: 'src/input/PlayerController.ts', span: g.size * 4.5, depth: tankById('nursery').depth, genome: g,
+    make: () => {
+      const cell = new RoleCell(g, 'wraith', false);
+      const rock = new Graphics();
+      const w = g.size * 2.2, bottom = g.size * 2.4;
+      rock.rect(-w, lip, w - gap / 2, bottom - lip).fill(CELL_ROCK);
+      rock.rect(gap / 2, lip, w - gap / 2, bottom - lip).fill(CELL_ROCK);
+      // over the body, as the room's rock is drawn over the bodies: the crack is what shows of it
+      cell.addChild(rock);
+      return cell;
+    },
+    animate: (view: Container, dt: number) => {
+      const cell = view as RoleCell;
+      const fish = cell.fish.fish;
+      t += dt;
+      if (t > CYCLE) { t = 0; angle = Math.PI / 2; face = 1; shots = 0; }
+      // down from over the crack, backed to its middle, a pause and two shots, and out
+      const y = t < 1 ? lerp(-g.size * 2.2, -g.size * 0.2, t)
+        : t < 1.8 ? lerp(-g.size * 0.2, g.size * 0.5, (t - 1) / 0.8)
+        : t < 3.2 ? g.size * 0.5
+        : lerp(g.size * 0.5, -g.size * 2.4, (t - 3.2) / 1.2);
+      const moving = t < 1.8 || t >= 3.2;
+      const now = y > lip;
+      if (now && !inside) fish.nestle();
+      inside = now;
+      upright = inside ? Math.min(1, upright + dt / NOOK_IN) : Math.max(0, upright - dt / NOOK_OUT);
+      // outside it swims nose-first down, and up; inside it holds its face up the crack
+      const hold = inside || t >= 3.2 ? Math.atan2(-1, face * AIM_LEAN) : Math.PI / 2;
+      const rate = PIVOT * g.turn * dt;
+      angle += Math.max(-rate, Math.min(rate, angleDelta(angle, hold)));
+      if (t > 2.1 + shots * 0.5 && shots < 2 && Math.abs(angleDelta(angle, hold)) < AIM_TOL) {
+        shots++; strike = 1;
+        cell.fire(prim.shot, prim.fan.map(o => -Math.PI / 2 + o), -y + g.size * 0.5);
+      }
+      strike = Math.max(0, strike - dt / STRIKE);
+      cell.fly(dt, PLAYER_SHOT_SPEED * tile);
+      beat += dt * (moving ? 9 : 4);
+      fish.animate(dt, moving ? 0.6 : 0.15, beat, 0, { windup: 0, strike, open: strike > 0 });
+      fish.place(0, y, angle, face, upright);
       fish.show(true, 1, 0xffffff);
     },
   };
@@ -1394,7 +1454,7 @@ class DropInCell extends Container {
 }
 
 const BOSS_NOTES: Record<'punch' | 'charge' | 'grab', string> = {
-  punch: 'Cocks its club — the tell — then a punch it cannot steer; the water boils where it lands. Three, and it rests. Fought in its den, whose clefts it jams itself in.',
+  punch: 'Cocks its club — the tell, the spot locked as the bar flashes — then a punch down that line; the water boils where it lands. Three, and it rests. Fought in its den, whose clefts it jams itself in.',
   charge: 'Turns square on and holds — the tell — then rushes the line; a miss leaves it spent, and rock leaves it dazed.',
   grab: 'Spreads its arms — the tell — then lashes the feeding pair; torn free, it loses one, and a lash into rock snags.',
 };
@@ -1549,7 +1609,7 @@ function bossGroup(): DesignGroup {
     const i = SPECIES.indexOf(sp);
     const g = genomeFor(sp, new Rng(1000 + i * 77));
     const fight = sp.boss!;
-    const tell = fight === 'punch' ? 0.6 : fight === 'charge' ? 1.0 : 0.9;
+    const tell = fight === 'punch' ? PUNCH_WIND : fight === 'charge' ? 1.0 : 0.9;
     const strike = fight === 'punch' ? 0.16 : fight === 'charge' ? 0.6 : 0.5;
     let t = 0;
     return {

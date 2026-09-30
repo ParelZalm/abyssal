@@ -50,7 +50,7 @@ export const BODY: Organ[] = [
       const b = lureBulb(c.genome, formFor(c.genome, c.species.plan));
       const k = c.genome.size / R;
       // in the view's facing frame, so the bulb is struck where it is drawn
-      const r = drawnAngle(c.angle, c.face);
+      const r = drawnAngle(c.angle, c.face, c.upright);
       const cr = Math.cos(r), sr = Math.sin(r);
       const lx = b.x * c.face;
       const bx = c.x + (lx * cr - b.y * sr) * k, by = c.y + (lx * sr + b.y * cr) * k;

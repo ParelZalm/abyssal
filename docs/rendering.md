@@ -111,7 +111,8 @@ grid, and re-baked only when the art density changes tier. Nothing about the ter
   shape, so the view is baked with `MARGIN` (10) tiles of rock around it, sinking to black
   within three tiles of the room's edge.
 - **It draws over the bodies**, so a nose pressed into a wall goes into it: the wall circle
-  is half the body's radius (`sim/world.ts`, `WALL_R`).
+  is half the body's radius (`sim/world.ts`, `WALL_R`). A boss's whole hull is held out of
+  the rock instead (`collideHull`), since tiles of it would otherwise be drawn under the wall.
 
 The design board's *Rooms* group draws every template at the density it plays at on a
 1440 × 900 screen, since the board's own tier is a mid-run one for the animals.
