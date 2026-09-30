@@ -17,10 +17,10 @@ export const BODY: Organ[] = [
     armour: (g, base) => base - g.pen }),
 
   O({ id: 'spines', when: g => g.spikes > 0,
-    onWounded: (def, att, ctx) => { if (!ctx.whole) sting(att, def.genome.spikes * 3, def); } }),
+    onWounded: (def, att, ctx) => { if (!ctx.whole && !ctx.ranged) sting(att, def.genome.spikes * 3, def); } }),
 
   O({ id: 'frill', when: g => g.frill > 0,
-    onWounded: (def, att, ctx) => { if (!ctx.whole) sting(att, def.genome.frill * 2, def); } }),
+    onWounded: (def, att, ctx) => { if (!ctx.whole && !ctx.ranged) sting(att, def.genome.frill * 2, def); } }),
 
   O({ id: 'venom', when: g => g.venom > 0,
     // keeps working after the mouth has let go; the poison tick itself is status on the

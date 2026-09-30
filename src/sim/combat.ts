@@ -181,11 +181,13 @@ export class Combat {
    * A blow that is not a bite — an organ striking with something other than the mouth.
    * No cooldown and never a swallow, but otherwise the same wound: armour, organs, and a
    * kill booked to whoever landed it. Public because organs deliver it (`organs.ts`).
+   * `ranged` is a shot's: no chomp, since the mouth that fired it is a room away, and
+   * nothing on the body it hit reaches back.
    */
-  hit(att: Creature, def: Creature, mult: number, chomp = true) {
+  hit(att: Creature, def: Creature, mult: number, ranged = false) {
     if (!att.alive || !def.alive) return;
-    if (chomp) att.view.chomp();
-    this.land(att, def, false, mult);
+    if (!ranged) att.view.chomp();
+    this.land(att, def, false, mult, ranged);
   }
 
   /**
@@ -217,7 +219,7 @@ export class Combat {
   }
 
   /** The damage, the organs, and the death, for a bite or a blow. */
-  private land(att: Creature, def: Creature, whole: boolean, mult: number) {
+  private land(att: Creature, def: Creature, whole: boolean, mult: number, ranged = false) {
     if (def.isPlayer) { this.hitPlayer(att, def); return; }
     const dmg = whole ? def.hp : this.damage(att, def, mult);
     def.hp -= dmg;
@@ -232,7 +234,14 @@ export class Combat {
     // what the bodies do to each other beyond the damage — recoil, venom, grip — is the
     // organs' business, and a kill is read off the wound before they run so poison cannot
     // credit a bite that already finished the job
-    wound(this.world, att, def, { dmg, fatal, whole });
+    const hp = att.hp;
+    wound(this.world, att, def, { dmg, fatal, whole, ranged });
+    // recoil on the player is a hit like any other, and has to be felt as one: taken in
+    // silence under the burst of its own bite landing, it read as a hit from nowhere
+    if (att.isPlayer && att.hp < hp) {
+      this.world.bites.push({ x: att.x, y: att.y, amount: hp - att.hp, fatal: att.hp < 1,
+        onPlayer: true, byPlayer: false, size: att.genome.size });
+    }
     // recoil can finish the attacker. Nothing booked that death before, so a spined body
     // could drive a biter's health below zero and leave it swimming; the kill is the
     // defender's. The player is left to `Game.digest`, which ends the run on its own hp
@@ -280,7 +289,7 @@ export class Combat {
   hitPlayer(att: Creature, p: Creature, how: Hurt = 'bite') {
     const got = p.takeHit(att, att.species.guardian ? 2 : 1, how);
     if (!got) return 0;
-    wound(this.world, att, p, { dmg: got, fatal: p.hp < 1, whole: false });
+    wound(this.world, att, p, { dmg: got, fatal: p.hp < 1, whole: false, ranged: false });
     this.world.bites.push({ x: p.x, y: p.y, amount: got, fatal: p.hp < 1,
       onPlayer: true, byPlayer: false, size: p.genome.size });
     return got;

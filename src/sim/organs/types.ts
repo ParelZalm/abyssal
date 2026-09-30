@@ -9,6 +9,11 @@ export interface WoundCtx {
   fatal: boolean;
   /** Swallowed whole rather than bitten: no recoil, no venom, nothing to hold. */
   whole: boolean;
+  /**
+   * Landed by a shot from across the water: no recoil either, since the body that fired it
+   * is nowhere near the spines. A shot into a puffer cost the larva half a heart for it.
+   */
+  ranged: boolean;
 }
 
 /**

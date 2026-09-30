@@ -62,7 +62,7 @@ export const ACTIVES: Organ[] = [
     taken: (c, dmg) => c.puffT > 0 ? dmg * 0.35 : dmg,
     guard: c => c.puffT > 0,
     onWounded: (def, att, ctx) => {
-      if (def.puffT <= 0 || ctx.whole) return;
+      if (def.puffT <= 0 || ctx.whole || ctx.ranged) return;
       sting(att, 3 + def.genome.size * 0.12, def);
     } }),
 ];

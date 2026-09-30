@@ -385,8 +385,7 @@ export class World {
           if (!c.alive || c.isPlayer || (fight && !c.hostile)) continue;
           if (surfaceGap(c, s.x, s.y) > s.r) continue;
           spent = struck = true;
-          // no chomp: the mouth that fired it is a room away
-          this.combat.hit(p, c, s.mult, false);
+          this.combat.hit(p, c, s.mult, true);
           // a shot carries its way on into what it hit, a little, so a hit is felt
           c.vx += s.vx * 0.15;
           c.vy += s.vy * 0.15;

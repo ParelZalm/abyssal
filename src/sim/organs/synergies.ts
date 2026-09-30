@@ -112,7 +112,7 @@ export const SYNERGY_ORGANS: Organ[] = [
     // the plate is what the spines stand in, so the recoil is paid in armour: the bite that
     // glances off is the bite that impales itself. On top of the spines' own recoil
     onWounded: (def, att, ctx) => {
-      if (ctx.whole) return false;
+      if (ctx.whole || ctx.ranged) return false;
       return sting(att, armourOf(def.genome) * 0.8, def) > 0;
     } }),
 
@@ -196,7 +196,7 @@ export const SYNERGY_ORGANS: Organ[] = [
       return fired;
     },
     onWounded: (def, att, ctx) => {
-      if (ctx.whole || !att.alive || att.poisonT > 0) return false;
+      if (ctx.whole || ctx.ranged || !att.alive || att.poisonT > 0) return false;
       stingOff(att, def);
       return true;
     } }),
@@ -318,7 +318,7 @@ export const SYNERGY_ORGANS: Organ[] = [
     },
     // a strike from further than touch — a big hunter's lunge — lands, and is paid for
     onWounded: (def, att, ctx) => {
-      if (ctx.whole || def.poise < SET || !att.alive || att.poisonT > 0) return false;
+      if (ctx.whole || ctx.ranged || def.poise < SET || !att.alive || att.poisonT > 0) return false;
       stoneSting(att, def);
       return true;
     } }),
@@ -348,7 +348,7 @@ export const SYNERGY_ORGANS: Organ[] = [
       return fired;
     },
     onWounded: (def, att, ctx) => {
-      if (def.puffT <= 0 || ctx.whole) return false;
+      if (def.puffT <= 0 || ctx.whole || ctx.ranged) return false;
       return sting(att, def.genome.spikes * 6, def) > 0;
     } }),
 
