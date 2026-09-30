@@ -450,6 +450,11 @@ export class World {
     }
   }
 
+  /** Development: every hostile in the room dead by the player's hand, so the room clears. */
+  slayHostiles() {
+    for (const c of this.creatures) if (c.hostile && c.alive) this.combat.slay(c, true);
+  }
+
   /**
    * Empty the room for the player to leave it: every body but the player's, the carcasses,
    * the deaths still playing, the blood and ink. Returns the pickups, which stay with the

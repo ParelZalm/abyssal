@@ -1,5 +1,5 @@
 import { generateMap, OPPOSITE, STEP, type MapRoom, type Side } from '../content/map';
-import { ROOMS, TANK_ORDER, tankIndex, type RoomTemplate } from '../content/tanks';
+import { ROOMS, TANK_ORDER, tankIndex, type RoomTemplate, type RoomType } from '../content/tanks';
 import { clamp, Rng } from '../core/util';
 import type { Camera } from '../render/Camera';
 import { DecorView, placeDecor } from '../render/decor';
@@ -70,6 +70,8 @@ const SHOP_GOODS: [PickupKind, number][] = [
   ['heart', 3], ['snail', 3], ['pellet', 4], ['airstone', 5], ['key', 5],
 ];
 const SHOP_MUTATION = 15;
+/** The map's own stream off the run's seed, apart from every room's. */
+const MAP_SALT = 0x51ed270b;
 
 /** What the tank asks of the run's other systems. */
 export interface TankHooks {
@@ -153,7 +155,7 @@ export class TankMap {
               private readonly p: Creature, private readonly camera: Camera,
               private readonly layers: RoomLayers, private readonly fx: Fx,
               private readonly ui: UI, private readonly hooks: TankHooks) {
-    const rng = new Rng(run.seed ^ 0x51ed270b);
+    const rng = new Rng(run.seed ^ MAP_SALT);
     const tank = run.tank;
     // a tank's own layouts first, and every layout until it has some
     const own = ROOMS.filter(r => r.tank === tank.id);
@@ -181,6 +183,11 @@ export class TankMap {
         this.cells[this.neighbour(i, side)].shut.set(OPPOSITE[side], why);
       }
     });
+  }
+
+  /** Whether the tank a seed deals has a room of this type: half of all tanks have no deal room. */
+  static has(seed: number, type: RoomType) {
+    return generateMap(new Rng(seed ^ MAP_SALT)).some(m => m.type === type);
   }
 
   get sliding() { return this.slide !== null; }
@@ -219,12 +226,25 @@ export class TankMap {
    * Put the player in the start room, with the camera on it. The room's rock is not baked
    * here — that is half a second, and a click on Hatch would sit on it before anything moved —
    * but a little each frame under the drop-in (`warm`).
+   *
+   * A dev launch begins in another room (`dev/launch.ts`), come in by its first door as if
+   * from next door, so a fight is dealt away from the player as it would be; in the deal room
+   * the seal is opened, since there is no boss room cleared behind it to open it.
    */
-  begin() {
+  begin(type: RoomType = 'start') {
+    const at = this.cells.findIndex(c => c.map.type === type);
+    if (at >= 0) this.current = at;
+    if (type === 'deal') {
+      for (const [side, why] of this.cell.shut) if (why === 'seal') this.open(this.current, side);
+    }
     const t = this.room;
-    this.p.x = t.cx;
-    this.p.y = t.cy;
-    if (!t.clearAt(t.cx, t.cy, this.p.genome.size)) {
+    const side = type === 'start' ? undefined : this.cell.map.doors[0];
+    const door = side && t.doorRect(side), inset = this.p.radius * 2.5;
+    this.p.x = !door ? t.cx : side === 'left' ? t.x0 + inset : side === 'right' ? t.x0 + t.width - inset
+      : door.x + door.w / 2;
+    this.p.y = !door ? t.cy : side === 'up' ? t.y0 + inset : side === 'down' ? t.y0 + t.height - inset
+      : door.y + door.h / 2;
+    if (!t.clearAt(this.p.x, this.p.y, this.p.genome.size)) {
       const at = t.openSpot(new Rng(this.run.seed), this.p.genome.size);
       if (at) { this.p.x = at.x; this.p.y = at.y; }
     }

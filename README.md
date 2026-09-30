@@ -147,12 +147,20 @@ npm run build    # tsc --noEmit && vite build: the only gate
 There is no test suite and no linter. `npm run build` type-checks in strict mode, and
 passing it is what "it works" means here. Almost every change is visual, so the real
 check is looking at it. In dev builds the `Game` instance is exposed as `window.game`,
-so you can drive a run from the console: skip the title, set the body's size, pin a
-depth. [`CLAUDE.md`](CLAUDE.md) has the recipe.
+so you can drive a run from the console. [`CLAUDE.md`](CLAUDE.md) has the recipe.
+
+**Launches** start a run past the title, in any tank and any room of it:
+`/?tank=reef&room=boss&god=1` is the Great White with nothing to lose. The keys are
+`tank` (nursery, reef, deep), `room` (start, fight, treasure, shop, deal, boss), and the
+flags `dropin`, `god`, `calm` (no hostiles), `rich`, plus `start`, `traits` (mutation ids,
+comma-separated) and `seed`. *Again* on the end screen replays the launch. In the game, the
+backquote key opens the dev panel, which has every launch and can act on the run under way: clear the room, go to any room of
+the tank, go down to the next tank, give a mutation, and toggle god mode.
 
 **The design board** (`/design.html`, dev only) lays out every drawing the game makes:
-every body plan, every mutation taken once on the hatchling, every species, the
-scenery, and the water palettes. Each one is drawn over the real water colour at its
+the rooms and their decoration, the hostiles and bosses, pickups and pedestals, every
+body plan, every mutation taken once on the hatchling, and the water palettes, sorted in
+its sidebar by what they belong to. Each one is drawn over the real water colour at its
 own depth. It imports the shipping drawing code, so it cannot drift from the game. The
 URL carries the whole state, so a link to one cell is a link to one design question.
 
@@ -194,6 +202,7 @@ The folders are layers, and imports only point down them. See
 | `src/input/` | The keyboard, and the player's swim, strike and active mutation. |
 | `src/render/` | Camera, scene visibility, the GLSL water, particulate, scenery, particles. `render/creature/` bakes and skins the fish. |
 | `src/ui/` | The DOM UI facade: HUD chrome, overlay screens, and the glyphs mutations are shown by. |
+| `src/dev/` | Launches and the in-game dev panel. Dev only. |
 | `src/design/` | The design board at `/design.html`. Dev only. |
 
 ### Further reading

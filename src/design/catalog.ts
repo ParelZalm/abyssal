@@ -66,7 +66,16 @@ export interface DesignItem {
   span: number;
   /** Depth this thing is actually seen at, so it sits over its own water. */
   depth: number;
-  make(): Container;
+  /** The view; `focused` when it is the one cell on the board, for an item that bakes finer then. */
+  make(focused?: boolean): Container;
+  /**
+   * Work too long for one frame, done ahead of `make` a slice at a time until `deadline` (a
+   * `performance.now()` time); true once `make` can run at once. An item with one hands back
+   * the same view from every `make`, so what it baked is kept, and the board takes the view
+   * back rather than destroying it. A room is a second's bake at the density it plays at, and
+   * there are twenty.
+   */
+  prepare?(deadline: number, focused: boolean): boolean;
   animate?(view: Container, dt: number, beat: number): void;
   /** Extra facts for the focus panel. */
   facts?: Record<string, string | number>;
@@ -633,12 +642,13 @@ function speciesGroup(): DesignGroup {
   };
 }
 
-// ------------------------------------------------------------------ guardians
+// ------------------------------------------------------------------ bosses to scale
 
 /**
- * The five guardians side by side, at a common scale.
+ * Every boss side by side, at a common scale: the three tanks' and the three for the tanks
+ * still to come (still `guardian` in the species table, the column's word for them).
  *
- * They are the one part of the roster that cannot afford to look generic — a guardian is
+ * They are the one part of the roster that cannot afford to look generic — a boss is
  * the animal the player is meant to recognise on sight, from a distance, while deciding
  * whether to run. Two of them on the shared `squid` plan and two on `leviathan` read as
  * recolours of each other, which is why they have bodies of their own. This group exists
@@ -648,8 +658,8 @@ function guardianGroup(): DesignGroup {
   const guards = SPECIES.filter(s => s.guardian);
   return {
     id: 'guardians',
-    name: 'Guardians',
-    note: 'One per zone, at a common scale — the check is whether they read as five animals.',
+    name: 'Bosses to scale',
+    note: 'Every boss, the three built and the three still to come, at one scale — the check is whether they read as six animals.',
     items: guards.map((sp, i) => {
       const g = genomeFor(sp, new Rng(500 + i * 31));
       const [top, bottom] = rangeOf(sp);
@@ -800,6 +810,13 @@ function waterGroup(): DesignGroup {
  * coarser than any room plays at.
  */
 const REF_SCREEN = { w: 1440, h: 900 };
+/**
+ * A room in the grid is a fifth of the board wide, and baked at the density it plays at it
+ * was a 1440-wide texture shown two hundred pixels across: a second of baking a room, most of
+ * it never seen. The grid bakes at a third of it, about a pixel of art to a pixel of cell;
+ * a room clicked into focus bakes again at the full density, which is when it is looked at.
+ */
+const ROOM_PREVIEW = 1 / 3;
 
 /** Every room template, whole, over its tank's water, at the density it plays at. */
 function roomGroup(): DesignGroup {
@@ -809,10 +826,13 @@ function roomGroup(): DesignGroup {
     note: 'Every room template, as the fixed camera frames it. Rock, sand and boulders block; water is swum.',
     items: [...ROOMS.map(t => {
       const tank = tankById(t.tank);
-      // every side doored and shut, so the carving and the gates show on every template
-      const terrain = new Terrain(t, tank, 1, 0, tank.depth, ['left', 'right', 'up', 'down']);
-      terrain.locked = true;
-      const zoom = Math.min(REF_SCREEN.w / terrain.width, REF_SCREEN.h / terrain.height);
+      const cols = t.rows[0].length, rows = t.rows.length;
+      const width = cols * tank.tile, height = rows * tank.tile;
+      const zoom = Math.min(REF_SCREEN.w / width, REF_SCREEN.h / height);
+      // built on the first prepare and kept, the preview and the focused bake apart: the board
+      // opens on another group, and a room is only baked once someone asks for the Rooms
+      const bakes = new Map<boolean, { terrain: Terrain; view: RoomView; cell?: Container & { decor: DecorView } }>();
+      const density = (focused: boolean) => zoom / PIXEL * (focused ? 1 : ROOM_PREVIEW);
       return {
         id: `room-${t.id}`,
         name: t.id,
@@ -820,22 +840,35 @@ function roomGroup(): DesignGroup {
         source: 'src/content/tanks.ts',
         // the board frames a cell on its short side, and a room is wider than it is tall:
         // framed on a little over half its width it fills the cell with the room whole
-        span: terrain.width * 0.55,
+        span: width * 0.55,
         depth: tank.depth,
-        facts: { tank: tank.name, tiles: `${terrain.cols} × ${terrain.rows}`,
+        facts: { tank: tank.name, tiles: `${cols} × ${rows}`,
           tile: `${tank.tile} cm`, types: t.types.join(' '), fauna: tank.fauna.join(' ') },
-        make: () => {
-          const view = new RoomView(terrain, zoom / PIXEL);
+        prepare: (deadline: number, focused: boolean) => {
+          let bake = bakes.get(focused);
+          if (!bake) {
+            // every side doored and shut, so the carving and the gates show on every template
+            const terrain = new Terrain(t, tank, 1, 0, tank.depth, ['left', 'right', 'up', 'down']);
+            terrain.locked = true;
+            bakes.set(focused, bake = { terrain, view: new RoomView(terrain, density(focused)) });
+          }
+          bake.view.prepare(deadline);
+          return bake.view.ready;
+        },
+        make: (focused = false) => {
+          const bake = bakes.get(focused)!;
+          if (bake.cell) return bake.cell;
+          const { terrain, view } = bake;
           view.update();
-          const decor = new DecorView(placeDecor(terrain, 1, tank.id), terrain.cy, zoom / PIXEL);
+          const decor = new DecorView(placeDecor(terrain, 1, tank.id), terrain.cy, density(focused));
           decor.update(0);
           // a room sits at its tank's depth in the world; the cell wants it about the origin
-          const c = new Container();
           const world = new Container();
           world.y = -terrain.cy;
           world.addChild(decor.root, view.root);
-          c.addChild(world);
-          return Object.assign(c, { decor });
+          bake.cell = Object.assign(new Container(), { decor });
+          bake.cell.addChild(world);
+          return bake.cell;
         },
         animate: (view: Container, dt: number) => {
           const v = view as Container & { decor: DecorView; t?: number };
@@ -1571,7 +1604,26 @@ function bossGroup(): DesignGroup {
   };
 }
 
-export function catalog(): DesignGroup[] {
-  return [roomGroup(), decorGroup(), healthGroup(), roleGroup(), powerGroup(), economyGroup(), bossGroup(), planGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup(),
-          speciesGroup(), guardianGroup(), motionGroup(), propGroup(), fieldGroup(), waterGroup()];
+/**
+ * A heading in the board's sidebar and the groups under it, in the order a question about the
+ * game is usually asked: where, what lives there, what the run carries, how a body is drawn.
+ */
+export interface DesignSection {
+  name: string;
+  /**
+   * Drawing from the open column that the tanks no longer show, kept to compare against and
+   * closed in the sidebar until asked for.
+   */
+  archived?: boolean;
+  groups: DesignGroup[];
+}
+
+export function catalog(): DesignSection[] {
+  return [
+    { name: 'Tanks', groups: [roomGroup(), decorGroup(), waterGroup()] },
+    { name: 'Animals', groups: [speciesGroup(), roleGroup(), bossGroup(), guardianGroup()] },
+    { name: 'The run', groups: [healthGroup(), powerGroup(), economyGroup()] },
+    { name: 'The body', groups: [planGroup(), motionGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup()] },
+    { name: 'Column era', archived: true, groups: [propGroup(), fieldGroup()] },
+  ];
 }

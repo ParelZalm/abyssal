@@ -9,7 +9,7 @@ fresh set of run systems over it, so no system carries state it has to remember 
 
 ```
 src/
-├── main.ts          boot, and the dev-only link to the design board
+├── main.ts          boot; in dev, a launch from the address bar and the dev panel
 ├── Game.ts          the loop, reset, and the routing of the world's outbox
 ├── core/            no pixi, no game knowledge
 │   ├── util.ts          Rng, clamp/lerp, colour, angle maths
@@ -61,13 +61,15 @@ src/
 │       ├── fishbake.ts      the bake cache, and paint(): the order a body is painted in
 │       └── bake/            the painters, one file per region of the body
 ├── audio/sound.ts   the heartbeat, synthesised
+├── dev/             dev only: launches (`launch.ts`, a run started in any tank and room)
+│                    and the in-game dev panel (`panel.ts`)
 ├── design/          the design board (dev only, never imported by the game)
 └── ui/              DOM UI — UI.ts facade, hud/*, screens/*, icons.ts
 ```
 
 `render/scenery.ts`, `props.ts` and `fields.ts` are the column's parallax background. They
-are not in play since the tank rework (roadmap stage 1) and are kept for the design board
-until stage 8 decides what a room's decoration reuses of them.
+are not in play since the tank rework (roadmap stage 1). Only the design board still draws
+them, in its archived *Column era* section.
 
 The run is being rebuilt as tanks of rooms — [adr/0003](adr/0003-tanks-of-rooms-replace-the-column.md)
 and [roadmap.md](roadmap.md). Until it is finished, a run is the nursery tank's map.

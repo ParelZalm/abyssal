@@ -4,7 +4,9 @@ import { Rng } from './core/util';
 import { familyCounts } from './content/forms';
 import { baseGenome, type Genome } from './content/genome';
 import { speciesById, type Species } from './content/species';
-import { TANK_ORDER, tankById, tankIndex, TEMPO } from './content/tanks';
+import { TANK_ORDER, tankById, tankIndex, TEMPO, type RoomType, type TankId } from './content/tanks';
+import { TRAITS } from './content/traits';
+import type { Launch } from './dev/launch';
 import { Input } from './input/Input';
 import { PlayerController } from './input/PlayerController';
 import { Camera } from './render/Camera';
@@ -32,7 +34,7 @@ import type { Phase } from './run/phase';
 import { COMBO_WINDOW, comboMult, Run } from './run/Run';
 import { HOVER, TankMap, type Good, type Pedestal, type RoomLayers } from './run/TankMap';
 import { CRITTER_SPOILS, Pockets, POT_SPOILS } from './run/Pockets';
-import { startById } from './run/starts';
+import { startById, type Start } from './run/starts';
 import { SYNERGIES } from './sim/organs';
 import { Creature } from './sim/creature';
 import { World, type Pickup, type PickupKind } from './sim/world';
@@ -86,6 +88,12 @@ export class Game {
   private input!: Input;
 
   phase: Phase = 'title';
+  /**
+   * Development: the launch this run came from, which again off the end screen replays, and
+   * the cheat the dev panel toggles live. See `dev/launch.ts`.
+   */
+  private launched: Launch | null = null;
+  readonly dev = { god: false };
 
   // one run's worth, rebuilt by reset()
   private rng!: Rng;
@@ -114,7 +122,8 @@ export class Game {
   private ending!: Ending;
   private impacts!: Impacts;
 
-  async boot() {
+  /** Start the loop: at the title, or — in development — straight into a launch. */
+  async boot(launch?: Launch | null) {
     await this.app.init({
       // one GLSL program for the water, so pin the renderer to WebGL
       preference: 'webgl',
@@ -165,7 +174,8 @@ export class Game {
     addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') saveCodex(this.codex);
     });
-    this.showTitle();
+    if (launch) this.launch(launch);
+    else this.showTitle();
   }
 
   private snapshot() {
@@ -220,6 +230,8 @@ export class Game {
    */
   private showTitle() {
     this.phase = 'title';
+    this.launched = null;
+    this.dev.god = false;
     this.ui.showTitle(choice => {
       const shared = Number(new URLSearchParams(location.search).get('seed'));
       if (choice.seed === undefined && Number.isFinite(shared) && shared > 0) choice.seed = shared;
@@ -228,7 +240,8 @@ export class Game {
     }, this.codex, date => this.best.daily(date));
   }
 
-  private reset(choice: RunChoice = this.run?.choice ?? { start: 'hatchling' }) {
+  private reset(choice: RunChoice = this.run?.choice ?? { start: 'hatchling' },
+                start: Start = startById(choice.start)) {
     this.app.stage.removeChildren();
     this.camera.root.removeChildren();
     this.camera.over.removeChildren();
@@ -296,6 +309,7 @@ export class Game {
     this.ending = new Ending(run, p, this.best, this, fx, ui, {
       // again means the same body; a daily again means the same ocean, to try it better
       restart: () => {
+        if (this.launched) { this.launch(this.launched); return; }
         this.reset(run.choice.daily ? run.choice : { start: run.choice.start });
         this.dropInto();
       },
@@ -304,7 +318,7 @@ export class Game {
     this.impacts = new Impacts(fx, camera, this.dread, ui);
     this.tank = this.makeTank();
 
-    this.evolution.hatch(startById(choice.start));
+    this.evolution.hatch(start);
     p.hpMax = run.containers * 2;
     p.hp = p.hpMax;
     run.remember(p);
@@ -339,25 +353,70 @@ export class Game {
    * Past the last tank there is no next: the animal is released.
    */
   private descend() {
-    const { run, player: p } = this;
-    const next = TANK_ORDER[tankIndex(run.tank.id) + 1];
+    const next = TANK_ORDER[tankIndex(this.run.tank.id) + 1];
     if (!next) { this.ending.finish(true); return; }
-    run.tank = tankById(next);
-    run.stage = tankIndex(next) + 1;
     recordTank(this.codex, tankIndex(next));
-    p.genome.size *= GROWTH;
-    p.genome.speed *= GROWTH;
+    this.enterTank(next, GROWTH);
+    this.run.remember(this.player, `Into the ${this.run.tank.name}`);
+    this.dropInto();
+  }
+
+  /**
+   * Put the run in a tank, the body grown by `growth`, and begin it in a room of `type`: the
+   * start room on a descent, any room from a dev launch.
+   */
+  private enterTank(id: TankId, growth: number, type: RoomType = 'start') {
+    const { run, player: p } = this;
+    run.tank = tankById(id);
+    run.stage = tankIndex(id) + 1;
+    p.genome.size *= growth;
+    p.genome.speed *= growth;
     p.view.rebuild(p.genome);
     p.refreshOrgans();
     p.holding = null;
     p.heldBy = null;
-    run.remember(p, `Into the ${run.tank.name}`);
     this.world.vacate();
     this.world.pickups.length = 0;
     this.tank.destroy();
     this.tank = this.makeTank();
-    this.tank.begin();
-    this.dropInto();
+    this.tank.begin(type);
+  }
+
+  /**
+   * Development: a run started past the title, in the tank and room the launch names, grown as
+   * a body that descended there would be, with the launch's mutations taken at the hatch.
+   * Without a seed, one is found whose tank has the room asked for, and kept for the replay.
+   */
+  launch(l: Launch) {
+    let seed = l.seed;
+    while (!seed || !TankMap.has(seed, l.room)) seed = (Math.random() * 2 ** 32) >>> 0;
+    // with its seed, so again is the same fight in the same tank
+    this.launched = { ...l, seed };
+    this.ui.hideOverlay();
+    this.ui.hud.setChrome(true);
+    const start = startById(l.start);
+    const extra = l.traits.filter(id => {
+      const known = TRAITS.some(t => t.id === id);
+      if (!known) console.warn(`[abyssal] launch: no mutation "${id}"`);
+      return known;
+    });
+    this.reset({ start: start.id, seed }, { ...start, traits: [...start.traits, ...extra] });
+    this.dev.god = l.god;
+    if (l.calm) this.world.spawner.hostiles = () => {};
+    if (l.rich) { this.run.shells = 99; this.run.keys = 9; }
+    if (l.tank !== 'nursery' || l.room !== 'start') {
+      this.enterTank(l.tank, GROWTH ** tankIndex(l.tank), l.room);
+    }
+    if (l.dropin) this.dropInto();
+    else this.phase = 'play';
+  }
+
+  /** Development: to a room of this tank — the tank dealt again from its seed — or the next tank. */
+  warp(to: RoomType | 'descend') {
+    if (this.phase !== 'play' || this.tank.sliding) return;
+    if (to === 'descend') this.descend();
+    else if (this.tank.cells.some(c => c.map.type === to)) this.enterTank(this.run.tank.id, 1, to);
+    else this.ui.toast(`This tank has no ${to} room`);
   }
 
   /** Play the drop-in into the run's tank; play resumes when it ends. */
@@ -469,6 +528,7 @@ export class Game {
       this.camera.jolt(10, 16);
       this.ui.toast(`The ${speciesById(killed).name} is dead`);
     }
+    if (this.dev.god) this.player.hp = this.player.hpMax;
     // health is whole halves: a fraction left over from a heal is not a half heart
     if (this.player.hp < 1) this.ending.finish(false);
   }

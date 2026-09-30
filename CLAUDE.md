@@ -21,19 +21,27 @@ browser pane attaches to it.
 
 ## Design mode
 
-`/design.html` (`src/design/`) lays out every drawing the game makes — every body plan,
-the morphology and stats that draw, every mutation taken once on the hatchling, all the
-species, each motion state, the background props and each band's field, and the water and
-biome palettes — each over the real water colour at its own depth. It imports the shipping drawing code and is never imported by it,
+`/design.html` (`src/design/`) lays out every drawing the game makes, each over the real
+water colour at its own depth. Its sidebar sorts the groups into sections (`DesignSection`
+in `catalog.ts`): the tanks (rooms, decoration, water), the animals (creatures, hostile
+roles, bosses), the run (health, pedestals, shop and deals), and the body (plans, motion,
+morphology, stats, builds, mutations). The column's parallax props and fields sit under an
+archived *Column era* section, since the game no longer draws them. A new group goes into
+the section it belongs to. The board opens on Body plans and fills a group's cells a slice a
+frame, with the count in the header. An item too slow for one frame (a room is ~1 s at play
+density) gives `DesignItem.prepare` and keeps what it baked. The rooms bake the grid at a
+third of their density (`ROOM_PREVIEW`), and at full density once focused. It imports the shipping drawing code and is never imported by it,
 so it cannot drift from the game. Click a cell to focus it with its source file; the URL
 carries the whole state, so a link to one cell is a link to one design question. The
-*show* options caption the art without touching it: `labels`, `icons` (a mutation's HUD
-glyph as the chip the player sees), and `morphology` (every genome field the cell moved
-off the hatchling, phrased the way the cards phrase it). A cell that draws a genome sets
+*show* options caption the art without touching it: `names`, `notes` (off by default; the
+focus panel always has the note), `icons` (a mutation's HUD glyph as the chip the player
+sees), and `morph` (every genome field the cell moved off the hatchling, phrased the way the
+cards phrase it). ↑/↓ steps through the groups, ←/→ through the cells, and `\` folds the
+sidebar away. A cell that draws a genome sets
 `genome` on its `DesignItem` and gets the last two for free.
 
 It is a development tool: `design.html` is not a build entry, so it is dev-served only, and
-both pages carry a corner link to the other (`import.meta.env.DEV` in `src/main.ts`).
+both pages carry a link to the other (`import.meta.env.DEV` in `src/main.ts`).
 
 Reach for it first when a change is about how something looks in isolation. Reach for the
 game itself when the question is how it reads in motion, at depth, or against the HUD.
@@ -47,14 +55,24 @@ Check new drawing against them.
 
 ## Verifying visual work
 
-Almost every change here is visual, and the only real verification is looking at it. In
-dev builds `src/main.ts` exposes the `Game` instance as `window.game`, which is the
+Almost every change here is visual, and the only real verification is looking at it.
+
+**Start with a launch** (`src/dev/launch.ts`) rather than playing to the thing: the address
+starts a run past the title in any tank and room, grown as a descent would grow it —
+`/?tank=deep&room=boss&god=1`, `/?room=shop&rich=1`, `/?tank=reef&dropin=1`,
+`/?traits=inksac,beak`. The flags are `god` (hearts refill; hits still land), `calm` (fight
+rooms deal no hostiles), `rich`, `dropin`; `seed` pins the map, and without it a seed is
+found whose tank has the room asked for. *Again* on the end screen replays the launch on the
+same seed. In the game the backquote key opens the dev panel (`src/dev/panel.ts`), which
+has every launch and some live actions: clear the room,
+go to any room (`Game.warp`), go down to the next tank, give a mutation, toggle god.
+
+In dev builds `src/main.ts` also exposes the `Game` instance as `window.game`, which is the
 intended way to drive the game from the browser console:
 
 ```js
-const g = window.game;
-[...document.querySelectorAll('button')].find(b => b.textContent === 'Hatch').click();
-g.player.invuln = 1e9;                           // nothing lands on the player
+const g = window.game;                           // after a launch: /?god=1&calm=1
+g.dev.god = true;                                // nothing kills the player
 g.world.spawner.hostiles = () => {};             // and no more hostiles arrive
 const key = (k, down = true) => dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { key: k }));
 key('ArrowRight'); for (let i = 0; i < 12; i++) g.frame(1 / 60); key('ArrowRight', false);
@@ -95,6 +113,7 @@ imports only point down them:
   (the room's rock), `Impacts` (the outbox made felt), `Dread`, the water shader, and
   `creature/` for the fish art.
 - `ui/` — the DOM HUD and screens behind the `UI` facade. `design/` — the design board.
+  `dev/` — launches and the in-game dev panel; dev only, like the board.
 
 The simulation publishes what happened as plain fields on `World` (`bites`, `spilled`,
 `pulses`, `playerGain`, `collected`, `devoured`, `synergies`, `noticedBy`,

@@ -21,6 +21,7 @@ import { catalog, type DesignGroup, type DesignItem } from './catalog';
 import { followZoom } from '../render/pixel';
 
 const params = new URLSearchParams(location.search);
+// not the rooms, which are twenty seconds' baking: they bake when asked for
 let groupId = params.get('g') ?? 'plans';
 let focusId = params.get('i');
 /** Background depth when not using each item's own. */
@@ -31,14 +32,18 @@ let playing = params.get('play') !== '0';
 /** Framing: 'fit' holds every cell at the same screen size, 'true' keeps world scale. */
 let framing = (params.get('fit') as 'fit' | 'true') ?? 'fit';
 /**
- * What is written over the art. Labels are the name and note; icons the HUD glyph of a
+ * What is written over the art. Names on each cell, and its note only when asked for — the
+ * focus panel always has it, and a board of notes was mostly words; icons the HUD glyph of a
  * mutation, as the chip the player sees it as; morphology every genome field a cell moved
  * off the hatchling, so "what did this trait actually change" is readable without opening
- * the file. All three are off the art itself — the art is the point, the rest is caption.
+ * the file. All of it is off the art itself — the art is the point, the rest is caption.
  */
-let showLabels = params.get('labels') !== '0';
+let showNames = params.get('labels') !== '0';
+let showNotes = params.get('notes') === '1';
 let showIcons = params.get('icons') !== '0';
 let showMorph = params.get('morph') === '1';
+/** The sidebar, folded away on `\` for a board the whole window wide. */
+let sideOpen = params.get('side') !== '0';
 
 const app = new Application();
 await app.init({ background: 0x01060d, resizeTo: window, antialias: true });
@@ -62,9 +67,13 @@ interface Cell {
   note?: Text;
   chip?: Container;
   morph?: Text;
+  /** Whether the item's view is made and in the cell; until then, `wait` says so. */
+  made: boolean;
+  wait?: Text;
 }
 let cells: Cell[] = [];
-let groups: DesignGroup[] = catalog();
+const sections = catalog();
+const groups: DesignGroup[] = sections.flatMap(s => s.groups);
 
 function group(): DesignGroup {
   return groups.find(g => g.id === groupId) ?? groups[0];
@@ -133,8 +142,17 @@ function chip(icon: IconName, rarity: Rarity): Container {
   return c;
 }
 
+/**
+ * Lay out the group's cells, each over its water with its caption, and leave the art to
+ * `pump`: most groups fill in the frame they are opened, and a slow one — the rooms, a
+ * second's bake each — fills in a cell at a time while the page stays live.
+ */
 function build() {
-  for (const c of cells) c.root.destroy({ children: true });
+  for (const c of cells) {
+    // a view that took a bake to make is kept by its item for next time, not destroyed
+    if (c.item.prepare && c.made) c.view.removeChildren();
+    c.root.destroy({ children: true });
+  }
   cells = [];
   board.removeChildren();
 
@@ -144,8 +162,6 @@ function build() {
     const bg = new Graphics();
     const clip = new Graphics();
     const holder = new Container();
-    const view = item.make();
-    holder.addChild(view);
     root.addChild(bg, holder, clip);
     root.mask = clip;
     root.eventMode = 'static';
@@ -156,13 +172,19 @@ function build() {
       layout();
       sync();
     });
-    const cell: Cell = { item, root, view: holder, bg, clip };
+    const cell: Cell = { item, root, view: holder, bg, clip, made: false };
+    cell.wait = new Text({ text: '', style: NOTE });
+    cell.wait.anchor.set(0.5);
+    root.addChild(cell.wait);
     // a focused cell carries its caption in the info panel instead
     if (!focused()) {
-      if (showLabels) {
+      if (showNames) {
         cell.name = new Text({ text: item.name, style: NAME });
+        root.addChild(cell.name);
+      }
+      if (showNotes) {
         cell.note = new Text({ text: item.note, style: { ...NOTE, wordWrap: true, wordWrapWidth: 200 } });
-        root.addChild(cell.name, cell.note);
+        root.addChild(cell.note);
       }
       if (showIcons && item.icon) {
         cell.chip = chip(item.icon, item.rarity ?? 'common');
@@ -178,15 +200,46 @@ function build() {
     board.addChild(root);
     cells.push(cell);
   }
+  pump(performance.now() + OPEN_MS);
+}
+
+/**
+ * Milliseconds a frame gives the cells still to be made — the board holds some forty frames a
+ * second while a group bakes, and nothing on it needs more — and the group's first frame,
+ * which has nothing else to do: enough that a cheap group never shows a cell empty.
+ */
+const FRAME_MS = 20;
+const OPEN_MS = 60;
+
+/** Make the cells still waiting until `deadline`, in order, and say how far along it is. */
+function pump(deadline: number) {
+  const one = cells.length === 1 && focusId !== null;
+  for (const cell of cells) {
+    if (cell.made) continue;
+    if (performance.now() >= deadline) break;
+    // one slow item at a time, top left first, so the board fills the way it is read
+    if (cell.item.prepare && !cell.item.prepare(deadline, one)) break;
+    cell.view.addChild(cell.item.make(one));
+    cell.made = true;
+    cell.wait?.destroy();
+    cell.wait = undefined;
+  }
+  // the label on the cell being worked on, whichever way the frame's slice ran out
+  const next = cells.find(c => !c.made);
+  if (next?.item.prepare) next.wait!.text = one ? 'baking at full density…' : 'baking…';
+  const done = cells.filter(c => c.made).length;
+  busy.textContent = done < cells.length ? `baking ${done} / ${cells.length}` : '';
+  busy.style.setProperty('--done', String(done / Math.max(1, cells.length)));
 }
 
 function layout() {
-  const W = app.screen.width;
-  // the bars own the top and bottom strips, and the bottom one wraps to a second line on a
-  // narrow window — measuring them keeps the art out from under both
-  const top = topBar.offsetHeight;
-  const H = app.screen.height - top - Math.max(64, bottomBar.offsetHeight);
-  board.y = top;
+  // the sidebar owns the left and the header the top, and the header wraps to a second line
+  // on a narrow window — measuring both keeps the art out from under them
+  const left = sideOpen ? side.offsetWidth : 0;
+  const top = header.offsetHeight;
+  const W = app.screen.width - left;
+  const H = app.screen.height - top;
+  board.position.set(left, top);
   const n = cells.length;
   const cols = n === 1 ? 1 : Math.ceil(Math.sqrt(n * (W / Math.max(H, 1))));
   const rows = Math.ceil(n / cols);
@@ -201,6 +254,7 @@ function layout() {
     const cy = Math.floor(i / cols) * ch;
     cell.root.position.set(cx, cy);
     cell.bg.clear().rect(1, 1, cw - 2, ch - 2).fill({ color: water(cell.item) });
+    cell.wait?.position.set(cw / 2, ch / 2);
     // Both of these exist because a creature is far bigger than the body you can see: the
     // guardians carry a fog cloud and an additive bloom that reach well past their own art.
     // Without the mask a guardian's cloud washes over its neighbours, and without an
@@ -242,44 +296,65 @@ window.addEventListener('resize', () => requestAnimationFrame(layout));
 
 let beat = 0;
 app.ticker.add(t => {
+  if (cells.some(c => !c.made)) pump(performance.now() + FRAME_MS);
   if (!playing) return;
   const dt = t.deltaMS / 1000;
   beat += dt * 4.5;
-  for (const cell of cells) cell.item.animate?.(cell.view.children[0] as Container, dt, beat);
+  for (const cell of cells) if (cell.made) cell.item.animate?.(cell.view.children[0] as Container, dt, beat);
 });
 
 // ------------------------------------------------------------------ chrome
 
 const style = document.createElement('style');
 style.textContent = `
-.dm-bar { position: fixed; left: 0; right: 0; z-index: 50; display: flex; flex-wrap: wrap;
-  gap: 6px; align-items: center; padding: 8px 14px; font-size: 12px; color: var(--ink);
-  background: var(--panel); }
-#dm-top { top: 0; border-bottom: 1px solid var(--edge); }
-#dm-bottom { bottom: 0; border-top: 1px solid var(--edge); gap: 10px; }
-.dm-title { display: flex; align-items: baseline; gap: 8px; margin-right: 10px;
+#dm-side { position: fixed; left: 0; top: 0; bottom: 0; z-index: 50; width: 236px; overflow-y: auto;
+  box-sizing: border-box; padding: 12px 12px 16px; font-size: 12px; color: var(--ink);
+  background: var(--panel); border-right: 1px solid var(--edge); }
+#dm-side.shut { display: none; }
+.dm-title { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px;
   letter-spacing: .14em; text-transform: uppercase; font-weight: 300; font-size: 14px; }
 .dm-title u { text-decoration: none; color: var(--accent); font-size: 10px; font-weight: 600;
   letter-spacing: .22em; }
-.dm-bar button, .dm-bar a.swap { font: inherit; font-size: 12px; color: var(--dim); cursor: pointer;
-  background: rgba(255,255,255,.04); border: 1px solid var(--edge); border-radius: 999px;
-  padding: 5px 12px; text-decoration: none; letter-spacing: .03em;
-  transition: color .12s, border-color .12s, background .12s; }
-.dm-bar button:hover { color: var(--ink); border-color: rgba(120,190,235,.5); }
-.dm-bar button[data-on="1"] { color: #032018; background: var(--accent); border-color: var(--accent);
+.dm-title a { margin-left: auto; font-size: 11px; letter-spacing: .04em; text-transform: none;
+  color: var(--ink); text-decoration: none; border: 1px solid var(--edge); border-radius: 4px; padding: 2px 7px; }
+.dm-title a:hover { color: var(--accent); border-color: var(--accent); }
+#dm-side h3, #dm-side summary { margin: 14px 0 4px; font-size: 10px; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--accent); font-weight: 600; }
+#dm-side summary { cursor: pointer; color: var(--dim); list-style: none; }
+#dm-side summary::before { content: '▸ '; }
+#dm-side details[open] summary::before { content: '▾ '; }
+#dm-side details p { margin: 0 0 4px; font-size: 10.5px; color: var(--dim); line-height: 1.4; }
+.dm-groups button { display: flex; width: 100%; align-items: baseline; gap: 6px; font: inherit;
+  color: var(--dim); cursor: pointer; text-align: left; background: none; border: 0;
+  border-radius: 4px; padding: 3px 8px; }
+.dm-groups button:hover { color: var(--ink); background: rgba(255,255,255,.04); }
+.dm-groups button[data-on="1"] { color: #032018; background: var(--accent); font-weight: 600; }
+.dm-groups button u { margin-left: auto; text-decoration: none; font-size: 10px; opacity: .7;
+  font-variant-numeric: tabular-nums; }
+.dm-keys { margin-top: 16px; font-size: 10.5px; color: var(--dim); line-height: 1.7; opacity: .8; }
+kbd { background: rgba(255,255,255,.08); border: 1px solid var(--edge); border-radius: 4px;
+  padding: 0 5px; font: 10.5px ui-monospace, monospace; }
+#dm-head { position: fixed; top: 0; right: 0; z-index: 50; display: flex; flex-wrap: wrap;
+  align-items: center; gap: 6px 14px; padding: 8px 14px; font-size: 12px; color: var(--ink);
+  background: var(--panel); border-bottom: 1px solid var(--edge); }
+.dm-what { flex: 1 1 280px; min-width: 0; display: flex; align-items: baseline; gap: 10px; }
+.dm-what h1 { margin: 0; font-size: 15px; font-weight: 600; white-space: nowrap; }
+.dm-what p { margin: 0; color: var(--dim); font-size: 11.5px; line-height: 1.4; }
+.dm-busy { flex: none; font-size: 11px; color: var(--accent); white-space: nowrap; padding-bottom: 2px;
+  background: linear-gradient(var(--accent), var(--accent)) left bottom / calc(var(--done, 0) * 100%) 2px no-repeat; }
+.dm-busy:empty { display: none; }
+.dm-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+#dm-head button { font: inherit; font-size: 11px; color: var(--dim); cursor: pointer;
+  background: rgba(255,255,255,.04); border: 1px solid var(--edge); border-radius: 4px;
+  padding: 3px 8px; }
+#dm-head button:hover { color: var(--ink); border-color: rgba(120,190,235,.5); }
+#dm-head button[data-on="1"] { color: #032018; background: var(--accent); border-color: var(--accent);
   font-weight: 600; }
-.dm-bar a.swap { color: var(--ink); margin-left: auto; }
-.dm-bar a.swap:hover { border-color: var(--accent); color: var(--accent); }
-.dm-set { display: flex; align-items: center; gap: 4px; padding-left: 10px;
-  border-left: 1px solid var(--edge); }
-.dm-set:first-child { border-left: 0; padding-left: 0; }
-.dm-set > u { text-decoration: none; font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
-  color: var(--dim); margin-right: 4px; }
-.dm-bar input[type=range] { width: 130px; accent-color: var(--accent); }
-.dm-bar input[type=range]:disabled { opacity: .35; }
-.dm-state { margin-left: auto; color: var(--dim); font-size: 11px; letter-spacing: .04em;
-  text-align: right; }
-#dm-info { position: fixed; right: 16px; top: 58px; z-index: 50; width: 280px; font-size: 12.5px;
+.dm-set { display: flex; align-items: center; gap: 3px; }
+.dm-set > u { text-decoration: none; font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--dim); margin-right: 3px; }
+#dm-head input[type=range] { width: 110px; accent-color: var(--accent); }
+#dm-info { position: fixed; right: 16px; z-index: 50; width: 280px; font-size: 12.5px;
   line-height: 1.5; color: var(--dim); padding: 14px 16px; background: var(--panel);
   border: 1px solid var(--edge); border-radius: 12px; backdrop-filter: blur(6px); }
 #dm-info .top { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
@@ -300,20 +375,19 @@ style.textContent = `
 #dm-info ul { list-style: none; margin: 0; padding: 0; columns: 2; font-family: ui-monospace, monospace;
   font-size: 11px; color: var(--ink); }
 #dm-info .hint { margin: 10px 0 0; font-size: 10.5px; color: var(--dim); opacity: .7; }
-#dm-info .hint kbd { background: rgba(255,255,255,.08); border: 1px solid var(--edge); border-radius: 4px;
-  padding: 1px 5px; font: inherit; }
 `;
 document.head.appendChild(style);
 
-const topBar = document.createElement('div');
-topBar.id = 'dm-top';
-topBar.className = 'dm-bar';
-const bottomBar = document.createElement('div');
-bottomBar.id = 'dm-bottom';
-bottomBar.className = 'dm-bar';
+const side = document.createElement('nav');
+side.id = 'dm-side';
+const header = document.createElement('div');
+header.id = 'dm-head';
 const info = document.createElement('div');
 info.id = 'dm-info';
-document.body.append(topBar, bottomBar, info);
+/** How far a slow group has got, beside its name; empty once every cell is in. */
+const busy = document.createElement('span');
+busy.className = 'dm-busy';
+document.body.append(side, header, info);
 
 function button(label: string, on: boolean, onClick: () => void, title?: string) {
   const b = document.createElement('button');
@@ -332,6 +406,53 @@ function set(label: string, ...children: HTMLElement[]) {
   return s;
 }
 function refresh() { build(); layout(); sync(); }
+function pickGroup(id: string) {
+  groupId = id;
+  focusId = null;
+  refresh();
+}
+
+/**
+ * The sidebar is built once — each section's groups — and only marked on a
+ * change after, so its scroll and an opened archive stay where they were.
+ */
+const groupButtons = new Map<string, HTMLButtonElement>();
+function buildSide() {
+  const title = document.createElement('div');
+  title.className = 'dm-title';
+  title.innerHTML = 'Abyssal <u>design</u><a href="/" title="the title screen">▶ game</a>';
+  side.append(title);
+  for (const s of sections) {
+    const list = document.createElement('div');
+    list.className = 'dm-groups';
+    for (const g of s.groups) {
+      const b = document.createElement('button');
+      b.innerHTML = `<span></span><u>${g.items.length}</u>`;
+      b.firstElementChild!.textContent = g.name;
+      b.title = g.note;
+      b.onclick = () => pickGroup(g.id);
+      groupButtons.set(g.id, b);
+      list.appendChild(b);
+    }
+    if (s.archived) {
+      const d = document.createElement('details');
+      d.open = s.groups.some(g => g.id === groupId);
+      d.innerHTML = `<summary>${s.name}</summary>
+        <p>From the open column, and no longer drawn by the game: kept to compare against.</p>`;
+      d.appendChild(list);
+      side.appendChild(d);
+    } else {
+      const h = document.createElement('h3');
+      h.textContent = s.name;
+      side.append(h, list);
+    }
+  }
+  const keys = document.createElement('div');
+  keys.className = 'dm-keys';
+  keys.innerHTML = '<kbd>↑</kbd> <kbd>↓</kbd> group · <kbd>←</kbd> <kbd>→</kbd> cell<br>'
+    + '<kbd>esc</kbd> back to the group · <kbd>\\</kbd> sidebar';
+  side.appendChild(keys);
+}
 
 function sync() {
   const url = new URL(location.href);
@@ -340,62 +461,59 @@ function sync() {
   url.searchParams.set('native', native ? '1' : '0');
   url.searchParams.set('play', playing ? '1' : '0');
   url.searchParams.set('fit', framing);
-  url.searchParams.set('labels', showLabels ? '1' : '0');
+  url.searchParams.set('labels', showNames ? '1' : '0');
+  url.searchParams.set('notes', showNotes ? '1' : '0');
   url.searchParams.set('icons', showIcons ? '1' : '0');
   url.searchParams.set('morph', showMorph ? '1' : '0');
+  url.searchParams.set('side', sideOpen ? '1' : '0');
   if (focusId) url.searchParams.set('i', focusId); else url.searchParams.delete('i');
   history.replaceState(null, '', url);
-  renderBars();
+  for (const [id, b] of groupButtons) b.dataset.on = id === groupId ? '1' : '0';
+  side.classList.toggle('shut', !sideOpen);
+  renderHeader();
   renderInfo();
 }
 
-function renderBars() {
-  topBar.replaceChildren();
-  const title = document.createElement('div');
-  title.className = 'dm-title';
-  title.innerHTML = 'Abyssal <u>design</u>';
-  topBar.appendChild(title);
-  for (const g of groups) {
-    topBar.appendChild(button(g.name, g.id === groupId, () => {
-      groupId = g.id;
-      focusId = null;
-      refresh();
-    }, g.note));
-  }
-  // the other half of the dev switch; the game carries the same link back
-  const swap = document.createElement('a');
-  swap.className = 'swap';
-  swap.href = '/';
-  swap.textContent = '▶ play';
-  topBar.appendChild(swap);
+function renderHeader() {
+  header.style.left = sideOpen ? `${side.offsetWidth}px` : '0';
+  header.replaceChildren();
+  const what = document.createElement('div');
+  what.className = 'dm-what';
+  const h = document.createElement('h1');
+  h.textContent = group().name;
+  const p = document.createElement('p');
+  p.textContent = group().note;
+  what.append(
+    button(sideOpen ? '◂' : '▸', false, () => { sideOpen = !sideOpen; sync(); layout(); }, 'the sidebar (\\)'),
+    h, busy, p);
 
-  bottomBar.replaceChildren();
   const slider = document.createElement('input');
   slider.type = 'range';
   slider.min = '0'; slider.max = '9000'; slider.step = '50';
   slider.value = String(depth);
-  slider.disabled = native;
-  slider.oninput = () => { depth = Number(slider.value); layout(); sync(); };
-  bottomBar.append(
+  slider.title = `every cell over the water at ${Math.round(depth)} m`;
+  slider.oninput = () => { depth = Number(slider.value); slider.title = `${depth} m`; layout(); };
+  slider.onchange = () => sync();
+  const opts = document.createElement('div');
+  opts.className = 'dm-opts';
+  opts.append(
     set('water',
-      button('native', native, () => { native = true; layout(); sync(); }, 'each cell over the water it is seen in'),
-      button('fixed', !native, () => { native = false; layout(); sync(); }, 'one depth for the whole board'),
-      slider),
-    set('scale',
-      button('fit', framing === 'fit', () => { framing = 'fit'; layout(); sync(); }, 'every cell the same screen size'),
-      button('true', framing === 'true', () => { framing = 'true'; layout(); sync(); }, 'one ruler for the whole board')),
+      button('own', native, () => { native = !native; layout(); sync(); },
+        'on: each cell over the water it is seen in · off: one depth for the board, on the slider'),
+      ...(native ? [] : [slider])),
+    set('scale', button(framing === 'fit' ? 'fit' : 'true', framing === 'true',
+      () => { framing = framing === 'fit' ? 'true' : 'fit'; layout(); sync(); },
+      'fit: every cell the same screen size · true: one ruler for the whole board')),
     set('show',
-      button('labels', showLabels, () => { showLabels = !showLabels; refresh(); }, 'name and note'),
+      button('names', showNames, () => { showNames = !showNames; refresh(); }),
+      button('notes', showNotes, () => { showNotes = !showNotes; refresh(); }, 'the one-line note, on every cell'),
       button('icons', showIcons, () => { showIcons = !showIcons; refresh(); }, 'the HUD glyph of a mutation'),
-      button('morphology', showMorph, () => { showMorph = !showMorph; refresh(); },
+      button('morph', showMorph, () => { showMorph = !showMorph; refresh(); },
         'every genome field a cell moved off the hatchling')),
-    set('', button(playing ? 'pause' : 'play', playing, () => { playing = !playing; sync(); })),
+    button(playing ? '❚❚' : '▶', false, () => { playing = !playing; sync(); }, playing ? 'pause' : 'play'),
   );
-  const state = document.createElement('span');
-  state.className = 'dm-state';
-  state.textContent = `${group().items.length} items` +
-    (native ? '  ·  each over its own water' : `  ·  depth ${Math.round(depth)} m`);
-  bottomBar.appendChild(state);
+  header.append(what, opts);
+  info.style.top = `${header.offsetHeight + 10}px`;
 }
 
 function renderInfo() {
@@ -442,15 +560,31 @@ function renderInfo() {
   }
   const hint = document.createElement('p');
   hint.className = 'hint';
-  hint.innerHTML = 'click the cell or press <kbd>esc</kbd> to go back';
+  hint.innerHTML = '<kbd>←</kbd> <kbd>→</kbd> the next cell · click it or <kbd>esc</kbd> to go back';
   info.appendChild(hint);
 }
 
 window.addEventListener('keydown', e => {
+  if (e.target instanceof HTMLInputElement) return;
+  const step = (list: { id: string }[], at: string | null, by: number) => {
+    const i = list.findIndex(x => x.id === at);
+    return list[(i + by + list.length) % list.length].id;
+  };
   if (e.key === 'Escape' && focusId) { focusId = null; refresh(); }
+  else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    pickGroup(step(groups, groupId, e.key === 'ArrowDown' ? 1 : -1));
+    groupButtons.get(groupId)?.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    e.preventDefault();
+    const items = group().items;
+    focusId = focusId ? step(items, focusId, e.key === 'ArrowRight' ? 1 : -1)
+      : items[e.key === 'ArrowRight' ? 0 : items.length - 1].id;
+    refresh();
+  } else if (e.key === '\\') { sideOpen = !sideOpen; sync(); layout(); }
 });
 
-renderBars();
+buildSide();
 build();
-layout();
 sync();
+layout();
