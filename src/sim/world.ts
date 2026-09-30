@@ -23,13 +23,19 @@ const FADE_IN = 0.9;
  * room draws over it.
  */
 const WALL_R = 0.5;
-/** How fast a carcass or a pickup settles, and how much of its drift the water takes a second. */
+/** How fast a pickup settles, and how much of its drift the water takes a second. */
 const SINK = 70;
 const SETTLE = 2.2;
+/**
+ * How much of a carcass's drift the water takes a second. A carcass floats where it died
+ * rather than sinking: dead fish float belly-up, and one on the floor was lost among the rock
+ * and the decoration, and had to be dived for.
+ */
+const HANG = 3;
 /** Carcasses kept at once; past it the oldest goes, so a long fight cannot fill a room with dead. */
 const CARCASS_MAX = 24;
 
-/** A body that died without being swallowed, lying where it sank until something eats it. */
+/** A body that died without being swallowed, floating where it died until something eats it. */
 export interface Carcass {
   x: number; y: number; vx: number; vy: number;
   size: number;
@@ -423,10 +429,16 @@ export class World {
       this.terrain?.collide(o, r);
     };
     const reach = p.radius * (0.9 + 0.5 * p.genome.gulp);
+    const hang = Math.exp(-HANG * dt);
     for (let i = this.carcasses.length - 1; i >= 0; i--) {
       const c = this.carcasses[i];
       const r = c.size * 0.62;
-      fall(c, r * WALL_R);
+      // the way it was going when it died, and then nothing: it hangs where it stopped
+      c.vx *= hang;
+      c.vy *= hang;
+      c.x += c.vx * dt;
+      c.y += c.vy * dt;
+      this.terrain?.collide(c, r * WALL_R);
       c.view.lie(dt, c.x, c.y);
       const d = reach + r * 0.5;
       if (p.alive && dist2(p.mouthX, p.mouthY, c.x, c.y) < d * d) {

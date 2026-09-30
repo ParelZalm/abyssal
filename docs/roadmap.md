@@ -281,6 +281,12 @@ pass through its fauna. A hit whitens the body, knocks it along the blow, lights
 the shot back off it; a kill lights the room round it. An idle larva still lasts about nine and
 a half seconds in a room of four, so contact on the whole body did not make a room deadlier.
 
+## Floating dead, and a closer ring
+
+The dead float belly-up where they died instead of sinking to the floor, where they were lost
+among the rock and decoration (`HANG` in `sim/world.ts`, a slow bob in `FishView.lie`). The
+ring round the larva is drawn at three of its radii, not four and a half, and fainter.
+
 ## Later
 
 Bomb fish and secret rooms; tanks four and five (the sperm whale, the colossal squid, the

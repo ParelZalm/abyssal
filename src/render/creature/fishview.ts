@@ -464,7 +464,9 @@ export class FishView extends Container {
     const unit = this.g.size / R;
     const roll = Math.min(1, this.deathT / 0.35);
     this.scale.y = unit * Math.max(0.12, Math.abs(Math.cos(roll * Math.PI))) * (roll < 0.5 ? 1 : -1);
-    this.x = x; this.y = y;
+    // floating, not lying: a slow rise and fall once the roll is done, each on its own phase
+    const bob = Math.sin(this.deathT * 1.3 + this.clock) * this.g.size * 0.06 * roll;
+    this.x = x; this.y = y + bob;
     this.rotation += (Math.round(this.rotation / Math.PI) * Math.PI - this.rotation) * Math.min(1, dt * 3);
     this.alpha = 1;
     this.tint = 0x8f96a4;

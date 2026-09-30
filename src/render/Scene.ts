@@ -49,8 +49,8 @@ export class Scene {
   constructor(private readonly water: Water, private readonly lighting: Lighting) {
     // drawn large and scaled down, so the curve stays smooth at any zoom
     this.focus
-      .circle(0, 0, 100).stroke({ color: 0xdffdf2, width: 4.5, alpha: 0.5 })
-      .circle(0, 0, 94).stroke({ color: 0xdffdf2, width: 12, alpha: 0.07 });
+      .circle(0, 0, 100).stroke({ color: 0xdffdf2, width: 4.5, alpha: 0.38 })
+      .circle(0, 0, 94).stroke({ color: 0xdffdf2, width: 12, alpha: 0.05 });
   }
 
   /**
@@ -58,7 +58,8 @@ export class Scene {
    * standing lights — the decoration's — added to what the bodies throw.
    */
   draw(view: View, world: World, p: Creature, phase: Phase, dread: Dread, lights: readonly Light[]) {
-    const halo = p.radius * (4.4 + Math.sin(view.t * 1.1) * 0.12);
+    // close round the body: at 4.4 radii it was a bubble a room's width of fish swam inside
+    const halo = p.radius * (3 + Math.sin(view.t * 1.1) * 0.1);
     this.focus.x = p.x;
     this.focus.y = p.y;
     this.focus.scale.set(halo / 100);
