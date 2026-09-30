@@ -8,7 +8,7 @@ import { Behaviour } from './behaviour';
 import { Combat } from './combat';
 import { Creature, type Hurt } from './creature';
 import type { Bite, Blood, Pulse } from './events';
-import { tick as tickOrgans, type Organ } from './organs';
+import { primaryOf, tick as tickOrgans, type Organ } from './organs';
 import { Patterns } from './patterns';
 import { Spawner } from './spawn';
 import type { Terrain } from './terrain';
@@ -71,9 +71,16 @@ export type PickupKind = 'heart' | 'shell' | 'key' | 'chest' | ItemId;
 export interface Pickup { kind: PickupKind; x: number; y: number; vx: number; vy: number; t: number }
 
 /**
+ * A clay pot on a room's floor, an aquarium's ornament and Isaac's: it breaks to the player's
+ * strike or shot, and now and then something was inside. `x`, `y` is where it stands on the
+ * floor; `r` its half height, in world units.
+ */
+export interface Pot { x: number; y: number; r: number }
+
+/**
  * The simulation: every body, the blood and ink in the water, and the outbox of what
  * happened this frame for `Game` to drain. `update` is three passes — `Behaviour.think`,
- * `integrate`, `Combat.resolveContacts` — and the spawner tops the population up between
+ * `integrate`, `Combat.resolveContacts` — and the tank lets a room's fauna in between
  * frames. It has no reference to the game above it.
  */
 export class World {
@@ -148,6 +155,15 @@ export class World {
   takes: (k: Pickup) => boolean = () => true;
   /** What is flying across the room. */
   readonly shots: Shot[] = [];
+  /**
+   * The room's pots. The room's own list, handed in by the tank as it is entered, so a pot
+   * broken stays broken when the player comes back.
+   */
+  pots: Pot[] = [];
+  /** Pots the player broke this frame, for what was inside. An event. */
+  readonly broken: Pot[] = [];
+  /** Where fauna the player killed this frame died, for what it may drop. An event. */
+  readonly felled: { x: number; y: number }[] = [];
 
   readonly spawner: Spawner;
   private readonly combat: Combat;
@@ -206,11 +222,12 @@ export class World {
     this.creatures.splice(i, 1);
     // a death on screen is played out rather than popped: the body is gone from the
     // simulation this frame, and its view stays behind. Swallowed, it goes down the throat;
-    // otherwise it is a carcass, and lies in the room until it is eaten
+    // a hostile otherwise is a carcass, and lies in the room until it is eaten. The fauna
+    // is not food, and leaves nothing to eat: it is simply gone
     if (!c.alive && c.view.visible && c.eatenBy) {
       c.view.die(c.vx, c.vy, true);
       this.dying.push({ view: c.view, eater: c.eatenBy });
-    } else if (!c.alive && c.view.visible) {
+    } else if (!c.alive && c.view.visible && c.hostile) {
       c.view.die(c.vx, c.vy, false);
       this.carcasses.push({ x: c.x, y: c.y, vx: c.vx * 0.3, vy: c.vy * 0.3, size: c.genome.size,
         species: c.species, view: c.view });
@@ -259,6 +276,8 @@ export class World {
     this.devoured.length = 0;
     this.playerGain = 0;
     this.collected.length = 0;
+    this.broken.length = 0;
+    this.felled.length = 0;
     this.player.shrugged = false;
     this.glanced = false;
     this.tellBy = null;
@@ -284,6 +303,7 @@ export class World {
     this.integrate(p, dt);
 
     this.combat.resolveContacts(dt, p);
+    this.smash();
     this.fly(dt);
     this.playDeaths(dt);
     this.settle(dt);
@@ -305,6 +325,32 @@ export class World {
   }
 
   /**
+   * The player's strike breaks the pots its bite reaches, at the reach it bites a body from
+   * (`Combat.strike`). A body with a primary strikes with its shots instead, as it does at
+   * the animals.
+   */
+  private smash() {
+    const p = this.player;
+    if (!this.pots.length || p.attack !== 'strike' || primaryOf(p)) return;
+    const pot = this.potAt(p.biteX, p.biteY, p.radius * 1.1 + p.genome.size * 0.45);
+    if (pot) this.breakPot(pot);
+  }
+
+  /** A pot within `reach` of a point, or null. */
+  private potAt(x: number, y: number, reach: number) {
+    for (const pot of this.pots) {
+      const r = pot.r + reach;
+      if (dist2(x, y, pot.x, pot.y - pot.r) < r * r) return pot;
+    }
+    return null;
+  }
+
+  private breakPot(pot: Pot) {
+    this.pots.splice(this.pots.indexOf(pot), 1);
+    this.broken.push(pot);
+  }
+
+  /**
    * Every shot a step along its line. One is spent on rock, on the end of its flight, or on
    * what it was fired at — whether or not the hit lands: a shot does not pass through a body
    * in its grace, it breaks on it, as Isaac's do. A hostile's is looking for the player; the
@@ -320,6 +366,10 @@ export class World {
       s.y += s.vy * dt;
       let spent = s.t > s.life || !t || t.solidAt(s.x, s.y);
       let struck = false;
+      if (!spent && s.by.isPlayer) {
+        const pot = this.potAt(s.x, s.y, s.r);
+        if (pot) { this.breakPot(pot); spent = struck = true; }
+      }
       if (!spent && s.by.isPlayer) {
         // while a room holds the player in, its shots are for what holds it: a shoal of fry
         // between the larva and a mackerel soaked up every shot aimed through it

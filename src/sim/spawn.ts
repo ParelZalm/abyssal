@@ -85,18 +85,50 @@ export class Spawner {
     return Object.keys(table)[0];
   }
 
-  /** Top a room up to `want` bodies of its tank's fauna. */
-  stock(room: Terrain, tank: Tank, want: number) {
+  /**
+   * Put at least `n` of the tank's fauna into the room and never more than `cap`, a shoal or
+   * a sheet at a time; returns how many went in, which is fewer when the room's water runs
+   * out of places. `hiding` is fauna coming out after a fight: from beside the rock,
+   * swimming out into the open.
+   */
+  stock(room: Terrain, tank: Tank, n: number, cap: number, hiding = false) {
     const pool = tank.fauna.map(speciesById);
-    let guard = 0;
-    while (this.world.creatures.filter(c => !c.hostile).length < want && guard++ < 20) {
+    let placed = 0;
+    for (let guard = 0; placed < n && placed < cap && guard < 20; guard++) {
       const sp = this.roll(pool);
-      const at = room.openSpot(this.rng, sp.size[1] * 0.6);
+      const clear = sp.size[1] * 0.6;
+      const at = hiding ? this.nook(room, clear) : room.openSpot(this.rng, clear);
       if (!at) continue;
-      if (sp.behavior === 'school') this.group(room, sp, at.x, at.y, this.rng.int(3, 6), 3, 1.2, tank);
-      else if (sp.behavior === 'plankton') this.group(room, sp, at.x, at.y, this.rng.int(5, 9), 4, 1.5, tank);
-      else this.place(room, sp, at.x, at.y, tank);
+      const heading = hiding ? (at.x < room.cx ? 0 : Math.PI) : undefined;
+      const left = cap - placed;
+      if (sp.behavior === 'school') {
+        placed += this.group(room, sp, at.x, at.y, Math.min(left, this.rng.int(3, 6)), 3, 1.2, tank, heading);
+      } else if (sp.behavior === 'plankton') {
+        placed += this.group(room, sp, at.x, at.y, Math.min(left, this.rng.int(5, 9)), 4, 1.5, tank, heading);
+      } else {
+        const c = this.place(room, sp, at.x, at.y, tank);
+        if (!c) continue;
+        if (heading !== undefined) this.setOff(c, heading);
+        placed++;
+      }
     }
+    return placed;
+  }
+
+  /**
+   * Open water beside the rock, where something hiding would come out from: an open spot with
+   * rock a tile and a half off it on some side. Falls back to any open spot, since a room of
+   * open water still has to fill.
+   */
+  private nook(room: Terrain, clear: number) {
+    const d = clear + room.tile * 1.5;
+    for (let n = 0; n < 12; n++) {
+      const at = room.openSpot(this.rng, clear);
+      if (!at) break;
+      if (room.solidAt(at.x - d, at.y) || room.solidAt(at.x + d, at.y) ||
+          room.solidAt(at.x, at.y - d) || room.solidAt(at.x, at.y + d)) return at;
+    }
+    return room.openSpot(this.rng, clear);
   }
 
   private roll(pool: Species[]) {
@@ -113,19 +145,26 @@ export class Spawner {
    * placed — a shoal against a wall is a smaller shoal, not one half inside it.
    */
   private group(room: Terrain, sp: Species, x: number, y: number, n: number, w: number, h: number,
-                tank: Tank) {
-    const heading = this.rng.chance(0.5) ? 0 : Math.PI;
+                tank: Tank, heading = this.rng.chance(0.5) ? 0 : Math.PI) {
+    let placed = 0;
     for (let i = 0; i < n; i++) {
       const r = this.rng.next() ** 0.7;
       const a = this.rng.next() * TAU;
       const c = this.place(room, sp, x + Math.cos(a) * r * w * room.tile,
         y + Math.sin(a) * r * h * room.tile, tank);
       if (!c) continue;
-      c.angle = heading + this.rng.range(-0.22, 0.22);
-      const v = c.genome.speed * 0.4;
-      c.vx = Math.cos(c.angle) * v;
-      c.vy = Math.sin(c.angle) * v;
+      this.setOff(c, heading + this.rng.range(-0.22, 0.22));
+      placed++;
     }
+    return placed;
+  }
+
+  /** A body already swimming, along `a`. */
+  private setOff(c: Creature, a: number) {
+    c.angle = a;
+    const v = c.genome.speed * 0.4;
+    c.vx = Math.cos(a) * v;
+    c.vy = Math.sin(a) * v;
   }
 
   private place(room: Terrain, sp: Species, x: number, y: number, tank: Tank) {

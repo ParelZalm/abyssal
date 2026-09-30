@@ -21,6 +21,15 @@ const NAG = 2.5;
 /** What a chest spills, by weight: mostly shells, then hearts, keys and items. */
 const CHEST: [PickupKind | 'item', number][] = [['shell', 50], ['heart', 20], ['key', 15], ['item', 15]];
 
+/**
+ * What a critter or a pot may leave, by weight, and how often each does: the fauna now and
+ * then — a room holds two dozen, and it is not what a room is for — a pot one time in three,
+ * since a room holds at most three and each was worth a detour to break.
+ */
+const SPOILS: [PickupKind, number][] = [['shell', 60], ['heart', 25], ['key', 15]];
+export const CRITTER_SPOILS = 0.06;
+export const POT_SPOILS = 0.35;
+
 /** A price at a stand: shells in a shop, heart containers in a deal room. */
 export type Price = { shells: number } | { containers: number };
 
@@ -119,6 +128,12 @@ export class Pockets {
       this.world.drop(kind, x, y - 4, Math.cos(a) * 70, Math.sin(a) * 70);
     }
     this.fx.burst(x, y, 0xd8a468, 12, 90, 2.2);
+  }
+
+  /** Now and then, by `chance`, a shell, a half heart or a key where something died or broke. */
+  loot(x: number, y: number, chance: number) {
+    if (!this.rng.chance(chance)) return;
+    this.world.drop(this.roll(SPOILS), x, y, this.rng.range(-30, 30), -40);
   }
 
   /** A pickup kind from a weighted table; `item` rolls one of the items. */

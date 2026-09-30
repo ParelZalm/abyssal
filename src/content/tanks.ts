@@ -28,8 +28,6 @@ export interface Tank {
   tile: number;
   /** What lives loose in its rooms, by species id. */
   fauna: string[];
-  /** Bodies a room is kept stocked with. */
-  population: number;
   /**
    * What hunts the player in its rooms: species id to how often it is dealt. Each has a role
    * (`Species.role`), and a room is a mix of them.
@@ -95,19 +93,19 @@ export const TANKS: Tank[] = [
   // the Twilight's water: dark and cool, the look of the references, with the light pooled
   // around what glows in it
   { id: 'nursery', name: 'Nursery Tank', depth: 3200, tile: 23,
-    fauna: ['bloom', 'krill', 'fry', 'anchovy'], population: 26,
+    fauna: ['bloom', 'krill', 'fry', 'anchovy'],
     hostiles: { mackerel: 3, archerfish: 3, pufferfish: 2, nettle: 2 },
     hostileHp: 0.55, pace: 1, boss: 'mantisshrimp' },
   // at 1.8 times the nursery's scale, the larva's growth at the descent: the Reef Shelf's
   // water, a shade less dark, and its animals
   { id: 'reef', name: 'Reef Tank', depth: 2600, tile: 41,
     // plankton to graze and three kinds of shoal that bolt from the larva
-    fauna: ['bloom', 'krill', 'fry', 'anchovy', 'reeffish'], population: 28,
+    fauna: ['bloom', 'krill', 'fry', 'anchovy', 'reeffish'],
     hostiles: { ribbon: 3, triggerfish: 3, lionfish: 2, moonjelly: 2 },
     hostileHp: 0.8, pace: 1.8, boss: 'greatwhite' },
   // and 1.8 times that again: the twilight-to-midnight water and what glows in it
   { id: 'deep', name: 'Deep Tank', depth: 5200, tile: 74,
-    fauna: ['driftsnow', 'lanternfish', 'hatchetfish', 'bristlemouth'], population: 24,
+    fauna: ['driftsnow', 'lanternfish', 'hatchetfish', 'bristlemouth'],
     hostiles: { barracuda: 2, gulper: 1, vampiresquid: 3, anglerfish: 2, siphon: 2 },
     hostileHp: 1.1, pace: 3.2, boss: 'giantsquid' },
 ];

@@ -207,6 +207,9 @@ export class Combat {
 
   /** What a bite or a blow would take off a body, before any swallowing. */
   private damage(att: Creature, def: Creature, mult: number) {
+    // the fauna is there to be eaten, not fought: anything the player lands on it ends it — a
+    // bite swallows it, a shot leaves the carcass — so it never soaks up a fight's attention
+    if (att.isPlayer && !def.hostile) return def.hp;
     const armour = Math.max(0, armourAgainst(att, armourOf(def.genome)));
     // a guardian spent by a missed rush is open: everything lands half again as hard
     const open = def.exposed > 0 ? EXPOSED_TAKEN : 1;
@@ -220,9 +223,11 @@ export class Combat {
     def.hp -= dmg;
     def.hurt(att, 'bite');
     const fatal = def.hp <= 0;
+    // the fauna is not the player's food: what it kills of it vanishes, and fills nothing
+    const food = !att.isPlayer || def.hostile;
     // seen, not just booked: a flinch on a wound, and on a whole swallow the body goes down
     // the throat that took it instead of simply ceasing to be drawn
-    if (fatal && whole) def.eatenBy = att;
+    if (fatal && whole && food) def.eatenBy = att;
     else def.view.hurt(def.x - att.x, def.y - att.y);
     // what the bodies do to each other beyond the damage — recoil, venom, grip — is the
     // organs' business, and a kill is read off the wound before they run so poison cannot
@@ -238,7 +243,7 @@ export class Combat {
     }
     if (fatal) {
       this.slay(def, att.isPlayer);
-      if (whole && att.isPlayer) this.world.playerGain += def.genome.size;
+      if (whole && att.isPlayer && food) this.world.playerGain += def.genome.size;
       // a meal worth the name buys a longer lull; a krill barely registers
       if (!att.isPlayer) {
         att.sated = clamp(4 + (def.genome.size / att.genome.size) * 20, 4, 14);
@@ -370,6 +375,7 @@ export class Combat {
     this.world.spilled.push(spill);
     if (!byPlayer) return;
     this.world.devoured.push(def.species.id);
+    if (!def.hostile) this.world.felled.push({ x: def.x, y: def.y });
     if (def.species.guardian) {
       this.world.hunted = false;
       this.world.deadGuardians.add(def.species.id);

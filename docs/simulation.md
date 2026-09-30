@@ -167,10 +167,27 @@ and `main` converts it into biomass, size and particles.
 
 ## Population
 
-A room is stocked from its tank (`Tank.fauna`, `Tank.population`): `Spawner.stock` rolls a
-species by `weight` and places it in open water — a school as a shoal of three to six on
-one heading, plankton as a sheet five to nine wide, anything else alone — and the room is
-topped back up as bodies die. That keeps a room alive while there is nothing else in it.
+A room is stocked from its tank's fauna (`Tank.fauna`): `Spawner.stock` rolls a species by
+`weight` and places it in open water — a school as a shoal of three to six on one heading,
+plankton as a sheet five to nine wide, anything else alone. Each room is dealt a roll of
+`FAUNA` (none to ten) the first time the map is made, off the room's own seed, and that
+count **only falls**: nothing that dies is replaced, and a room left keeps what was still
+swimming in it (`Cell.fauna`, counted in `TankMap.leave`).
+**A locked room holds no fauna**: the small fish keep to the rock while there are hunters
+about, so a fight is the player and its hostiles alone. When the room is won they come back
+out (`TankMap.release`): `HUSH` seconds of empty water, then the room's count comes out over
+`EMERGE` seconds, each arrival placed beside the rock and swimming out towards the middle.
+**The fauna is not food.** Whatever the player lands on it ends it, bite or shot
+(`Combat.damage`); it is not swallowed, fills nothing, and leaves no carcass — the view is
+simply dropped (`World.remove`). Where it died is published on `World.felled`, and now and
+then (`CRITTER_SPOILS`) it leaves a shell, a half heart or a key (`Pockets.loot`).
+
+**Pots.** A room other than the start and the boss room is dealt up to three clay pots on
+its floor (`TankMap.placePots`), handed to the world as `World.pots` — the room's own list,
+so a broken pot stays broken. The player's strike breaks one within its bite's reach
+(`World.smash`), and the player's shot one it flies into; `World.broken` carries it to
+`Game.digest`, which throws the shards (`PotView.shatter`) and rolls the same pool as the
+fauna, one time in three (`POT_SPOILS`).
 A fight room is also dealt its hostiles, the first time it is entered (`Spawner.hostiles`):
 three or four from the tank's table (`Tank.hostiles`, species to weight), no more than
 `ROLE_MAX` of one role, placed at least three tenths of the room from the player, with

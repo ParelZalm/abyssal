@@ -522,8 +522,9 @@ draft are gone.
   belly-up (`FishView.lie`), sinks and settles on what is under it, and stays until the
   player swims into it — within the `gulp` reach, which is what the stat means now — or the
   room holds more than `CARCASS_MAX`.
-- **The belly** (`run/Belly.ts`) fills with the centimetres swallowed (`World.playerGain`); at
-  `BELLY_FULL` (45, about half a dozen nursery fish) times the body's metabolism it passes a
+- **The belly** (`run/Belly.ts`) fills with the centimetres of hostile swallowed or eaten
+  as a carcass (`World.playerGain`) — the fauna is not food, and fills nothing; at
+  `BELLY_FULL` (80, about one nursery fight room's hostiles) times the body's metabolism it passes a
   pickup out behind the body —
   a half heart while there is health to fill, 60% of the time, else a shell. Pickups
   (`World.pickups`) sink, settle, and are taken by touch after half a second; a heart is left

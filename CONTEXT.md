@@ -48,7 +48,12 @@ room's mutation, and each of a shop's or a deal room's goods, at its price.
 **Pickup** — anything lying loose in a room that is collected by swimming into it: a
 half heart, a shell, a key, or a chest, which takes a key and spills pickups — and an item,
 which is taken only on E, as a pedestal's good is.
-Pickups drop from cleared rooms, from chests and from the belly.
+Pickups drop from cleared rooms, from chests, from the belly, and now and then from fauna
+the player kills and from pots.
+
+**Pot** — a clay ornament standing on a room's floor, broken by a strike or a shot. Now and
+then something was inside: a shell, a half heart or a key. What is broken stays broken.
+_Avoid_: destructible, urn, crate
 
 **Descent** — moving from one tank to the next, bigger one, down the **drain** the boss room
 opens in its floor when the boss is dead. It is where the animal grows: because the new tank
@@ -64,8 +69,10 @@ seen from outside: at the start of a run and at every descent.
 some earlier run has reached.
 
 **Hostile** — an animal that counts toward clearing a room. It fights the player and
-nothing else. Everything else in a room is fauna: it can be eaten, and the exits do not wait
-for it.
+nothing else. Everything else in a room is fauna: one bite or one shot kills it, it is not
+food, and the exits do not wait for it. A room's fauna is a few, and what dies of it is not
+replaced; it keeps out of a room while its hostiles hold it and comes out of hiding once the
+room is won.
 _Avoid_: enemy, mob
 
 **Role** — how a hostile fights, shared across species: a **charger** winds up and
@@ -130,7 +137,8 @@ _Avoid_: coin, money
 **Key** — what opens a locked door or a chest. Found and dropped like a shell, spent one
 at a time.
 
-**Belly** — what swallowing fills, by the size of what went down. A full belly empties by
+**Belly** — what swallowing a hostile fills, or eating its carcass, by the size of what
+went down; the fauna fills nothing. A full belly empties by
 passing a pickup, and starts again.
 _Avoid_: fullness, hunger, XP
 

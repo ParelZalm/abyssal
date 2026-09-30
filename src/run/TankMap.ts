@@ -8,7 +8,7 @@ import { RoomView } from '../render/room';
 import type { Container } from 'pixi.js';
 import type { Creature } from '../sim/creature';
 import { Terrain } from '../sim/terrain';
-import type { Pickup, PickupKind, World } from '../sim/world';
+import type { Pickup, PickupKind, Pot, World } from '../sim/world';
 import type { UI } from '../ui/UI';
 import type { Trait } from '../content/traits';
 import type { Price } from './Pockets';
@@ -37,6 +37,21 @@ const REACH = 3;
 const SPACING = 3.2;
 /** How near a locked door the player has to come for a key to go into it, in tiles past the body. */
 const LOCK_REACH = 1.2;
+/**
+ * A won room's fauna coming out of hiding: seconds of empty water after the last hostile
+ * dies, so the clear is read on its own, then seconds over which the room fills back up —
+ * a shoal at a time rather than the whole room resolving at once.
+ */
+const HUSH = 1.5;
+const EMERGE = 6;
+/**
+ * The fauna a room is dealt, fewest and most. A room's few small fish are its life, not its
+ * business: two dozen crowded the fights and the shots, and gave the eye nothing to follow.
+ */
+const FAUNA: [number, number] = [0, 10];
+/** The most pots a room is dealt, and a pot's half height, in tiles. */
+const POTS = 3;
+const POT = 0.4;
 
 /** What a pedestal offers: a mutation, or something that would otherwise be picked up. */
 export type Good = { kind: 'mutation'; trait: Trait } | { kind: 'pickup'; pickup: PickupKind };
@@ -95,6 +110,13 @@ interface Cell {
   shut: Map<Side, 'key' | 'seal'>;
   /** The drain a boss room opens in its floor when the boss is dead. */
   drain: { x: number; y: number } | null;
+  /**
+   * The fauna the room has left. It starts at a roll of `FAUNA` and only falls: what
+   * dies is not replaced, so a room swum through twice is emptier the second time.
+   */
+  fauna: number;
+  /** Its pots still whole, placed the first time it is entered. */
+  pots: Pot[] | null;
 }
 
 /** The rooms' display slots, which the current room's views are put into. */
@@ -113,6 +135,10 @@ export interface MapCell { gx: number; gy: number; type: MapRoom['type']; visite
 export class TankMap {
   readonly cells: Cell[];
   private current = 0;
+  /** Seconds since the room the player is in was won; unbounded for one entered already won. */
+  private calm = Infinity;
+  /** The room's fauna not yet in the water: hiding from its fight, or still to be placed. */
+  private pending = 0;
   /** The slide under way: from which room to which, through which side, and how far. */
   private slide: { from: number; to: number; side: Side; t: number;
                    px: number; py: number; tx: number; ty: number } | null = null;
@@ -137,8 +163,10 @@ export class TankMap {
       return { map, template: rng.pick(fits.length ? fits : templates), mirror: rng.chance(0.5),
         seed: rng.int(0, 1e6),
         terrain: null, view: null, decor: null, seen: false, visited: false, cleared: false,
-        pickups: [], pedestals: null, shut: new Map(), drain: null };
+        pickups: [], pedestals: null, shut: new Map(), drain: null, fauna: 0, pots: null };
     });
+    // off each room's own seed, not the map's stream, which would redraw every room after it
+    for (const c of this.cells) c.fauna = new Rng(c.seed ^ 0xfa_0a17).int(FAUNA[0], FAUNA[1]);
     this.current = this.cells.findIndex(c => c.map.type === 'start');
     // a shop's door takes a key, and past the nursery a treasure room's does too; the deal
     // room is sealed until the boss room is cleared. Both sides of a door, since the player
@@ -158,6 +186,7 @@ export class TankMap {
   get sliding() { return this.slide !== null; }
   get room(): Terrain { return this.terrainOf(this.current); }
   get cell() { return this.cells[this.current]; }
+
 
   /** Where a room sits: rooms are edge to edge, a grid step a room's size apart. */
   private terrainOf(i: number): Terrain {
@@ -242,7 +271,7 @@ export class TankMap {
     const tank = this.run.tank;
     // what the room offers is dealt as it is first entered, so it reads the build as it is by then
     c.pedestals ??= this.stock(c, t);
-    this.world.spawner.stock(t, tank, tank.population);
+    this.world.pots = c.pots ??= this.placePots(c, t);
     const fight = c.map.type === 'fight' || c.map.type === 'boss';
     if (fight && !c.cleared) {
       // the boss room holds the tank's boss and nothing else of the fight
@@ -253,6 +282,50 @@ export class TankMap {
       c.cleared = true;
       t.locked = false;
     }
+    // released after the lock, which keeps a fight room's fauna out of it until it is won
+    this.calm = Infinity;
+    this.pending = c.fauna;
+    this.release();
+  }
+
+  /**
+   * Let the room's fauna into the water. None while hostiles hold the room — the small fish
+   * keep to the rock while there are hunters about — and all of it at once in a room entered
+   * already won; after a fight, a share that grows over `EMERGE` once `HUSH` has passed,
+   * coming out from beside the rock.
+   */
+  private release() {
+    if (this.room.locked || this.pending <= 0) return;
+    const c = this.cell;
+    const out = clamp((this.calm - HUSH) / EMERGE, 0, 1);
+    const due = Math.ceil(c.fauna * out) - (c.fauna - this.pending);
+    if (due <= 0) return;
+    const placed = this.world.spawner.stock(this.room, this.run.tank, due, this.pending, out < 1);
+    this.pending -= placed;
+    // a room with no more water to put them in is as full as it gets; trying again every
+    // frame would only spend the frame on it
+    if (!placed && out >= 1) this.pending = 0;
+  }
+
+  /**
+   * The room's pots, the first time it is entered: none in the start room or the boss's,
+   * otherwise up to `POTS`, standing on open floor clear of the plinths and of each other.
+   */
+  private placePots(c: Cell, t: Terrain): Pot[] {
+    const type = c.map.type;
+    if (type === 'start' || type === 'boss') return [];
+    const rng = new Rng(c.seed ^ 0x9075_0a11);
+    const r = t.tile * POT;
+    const want = rng.int(0, POTS);
+    const out: Pot[] = [];
+    for (let k = 0; k < 16 && out.length < want; k++) {
+      const at = t.standAt(t.x0 + rng.range(0.08, 0.92) * t.width, t.y0 + rng.range(0, t.height), r * 2, r * 2.5);
+      if (!at) continue;
+      const near = (o: { x: number; y: number }, d: number) => Math.hypot(o.x - at.x, o.y - at.y) < d;
+      if (out.some(o => near(o, t.tile * 2)) || c.pedestals?.some(s => near(s, t.tile * SPACING))) continue;
+      out.push({ x: at.x, y: at.y, r });
+    }
+    return out;
   }
 
   /**
@@ -264,7 +337,9 @@ export class TankMap {
     if (this.slide) { this.sliding_(dt); return true; }
     const c = this.cell;
     const t = this.room;
+    this.calm += dt;
     if (t.locked && !this.world.creatures.some(o => o.hostile && o.alive)) this.clear();
+    this.release();
     const drain = c.drain;
     if (drain && Math.hypot(this.p.x - drain.x, this.p.y - drain.y) < this.p.radius + t.tile * DRAIN_REACH) {
       c.drain = null;
@@ -295,6 +370,7 @@ export class TankMap {
     const c = this.cell, t = this.room;
     t.locked = false;
     c.cleared = true;
+    this.calm = 0;
     this.version = ++TankMap.versions;
     this.fx.ring(this.p.x, this.p.y, 0xcfe4ff, this.p.radius * 5);
     this.camera.jolt(4, 8);
@@ -428,7 +504,10 @@ export class TankMap {
       : clamp(this.p.x, door.x + inset, door.x + door.w - inset);
     const ty = dy > 0 ? next.y0 + inset : dy < 0 ? next.y0 + next.height - inset
       : clamp(this.p.y, door.y + inset, door.y + door.h - inset);
-    this.cells[this.current].pickups = this.world.vacate();
+    const here = this.cells[this.current];
+    // what is still swimming, and what never came out, is what the room keeps
+    here.fauna = this.world.creatures.filter(o => o.alive && !o.hostile).length + this.pending;
+    here.pickups = this.world.vacate();
     this.slide = { from: this.current, to, side, t: 0, px: this.p.x, py: this.p.y, tx, ty };
     // the next room is drawn beside this one while the camera pans across
     const { view, decor } = this.viewsOf(to);

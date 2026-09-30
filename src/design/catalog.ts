@@ -27,7 +27,8 @@ import { PedestalsView } from '../render/pedestals';
 import { DropIn } from '../render/dropin';
 import type { Pedestal } from '../run/TankMap';
 import { ITEM_IDS, ITEMS } from '../content/items';
-import { priceCanvas } from '../render/pickups';
+import { paintMap, priceCanvas } from '../render/pickups';
+import { POT_COLOURS, POT_MAP } from '../render/pots';
 import { glyphCanvas } from '../render/glyphs';
 import { HOVER } from '../run/TankMap';
 import { SHOT_RANGE, SHOT_SPEED as PLAYER_SHOT_SPEED } from '../input/PlayerController';
@@ -1191,7 +1192,8 @@ function powerGroup(): DesignGroup {
 
 /**
  * What a run buys and finds: a shop's shelf and a deal room as they stand, every item and
- * the pickups that are not health — the key and the chest — and the price tags in both
+ * the pickups that are not health — the key and the chest — the pot they may come out of,
+ * and the price tags in both
  * currencies. The shelf's mutation and the deal's pair are fixed picks, so the cells hold still.
  */
 function economyGroup(): DesignGroup {
@@ -1203,7 +1205,7 @@ function economyGroup(): DesignGroup {
   });
   return {
     id: 'economy', name: 'Shop & deals',
-    note: 'A shop\'s shelf and a deal room, every item, the key and the chest, and the price tags.',
+    note: 'A shop\'s shelf and a deal room, every item, the key and the chest, the pot, and the price tags.',
     items: [
       pedestalsItem('shop', 'shop', 'three goods for 3–5 shells, and a mutation for 15', [
         { good: { kind: 'pickup', pickup: 'pellet' }, price: { shells: 4 } },
@@ -1218,6 +1220,9 @@ function economyGroup(): DesignGroup {
       ...ITEM_IDS.map(id => sprite(id, ITEMS[id].name, ITEMS[id].desc)),
       sprite('key', 'key', 'opens a locked door or a chest'),
       sprite('chest', 'chest', 'takes a key; spills two or three pickups'),
+      { id: 'pot', name: 'pot', note: 'breaks to a strike or a shot; one in three holds a shell, a heart or a key',
+        source: 'src/render/pots.ts', span: 18, depth: tank.depth,
+        make: () => spriteCell(paintMap(POT_MAP, POT_COLOURS), 1) },
       { id: 'price-tags', name: 'price tags', note: 'in shells, and a deal in hearts',
         source: 'src/render/pickups.ts', span: 30, depth: tank.depth,
         make: () => {

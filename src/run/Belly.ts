@@ -9,18 +9,19 @@ import type { UI } from '../ui/UI';
 import type { Run } from './Run';
 
 /**
- * Centimetres of prey a belly holds before it passes a pickup. About half a dozen of the
- * nursery's fish: often enough that eating is worth doing between fights, rarely enough
- * that grazing cannot replace what a room drops.
+ * Centimetres of prey a belly holds before it passes a pickup. Only hostiles fill it, so
+ * about one nursery fight room of them — three or four at twenty-odd centimetres: at the 45
+ * it held when the fauna fed it, every second kill passed something, and the belly paid out
+ * more than the room's own drop.
  */
-export const BELLY_FULL = 45;
+export const BELLY_FULL = 80;
 /** The chance a full belly passes a heart rather than a shell, while there is health to fill. */
 const HEART_CHANCE = 0.6;
 
 
 /**
- * What eating does now that it no longer feeds a hunger bar or an XP bar: every swallow
- * scores and fills the belly by the size of what went down, and a full belly passes a
+ * What eating does now that it no longer feeds a hunger bar or an XP bar: every swallow of a
+ * hostile, or of its carcass, scores and fills the belly by the size of what went down, and a full belly passes a
  * pickup behind the body — half a heart or a shell. The heartbeat that once warned of hunger
  * warns of the last heart instead. See `CONTEXT.md` for the belly and the pickup.
  */

@@ -14,6 +14,7 @@ import { Impacts } from './render/Impacts';
 import { Ocean } from './render/ocean';
 import { followZoom, FramePass, PIXEL } from './render/pixel';
 import { PickupView, SPRITES } from './render/pickups';
+import { PotView } from './render/pots';
 import { PromptView } from './render/prompt';
 import { ShotView } from './render/shots';
 import { BOB, DrainView, GLYPH, PedestalsView } from './render/pedestals';
@@ -29,7 +30,7 @@ import { Belly } from './run/Belly';
 import type { Phase } from './run/phase';
 import { COMBO_WINDOW, comboMult, Run } from './run/Run';
 import { HOVER, TankMap, type Good, type Pedestal, type RoomLayers } from './run/TankMap';
-import { Pockets } from './run/Pockets';
+import { CRITTER_SPOILS, Pockets, POT_SPOILS } from './run/Pockets';
 import { startById } from './run/starts';
 import { SYNERGIES } from './sim/organs';
 import { Creature } from './sim/creature';
@@ -92,6 +93,7 @@ export class Game {
   /** The tank the run is in: its map, the room the player is in, the doors, the slide. */
   tank!: TankMap;
   private pickups!: PickupView;
+  private pots!: PotView;
   private shots!: ShotView;
   private pedestals!: PedestalsView;
   private prompt!: PromptView;
@@ -230,6 +232,7 @@ export class Game {
     this.camera.over.removeChildren();
     this.tank?.destroy();
     this.pickups?.destroy();
+    this.pots?.destroy();
     this.shots?.destroy();
     this.pedestals?.destroy();
     this.prompt?.destroy();
@@ -240,6 +243,7 @@ export class Game {
     this.rng = new Rng(seed);
     this.ocean = new Ocean(this.rng);
     this.pickups = new PickupView();
+    this.pots = new PotView();
     this.shots = new ShotView();
     this.pedestals = new PedestalsView();
     this.prompt = new PromptView();
@@ -262,7 +266,7 @@ export class Game {
     this.camera.root.addChild(
       // what grows on the rock stands behind the bodies; the rock itself is drawn over them
       this.ocean.world, layers.decor, this.scene.focus,
-      this.drain.root, this.pedestals.root, world.fog, world.layer, this.pickups.root, this.shots.root, this.fx.layer,
+      this.drain.root, this.pedestals.root, this.pots.root, world.fog, world.layer, this.pickups.root, this.shots.root, this.fx.layer,
       // the rock over the bodies, so a nose pressed into a wall goes into it
       layers.rock,
     );
@@ -433,6 +437,11 @@ export class Game {
     this.impacts.drain(world, this.player);
     if (world.playerGain > 0) this.belly.swallow(world.playerGain);
     for (const k of world.collected) this.pockets.collect(k);
+    for (const f of world.felled) this.pockets.loot(f.x, f.y, CRITTER_SPOILS);
+    for (const pot of world.broken) {
+      this.pots.shatter(pot, this.fx);
+      this.pockets.loot(pot.x, pot.y - pot.r, POT_SPOILS);
+    }
     for (const id of world.devoured) {
       if (!recordSpecies(run.codex, id)) continue;
       const name = speciesById(id).name;
@@ -469,13 +478,14 @@ export class Game {
     // under the drop-in and the title the room is baked a slice a frame (`warm`), not all at once here
     this.tank.draw(view.t, this.phase !== 'dropin' && this.phase !== 'title');
     this.pickups.update(this.world.pickups, view.zoom, view.t);
+    this.pots.update(this.world.pots, view.zoom);
     this.shots.update(this.world.shots, view.zoom);
     this.pedestals.update(this.tank.pedestals, this.tank.room.tile * HOVER, view.zoom, view.t);
     this.drain.update(this.tank.drain, view.zoom, view.t);
     const within = this.phase === 'play' && !this.tank.sliding ? this.within() : null;
     this.prompt.update(within, view.zoom, view.t);
     const dread = this.scene.draw(view, this.world, p, this.phase, this.dread,
-      [...this.tank.lights, ...this.shots.lights, ...this.pedestals.lights, ...this.drain.lights,
+      [...this.tank.lights, ...this.shots.lights, ...this.pedestals.lights, ...this.pots.lights, ...this.drain.lights,
         ...this.fx.lights]);
     this.lighting.render(this.camera);
     if ((this.phase === 'play' || this.phase === 'draft') && !this.tank.sliding) {
@@ -484,7 +494,6 @@ export class Game {
       // culled on the frame it arrived
       const room = this.tank.room;
       this.world.cull(room.cx, room.cy, Math.hypot(room.width, room.height) / 2);
-      this.world.spawner.stock(this.tank.room, this.run.tank, this.run.tank.population);
     }
 
     this.ui.update({
