@@ -40,13 +40,14 @@ import { HATCHED } from '../run/starts';
 import { shotGlow, shotTexture } from '../render/shots';
 import { glowTexture } from '../render/textures';
 import { BAR_OVER, ChargeBar } from '../render/tells';
+import { BREACH_LOCK, DRAW_TIME, LOB_WIND, LURK, SNAGGED, SPACING, WEDGED } from '../sim/bosses';
 import { PickupView } from '../render/pickups';
 import type { Pickup } from '../sim/world';
 import {
   CHARGE_LOCK, CHARGE_RECOVER, CHARGE_WIND, DASH_TIME, SHOT_SPEED, SPIT_RECOVER, SPIT_WIND, SPOKES, SWELL,
   TURRET_RECOVER, TURRET_WIND,
 } from '../sim/roles';
-import type { Role, ShotKind, Species } from '../content/species';
+import type { FiredKind, Role, ShotKind, Species } from '../content/species';
 import { Texture } from 'pixi.js';
 import { speciesById } from '../content/species';
 import type { IconName } from '../ui/icons';
@@ -1130,7 +1131,7 @@ function roleGroup(): DesignGroup {
     };
   });
   // each kind twice, a hostile's beside the player's: the pair is the contrast to judge
-  for (const kind of Object.keys(SHOT_SPEED) as ShotKind[]) {
+  for (const kind of Object.keys(SHOT_SPEED) as FiredKind[]) {
     for (const hostile of [true, false]) {
       items.push({
         id: hostile ? `shot-${kind}` : `shot-${kind}-yours`,
@@ -1360,10 +1361,150 @@ class DropInCell extends Container {
 }
 
 const BOSS_NOTES: Record<'punch' | 'charge' | 'grab', string> = {
-  punch: 'Cocks its club — the tell — then a punch it cannot steer; the water boils where it lands. Three, and it rests.',
-  charge: 'Turns square on and holds — the tell — then rushes the line; a miss leaves it spent.',
-  grab: 'Spreads its arms — the tell — then lashes the feeding pair; torn free, it loses one.',
+  punch: 'Cocks its club — the tell — then a punch it cannot steer; the water boils where it lands. Three, and it rests. Fought in its den, whose clefts it jams itself in.',
+  charge: 'Turns square on and holds — the tell — then rushes the line; a miss leaves it spent, and rock leaves it dazed.',
+  grab: 'Spreads its arms — the tell — then lashes the feeding pair; torn free, it loses one, and a lash into rock snags.',
 };
+
+/** A boss's set piece on the board: the boss, and what else the cell draws beside it. */
+class MoveCell extends BoardFish {
+  readonly rock = new Graphics();
+  readonly props = new Container();
+  constructor(g: Genome, plan: Plan) {
+    super(g, plan);
+    this.addChild(this.props, this.rock);
+  }
+}
+
+/** A shot's sprite and bloom for a board cell, at the roles' shot scale. */
+function shotSprite(kind: ShotKind): Container {
+  const c = new Container();
+  const b = new Sprite(glowTexture());
+  b.anchor.set(0.5);
+  b.blendMode = 'add';
+  b.tint = shotGlow(kind, true).color;
+  b.width = b.height = kind === 'urchin' ? 26 : 16;
+  const s = new Sprite(shotTexture(kind, true));
+  s.anchor.set(0.5);
+  s.scale.set(SHOT_PX);
+  c.addChild(b, s);
+  return c;
+}
+
+/** Rock for a move cell: a flat slab of the rooms' dark stone. */
+const CELL_ROCK = 0x1c2230;
+
+/**
+ * Each boss's set pieces, and what the room does to it, looped on the simulation's timings:
+ * the mantis shrimp wedged in a cleft and digging up its urchin, the spines' fan, the Great
+ * White's breach, the Giant Squid snagged on rock and drawing water in. The rock is a slab in
+ * the cell; the room's own is on the Rooms group.
+ */
+function bossMoves(): DesignItem[] {
+  const genome = (id: string) => {
+    const sp = speciesById(id);
+    return { sp, g: genomeFor(sp, new Rng(1000 + SPECIES.indexOf(sp) * 77)) };
+  };
+  const cell = (id: string, move: string, note: string, facts: Record<string, string | number>,
+                build: (c: MoveCell, g: Genome) => void,
+                step: (c: MoveCell, g: Genome, t: number, dt: number, beat: number) => void): DesignItem => {
+    const { sp, g } = genome(id);
+    const tank = TANKS.find(k => k.boss === id)!;
+    let t = 0;
+    return {
+      id: `boss-${id}-${move}`, name: `${sp.name} · ${move}`, note,
+      source: 'src/sim/bosses.ts', span: g.size * 5, depth: tank.depth, genome: g, facts,
+      make: () => { const c = new MoveCell(g, sp.plan); build(c, g); return c; },
+      animate: (view: Container, dt: number, beat: number) => {
+        t += dt;
+        step(view as MoveCell, g, t, dt, beat);
+        (view as MoveCell).fish.show(true, 1, 0xffffff);
+      },
+    };
+  };
+  return [
+    cell('mantisshrimp', 'wedged',
+      'A punch down a cleft it does not fit: the head jammed in, the tail beating, open to blows. No burst.',
+      { held: `${WEDGED} s`, then: 'wary: lobs rather than punching after a larva in a narrow place' },
+      (c, g) => {
+        // the cleft: two walls a little over half a tile apart, the body jammed at their lip
+        const w = g.size * 0.35;
+        c.rock.rect(-g.size * 2.2, g.size * 0.35, g.size * 2.2 - w / 2, g.size * 2).fill(CELL_ROCK);
+        c.rock.rect(w / 2, g.size * 0.35, g.size * 2.2 - w / 2, g.size * 2).fill(CELL_ROCK);
+      },
+      (c, g, t, dt, beat) => {
+        const cycle = WEDGED + 1.2, k = t % cycle;
+        const stuck = k < WEDGED;
+        const a = 1.25 + (stuck ? Math.sin(t * 23) * 0.07 : 0);
+        const back = stuck ? 0 : (k - WEDGED) / 1.2;
+        c.fish.animate(dt, stuck ? 1.2 : 0.4, beat, 0, REST);
+        c.fish.place(-Math.cos(a) * g.size * (0.45 + back), -Math.sin(a) * g.size * (0.45 + back) + g.size * 0.1, a, 1);
+      }),
+    cell('mantisshrimp', 'urchin',
+      'Dug up nose-down — the tell — and lobbed; it bursts under the roof into a fan of spines that sink.',
+      { tell: `${LOB_WIND} s`, spines: `9, ${SPACING} tiles apart`, sink: '3 tiles/s' },
+      (c) => {
+        c.props.addChild(shotSprite('urchin'));
+        for (let i = 0; i < 5; i++) c.props.addChild(shotSprite('spine'));
+      },
+      (c, g, t, dt, beat) => {
+        const cycle = LOB_WIND + 2.6, k = t % cycle;
+        const dig = k < LOB_WIND;
+        c.fish.animate(dt, dig ? 0.2 : 0.3, beat, 0,
+          dig ? { windup: k / LOB_WIND, strike: 0, open: k / LOB_WIND > 0.35 } : REST);
+        c.fish.place(-g.size * 1.2, g.size * 1.2, dig ? 1.1 : 0, 1);
+        const [urchin, ...spines] = c.props.children;
+        const fly = k - LOB_WIND, top = 0.9;
+        urchin.visible = !dig && fly < top;
+        if (urchin.visible) {
+          const u = fly / top;
+          urchin.position.set(-g.size * 1.2 + u * g.size * 2, g.size * 1.0 - (1 - (1 - u) ** 2) * g.size * 2.8);
+          urchin.rotation = t * 5;
+        }
+        spines.forEach((s, i) => {
+          s.visible = !dig && fly >= top;
+          const f = fly - top;
+          s.position.set(g.size * 0.8 + (i - 2) * g.size * 0.55 * Math.min(1, f * 3),
+            -g.size * 1.8 + Math.max(0, f - 0.2) * g.size * 1.6);
+          s.rotation = Math.PI / 2;
+        });
+      }),
+    cell('greatwhite', 'breach',
+      'Lurks on the floor under the player with bubbles off its back, turns nose-up on the lock, and rushes straight up. The roof dazes it.',
+      { lurk: `${LURK} s`, lock: `${BREACH_LOCK} s`, dazed: 'on rock, 3.4 s; a miss in the open 1.2 s' },
+      () => {},
+      (c, g, t, dt, beat) => {
+        const cycle = LURK + 0.4 + 1.2, k = t % cycle;
+        const lurk = k < LURK, locked = k > LURK - BREACH_LOCK && lurk;
+        const up = lurk ? 0 : Math.min(1, (k - LURK) / 0.4);
+        const a = locked || !lurk ? -Math.PI / 2 : 0;
+        c.fish.animate(dt, lurk ? (locked ? 0.2 : 0.5) : 1.6, beat, 0,
+          lurk ? { windup: locked ? 1 : k / LURK * 0.6, strike: 0, open: locked } : { windup: 0, strike: 1 - up, open: true });
+        c.fish.place(lurk ? Math.sin(k * 1.6) * g.size * 0.3 : 0, g.size * 1.1 - up * g.size * 2.2, a, 1);
+      }),
+    cell('giantsquid', 'snagged',
+      'A lash that meets rock before the player — a pillar ducked behind through the tell — wraps the rock and holds the squid to it.',
+      { held: `${SNAGGED} s` },
+      (c, g) => { c.rock.rect(g.size * 1.2, -g.size * 1.2, g.size * 0.6, g.size * 2.4).fill(CELL_ROCK); },
+      (c, g, t, dt, beat) => {
+        c.fish.grab({ x: g.size * 1.2 - g.size * 0.6, y: 0 });
+        c.fish.animate(dt, 1.2, beat, 0, REST);
+        c.fish.place(-g.size * 1.2, 0, Math.sin(t * 23) * 0.05, 1);
+      }),
+    cell('giantsquid', 'draw',
+      'Arms spread, drawing the water in along the open line to the player — rock between them cuts it — then the lash.',
+      { draw: `${DRAW_TIME} s`, pull: '0.6 of a cruise at the arms' },
+      () => {},
+      (c, g, t, dt, beat) => {
+        const cycle = DRAW_TIME + 0.5 + 1.2, k = t % cycle;
+        const drawing = k < DRAW_TIME, lash = !drawing && k < DRAW_TIME + 0.5;
+        c.fish.grab(lash ? { x: g.size * 1.6, y: 0 } : null);
+        c.fish.animate(dt, drawing ? 0.1 : 0.3, beat, 0,
+          drawing ? { windup: Math.min(1, k / 0.5), strike: 0, open: true } : REST);
+        c.fish.place(-g.size * 0.6, 0, 0, 1);
+      }),
+  ];
+}
 
 /**
  * Each tank's boss on a loop of its fight's tell and strike, on the tell's own timings; and
@@ -1422,10 +1563,10 @@ function bossGroup(): DesignGroup {
       },
     };
   };
-  items.push(...TANKS.map(drop));
+  items.push(...bossMoves(), ...TANKS.map(drop));
   return {
     id: 'bosses', name: 'Bosses & the descent',
-    note: 'Each tank\'s boss on a loop of its tell and its strike, and the drop-in into each tank.',
+    note: 'Each tank\'s boss on a loop of its tell and its strike, its set pieces and what the room does to it, and the drop-in into each tank.',
     items,
   };
 }

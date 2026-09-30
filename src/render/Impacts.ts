@@ -1,6 +1,7 @@
 import { lerp, rgb } from '../core/util';
 import type { Creature } from '../sim/creature';
 import type { World } from '../sim/world';
+import type { BossCue } from '../sim/events';
 import { speciesById } from '../content/species';
 import type { UI } from '../ui/UI';
 import type { Camera } from './Camera';
@@ -10,6 +11,19 @@ import { shotGlow } from './shots';
 import { lightAt, waterColor } from './water';
 
 /**
+ * What the first of each boss set piece says: the move and its answer, or what the room did
+ * to the boss and what that is for.
+ */
+const CUES: Record<BossCue, string> = {
+  wedged: 'Wedged in the cleft — strike it while it is stuck',
+  lob: 'Digging up an urchin — its spines rain down: find a gap, or get under rock',
+  dazed: 'It rammed the rock and is dazed — strike now; lure its rush into rock',
+  breach: 'Lurking under you — get out of the line of its bubbles',
+  draw: 'Drawing you in — swim hard away, or put rock between you',
+  snagged: 'Its arms caught the rock — it is snagged; strike it',
+};
+
+/**
  * What the simulation did this frame, made felt: blood in the water, what organs threw
  * into it, the hits, and a guardian turning toward you. Reads the world's outbox and
  * writes only particles, shake, dread and toasts — the run's numbers are not its business.
@@ -17,6 +31,8 @@ import { lightAt, waterColor } from './water';
 export class Impacts {
   /** Guardians whose tell has already been explained this run. */
   private readonly toldBy = new Set<string>();
+  /** Boss set pieces already explained this run. */
+  private readonly toldCue = new Set<BossCue>();
   /** Seconds before another hint may toast, so a held state does not repeat itself. */
   private hintCd = 0;
 
@@ -88,6 +104,17 @@ export class Impacts {
             0xe8f8ff, 2 + Math.random() * 3);
         }
         camera.jolt(5, 10);
+      } else if (f.kind === 'dust') {
+        // grit knocked off rock or dug out of the sand: the sand's colour, thrown and settling
+        fx.burst(f.x, f.y, 0xc8b490, 10, f.r * 2.4, 2);
+        fx.burst(f.x, f.y, 0x8a7a64, 6, f.r * 1.4, 2.6);
+        camera.jolt(3, 10);
+      } else if (f.kind === 'rise') {
+        // bubbles streaming up off something below: a line the eye follows to what is coming
+        for (let i = 0; i < 3; i++) {
+          fx.wake(f.x + (Math.random() - 0.5) * f.r, f.y, (Math.random() - 0.5) * f.r * 0.5,
+            -f.r * (4 + Math.random() * 4), 0xe8f8ff, f.r * (0.1 + Math.random() * 0.1));
+        }
       } else if (f.kind === 'exposed') {
         fx.ring(f.x, f.y, 0xffe28a, f.r);
       } else {
@@ -108,6 +135,11 @@ export class Impacts {
             : who.pattern === 'suck'
               ? `The ${who.name} is drawing water in — boost straight out, or cut across it`
               : `The ${who.name} is lining up — get out of its line, then strike it while it is spent`);
+    }
+    const cue = world.cue;
+    if (cue && !this.toldCue.has(cue)) {
+      this.toldCue.add(cue);
+      this.ui.toast(CUES[cue]);
     }
     for (const b of world.bites) {
       const col = b.onPlayer ? 0xff5a4a : 0xff9a7a;

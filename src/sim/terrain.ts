@@ -27,6 +27,21 @@ const BEND = 0.24;
  */
 const KNOB = 0.44;
 const KNOB_SIZE = 0.7;
+/**
+ * A cleft's sample in the field, between water's 0 and rock's 1: beside a tile of rock the
+ * blend crosses one half 0.31 of a tile from the cleft's middle, so the crack is 0.62 of a
+ * tile across. That is the width that matters, and it is a narrow one: at the nursery's
+ * scale it is two or three collision cells, which a larva's wall circle passes through and
+ * the mantis shrimp's, four and more across, never does. Along the cleft the sample holds,
+ * so it stays open to its end.
+ */
+const CLEFT = 0.352;
+/**
+ * The rock's noise is taken off near a cleft — wholly within half a tile of its middle — or
+ * it would wander a crack that narrow shut in one place and wide enough for the boss in the
+ * next. Its walls are the one clean cut in the reef rock.
+ */
+const CALM = 2;
 
 /**
  * Where a door goes through each side, in template tiles: rows 8–10 on the left and right,
@@ -180,22 +195,20 @@ export class Terrain {
     return null;
   }
 
-  private sample(i: number, j: number) {
-    return SOLID[this.at(i, j)] ? 1 : 0;
-  }
-
   /** How solid a point is: over one half is rock. Continuous, so an edge can be drawn to the pixel. */
   field(x: number, y: number) {
     const u = (x - this.x0) / this.tile - 0.5, v = (y - this.y0) / this.tile - 0.5;
     const i = Math.floor(u), j = Math.floor(v);
     const su = smooth(u - i), sv = smooth(v - j);
-    const top = this.sample(i, j) + (this.sample(i + 1, j) - this.sample(i, j)) * su;
-    const bot = this.sample(i, j + 1) + (this.sample(i + 1, j + 1) - this.sample(i, j + 1)) * su;
-    const s = top + (bot - top) * sv;
+    const a = this.at(i, j), b = this.at(i + 1, j), c = this.at(i, j + 1), d = this.at(i + 1, j + 1);
+    const s = blend(fill(a), fill(b), fill(c), fill(d), su, sv);
     const t = this.tile;
     const knob = cells(x / (t * KNOB_SIZE), y / (t * KNOB_SIZE), 7 + this.seed);
-    return s + fbmSigned(x / (t * 1.6), y / (t * 1.6), 3 + this.seed, 3) * BEND +
+    const noise = fbmSigned(x / (t * 1.6), y / (t * 1.6), 3 + this.seed, 3) * BEND +
       (0.42 - knob.f1) * KNOB;
+    if (a !== 'cleft' && b !== 'cleft' && c !== 'cleft' && d !== 'cleft') return s + noise;
+    const calm = blend(+(a === 'cleft'), +(b === 'cleft'), +(c === 'cleft'), +(d === 'cleft'), su, sv);
+    return s + noise * Math.max(0, 1 - calm * CALM);
   }
 
   /**
@@ -376,4 +389,15 @@ export class Terrain {
 
 function smooth(t: number) {
   return t * t * (3 - 2 * t);
+}
+
+/** A tile's sample in the field: rock 1, water 0, a cleft between (`CLEFT`). */
+function fill(k: Tile) {
+  return SOLID[k] ? 1 : k === 'cleft' ? CLEFT : 0;
+}
+
+/** Four corners' values blended across a cell by its smoothed offsets. */
+function blend(a: number, b: number, c: number, d: number, su: number, sv: number) {
+  const top = a + (b - a) * su, bot = c + (d - c) * su;
+  return top + (bot - top) * sv;
 }

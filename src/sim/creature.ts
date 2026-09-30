@@ -101,6 +101,20 @@ export class Creature {
   tornSeen = 0;
   anchor: { x: number; y: number } | null = null;
   volley = 0;
+  /**
+   * A boss's fight beyond its main move (`sim/bosses.ts`). `move` is the set piece in hand —
+   * '' for the main one — and `rounds` how many of the main one since the last. `stuck` is
+   * seconds held fast by the room, at `pinX`, `pinY`: a mantis shrimp wedged in a cleft, a
+   * squid's arms round a pillar. `wary` is seconds a boss that was caught will not be caught
+   * the same way, and `unseen` how long the player has kept out of its reach.
+   */
+  move: '' | 'lob' | 'breach' | 'draw' = '';
+  rounds = 0;
+  stuck = 0;
+  pinX = 0;
+  pinY = 0;
+  wary = 0;
+  unseen = 0;
   /** Seconds the player cannot be hit for; see `takeHit`. */
   invuln = 0;
   /** Whether the last blow on the player was shrugged off, for the view to say so. An event. */

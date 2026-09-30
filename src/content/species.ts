@@ -8,7 +8,13 @@ export type Behavior = 'plankton' | 'school' | 'drift' | 'hunter' | 'ambush' | '
 /** How a hostile fights; see *Role* in `CONTEXT.md` and `sim/roles.ts`. */
 export type Role = 'charger' | 'spitter' | 'turret' | 'drifter';
 /** What a spitter or a turret fires: a jet of water, a spine, a blob of light. */
-export type ShotKind = 'spit' | 'spine' | 'bolt';
+/**
+ * What a body fires: a jet of water, a spine, a blob of light — and the mantis shrimp's
+ * urchin, which is thrown rather than fired, and never by the player.
+ */
+export type ShotKind = 'spit' | 'spine' | 'bolt' | 'urchin';
+/** What a role fires, and a primary: every kind but the thrown one. */
+export type FiredKind = Exclude<ShotKind, 'urchin'>;
 
 export interface Species {
   id: string;
@@ -43,7 +49,7 @@ export interface Species {
    */
   role?: Role;
   /** What it fires, for the roles that fire. */
-  shot?: ShotKind;
+  shot?: FiredKind;
   /**
    * A boss's fight, when a tank is built around this animal (`sim/bosses.ts`): the mantis
    * shrimp's punch, the Great White's charge, the Giant Squid's grab. And its health, set

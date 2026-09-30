@@ -7,7 +7,7 @@ import { clamp, dist2, type Rng, TAU } from '../core/util';
 import { Behaviour } from './behaviour';
 import { Combat } from './combat';
 import { Creature, type Hurt } from './creature';
-import type { Bite, Blood, Pulse } from './events';
+import type { Bite, Blood, BossCue, Pulse } from './events';
 import { primaryOf, tick as tickOrgans, type Organ } from './organs';
 import { Patterns } from './patterns';
 import { Spawner } from './spawn';
@@ -58,6 +58,20 @@ export interface Shot {
   /** Its share of a bite, for a shot the player fired. */
   mult: number;
   by: Creature;
+  /**
+   * For something thrown or let fall rather than fired (`World.lob`): what the water does to
+   * it. `g` pulls it down in world units a second², `sink` is the fall it tops out at, and
+   * `drag` is the share of its sideways way the water takes a second.
+   */
+  heavy?: { g: number; sink: number; drag: number };
+  /**
+   * Where it breaks: at the top of its arc (`apex`), or on the rock or the end of its flight
+   * short of it. The mantis shrimp's urchin, bursting into its spines.
+   */
+  burst?: (x: number, y: number) => void;
+  apex?: boolean;
+  /** A lob that cannot hurt on its way: only what it bursts into can. */
+  harmless?: boolean;
 }
 /** A shot's reach, in tiles, and the seconds it flies before it is spent anyway. */
 const SHOT_R = 0.16;
@@ -112,6 +126,8 @@ export class World {
   terrain: Terrain | null = null;
   /** Species id of a guardian whose tell started this frame, for the first-time toast. */
   tellBy: string | null = null;
+  /** A boss's set piece that began this frame — a move, or the room catching it — for its first-time toast. */
+  cue: BossCue | null = null;
   /** True on a frame the player's bite glanced off a bait ball. */
   glanced = false;
   /** The player's boost kicks already answered by a scatter. */
@@ -288,6 +304,7 @@ export class World {
     this.player.shrugged = false;
     this.glanced = false;
     this.tellBy = null;
+    this.cue = null;
     this.hunted = false;
     this.playerHeld = false;
   }
@@ -334,6 +351,18 @@ export class World {
   }
 
   /**
+   * Throw something across the room from (`x`, `y`) at (`vx`, `vy`) world units a second, to
+   * fall as `heavy` says for up to `life` seconds: the mantis shrimp's urchin and its spines.
+   * Unlike a shot its way is in world units, since it is aimed at a place and not down a line.
+   */
+  lob(by: Creature, kind: ShotKind, x: number, y: number, vx: number, vy: number,
+      heavy: Shot['heavy'], life: number, then?: Pick<Shot, 'burst' | 'apex' | 'harmless'>) {
+    const t = this.terrain;
+    if (!t) return;
+    this.shots.push({ kind, x, y, vx, vy, r: SHOT_R * t.tile, t: 0, life, mult: 1, by, heavy, ...then });
+  }
+
+  /**
    * The player's strike breaks the pots its bite reaches, at the reach it bites a body from
    * (`Combat.strike`). A body with a primary strikes with its shots instead, as it does at
    * the animals.
@@ -371,9 +400,13 @@ export class World {
     for (let i = this.shots.length - 1; i >= 0; i--) {
       const s = this.shots[i];
       s.t += dt;
+      if (s.heavy) {
+        s.vx *= Math.exp(-s.heavy.drag * dt);
+        s.vy = Math.min(s.heavy.sink, s.vy + s.heavy.g * dt);
+      }
       s.x += s.vx * dt;
       s.y += s.vy * dt;
-      let spent = s.t > s.life || !t || t.solidAt(s.x, s.y);
+      let spent = s.t > s.life || !t || t.solidAt(s.x, s.y) || (!!s.apex && s.vy >= 0);
       let struck = false;
       if (!spent && s.by.isPlayer) {
         const pot = this.potAt(s.x, s.y, s.r);
@@ -395,7 +428,8 @@ export class World {
         }
       }
       const reach = s.r + p.radius * 0.5;
-      if (!spent && p.alive && !s.by.isPlayer && s.t >= SHOT_ARM && dist2(s.x, s.y, p.x, p.y) < reach * reach) {
+      if (!spent && p.alive && !s.by.isPlayer && !s.harmless && s.t >= SHOT_ARM &&
+          dist2(s.x, s.y, p.x, p.y) < reach * reach) {
         spent = true;
         const got = p.takeHit(s.by, 1, 'shot');
         if (got) {
@@ -405,6 +439,9 @@ export class World {
       }
       if (!spent) continue;
       this.shots.splice(i, 1);
+      // at the top of its arc, from where it was a step before; one that met rock short of
+      // it only breaks there
+      if (s.burst && (!s.apex || s.vy >= 0)) s.burst(s.x - s.vx * dt, s.y - s.vy * dt);
       // a shot that found a body is an impact, with the way it was going; one that found rock
       // or ran out is a splash
       this.pulses.push({ x: s.x, y: s.y, r: s.r * 3, kind: struck ? 'impact' : 'splash', shot: s.kind,

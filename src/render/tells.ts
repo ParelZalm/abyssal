@@ -1,5 +1,6 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 import type { Creature } from '../sim/creature';
+import { lockOf } from '../sim/bosses';
 import { chargeOf } from '../sim/roles';
 
 /**
@@ -65,8 +66,8 @@ function bar() {
 
 /**
  * The tells a room's hostiles show over their bodies, drawn in the layer over the lighting,
- * since a warning the dark could swallow is no warning: for now the charger's bar through its
- * wind-up (`Roles.charger`, `chargeOf`). Sized in art pixels, as the pickups are.
+ * since a warning the dark could swallow is no warning: the charger's bar through its wind-up
+ * (`Roles.charger`, `chargeOf`), and the Great White's through its breach (`lockOf`). Sized in art pixels, as the pickups are.
  */
 export class TellView {
   readonly root = new Container();
@@ -77,7 +78,7 @@ export class TellView {
     let n = 0;
     for (const c of creatures) {
       if (!c.alive || !c.hostile) continue;
-      const charge = chargeOf(c);
+      const charge = chargeOf(c) ?? lockOf(c);
       if (!charge) continue;
       if (n === this.bars.length) {
         const b = new ChargeBar();

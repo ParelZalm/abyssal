@@ -427,14 +427,47 @@ did. A boss's hit is a whole heart. The first tell of each names its answer (`Wo
   rests, spent, for 2.2 s. Under half health each burst throws a ring of spray.
 - **The Great White's charge** (reef). It circles six tiles off, turns square on and holds
   for a second, and rushes the line at 2.4× its speed for up to a second — rock ends it, the
-  snout meeting the wall. A miss leaves it spent for 2 s. Under half health a miss is
-  followed by a second rush on a shorter tell.
+  snout meeting the wall. A miss in open water leaves it spent for 1.2 s. Under half health
+  such a miss is followed by a second rush on a shorter tell.
 - **The Giant Squid's grab** (deep). It drifts in to three tiles, spreads its arms for 0.9 s
   and lashes the feeding pair for half a second: anything in reach is held, and
   `Combat.grasp` reels it in, bites it and lets it pull, as the column's squids did. Torn
   free (`Creature.tornArms`, counted where the grip breaks), it loses an arm — drawn gone,
   `FishView.tear` — its reach falls by three tenths, it takes a tenth of its health, jets away
   in ink and is spent. Swimming hard away tears free in about a second.
+
+**Each boss has a set piece of its own, and a way the room turns on it.** The move is
+`Creature.move`; the room's answer is `Creature.stuck` — held fast where it is (`pinX`,
+`pinY`) and exposed as long — or a long daze. Each is published once as `World.cue` for a
+first-time toast that names the answer (`Impacts`).
+
+- **Mantis shrimp: wedged, and the urchin.** Its boss room is its own, `nursery-den`: two flats
+  of rock with a *cleft* down each (`|` in a template), a crack 0.62 of a tile across that the
+  larva fits and the shrimp does not. A punch that ends with water straight ahead and rock
+  either side of it (`Bosses.pinched`) jams its head in: 3.5 s stuck, no burst. Freed, it is
+  wary for 12 s — it stands off a larva in a narrow place and lobs an urchin instead of
+  punching after it. The urchin is dug up through a 1 s tell and thrown (`World.lob`, a shot
+  with `heavy`) to the top of an arc a tile under whatever roofs the player's column; there
+  it bursts into nine spines, 1.5 tiles apart with one over the player, that sink at up to 3
+  tiles a second. It lobs only along an open arc, and an urchin that meets rock before its
+  apex breaks there and rains nothing, so a ledge is a roof. Two urchins under half health.
+  It also lobs after every second rest, and at a player out of its reach for five seconds.
+- **Great White: dazed, and the breach.** A rush that ends on rock leaves it dazed for 3.4 s,
+  where a miss in the open leaves it 1.2 s. After every second charge — every one under half
+  health — with the player five tiles over the floor, it dives to the sand under the player,
+  lurks there for 1.5 s tracking the player's x with bubbles streaming off its back, turns
+  nose-up for the last 0.5 s under the charge bar (`lockOf`), and rushes straight up. The
+  roof, an arch or a coral head dazes it.
+- **Giant Squid: snagged, and the draw.** A lash that meets rock before the player within
+  reach (`rockOn`) — a pillar ducked behind through the tell — wraps the feeding pair round
+  the rock (`FishView.grab` on the point) and holds it 3 s. After every second grab, or at a
+  player out of reach for five seconds, it draws the water in for 1.8 s from up to eight
+  tiles: a pull on the player of 0.6 of its cruise at the arms, half that at the range, down
+  the open line only, and then the lash. Swimming straight out escapes from two and a half
+  tiles; stopping is being taken; rock between them cuts the pull.
+
+`Flow` walks the target's own pocket of narrow water out to the open (up to 20 cells), so a
+larva in a cleft draws its hunters to the cleft's mouth rather than the rock nearest it.
 
 **Culling is round the room.** `World.cull` drops anything more than twice the room's half
 diagonal from its middle. It was the camera's centre, and just after a slide the camera is

@@ -8,12 +8,16 @@
  * a tank's rooms are laid out at the depth whose water it is.
  */
 
-/** What one cell of a room is. Solid cells block every body; water is swum through. */
-export type Tile = 'water' | 'rock' | 'sand' | 'boulder';
+/**
+ * What one cell of a room is. Solid cells block every body; water is swum through. A cleft is
+ * water too, but narrow: a crack in the rock the larva slips into and a boss cannot follow
+ * (`Terrain.field` draws it a little over half a tile wide, however the rock around it wanders).
+ */
+export type Tile = 'water' | 'rock' | 'sand' | 'boulder' | 'cleft';
 
-const LEGEND: Record<string, Tile> = { '.': 'water', '#': 'rock', '=': 'sand', 'o': 'boulder' };
+const LEGEND: Record<string, Tile> = { '.': 'water', '#': 'rock', '=': 'sand', 'o': 'boulder', '|': 'cleft' };
 
-export const SOLID: Record<Tile, boolean> = { water: false, rock: true, sand: true, boulder: true };
+export const SOLID: Record<Tile, boolean> = { water: false, rock: true, sand: true, boulder: true, cleft: false };
 
 export interface Tank {
   id: TankId;
@@ -65,7 +69,8 @@ export interface RoomTemplate {
   /** The room types this layout can be dealt as. */
   types: RoomType[];
   /**
-   * The room as rows of tiles, top first: `#` rock, `=` sand, `o` boulder, `.` water. Every
+   * The room as rows of tiles, top first: `#` rock, `=` sand, `o` boulder, `.` water, `|` a
+   * cleft — a crack a tile of rock either side, which the larva fits and a boss does not. Every
    * row the same length. The rock is the smooth shape the tiles imply (`Terrain.field`), so
    * a lone tile is a small lump and a gap one tile wide may close: draw features two wide.
    * Doors are carved at build time through the middle of each side that has a neighbour —
@@ -168,7 +173,7 @@ export const ROOMS: RoomTemplate[] = [
     ],
   },
   {
-    id: 'nursery-arch', tank: 'nursery', types: ['fight', 'boss'],
+    id: 'nursery-arch', tank: 'nursery', types: ['fight'],
     rows: [
       '################################',
       '################################',
@@ -237,7 +242,7 @@ export const ROOMS: RoomTemplate[] = [
     ],
   },
   {
-    id: 'nursery-stalactites', tank: 'nursery', types: ['fight', 'boss'],
+    id: 'nursery-stalactites', tank: 'nursery', types: ['fight'],
     rows: [
       '################################',
       '################################',
@@ -301,6 +306,32 @@ export const ROOMS: RoomTemplate[] = [
       '#########.......o......#########',
       '#########=....ooo.....=#########',
       '#########=============##########',
+      '################################',
+      '################################',
+    ],
+  },
+  // the mantis shrimp's den: two flats of reef rock with a cleft down each, which it will
+  // punch into after the larva and jam its head in; shelves off both walls to shelter under
+  // when it throws its urchins, and a sand basin between the flats for the drain
+  {
+    id: 'nursery-den', tank: 'nursery', types: ['boss'],
+    rows: [
+      '################################',
+      '################################',
+      '####...........####...........##',
+      '##..............##.............#',
+      '#..............................#',
+      '######......................####',
+      '####..........................##',
+      '#..............................#',
+      '#..............................#',
+      '#..............................#',
+      '#..............................#',
+      '#..............................#',
+      '#...#####|###.......###|#####..#',
+      '#=..#####|###.......###|#####.=#',
+      '#==.#####|###.......###|#####==#',
+      '#========|####=====####|=======#',
       '################################',
       '################################',
     ],
@@ -428,7 +459,7 @@ export const ROOMS: RoomTemplate[] = [
   },
   // a tall hall, its ceiling hung with points of rock, the floor open
   {
-    id: 'deep-hall', tank: 'deep', types: ['start', 'fight', 'boss'],
+    id: 'deep-hall', tank: 'deep', types: ['start', 'fight'],
     rows: [
       '################################',
       '################################',

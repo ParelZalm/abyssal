@@ -288,6 +288,31 @@ The dead float belly-up where they died instead of sinking to the floor, where t
 among the rock and decoration (`HANG` in `sim/world.ts`, a slow bob in `FishView.lie`). The
 ring round the larva is drawn at three of its radii, not four and a half, and fainter.
 
+## Boss fights: the room as a weapon
+
+Done next, from playing it: each boss has a set piece of its own and a way to be beaten with
+the room, each told the first time by a toast that names its answer (`World.cue`). The mantis
+shrimp is fought in its own den (`nursery-den`), whose clefts — a new tile, `|`, narrow enough
+for the larva and not for it — jam its head in a punch thrown after the larva, and it digs up
+urchins that burst under the roof into a sinking fan of spines, which a ledge keeps off. The
+Great White is dazed long by rock and briefly by a miss, and breaches from the floor under
+the player after its bubbles and the charge bar. The Giant Squid snags its arms on a pillar
+ducked behind through its tell, and draws the player in down an open line before it lashes.
+The board has each move in *Bosses & the descent*.
+
+What it found, and what it leaves:
+
+- **A hostile hunting a larva in a cleft pressed against the rock nearest it.** `Flow` only
+  walks open water, so the cleft was off the map and the way ran out; it now walks the
+  target's own pocket out to the open.
+- **Parked on the mouth of a cleft, the wary shrimp trapped the larva under its own rain.** It
+  stands off a larva in a narrow place now.
+- **An urchin thrown from under a shelf broke on it**; the shrimp only lobs along an open arc.
+- The nursery and deep boss rooms are fixed layouts now (the den, the pillars); the reef's
+  are still the arch or the channel, both of which have rock to lure a rush into. A larva that
+  grew past about 18 cm in the nursery no longer fits the clefts. The snagged squid's resting
+  arms still reach past the pillar they are wrapped round; its size makes that hard to hide.
+
 ## Later
 
 Bomb fish and secret rooms; tanks four and five (the sperm whale, the colossal squid, the

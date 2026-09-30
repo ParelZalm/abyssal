@@ -8,6 +8,12 @@ import type { Terrain } from './terrain';
 const STALE = 3;
 /** Cells either way a body looks for the lowest ground, so it follows a slope and not a stair. */
 const LOOK = 2;
+/**
+ * How far, in cells, the way may run through narrow water from the target before it reaches
+ * the open: a cleft's depth and a little. Unbounded, the band of narrow water along every
+ * wall joins up round the room, and every hostile would come the long way, scraping the rock.
+ */
+const POCKET = 20;
 
 /**
  * The way to one point through a room's water: a distance, in collision cells, from every
@@ -16,7 +22,8 @@ const LOOK = 2;
  *
  * A cell is open when it and its eight neighbours are all water — a body's width of
  * clearance — so the path keeps off the rock instead of scraping it. The target's own cell is
- * seeded whatever it is, since the player lies against walls all the time.
+ * seeded whatever it is, since the player lies against walls all the time, and the narrow
+ * water round it is walked out of to the open, since the player hides in clefts.
  */
 export class Flow {
   private readonly dist: Int32Array;
@@ -79,15 +86,20 @@ export class Flow {
       const k = queue[head++];
       const i = k % W, j = (k - i) / W;
       const d = dist[k] + 1;
+      // out of the pocket the target is in — a cleft, a gap too narrow to be open — by any
+      // water, until the way reaches open water; a body is led to the mouth of it, and not
+      // left to press against the rock nearest the player
+      const pocket = !open[k] && d <= POCKET;
+      const through = (n: number, a: number, b: number) => open[n] || (pocket && !t.solid(a, b));
       for (let dj = -1; dj <= 1; dj++) {
         for (let di = -1; di <= 1; di++) {
           if (!di && !dj) continue;
           const a = i + di, b = j + dj;
           if (a < 0 || b < 0 || a >= W || b >= H) continue;
           const n = b * W + a;
-          if (dist[n] >= 0 || !open[n]) continue;
+          if (dist[n] >= 0 || !through(n, a, b)) continue;
           // no corner-cutting: a diagonal step needs both of the square steps it cuts across
-          if (di && dj && (!open[j * W + a] || !open[b * W + i])) continue;
+          if (di && dj && (!through(j * W + a, a, j) || !through(b * W + i, i, b))) continue;
           dist[n] = d;
           queue[tail++] = n;
         }

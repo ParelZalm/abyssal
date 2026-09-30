@@ -396,6 +396,14 @@ beside the drain in every tank but the last (`TankMap.prize`), leaning ×3 towar
 hits harder (`hitsHarder` in `prospects.ts`), as Isaac's boss items are mostly stat ups. A
 boss's armour is kept to two or three, since it comes off every shot flat.
 
+**A boss is beaten faster with the room than against it.** Each has an opening the room makes
+— the mantis shrimp wedged in a cleft of its den, the Great White dazed on rock, the Giant
+Squid snagged on a pillar — held for three to three and a half seconds at half again the
+damage, where the openings a fight gives by itself are one to two. So the shot counts above
+are the ceiling, and a player who reads the room pays well under them. Each boss's set piece
+(the urchin's rain, the breach, the draw) is what a player who only kites has to answer
+(`docs/simulation.md`, *Bosses*).
+
 **The descent** (`Game.descend`). The boss room's clear opens a drain in its floor
 (`TankMap.clear`, drawn by `DrainView`); swimming into it takes the next tank: the body and
 its swim ×`GROWTH` (1.8), the view rebuilt, a new map dealt, the lineage given a frame, the

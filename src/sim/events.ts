@@ -29,10 +29,17 @@ export interface Blood {
   kind?: Plan;
 }
 
+/**
+ * A boss's set piece, published the frame it begins, so its first time can name the answer:
+ * its moves, and the room turning on it — the mantis shrimp wedged in a cleft, the Great
+ * White dazed on rock, the Giant Squid's arms wrapped round it.
+ */
+export type BossCue = 'lob' | 'wedged' | 'breach' | 'dazed' | 'draw' | 'snagged';
+
 export interface Pulse {
   x: number; y: number; r: number;
   kind: 'flash' | 'ink' | 'discharge' | 'inflate' | 'tell' | 'click' | 'blast' | 'exposed'
-    | 'draw' | 'snap' | 'venom' | 'shot' | 'splash' | 'impact' | 'bubbles';
+    | 'draw' | 'snap' | 'venom' | 'shot' | 'splash' | 'impact' | 'bubbles' | 'rise' | 'dust';
   /** For something moving through the water rather than spreading: the draw's streaks, a shot's impact. */
   vx?: number; vy?: number;
   /** What was fired or spent, for a `shot`, a `splash` or an `impact`. */
