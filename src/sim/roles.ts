@@ -229,10 +229,12 @@ export class Roles {
     } else if (role === 'turret' && kind) {
       c.volley++;
       const turn = (c.volley % 2) * (TAU / SPOKES / 2);
+      // from the skin as drawn, which is swollen by the strike: fired from the resting body's,
+      // a spine crossed the puffed body in the body's own orange before it was out of it
+      const from = c.radius * 0.6 * (1 + SWELL);
       for (let k = 0; k < SPOKES; k++) {
         const a = turn + (k / SPOKES) * TAU;
-        w.fire(c, kind, c.x + Math.cos(a) * c.radius * 0.6, c.y + Math.sin(a) * c.radius * 0.6,
-          a, SHOT_SPEED[kind]);
+        w.fire(c, kind, c.x + Math.cos(a) * from, c.y + Math.sin(a) * from, a, SHOT_SPEED[kind]);
       }
     } else if (role === 'charger') {
       c.landed = false;

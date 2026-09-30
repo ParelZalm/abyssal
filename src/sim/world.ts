@@ -62,6 +62,13 @@ export interface Shot {
 /** A shot's reach, in tiles, and the seconds it flies before it is spent anyway. */
 const SHOT_R = 0.16;
 const SHOT_LIFE = 5;
+/**
+ * Seconds a hostile's shot flies before it can land on the player. Fired at a player close
+ * by, a shot landed on the step it was fired — hit and spent before it was ever drawn — so
+ * the larva took hits from a turret's ring out of nothing. This is long enough to be seen
+ * leaving; anything nearer than it reaches is the body's own touch to hurt.
+ */
+const SHOT_ARM = 0.1;
 
 /**
  * Something loose in a room that the player collects by swimming into it: a half heart, a
@@ -387,7 +394,7 @@ export class World {
         }
       }
       const reach = s.r + p.radius * 0.5;
-      if (!spent && p.alive && !s.by.isPlayer && dist2(s.x, s.y, p.x, p.y) < reach * reach) {
+      if (!spent && p.alive && !s.by.isPlayer && s.t >= SHOT_ARM && dist2(s.x, s.y, p.x, p.y) < reach * reach) {
         spent = true;
         const got = p.takeHit(s.by, 1, 'shot');
         if (got) {

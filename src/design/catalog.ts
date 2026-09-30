@@ -984,7 +984,7 @@ function roleAnimate(sp: Species, g: Genome, tile: number) {
         if (role === 'turret') {
           const turn = (volley++ % 2) * (Math.PI / SPOKES);
           cell.fire(sp.shot, Array.from({ length: SPOKES }, (_, k) => turn + (k / SPOKES) * Math.PI * 2),
-            g.size * 0.4);
+            g.size * 0.4 * (1 + SWELL));
         } else {
           cell.fire(sp.shot, [-0.15], g.size * 0.55);
         }
