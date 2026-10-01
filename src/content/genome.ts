@@ -45,6 +45,16 @@ export interface Genome {
   spit: number;        // archer spit: a jet of water fired down the aim
   volley: number;      // spine volley: a fan of three spines
   fangs: number;       // lunging bite: the strike is the mouth again, and hits twice as hard
+  // shot organs — what the shots carry, on whichever primary fires them. Unlike the slots
+  // above these stack with each other: a shot that bursts, burns and arcs is the build
+  blast: number;       // cavitation: a shot bursts where it breaks
+  scald: number;       // vent gland: what a shot hits burns
+  halo: number;        // surface halo: now and then a hit calls down a shaft of light
+  arc: number;         // galvanic cells: a hit arcs on to the hostiles nearest it
+  pierce: number;      // needle jet: shots pass through bodies and break only on rock
+  seek: number;        // hunting nares: shots bend toward a hostile ahead of them
+  brood: number;       // brood pouch: a shot that lands breaks into fry that swim on
+  frost: number;       // brine gland: what a shot hits is chilled, and a chilled kill shatters
 
   // morphology — purely visual, but every trait nudges it so the fish reads as evolved
   hue: number;
@@ -98,6 +108,7 @@ export function baseGenome(): Genome {
     venom: 0, lure: 0, claws: 0, jet: 0, coral: 0, frill: 0, filter: 0, crush: 0,
     eel: 0, mantle: 0, lurk: 0, frenzy: 0, electro: 0, glare: 0, brittle: 0, veins: 0, lead: 0,
     ink: 0, discharge: 0, inflate: 0, spit: 0, volley: 0, fangs: 0,
+    blast: 0, scald: 0, halo: 0, arc: 0, pierce: 0, seek: 0, brood: 0, frost: 0,
     hue: 30, accentHue: 200, finSize: 1, tailSplit: 0.35, spikes: 0, serrate: 0,
     jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0, smoke: 0, pale: 0,
     photophores: 0, eyeAdapt: 0, gape: 0, veil: 0, bulk: 0, barbels: 0,

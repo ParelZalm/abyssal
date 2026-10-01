@@ -3,7 +3,7 @@ import { armourOf, biteDamage } from '../content/genome';
 import { angleDelta, clamp, dist2 } from '../core/util';
 import type { Creature, Hurt } from './creature';
 import type { Blood } from './events';
-import { armourAgainst, biteRateOf, damageOf, gulpOf, primaryOf, strikeOf, takenOf, wound } from './organs';
+import { armourAgainst, biteRateOf, damageOf, gulpOf, kindle, primaryOf, strikeOf, takenOf, wound } from './organs';
 import { EXPOSED_TAKEN, PATTERN_CD, RUSH_BITE } from './patterns';
 import { bracedOf } from './roles';
 import type { World } from './world';
@@ -388,6 +388,8 @@ export class Combat {
     this.world.blood.push(spill);
     this.world.spilled.push(spill);
     this.world.roles.died(def);
+    // a body that dies burning lights what was close to it (Vent Gland)
+    kindle(this.world, def);
     if (!byPlayer) return;
     this.world.devoured.push(def.species.id);
     if (!def.hostile) this.world.felled.push({ x: def.x, y: def.y });

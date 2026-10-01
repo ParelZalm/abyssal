@@ -6,4 +6,5 @@ export type IconName =
   | 'muscle' | 'fin' | 'tail' | 'jaw' | 'teeth' | 'gullet' | 'scale' | 'spike'
   | 'shield' | 'eye' | 'wave' | 'glow' | 'ghost' | 'gill' | 'pulse' | 'mass'
   | 'bolt' | 'spiral' | 'blade' | 'drop' | 'ring' | 'funnel' | 'sieve' | 'molar'
-  | 'coil' | 'bell' | 'crouch' | 'ink' | 'shock' | 'puff';
+  | 'coil' | 'bell' | 'crouch' | 'ink' | 'shock' | 'puff'
+  | 'seek' | 'needle' | 'roe' | 'blast' | 'chain' | 'flame' | 'flake' | 'halo';

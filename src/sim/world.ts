@@ -3,12 +3,13 @@ import { faceFor } from '../content/form';
 import type { ItemId } from '../content/items';
 import { genomeFor, type ShotKind, type Species } from '../content/species';
 import { DEPTH_MAX } from '../content/zones';
-import { clamp, dist2, type Rng, TAU } from '../core/util';
+import { angleDelta, clamp, dist2, type Rng, TAU } from '../core/util';
 import { Behaviour } from './behaviour';
 import { Combat } from './combat';
-import { Creature, type Hurt } from './creature';
+import { Creature, DRAG_FWD, type Hurt } from './creature';
 import type { Bite, Blood, BossCue, Pulse } from './events';
-import { primaryOf, tick as tickOrgans, type Organ } from './organs';
+import { primaryOf, shotHit, shotModsOf, shotSpent, tick as tickOrgans, type Organ,
+         type ShotMark } from './organs';
 import { Patterns } from './patterns';
 import { Roles } from './roles';
 import { Spawner } from './spawn';
@@ -90,10 +91,37 @@ export interface Shot {
    * every fraction of a second, and each breaking on its way out was a room of spray.
    */
   fades?: boolean;
+  /** What the shooter's shot organs marked it with (`ShotMods`), for the art. */
+  marks?: readonly ShotMark[];
+  /** Passes through bodies, breaking only on rock or at the end of its flight (Needle Jet). */
+  pierce?: boolean;
+  /** Radians a second it bends toward a hostile ahead of it (Hunting Nares). */
+  seek?: number;
+  /** The bodies it has already landed on, which it passes without landing again. */
+  hit?: Creature[];
+  /**
+   * Thrown off another shot — a brood's fry, a chilled kill's shards. It carries what that
+   * one carried, but throws nothing off itself, or one shot into a crowd fills the room.
+   */
+  spawned?: boolean;
 }
 /** A shot's reach, in tiles, and the seconds it flies before it is spent anyway. */
 const SHOT_R = 0.16;
 const SHOT_LIFE = 5;
+/** A shot thrown off another, as a share of that one's reach. */
+const SPAWN_R = 0.7;
+/**
+ * How far ahead a seeking shot looks for something to bend to, in tiles, and how far off its
+ * line: a cone, so a shot fired past a hostile does not turn round and come back for it —
+ * Isaac's homing tears read as aimed better, not as fired at whatever is nearest.
+ */
+const SEEK_REACH = 5;
+const SEEK_CONE = 1.1;
+/**
+ * The thick water of a chill: another body's worth of forward drag, so a chilled body tops
+ * out at about half its speed, a dash included.
+ */
+const CHILL_DRAG = DRAG_FWD;
 /**
  * Seconds a hostile's shot flies before it can land on the player. Fired at a player close
  * by, a shot landed on the step it was fired — hit and spent before it was ever drawn — so
@@ -212,7 +240,7 @@ export class World {
   private readonly combat: Combat;
   private readonly behaviour: Behaviour;
 
-  constructor(private rng: Rng, readonly player: Creature) {
+  constructor(readonly rng: Rng, readonly player: Creature) {
     this.combat = new Combat(this);
     this.roles = new Roles(this);
     this.behaviour = new Behaviour(this, this.combat, new Patterns(this, this.combat), this.roles);
@@ -366,8 +394,10 @@ export class World {
     const t = this.terrain;
     if (!t) return;
     const v = speed * t.tile;
+    const m = shotModsOf(by);
     this.shots.push({ kind, x, y, vx: Math.cos(a) * v + cvx, vy: Math.sin(a) * v + cvy, r: SHOT_R * t.tile,
-      t: 0, life: range / speed, mult, by });
+      t: 0, life: range / speed, mult, by,
+      ...(m.marks.length ? { marks: m.marks, pierce: m.pierce, seek: m.seek } : {}) });
     this.pulses.push({ x, y, r: by.radius * 0.6, kind: 'shot', shot: kind, hostile: !by.isPlayer });
   }
 
@@ -381,6 +411,61 @@ export class World {
     const t = this.terrain;
     if (!t) return;
     this.shots.push({ kind, x, y, vx, vy, r: SHOT_R * t.tile, t: 0, life, mult: 1, by, heavy, ...then });
+  }
+
+  /**
+   * A shot thrown off `from` where it landed — a brood's fry, a chilled kill's shards — from
+   * (`x`, `y`) heading `a` at `from`'s speed, for `range` tiles, worth `mult` of a bite. It is
+   * smaller and carries what `from` carried; `past` are the bodies it is already through.
+   */
+  split(from: Shot, x: number, y: number, a: number, mult: number, range: number, past: readonly Creature[]) {
+    const t = this.terrain;
+    const v = Math.hypot(from.vx, from.vy);
+    if (!t || v < 1) return;
+    this.shots.push({ kind: from.kind, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: from.r * SPAWN_R,
+      t: 0, life: range * t.tile / v, mult, by: from.by, marks: from.marks, pierce: from.pierce,
+      seek: from.seek, hit: [...past], spawned: true });
+  }
+
+  /**
+   * Whether the player's shot, or what it bursts into, can land on `c`: anything alive but the
+   * player — and while a room holds the player in, only what holds it. A shoal of fry between
+   * the larva and a mackerel soaked up every shot aimed through it.
+   */
+  canHit(c: Creature) {
+    return c.alive && !c.isPlayer && (!this.terrain?.locked || c.hostile);
+  }
+
+  /** Break every pot within `r` of a point: a burst breaks all it reaches, not the first. */
+  smashAt(x: number, y: number, r: number) {
+    for (let i = this.pots.length - 1; i >= 0; i--) {
+      const pot = this.pots[i], rr = pot.r + r;
+      if (dist2(x, y, pot.x, pot.y - pot.r) < rr * rr) this.breakPot(pot);
+    }
+  }
+
+  /**
+   * A seeking shot turned toward the nearest hostile in the cone ahead of it, by at most its
+   * rate, keeping its speed.
+   */
+  private bend(s: Shot, dt: number) {
+    const t = this.terrain;
+    if (!t || !s.seek) return;
+    const a = Math.atan2(s.vy, s.vx);
+    let want = 0, best = (SEEK_REACH * t.tile) ** 2, found = false;
+    for (const c of this.creatures) {
+      if (!c.hostile || !this.canHit(c) || s.hit?.includes(c)) continue;
+      const d = dist2(s.x, s.y, c.x, c.y);
+      if (d > best) continue;
+      const to = Math.atan2(c.y - s.y, c.x - s.x);
+      if (Math.abs(angleDelta(a, to)) > SEEK_CONE) continue;
+      best = d; want = to; found = true;
+    }
+    if (!found) return;
+    const turn = clamp(angleDelta(a, want), -s.seek * dt, s.seek * dt);
+    const v = Math.hypot(s.vx, s.vy);
+    s.vx = Math.cos(a + turn) * v;
+    s.vy = Math.sin(a + turn) * v;
   }
 
   /**
@@ -421,6 +506,7 @@ export class World {
     for (let i = this.shots.length - 1; i >= 0; i--) {
       const s = this.shots[i];
       s.t += dt;
+      if (s.seek) this.bend(s, dt);
       if (s.heavy) {
         s.vx *= Math.exp(-s.heavy.drag * dt);
         s.vy = Math.min(s.heavy.sink, s.vy + s.heavy.g * dt);
@@ -431,21 +517,22 @@ export class World {
       let struck = false;
       if (!spent && s.by.isPlayer) {
         const pot = this.potAt(s.x, s.y, s.r);
-        if (pot) { this.breakPot(pot); spent = struck = true; }
+        if (pot) { this.breakPot(pot); spent = struck = !s.pierce; }
       }
       if (!spent && s.by.isPlayer) {
-        // while a room holds the player in, its shots are for what holds it: a shoal of fry
-        // between the larva and a mackerel soaked up every shot aimed through it
-        const fight = !!t?.locked;
         for (const c of this.creatures) {
-          if (!c.alive || c.isPlayer || (fight && !c.hostile)) continue;
+          if (!this.canHit(c) || s.hit?.includes(c)) continue;
           if (surfaceGap(c, s.x, s.y) > s.r) continue;
-          spent = struck = true;
           this.combat.hit(p, c, s.mult, true);
           // a shot carries its way on into what it hit, a little, so a hit is felt
           c.vx += s.vx * 0.15;
           c.vy += s.vy * 0.15;
-          break;
+          (s.hit ??= []).push(c);
+          shotHit(this, s, c);
+          if (!s.pierce) { spent = struck = true; break; }
+          // through and out the other side: the impact without the shot's end
+          this.pulses.push({ x: s.x, y: s.y, r: s.r * 3, kind: 'impact', shot: s.kind, marks: s.marks,
+            vx: s.vx, vy: s.vy });
         }
       }
       const reach = s.r + p.radius * 0.5;
@@ -464,10 +551,16 @@ export class World {
       // at the top of its arc, from where it was a step before; one that met rock short of
       // it only breaks there
       if (s.burst && (!s.apex || s.vy >= 0)) s.burst(s.x - s.vx * dt, s.y - s.vy * dt);
+      // what it bursts into happens where it was a step before, out of the rock it met
+      if (s.marks) {
+        s.x -= s.vx * dt;
+        s.y -= s.vy * dt;
+        shotSpent(this, s);
+      }
       // a shot that found a body is an impact, with the way it was going; one that found rock
       // or ran out is a splash
       this.pulses.push({ x: s.x, y: s.y, r: s.r * 3, kind: struck ? 'impact' : 'splash', shot: s.kind,
-        hostile: !s.by.isPlayer,
+        hostile: !s.by.isPlayer, marks: s.marks,
         vx: struck ? s.vx : undefined, vy: struck ? s.vy : undefined });
     }
   }
@@ -591,8 +684,8 @@ export class World {
    * No cooldown and never a swallow, but otherwise the same wound: armour, organs, and a
    * kill booked to whoever landed it. Public because organs deliver it (`organs.ts`).
    */
-  hit(att: Creature, def: Creature, mult: number) {
-    this.combat.hit(att, def, mult);
+  hit(att: Creature, def: Creature, mult: number, ranged = false) {
+    this.combat.hit(att, def, mult, ranged);
   }
 
   /**
@@ -637,10 +730,16 @@ export class World {
       c.vx *= k;
       c.vy *= k;
     }
+    if (c.chillT > 0) {
+      c.chillT = Math.max(0, c.chillT - dt);
+      const k = Math.exp(-CHILL_DRAG * dt);
+      c.vx *= k;
+      c.vy *= k;
+    }
     if (c.fade < 1) c.fade = Math.min(1, c.fade + dt / FADE_IN);
     c.face = faceFor(c.face, c.angle);
     // nothing heals while a wound is still working on it
-    const wounded = c.poisonT > 0 || c.bleedT > 0;
+    const wounded = c.poisonT > 0 || c.bleedT > 0 || c.burnT > 0;
     if (c.poisonT > 0) {
       c.poisonT -= dt;
       if (c.isPlayer) c.ail(dt);
@@ -649,6 +748,16 @@ export class World {
         this.combat.slay(c, c.poisonByPlayer);
         this.bites.push({ x: c.x, y: c.y, amount: c.poison, fatal: true,
           onPlayer: c.isPlayer, byPlayer: c.poisonByPlayer, size: c.genome.size });
+      }
+    }
+    if (c.burnT > 0) {
+      c.burnT -= dt;
+      if (c.isPlayer) c.ail(dt);
+      else c.hp -= c.burn * dt;
+      if (c.hp <= 0 && c.alive && !c.isPlayer) {
+        this.combat.slay(c, c.burnByPlayer);
+        this.bites.push({ x: c.x, y: c.y, amount: c.burn, fatal: true,
+          onPlayer: false, byPlayer: c.burnByPlayer, size: c.genome.size });
       }
     }
     if (c.bleedT > 0 && c.alive) this.combat.bleedOut(c, dt);

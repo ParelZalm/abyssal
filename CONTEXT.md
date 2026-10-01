@@ -124,6 +124,11 @@ mutation replaces it — another shot, or the bite, which comes back only as a m
 from the reef down. One is carried at a time.
 _Avoid_: weapon, main attack
 
+**Shot organ** — a mutation that changes what the shots do, not what fires them: a burst,
+a burn, a chill, an arc, a shaft of light, passing through, bending, breaking into fry. Not a
+slot: shot organs stack with each other and on any primary that fires.
+_Avoid_: tear effect, bullet modifier
+
 **Charge** — a room cleared, counted toward the active mutation's next use. Each active
 needs its own number of them.
 _Avoid_: cooldown, recharge time

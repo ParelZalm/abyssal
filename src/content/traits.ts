@@ -250,6 +250,44 @@ export const TRAITS: Trait[] = [
     maxStacks: 1,
     apply: g => { g.fangs = 1; g.spit = 0; g.volley = 0; g.jaw += 0.35; } }),
 
+  // ------------------------------------------------------------ shot organs
+  // What the shots carry, on whichever primary fires them, and unlike the primaries they
+  // stack — with each other and with themselves — as Isaac's tear effects do: a spit that
+  // bursts, burns and arcs is the build. A body that bites instead has no use for them, and
+  // the draft knows it (`leanOf`).
+  T({ id: 'nares', tank: 'nursery', name: 'Hunting Nares', rarity: 'common', icon: 'seek',
+    desc: 'Your shots bend toward a hostile ahead of them. Smell the water a shot is swimming through.',
+    apply: g => { g.seek += 1; g.barbels += 0.15; } }),
+
+  T({ id: 'needlejet', tank: 'nursery', name: 'Needle Jet', rarity: 'rare', icon: 'needle',
+    desc: 'Your shots pass through every body in their way, and break only on rock.',
+    maxStacks: 1,
+    apply: g => { g.pierce += 1; } }),
+
+  T({ id: 'broodpouch', tank: 'nursery', name: 'Brood Pouch', rarity: 'rare', icon: 'roe',
+    desc: 'A shot that lands breaks into three fry that swim on, each a third of a shot.',
+    apply: g => { g.brood += 1; } }),
+
+  T({ id: 'cavitation', tank: 'reef', name: 'Cavitation', rarity: 'rare', icon: 'blast',
+    desc: 'Your shots burst where they break, like a pistol shrimp’s snap: everything within a tile and a bit takes 60% of a shot and is thrown.',
+    apply: g => { g.blast += 1; } }),
+
+  T({ id: 'galvanic', tank: 'reef', name: 'Galvanic Cells', rarity: 'rare', icon: 'chain',
+    desc: 'A shot that lands arcs on to the two hostiles nearest it, each for half a shot.',
+    apply: g => { g.arc += 1; } }),
+
+  T({ id: 'ventgland', tank: 'deep', name: 'Vent Gland', rarity: 'rare', icon: 'flame',
+    desc: 'Your shots scald: what they hit burns for a third of a shot a second, and what dies burning sets light to what is near it.',
+    apply: g => { g.scald += 1; } }),
+
+  T({ id: 'brinegland', tank: 'deep', name: 'Brine Gland', rarity: 'rare', icon: 'flake',
+    desc: 'Your shots chill: what they hit swims at half speed for 2 s, and what they kill shatters into shards.',
+    apply: g => { g.frost += 1; } }),
+
+  T({ id: 'surfacehalo', tank: 'deep', name: 'Surface Halo', rarity: 'rare', icon: 'halo', families: ['luminous'],
+    desc: 'One shot in four that lands calls down a shaft of sunlight: everything under it takes a shot and a half and is stunned.',
+    apply: g => { g.halo += 1; g.glow += 0.2; } }),
+
   // ---------------------------------------------------------------- cursed
   T({ id: 'bloodlamp', tank: 'deep', name: 'Blood Lamp', rarity: 'rare', icon: 'glow', families: ['predator'],
     desc: '+90% damage. A furnace of a body.',

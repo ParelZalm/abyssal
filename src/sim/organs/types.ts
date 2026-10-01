@@ -2,7 +2,7 @@ import type { Genome } from '../../content/genome';
 import type { IconName } from '../../content/icon';
 import type { ShotKind } from '../../content/species';
 import type { Creature } from '../creature';
-import type { World } from '../world';
+import type { Shot, World } from '../world';
 
 export interface WoundCtx {
   dmg: number;
@@ -48,6 +48,22 @@ export interface BoostMods {
   wind: number;
   /** Fullness burned per second while held. */
   cost: number;
+}
+
+/**
+ * What a shot organ marks a shot with. The simulation acts on the shot organs' hooks; the
+ * marks are what the shot carries so the art can say what it will do before it lands — its
+ * shape, its colour, what it sheds as it flies (`render/shots.ts`).
+ */
+export type ShotMark = 'blast' | 'scald' | 'halo' | 'arc' | 'pierce' | 'seek' | 'brood' | 'frost';
+
+/** What a shot leaves the body carrying, folded from its organs as it is fired. */
+export interface ShotMods {
+  marks: ShotMark[];
+  /** Passes through every body in its way and breaks only on rock or the end of its flight. */
+  pierce: boolean;
+  /** Radians a second it may bend toward a hostile ahead of it; 0 flies straight. */
+  seek: number;
 }
 
 export interface Organ {
@@ -119,6 +135,8 @@ export interface Organ {
   strike?: (g: Genome, base: number) => number;
   /** Whether a hit on this body is turned aside entirely right now. */
   guard?: (c: Creature) => boolean;
+  /** What a shot this body fires carries — see `ShotMods`. Folded as each one leaves. */
+  shot?: (g: Genome, m: ShotMods) => void;
 
   // ---- effects
   /** The attacker's organs, after its bite has landed. */
@@ -131,6 +149,13 @@ export interface Organ {
    * on the active through, since the cooldown and the press are the controller's.
    */
   onFire?: (c: Creature, world: World, active: string) => void | boolean;
+  /**
+   * A shot this body fired has landed on `def`, after the blow — every body it lands on, for
+   * one that passes through. `def` may be dead by it.
+   */
+  onShotHit?: (att: Creature, def: Creature, world: World, s: Shot) => void | boolean;
+  /** A shot this body fired is spent where it is: on a body, on rock, or out of flight. */
+  onShotSpent?: (att: Creature, world: World, s: Shot) => void | boolean;
 }
 
 /** Identity, for the type check: an entry reads as an organ, not as a loose object literal. */

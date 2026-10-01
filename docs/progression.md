@@ -311,6 +311,44 @@ rack of loose quills for the volley (`bake/organs.ts`), a wider jaw for the bite
 say *damage* where they once said *bite*: every hit the body lands is `biteDamage` times its
 primary's share.
 
+## Shot organs
+
+What the shots carry, on whichever primary fires them (`sim/organs/shots.ts`). Unlike the
+primaries and the active these are not a slot: they stack with each other and with
+themselves, as Isaac's tear effects do, so a build is a shot that does several things. Each
+is an organ with three new hooks — `shot` marks the shot as it is fired (`ShotMods`:
+`marks`, `pierce`, `seek`), `onShotHit` answers it landing on a body (every body, for one that
+passes through), and `onShotSpent` answers it breaking, on a body, on rock or at the end of
+its flight. `World.fly` calls them; nothing else reads the fields.
+
+| card | tank | what the shot does |
+| --- | --- | --- |
+| Hunting Nares (`seek`) | nursery, common | bends 2.6 rad/s toward a hostile in a cone ahead, out to 5 tiles |
+| Needle Jet (`pierce`) | nursery | passes through every body and pot; breaks only on rock |
+| Brood Pouch (`brood`) | nursery | a landed shot breaks into three fry, 0.35 each, for 3.5 tiles |
+| Cavitation (`blast`) | reef | bursts where it breaks: 0.6 to everything within 1.2 tiles, thrown |
+| Galvanic Cells (`arc`) | reef | a landed shot arcs on to the two nearest hostiles within 3.2 tiles, 0.5 each, a twitch |
+| Vent Gland (`scald`) | deep | burns 0.3 of the shot a second for 3 s; a body that dies burning lights all within 1.6 tiles |
+| Brine Gland (`frost`) | deep | chills 2 s (half speed: `CHILL_DRAG` is the body's own drag again); a kill shatters into four shards, 0.4 each |
+| Surface Halo (`halo`) | deep | one landed shot in four calls a shaft of light rock to rock: 1.5 to all in it, stunned |
+
+A shot thrown off another — fry, shards (`World.split`) — is smaller, carries what its
+parent carried, and throws nothing off itself, so one shot into a crowd cannot fill a room.
+Fire leaps only to what is not already alight, for the same reason. Burn and chill are
+status on the struck body like venom (`Creature.burn`, `chillT`), ticked in
+`World.integrate`, and tint it (`Scene`) and shed embers or rime off it (`Impacts.trail`).
+A body that bites has no use for any of them, so the draft deals them at a fifth of their
+weight to it (`leanOf`).
+
+The look follows the same rule as the rest of the player's shots: off the hostiles' reds.
+Fire is a vent's sulphur, the light a pale gold. Four marks change the shot's shape (a
+bubble, a shard, a needle, a clutch of roe) and the rest its colour, the first of each
+winning, so two marks read at once — a scalding burst is a sulphur bubble — and every mark
+sheds its own motes as the shot flies. Each organ is on the body too (`bake/shotorgans.ts`):
+a needle bill, nares, a lit galvanic line, sulphur glands, a bubble bladder, roe on the
+belly, rime on the back, a halo over the head. The board's *Shot organs* group has each card
+firing, each mark's shot, marks stacked, and all eight on the volley.
+
 ## The stat column
 
 Isaac's left edge, under the status panel (`ui/hud/StatColumn.ts`, from

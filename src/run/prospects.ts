@@ -1,6 +1,6 @@
 import { formDue, MAX_FORMS, type Family, type Transformation } from '../content/forms';
-import { biteDamage, type Genome } from '../content/genome';
-import { SYNERGIES, synergiesOf } from '../sim/organs';
+import { baseGenome, biteDamage, type Genome } from '../content/genome';
+import { organsOf, SYNERGIES, synergiesOf } from '../sim/organs';
 import { TRAITS, type Trait } from '../content/traits';
 
 /**
@@ -37,6 +37,16 @@ export function completes(g: Genome, owned: Trait[], forms: readonly Transformat
   return out;
 }
 
+/** How much a card that would do nothing for the body is still dealt. */
+const DEAD_CARD = 0.2;
+
+/** Whether `t` grows a shot organ: something the shots carry, which a bite does not. */
+function carriesShot(t: Trait) {
+  const g = baseGenome();
+  t.apply(g);
+  return organsOf(g).some(o => o.shot);
+}
+
 /**
  * How much the draft should lean toward `t`. Enough that a build that has started tends
  * to finish, not enough that it is guaranteed: a card that completes something is half
@@ -44,6 +54,9 @@ export function completes(g: Genome, owned: Trait[], forms: readonly Transformat
  */
 export function leanOf(g: Genome, owned: Trait[], forms: readonly Transformation[],
                        counts: Record<Family, number>, t: Trait) {
+  // a shot organ on a body that bites is a card that does nothing, and the draft says so by
+  // all but leaving it out — not wholly, since a primary that fires may still come
+  if (carriesShot(t) && !organsOf(g).some(o => o.primary)) return DEAD_CARD;
   if (completes(g, owned, forms, t).length) return 1.5;
   // a family already become is finished with, so it no longer pulls the draft its way
   const open = (f: Family) => counts[f] > 0 && !forms.some(h => h.family === f);

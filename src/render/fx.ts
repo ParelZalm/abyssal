@@ -123,6 +123,19 @@ export class Fx {
       spread: 1, lift: -26, peak: 0.45, baseScale: s.scale.x });
   }
 
+  /**
+   * A column of light standing for `max` seconds, from `top` down `len`, `w` across: a dot
+   * stretched, so it is soft at its ends where it meets the rock and the frame quantises it.
+   */
+  beam(x: number, top: number, len: number, w: number, color: number, alpha: number, max: number) {
+    const s = this.takeDot(1, color, alpha);
+    s.width = w;
+    s.height = len;
+    s.x = x; s.y = top + len / 2;
+    this.live.push({ node: s, vx: 0, vy: 0, life: 0, max, grow: 0, spread: 1, lift: 0, peak: alpha,
+      baseScale: s.scale.x });
+  }
+
   ring(x: number, y: number, color: number, radius: number) {
     const g = this.rings.pop() ?? new Graphics();
     g.visible = true;

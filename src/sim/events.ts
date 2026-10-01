@@ -1,6 +1,7 @@
 import type { Plan } from '../content/form';
 import type { ShotKind } from '../content/species';
 import type { Creature } from './creature';
+import type { ShotMark } from './organs/types';
 
 export interface Bite {
   x: number; y: number; amount: number; fatal: boolean; onPlayer: boolean;
@@ -40,11 +41,15 @@ export interface Pulse {
   x: number; y: number; r: number;
   kind: 'flash' | 'ink' | 'discharge' | 'inflate' | 'tell' | 'click' | 'blast' | 'exposed'
     | 'draw' | 'snap' | 'venom' | 'shot' | 'splash' | 'impact' | 'bubbles' | 'rise' | 'dust'
-    | 'turn';
+    | 'turn' | 'cavitate' | 'flame' | 'shaft' | 'arc' | 'shatter';
   /** For something moving through the water rather than spreading: the draw's streaks, a shot's impact. */
   vx?: number; vy?: number;
   /** What was fired or spent, for a `shot`, a `splash` or an `impact`. */
   shot?: ShotKind;
   /** Whether a hostile fired it, rather than the player: the two are coloured apart. */
   hostile?: boolean;
+  /** What the spent shot carried (`Shot.marks`): its colour is theirs, not its kind's. */
+  marks?: readonly ShotMark[];
+  /** A shaft's length, down from `y`: it is drawn from the rock above to the rock below. */
+  len?: number;
 }

@@ -1,5 +1,5 @@
 import type { Creature } from '../creature';
-import type { BoostMods, Organ, SwimMods } from './types';
+import type { BoostMods, Organ, ShotMods, SwimMods } from './types';
 import type { Genome } from '../../content/genome';
 
 /**
@@ -106,4 +106,11 @@ export function swallowHealOf(c: Creature, gain: number) {
   let h = 0;
   for (const o of c.organs) if (o.swallowHeal) h += o.swallowHeal(c.genome, gain);
   return h;
+}
+
+/** What a shot leaving this body carries, folded from its shot organs (`ShotMods`). */
+export function shotModsOf(c: Pick<Creature, 'organs' | 'genome'>): ShotMods {
+  const m: ShotMods = { marks: [], pierce: false, seek: 0 };
+  for (const o of c.organs) o.shot?.(c.genome, m);
+  return m;
 }

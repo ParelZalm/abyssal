@@ -7,6 +7,8 @@ import type { UI } from '../ui/UI';
 import type { Camera } from './Camera';
 import type { Dread } from './Dread';
 import type { Fx } from './fx';
+import type { ShotMark } from '../sim/organs';
+import type { Shot } from '../sim/world';
 import { shotGlow } from './shots';
 import { lightAt, waterColor } from './water';
 
@@ -83,13 +85,13 @@ export class Impacts {
         fx.burst(f.x, f.y, 0xa8e05a, 8, f.r, 2);
       } else if (f.kind === 'shot' && f.shot) {
         // the muzzle: a puff of the shot's colour where it left the mouth
-        fx.burst(f.x, f.y, shotGlow(f.shot, !!f.hostile).color, 4, 50, 1.6);
+        fx.burst(f.x, f.y, shotGlow(f.shot, !!f.hostile, f.marks).color, 4, 50, 1.6);
       } else if (f.kind === 'splash' && f.shot) {
-        fx.burst(f.x, f.y, shotGlow(f.shot, !!f.hostile).color, 6, 70, 1.8);
+        fx.burst(f.x, f.y, shotGlow(f.shot, !!f.hostile, f.marks).color, 6, 70, 1.8);
       } else if (f.kind === 'impact' && f.shot) {
         // a shot into a body: the shot's colour thrown back off it and a little on through,
         // a tight bright ring where it went in, and a flash of light on what it hit
-        const col = shotGlow(f.shot, !!f.hostile).color;
+        const col = shotGlow(f.shot, !!f.hostile, f.marks).color;
         const vx = f.vx ?? 0, vy = f.vy ?? 0;
         fx.spray(f.x, f.y, -vx, -vy, col, 7, 150, 1.8, 0.9);
         fx.spray(f.x, f.y, vx, vy, 0xfff4e0, 4, 110, 1.4, 0.45);
@@ -120,6 +122,54 @@ export class Impacts {
         fx.ring(f.x, f.y, 0xff7a3a, f.r);
         fx.burst(f.x, f.y, 0xffb08a, 10, f.r * 0.8, 2.2);
         fx.flash(f.x, f.y, 0xff7a3a, f.r * 3, 0.7, 0.2);
+      } else if (f.kind === 'cavitate') {
+        // a pistol shrimp's snap: the bubble's wall going out, its collapse a white flash, and
+        // what is left of it rising
+        fx.ring(f.x, f.y, 0xe8f4ff, f.r);
+        fx.ring(f.x, f.y, 0xffffff, f.r * 0.5);
+        fx.burst(f.x, f.y, 0xe8f4ff, 14, f.r * 2.4, 2.2);
+        for (let i = 0; i < 8; i++) {
+          const a = Math.random() * Math.PI * 2, d = Math.random() * f.r * 0.7;
+          fx.wake(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d, (Math.random() - 0.5) * 30,
+            -40 - Math.random() * 50, 0xe8f8ff, 1.5 + Math.random() * 2);
+        }
+        fx.flash(f.x, f.y, 0xe8f4ff, f.r * 3.5, 1, 0.18);
+        camera.jolt(4, 12);
+      } else if (f.kind === 'flame') {
+        // a burn leaping to a body: sulphur thrown up off it, and its light
+        fx.burst(f.x, f.y, FLAME, 10, f.r * 2, 2);
+        fx.flash(f.x, f.y, FLAME, f.r * 4, 0.9, 0.25);
+      } else if (f.kind === 'shaft') {
+        // sunlight straight down through the room, rock to rock: a wide glow, a hot core, the
+        // column lit along its length and motes falling through it
+        const len = f.len ?? 0;
+        fx.beam(f.x, f.y, len, f.r * 2.6, SUN, 0.4, 0.55);
+        fx.beam(f.x, f.y, len, f.r * 0.8, 0xfffcef, 0.9, 0.35);
+        for (let d = f.r; d < len; d += f.r * 3) fx.flash(f.x, f.y + d, SUN, f.r * 4, 0.8, 0.45);
+        for (let i = 0; i < 14; i++) {
+          fx.wake(f.x + (Math.random() - 0.5) * f.r * 2, f.y + Math.random() * len, 0, 30 + Math.random() * 40,
+            0xfff4cc, 1.5 + Math.random() * 1.5);
+        }
+        camera.jolt(5, 12);
+      } else if (f.kind === 'arc') {
+        // a crooked line of sparks from body to body, widest from straight at its middle, and
+        // a snap of light on the one it reached
+        const vx = f.vx ?? 0, vy = f.vy ?? 0;
+        const d = Math.hypot(vx, vy) || 1;
+        const nx = -vy / d, ny = vx / d;
+        const n = Math.max(4, Math.round(d / (f.r * 1.4)));
+        let kink = 0;
+        for (let i = 0; i <= n; i++) {
+          const k = i / n;
+          kink = (kink + (Math.random() - 0.5) * f.r * 2.2) * Math.sin(k * Math.PI);
+          fx.spray(f.x + vx * k + nx * kink, f.y + vy * k + ny * kink, nx, ny, SPARK, 1, 12, 1.3, Math.PI);
+        }
+        fx.flash(f.x + vx, f.y + vy, 0xc0b0ff, f.r * 12, 0.9, 0.12);
+      } else if (f.kind === 'shatter') {
+        // a chilled kill breaking: a ring of rime and ice thrown off it
+        fx.ring(f.x, f.y, ICE, f.r * 1.2);
+        fx.burst(f.x, f.y, ICE, 14, f.r * 3, 1.8);
+        fx.flash(f.x, f.y, ICE, f.r * 3, 0.8, 0.2);
       } else if (f.kind === 'exposed') {
         fx.ring(f.x, f.y, 0xffe28a, f.r);
       } else {
@@ -168,6 +218,32 @@ export class Impacts {
     }
   }
 
+  /**
+   * What the player's shots shed as they fly — every mark it carries, so one that does not
+   * decide its shape or colour is still seen to be there — and the burn and the chill on a
+   * body, which a wound's flinch is over too soon to say.
+   */
+  trail(world: World, dt: number) {
+    const { fx } = this;
+    for (const s of world.shots) {
+      if (!s.marks) continue;
+      for (const m of s.marks) if (Math.random() < TRAIL_RATE[m] * dt) shed(fx, s, m);
+    }
+    for (const c of world.creatures) {
+      if (!c.alive || !c.view.visible) continue;
+      if (c.burnT > 0 && Math.random() < EMBERS * dt) {
+        const a = Math.random() * Math.PI * 2, d = Math.random() * c.radius * 0.6;
+        const x = c.x + Math.cos(a) * d, y = c.y + Math.sin(a) * d;
+        fx.wake(x, y, (Math.random() - 0.5) * 20, -30 - Math.random() * 40, FLAME, c.radius * (0.08 + Math.random() * 0.08));
+        fx.flash(x, y, FLAME, c.radius * 2.4, 0.45, 0.16);
+      }
+      if (c.chillT > 0 && Math.random() < RIME * dt) {
+        const a = Math.random() * Math.PI * 2, d = Math.random() * c.radius * 0.7;
+        fx.wake(c.x + Math.cos(a) * d, c.y + Math.sin(a) * d, 0, 12, ICE, c.radius * (0.06 + Math.random() * 0.06));
+      }
+    }
+  }
+
   /** The states that have an answer the player may not know: a balled shoal, a grip. */
   hints(world: World, dt: number) {
     this.hintCd = Math.max(0, this.hintCd - dt);
@@ -189,6 +265,38 @@ export class Impacts {
     this.dread.startle();
     this.camera.jolt(7, 13);
     this.ui.toast(`${who.name} has seen you`, 'boss');
+  }
+}
+
+/** The shot organs' colours, as `render/shots.ts` paints their shots. */
+const FLAME = 0xd8f060;
+const SUN = 0xffecb0;
+const SPARK = 0xd8d0ff;
+const ICE = 0xd8f6ff;
+
+/**
+ * How many of a mark's motes a shot sheds a second. A shot is a fifth of a second across a
+ * fight, so a handful each is a trail and not a cloud; the burn's embers and the chill's rime
+ * the same, a second, off each body.
+ */
+const TRAIL_RATE: Record<ShotMark, number> = {
+  scald: 30, halo: 18, arc: 24, seek: 14, frost: 16, blast: 12, brood: 8, pierce: 24,
+};
+const EMBERS = 22;
+const RIME = 10;
+
+/** One mote of a mark off a shot in flight, sized off the shot. */
+function shed(fx: Fx, s: Shot, m: ShotMark) {
+  const r = s.r, j = () => (Math.random() - 0.5) * r * 2;
+  switch (m) {
+    case 'scald': fx.wake(s.x + j(), s.y + j(), j() * 5, -30 - Math.random() * 30, FLAME, r * 0.5); break;
+    case 'halo': fx.wake(s.x + j(), s.y + j(), 0, 15, 0xfff0c0, r * 0.4); break;
+    case 'arc': fx.spray(s.x + j(), s.y + j(), Math.random() - 0.5, Math.random() - 0.5, SPARK, 1, 40, r * 0.35, Math.PI); break;
+    case 'seek': fx.wake(s.x, s.y, -s.vx * 0.05, -s.vy * 0.05, 0x7af0c8, r * 0.35); break;
+    case 'frost': fx.wake(s.x + j(), s.y + j(), j() * 3, 10, 0xe8faff, r * 0.35); break;
+    case 'blast': fx.wake(s.x + j(), s.y + j(), j() * 3, -40, 0xe8f8ff, r * 0.4); break;
+    case 'brood': fx.wake(s.x + j(), s.y + j(), 0, 0, 0xf4c8e0, r * 0.35); break;
+    case 'pierce': fx.spray(s.x, s.y, -s.vx, -s.vy, 0xeaf6ff, 1, Math.hypot(s.vx, s.vy) * 0.2, r * 0.4, 0.15); break;
   }
 }
 

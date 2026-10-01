@@ -1,5 +1,6 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 import type { ShotKind } from '../content/species';
+import type { ShotMark } from '../sim/organs';
 import type { Shot } from '../sim/world';
 import type { Light } from './lighting';
 import { paintMap, type Palette } from './pickups';
@@ -102,16 +103,95 @@ export const HOSTILE_GLOW: Record<ShotKind, { color: number; a: number }> = {
   sting: { color: 0xff6a50, a: 0.45 },
 };
 
-export function shotGlow(kind: ShotKind, hostile: boolean) {
-  return (hostile ? HOSTILE_GLOW : SHOT_GLOW)[kind];
+/**
+ * What the shot organs make of a player's shot (`ShotMark`). Some change its shape — a
+ * bubble, a shard, a needle, a clutch of roe — and some its colour, so two at once are both
+ * seen: a scalding burst is a sulphur bubble. The first of each list the shot carries wins;
+ * the rest show in what it sheds as it flies (`Impacts.trail`).
+ *
+ * Every colour stays off the hostiles' reds, oranges and pinks, which is the one rule the
+ * player's shots keep: fire is a vent's sulphur, not a flame's orange, and the light is a
+ * pale gold that a hostile's spine is too red to be mistaken for.
+ */
+const MARK_MAPS: Partial<Record<ShotMark, readonly string[]>> = {
+  // a cavitation bubble: a ring with the water showing through it
+  blast: [
+    '..###..',
+    '.#hhx#.',
+    '#h...d#',
+    '#x...d#',
+    '#x...d#',
+    '.#xdd#.',
+    '..###..',
+  ],
+  frost: [
+    '...##....',
+    '.##hx##..',
+    '#hhxxxdd#',
+    '.##xdd##.',
+    '....##...',
+  ],
+  pierce: [
+    '..######...',
+    '##hhhxxxdd#',
+    '..######...',
+  ],
+  brood: [
+    '.##.....',
+    '#hx#.##.',
+    '#xd##hx#',
+    '.###xd#.',
+    '.#hx##..',
+    '.#xd#...',
+    '..##....',
+  ],
+};
+const SHAPE_ORDER: readonly ShotMark[] = ['blast', 'frost', 'pierce', 'brood'];
+/** The shapes that are round, and are not turned along their line. */
+const ROUND: ReadonlySet<ShotMark> = new Set(['blast']);
+
+export const MARK_COLOURS: Partial<Record<ShotMark, Palette>> = {
+  scald: { x: '#d4f04a', h: '#fbffd8', d: '#8cb020', o: '#1e2a06' },
+  halo: { x: '#ffe49a', h: '#fffcef', d: '#d0a850', o: '#3a2a0a' },
+  arc: { x: '#b8a8ff', h: '#f4f0ff', d: '#6a58d8', o: '#140e3a' },
+  seek: { x: '#7af0c8', h: '#eafff6', d: '#2aa880', o: '#0a3026' },
+  frost: { x: '#d8f6ff', h: '#ffffff', d: '#78c4e8', o: '#0e2a3e' },
+  blast: { x: '#e8f4ff', h: '#ffffff', d: '#98b8d8', o: '#14243a' },
+  brood: { x: '#f4c8e0', h: '#fff4fa', d: '#c080a8', o: '#2e1424' },
+};
+export const MARK_GLOW: Record<ShotMark, { color: number; a: number }> = {
+  scald: { color: 0xd8f060, a: 0.8 },
+  halo: { color: 0xffecb0, a: 0.95 },
+  arc: { color: 0xc0b0ff, a: 0.85 },
+  seek: { color: 0x7af0c8, a: 0.6 },
+  frost: { color: 0xd8f6ff, a: 0.7 },
+  blast: { color: 0xe8f4ff, a: 0.6 },
+  brood: { color: 0xf0c0dc, a: 0.5 },
+  pierce: { color: 0xeaf6ff, a: 0.5 },
+};
+const COLOUR_ORDER: readonly ShotMark[] = ['scald', 'halo', 'arc', 'seek', 'frost', 'blast', 'brood'];
+
+export function shotGlow(kind: ShotKind, hostile: boolean, marks?: readonly ShotMark[]) {
+  const by = marks && COLOUR_ORDER.find(m => marks.includes(m));
+  return by ? MARK_GLOW[by] : (hostile ? HOSTILE_GLOW : SHOT_GLOW)[kind];
+}
+
+/** Whether the shot is drawn the same way up whichever way it flies. */
+export function shotRound(kind: ShotKind, marks?: readonly ShotMark[]) {
+  const shape = marks && SHAPE_ORDER.find(m => marks.includes(m));
+  return shape ? ROUND.has(shape) : kind === 'bolt';
 }
 
 const textures = new Map<string, Texture>();
-export function shotTexture(kind: ShotKind, hostile = false) {
-  const key = hostile ? `${kind}!` : kind;
+export function shotTexture(kind: ShotKind, hostile = false, marks?: readonly ShotMark[]) {
+  const shape = marks && SHAPE_ORDER.find(m => marks.includes(m));
+  const colour = marks && COLOUR_ORDER.find(m => marks.includes(m));
+  const key = `${kind}${hostile ? '!' : ''}|${shape ?? ''}|${colour ?? ''}`;
   let t = textures.get(key);
   if (!t) {
-    t = Texture.from(paintMap(SHOT_MAPS[kind], (hostile ? HOSTILE_COLOURS : SHOT_COLOURS)[kind]));
+    const map = (shape && MARK_MAPS[shape]) || SHOT_MAPS[kind];
+    const pal = (colour && MARK_COLOURS[colour]) || (hostile ? HOSTILE_COLOURS : SHOT_COLOURS)[kind];
+    t = Texture.from(paintMap(map, pal));
     t.source.scaleMode = 'nearest';
     textures.set(key, t);
   }
@@ -128,6 +208,8 @@ const PLAYER_BLOOM = 7;
 const THROB = 16;
 /** Radians a second a thrown urchin turns over as it flies. */
 const URCHIN_SPIN = 5;
+/** What a shot thrown off another is drawn at, as a share of a whole one (`World.split`). */
+const SPAWNED = 0.7;
 /** How far a hanging sting sways either side of straight down, and how fast. */
 const STING_SWAY = 0.5;
 const STING_SWAY_RATE = 3;
@@ -164,15 +246,15 @@ export class ShotView {
       s.visible = b.visible = !!k;
       if (!k) continue;
       const hostile = !k.by.isPlayer;
-      const glow = shotGlow(k.kind, hostile);
-      s.texture = shotTexture(k.kind, hostile);
+      const glow = shotGlow(k.kind, hostile, k.marks);
+      s.texture = shotTexture(k.kind, hostile, k.marks);
       s.position.set(k.x, k.y);
-      // a bolt is round, an urchin tumbles and a sting hangs and sways; the rest point along
-      // their line
-      s.rotation = k.kind === 'bolt' ? 0 : k.kind === 'urchin' ? k.t * URCHIN_SPIN
+      // a bolt or a bubble is round, an urchin tumbles and a sting hangs and sways; the rest
+      // point along their line
+      s.rotation = shotRound(k.kind, k.marks) ? 0 : k.kind === 'urchin' ? k.t * URCHIN_SPIN
         : k.kind === 'sting' ? Math.PI / 2 + Math.sin(k.t * STING_SWAY_RATE + k.x) * STING_SWAY
           : Math.atan2(k.vy, k.vx);
-      s.scale.set(px);
+      s.scale.set(px * (k.spawned ? SPAWNED : 1));
       // something left in the water thins out through its life rather than breaking
       const left = k.fades ? 1 - (k.t / k.life) ** 2 : 1;
       s.alpha = left;

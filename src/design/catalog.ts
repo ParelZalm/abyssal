@@ -35,9 +35,9 @@ import {
   AIM_LEAN, AIM_TOL, BURST_TIME, NOOK_IN, NOOK_OUT, PIVOT, SHOT_RANGE, SHOT_SPEED as PLAYER_SHOT_SPEED, SNAP,
   STRIKE, STROKE_EVERY,
 } from '../input/PlayerController';
-import { primaryOf, organsOf, strikeOf } from '../sim/organs';
+import { primaryOf, organsOf, shotModsOf, strikeOf, type ShotMark } from '../sim/organs';
 import { HATCHED } from '../run/starts';
-import { shotGlow, shotTexture } from '../render/shots';
+import { shotGlow, shotRound, shotTexture } from '../render/shots';
 import { glowTexture } from '../render/textures';
 import { BAR_OVER, ChargeBar } from '../render/tells';
 import { BREACH_LOCK, DRAW_TIME, LOB_WIND, LURK, PUNCH_WIND, SNAGGED, SPACING, WEDGED } from '../sim/bosses';
@@ -1139,17 +1139,17 @@ class RoleCell extends Container {
   }
   private flights: { a: number; d: number; t: number; s: Sprite; b: Sprite }[] = [];
 
-  /** Shots out along `angles`, from `r` off the centre. */
-  fire(kind: ShotKind, angles: number[], r: number) {
+  /** Shots out along `angles`, from `r` off the centre, carrying `marks` (`ShotMark`). */
+  fire(kind: ShotKind, angles: number[], r: number, marks?: readonly ShotMark[]) {
     for (const a of angles) {
-      const s = new Sprite(shotTexture(kind, this.hostile));
+      const s = new Sprite(shotTexture(kind, this.hostile, marks));
       s.anchor.set(0.5);
       s.scale.set(SHOT_PX);
-      s.rotation = kind === 'bolt' ? 0 : a;
+      s.rotation = shotRound(kind, marks) ? 0 : a;
       const b = new Sprite(glowTexture());
       b.anchor.set(0.5);
       b.blendMode = 'add';
-      b.tint = shotGlow(kind, this.hostile).color;
+      b.tint = shotGlow(kind, this.hostile, marks).color;
       b.alpha = 0.6;
       b.width = b.height = this.hostile ? 36 : 26;
       this.shots.addChild(s);
@@ -1512,6 +1512,87 @@ function powerGroup(): DesignGroup {
   };
 }
 
+// ------------------------------------------------------------------ shot organs
+
+/** A shot standing still on the board: its bloom and the sprite, as `ShotView` draws one. */
+function shotStill(kind: ShotKind, marks: readonly ShotMark[]) {
+  const c = new Container();
+  const b = new Sprite(glowTexture());
+  b.anchor.set(0.5);
+  b.blendMode = 'add';
+  b.tint = shotGlow(kind, false, marks).color;
+  b.width = b.height = 14;
+  const s = new Sprite(shotTexture(kind, false, marks));
+  s.anchor.set(0.5);
+  c.addChild(b, s);
+  return c;
+}
+
+/**
+ * The shot organs (`sim/organs/shots.ts`): each card on the larva, firing the shot it marks
+ * and wearing the organ it grows; each mark's shot on its own; and marks stacked, the shape of
+ * one in the colour of another, which is how two are read at once in play.
+ */
+function shotOrganGroup(): DesignGroup {
+  const tank = tankById('nursery');
+  const CARDS = ['nares', 'needlejet', 'broodpouch', 'cavitation', 'galvanic', 'ventgland', 'brinegland',
+    'surfacehalo'];
+  const larvaWith = (ids: string[]) => {
+    const g = larva();
+    for (const id of ids) TRAITS.find(t => t.id === id)!.apply(g);
+    return g;
+  };
+  const firing = (id: string, name: string, note: string, ids: string[], rarity?: Rarity,
+                  icon?: IconName): DesignItem => {
+    const g = larvaWith(ids);
+    const body = { organs: organsOf(g), genome: g } as never;
+    const prim = primaryOf(body)!;
+    const marks = shotModsOf(body).marks;
+    let t0 = 0;
+    return {
+      id, name, note, source: 'src/sim/organs/shots.ts', span: 110, depth: tank.depth, genome: g,
+      rarity, icon, facts: { marks: marks.join(' + ') },
+      make: () => new RoleCell(g, 'wraith', false),
+      animate: (view: Container, dt: number, beat: number) => {
+        const cell = view as RoleCell;
+        t0 += dt;
+        if (t0 > 0.6) { t0 = 0; cell.fire(prim.shot, [...prim.fan], g.size * 0.5, marks); }
+        cell.fly(dt, PLAYER_SHOT_SPEED * tank.tile);
+        const fish = cell.fish.fish;
+        const strike = t0 < 0.2 ? 1 - t0 / 0.2 : 0;
+        fish.animate(dt, 0.2, beat, 0, { windup: 0, strike, open: strike > 0 });
+        fish.place(0, 0, 0, 1);
+        fish.show(true, 1, 0xffffff);
+      },
+    };
+  };
+  const items: DesignItem[] = CARDS.map(id => {
+    const t = TRAITS.find(x => x.id === id)!;
+    return firing(`shotorgan-${id}`, t.name, t.desc, [id], t.rarity, t.icon);
+  });
+  const MARKS: ShotMark[] = ['blast', 'scald', 'halo', 'arc', 'pierce', 'seek', 'brood', 'frost'];
+  for (const m of MARKS) {
+    items.push({ id: `shot-mark-${m}`, name: `shot · ${m}`, note: 'the spit, marked',
+      source: 'src/render/shots.ts', span: 16, depth: tank.depth, make: () => shotStill('spit', [m]) });
+  }
+  const STACKS: [string, ShotMark[]][] = [
+    ['sulphur bubble', ['blast', 'scald']], ['live needle', ['pierce', 'arc']],
+    ['sunlit shard', ['frost', 'halo']], ['seeking roe', ['brood', 'seek']],
+  ];
+  for (const [name, marks] of STACKS) {
+    items.push({ id: `shot-stack-${marks.join('-')}`, name: `shot · ${name}`,
+      note: `${marks.join(' + ')}: the first's shape in the second's colour; the rest shed as it flies`,
+      source: 'src/render/shots.ts', span: 16, depth: tank.depth, make: () => shotStill('spit', marks) });
+  }
+  items.push(firing('shotorgan-all', 'every shot organ', 'All eight at once, on the volley: a burst, a sulphur bubble.',
+    ['spinevolley', ...CARDS]));
+  return {
+    id: 'shotorgans', name: 'Shot organs',
+    note: 'What the shots carry, stacked on any primary: each card on the larva, each mark\'s shot, and marks stacked.',
+    items,
+  };
+}
+
 // ------------------------------------------------------------------ the economy
 
 /**
@@ -1804,7 +1885,7 @@ export function catalog(): DesignSection[] {
   return [
     { name: 'Tanks', groups: [roomGroup(), decorGroup(), waterGroup()] },
     { name: 'Animals', groups: [speciesGroup(), roleGroup(), bossGroup(), guardianGroup()] },
-    { name: 'The run', groups: [healthGroup(), powerGroup(), economyGroup()] },
+    { name: 'The run', groups: [healthGroup(), powerGroup(), shotOrganGroup(), economyGroup()] },
     { name: 'The body', groups: [planGroup(), motionGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup()] },
     { name: 'Column era', archived: true, groups: [propGroup(), fieldGroup()] },
   ];

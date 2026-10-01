@@ -31,6 +31,8 @@ import { bluntSnout, head, lureAt, lure, barbels } from './bake/head';
 import { spines, organs, ballisticReach, urchinReach, urchinSpines, electroplates, prickles,
          inkSac, spitSac, stoneWarts, volleyQuills, armourBands } from './bake/organs';
 import { photophores, flankLights, embers } from './bake/lights';
+import { broodPouch, cavityBladder, galvanicLine, halo, nares, NEEDLE, needleBill, rime,
+         ventGlands } from './bake/shotorgans';
 
 export interface Baked {
   texture: Texture;
@@ -100,6 +102,8 @@ function key(g: Genome, plan: Plan) {
           g.venom > 0 ? 1 : 0, Math.min(2, g.filter), g.crush > 0 ? 1 : 0,
           g.eel > 0 ? 1 : 0, g.mantle > 0 ? 1 : 0, g.lurk > 0 ? 1 : 0, g.smoke > 0 ? 1 : 0,
           g.spit > 0 ? 1 : 0, g.volley > 0 ? 1 : 0,
+          g.blast > 0 ? 1 : 0, g.scald > 0 ? 1 : 0, Math.min(2, g.halo), g.arc > 0 ? 1 : 0,
+          g.pierce > 0 ? 1 : 0, g.seek > 0 ? 1 : 0, g.brood > 0 ? 1 : 0, g.frost > 0 ? 1 : 0,
           // a synergy's threshold can fall inside one bucket of the fields above — Urchin's
           // armour test sits mid-step — so the paint's own predicate goes in whole
           synergiesOf(g).join('+')].join('|');
@@ -172,7 +176,8 @@ function paint(g: Genome, plan: Plan): Baked {
   const reachUp = Math.max(widest * 3.2, L ? -L.y + L.r * 3 : 0,
                            widest * (1 + 0.7 * urchinReach(g)) * 1.6) + R * 0.4;
   const front = spineAt(0, f) + Math.max(R * 0.4, L ? L.x - spineAt(0, f) + L.r * 3 : 0,
-    A.club || hasSynergy(g, 'ballistic') ? ballisticReach(g) + R * 0.2 : 0, widest * 0.5);
+    A.club || hasSynergy(g, 'ballistic') ? ballisticReach(g) + R * 0.2 : 0, widest * 0.5,
+    g.pierce > 0 ? R * (NEEDLE + 0.1) : 0);
   const back = spineAt(1, f) - f.len * R * (f.fluke * 1.5 + g.veil * 0.7 + (bloom ? BLOOM_TRAIL * 1.1 : 0))
     - (rigged ? 0 : A.armLen * R * (1 + g.segments * 0.1) * 1.8) - R * 0.6;
   const halfH = Math.ceil(reachUp * res) / res;
@@ -245,6 +250,10 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   if (g.discharge > 0) electroplates(s, f, g);
   if (g.ink > 0) inkSac(s, f);
   if (g.spit > 0) spitSac(s, f);
+  if (g.seek > 0) nares(s, f);
+  if (g.arc > 0) galvanicLine(s, f);
+  if (g.scald > 0) ventGlands(s, f);
+  if (g.blast > 0) cavityBladder(s, f);
   if (A.bands) armourBands(s, f, pal, g.segments);
   if (g.mantle > 0) mantle(s, f, pal);
   if (smoke) viscera(s, f, pal);
@@ -258,12 +267,16 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   if (A.spines) spines(s, f, g, men);
   if (g.inflate > 0) prickles(s, f, g, seed);
   if (g.volley > 0) volleyQuills(s, f);
+  if (g.frost > 0) rime(s, f, seed);
+  if (g.brood > 0) broodPouch(s, f);
   if (hasSynergy(g, 'urchin')) urchinSpines(s, f, g, seed);
   fins(s, f, g, A);
   organs(s, f, pal, g, A.club);
   head(s, f, pal, g, A, men, gape);
   if (g.barbels > 0) barbels(s, f, pal, g);
   if (g.lure > 0) lure(s, f, pal, g);
+  if (g.pierce > 0) needleBill(s, f);
+  if (g.halo > 0) halo(s, f, g);
   return true;
 }
 

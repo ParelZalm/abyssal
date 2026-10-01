@@ -209,6 +209,12 @@ export class Creature {
   bleedByPlayer = false;
   /** Seconds until the wound next drips blood into the water. */
   drip = 0;
+  /** A scald (Vent Gland): damage per second, seconds left, who is owed the kill. */
+  burn = 0;
+  burnT = 0;
+  burnByPlayer = false;
+  /** Seconds of a chill (Brine Gland) left: the body swims through water gone thick. */
+  chillT = 0;
   /** What this animal's tentacles are holding, and what is holding this one. */
   holding: Creature | null = null;
   heldBy: Creature | null = null;

@@ -336,6 +336,24 @@ What it found, and what it leaves:
   against a pufferfish, an archerfish and a nettle.
 - The dev panel's *clear the room* kills the ephyrae as they bud, which is what it is for.
 
+## Shot organs
+
+Done next, asked for: eight mutations that change what the shots do rather than what fires
+them, stacked on any primary and on each other, as Isaac's tear effects are — Cavitation
+bursts, Vent Gland burns and spreads from the dead, Surface Halo calls a shaft of light,
+Galvanic Cells arcs on, Needle Jet passes through, Hunting Nares bends, Brood Pouch breaks
+into fry, Brine Gland chills and shatters (`sim/organs/shots.ts`, *Shot organs* in
+`progression.md`). Each marks its shot's shape or colour and is painted on the body. The
+board has a *Shot organs* group.
+
+What it found, and what it leaves:
+
+- **Fire cannot be orange.** The player's shots keep off the hostiles' hot colours, so the
+  burn is a vent's sulphur and the light a pale gold; a red flame would read as incoming.
+- With all four of the reef and deep damage cards, a room of three reef hostiles fell to ten
+  spits in three seconds, where the numbers say about eighteen without them. Nothing is tuned yet
+  against a full stack; no synergies pair them yet (a burst that scalds, a chill that arcs).
+
 ## Hostile movesets: the reef
 
 The ribbon eel burrows in the rock and lunges along a line from its hole, and turned hunts

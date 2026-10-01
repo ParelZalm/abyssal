@@ -22,10 +22,13 @@ import type { World } from '../world';
 import { ACTIVES } from './actives';
 import { CURSES, DIET, LOCOMOTION, SENSES } from './adaptations';
 import { BODY, FORMS, PRIMARIES } from './body';
+import { SHOT_ORGANS } from './shots';
 import { SYNERGY_ORGANS } from './synergies';
 import type { Organ, WoundCtx } from './types';
+import type { Shot } from '../world';
 
-export type { BoostMods, Organ, SwimMods, WoundCtx } from './types';
+export type { BoostMods, Organ, ShotMark, ShotMods, SwimMods, WoundCtx } from './types';
+export { kindle } from './shots';
 export { POISE_MAX } from './adaptations';
 export { PUFF_TIME, shockReach } from './actives';
 export { BLOOM_TRAIL } from './synergies';
@@ -36,8 +39,8 @@ export * from './query';
  * number compose in the same order every time, and `activeOf` takes the first active.
  */
 export const ORGANS: Organ[] = [
-  ...BODY, ...DIET, ...LOCOMOTION, ...SENSES, ...CURSES, ...ACTIVES, ...PRIMARIES, ...FORMS,
-  ...SYNERGY_ORGANS,
+  ...BODY, ...DIET, ...LOCOMOTION, ...SENSES, ...CURSES, ...ACTIVES, ...PRIMARIES, ...SHOT_ORGANS,
+  ...FORMS, ...SYNERGY_ORGANS,
 ];
 
 /** Every named synergy, in the order the registry declares them — the codex's list. */
@@ -79,6 +82,16 @@ export function fire(world: World, c: Creature) {
   o.active.fire(c, world);
   for (const s of c.organs) if (s.onFire?.(c, world, o.id) === true) world.fired(s, c);
   return o.active;
+}
+
+/** A shot has landed on `def`: run its shooter's organs on it. */
+export function shotHit(world: World, s: Shot, def: Creature) {
+  for (const o of s.by.organs) if (o.onShotHit?.(s.by, def, world, s) === true) world.fired(o, s.by);
+}
+
+/** A shot is spent where it is: run its shooter's organs on what it bursts into. */
+export function shotSpent(world: World, s: Shot) {
+  for (const o of s.by.organs) if (o.onShotSpent?.(s.by, world, s) === true) world.fired(o, s.by);
 }
 
 export function tick(world: World, c: Creature, dt: number) {

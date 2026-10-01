@@ -13,6 +13,9 @@ import { lightAt, type Water } from './water';
 
 /** The cast on a body the ampullae found but the eyes could not: cold, like the field. */
 const FELT_TINT = 0x9fc4ff;
+/** A chilled body, frosted pale, and a burning one, gone the vent's sulphur. */
+const CHILL_TINT = 0xc8ecff;
+const BURN_TINT = 0xf0ffa8;
 /**
  * How much of a hidden animal's stealth the player's eyes lose it by, at a distance. Under
  * 1 on purpose: a lurking ribbon eel at the reef can swallow a hatchling, and one that was
@@ -74,7 +77,9 @@ export class Scene {
     let danger = 0;
     for (const c of world.creatures) {
       const d = Math.sqrt(dist2(c.x, c.y, p.x, p.y));
-      let tint = 0xffffff;
+      // a chill frosts the body over and a burn yellows it, so a struck hostile says what is
+      // still working on it after the flinch is gone
+      let tint = c.chillT > 0 ? CHILL_TINT : c.burnT > 0 ? BURN_TINT : 0xffffff;
       if (c.hostile) {
         // nothing swallows the player now, so the frame no longer closes on whatever could:
         // it closes on a hostile with its body nearly on the player's, gap not centres, and

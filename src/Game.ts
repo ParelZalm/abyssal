@@ -488,6 +488,7 @@ export class Game {
       this.run.tick(dt);
       this.dread.update(dt, this.world.hunted);
       this.impacts.hints(this.world, dt);
+      this.impacts.trail(this.world, dt);
       // and the next tank's, a little at a time, so the descent's drop-in starts at once
       const next = TANK_ORDER[tankIndex(this.run.tank.id) + 1];
       if (next) this.dropIn.prepare(tankById(next), W, H, performance.now() + 2);
