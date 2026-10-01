@@ -104,6 +104,22 @@ export class Creature {
   anchor: { x: number; y: number } | null = null;
   volley = 0;
   /**
+   * A hostile's moveset (`Roles`): whether it has turned at half health, seconds left of the
+   * stagger it turns in, and whether it is a brood — something a death left (a nettle's
+   * ephyrae), which neither turns nor buds again. `salvo` is shots left in a burst and
+   * `salvoT` seconds to the next, or to the next sting a bell leaves; `guardCd` seconds before
+   * a pufferfish may puff again, or an archerfish looks for cover again; `surgeT` how far
+   * through its pulse a bell is; `orbit` which way round the player a pack circles.
+   */
+  wounded = false;
+  turnT = 0;
+  brood = false;
+  salvo = 0;
+  salvoT = 0;
+  guardCd = 0;
+  surgeT = 0;
+  orbit: 1 | -1 = Math.random() < 0.5 ? 1 : -1;
+  /**
    * A boss's fight beyond its main move (`sim/bosses.ts`). `move` is the set piece in hand —
    * '' for the main one — and `rounds` how many of the main one since the last. `stuck` is
    * seconds held fast by the room, at `pinX`, `pinY`: a mantis shrimp wedged in a cleft, a

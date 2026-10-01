@@ -8,7 +8,7 @@ import type { Blood } from './events';
 import { glareOf, lureRangeOf, stealthOf } from './organs';
 import type { Patterns } from './patterns';
 import { Bosses } from './bosses';
-import { clearHeading, Roles } from './roles';
+import { clearHeading, type Roles } from './roles';
 import type { World } from './world';
 
 /**
@@ -54,12 +54,10 @@ const STRIKE_KICK = 0.95;
  * Perception lives here too: who notices whom, and what a nose can find.
  */
 export class Behaviour {
-  private readonly roles: Roles;
   private readonly bosses: Bosses;
 
   constructor(private readonly world: World, private readonly combat: Combat,
-              private readonly patterns: Patterns) {
-    this.roles = new Roles(world);
+              private readonly patterns: Patterns, private readonly roles: Roles) {
     this.bosses = new Bosses(world);
   }
 

@@ -44,10 +44,11 @@ import { BREACH_LOCK, DRAW_TIME, LOB_WIND, LURK, PUNCH_WIND, SNAGGED, SPACING, W
 import { PickupView } from '../render/pickups';
 import type { Pickup } from '../sim/world';
 import {
-  CHARGE_LOCK, CHARGE_RECOVER, CHARGE_WIND, DASH_TIME, SHOT_SPEED, SPIT_RECOVER, SPIT_WIND, SPOKES, SWELL,
-  TURRET_RECOVER, TURRET_WIND,
+  BOUNCE, CHARGE_LOCK, CHARGE_RECOVER, CHARGE_WIND, DASH_TIME, FAN, FRENZY_WIND, GLIDE, SALVO, SALVO_GAP,
+  SHOT_SPEED, SPIT_RECOVER, SPIT_WIND, SPOKES, STING_LIFE, SURGE, SWELL, TAUT, TURRET_RECOVER, TURRET_WIND,
+  woundedGenome,
 } from '../sim/roles';
-import type { FiredKind, Role, ShotKind, Species } from '../content/species';
+import type { FiredKind, Moveset, Role, ShotKind, Species } from '../content/species';
 import { Texture } from 'pixi.js';
 import { speciesById } from '../content/species';
 import type { IconName } from '../ui/icons';
@@ -1100,6 +1101,26 @@ const ROLE_NOTES: Record<Role, string> = {
   drifter: 'Comes on slowly by the shortest water; the touch is the attack.',
 };
 
+/** A moveset whole, and turned at half health (`sim/roles.ts`). */
+const MOVE_NOTES: Record<Moveset, { whole: string; turned: string }> = {
+  pack: {
+    whole: 'Dealt in pairs; circles you and the pack dashes one at a time.',
+    turned: 'Frenzy: flushed red, jaw and fins up. A missed dash is chained into a second on a fresh line.',
+  },
+  volley: {
+    whole: `A burst of ${SALVO} spits, ${SALVO_GAP} s apart; the last one leads you.`,
+    turned: 'Goes to ground: rock between you and it, out for a line, a burst, and back.',
+  },
+  balloon: {
+    whole: 'A ring on the beat; puffs at you up close, braced against every blow, then slack.',
+    turned: `Spines up and taut, bouncing on a diagonal at ${BOUNCE} tiles a second, ${FAN} spines off each wall. Dead, it pops into a ring.`,
+  },
+  bloom: {
+    whole: `Pulses: a surge at you, a coast. Its tentacles hang behind it, each a sting for ${STING_LIFE} s.`,
+    turned: 'Glows hotter and pulses faster. Dead, it buds into two ephyrae the room waits on.',
+  },
+};
+
 /**
  * A role cell: the body, and the shots it throws, which fly out and are spent as in play —
  * in a hostile's colours, or the player's for a primary on the larva.
@@ -1158,25 +1179,30 @@ function roleAnimate(sp: Species, g: Genome, tile: number) {
   const role = sp.role!;
   const wind = role === 'charger' ? CHARGE_WIND(g.size) + CHARGE_LOCK : role === 'turret' ? TURRET_WIND
     : role === 'spitter' ? SPIT_WIND : 0;
-  const strike = role === 'charger' ? DASH_TIME : 0.12;
+  const salvo = sp.moves === 'volley' ? SALVO : 1;
+  const strike = role === 'charger' ? DASH_TIME : SALVO_GAP * (salvo - 1) + 0.12;
   const recover = role === 'charger' ? CHARGE_RECOVER : role === 'turret' ? TURRET_RECOVER : SPIT_RECOVER;
-  const cycle = wind + strike + recover + 1.2;
-  let t = 0, fired = false, volley = 0;
+  const cycle = role === 'drifter' && sp.moves === 'bloom' ? (SURGE + GLIDE) * 2 : wind + strike + recover + 1.2;
+  let t = 0, fired = 0, volley = 0;
   return (view: Container, dt: number, beat: number) => {
     const cell = view as RoleCell;
     const fish = cell.fish.fish;
     t += dt;
-    if (t > cycle) { t = 0; fired = false; }
+    if (t > cycle) { t = 0; fired = 0; }
     let pose: Pose = REST, thrust = 0.1, x = 0;
     if (role === 'drifter') {
-      thrust = 0.85;
+      // a bloom's bell pulses: hard through the surge, slack through the coast
+      thrust = sp.moves === 'bloom' ? (t % (SURGE + GLIDE) < SURGE ? 1.4 : 0.1) : 0.85;
     } else if (t < wind) {
       pose = { windup: t / wind, strike: 0, open: t / wind > 0.35 };
     } else if (t < wind + strike) {
       pose = { windup: 0, strike: 1 - (t - wind) / strike, open: true };
       thrust = role === 'charger' ? 1.6 : 0.1;
-      if (!fired && sp.shot) {
-        fired = true;
+      if (sp.shot && role === 'spitter' && fired < salvo && t - wind >= fired * SALVO_GAP) {
+        fired++;
+        cell.fire(sp.shot, [-0.15], g.size * 0.55);
+      } else if (!fired && sp.shot) {
+        fired = 1;
         if (role === 'turret') {
           const turn = (volley++ % 2) * (Math.PI / SPOKES);
           cell.fire(sp.shot, Array.from({ length: SPOKES }, (_, k) => turn + (k / SPOKES) * Math.PI * 2),
@@ -1208,6 +1234,66 @@ function roleAnimate(sp: Species, g: Genome, tile: number) {
   };
 }
 
+/**
+ * A moveset's turned half on a loop, on the simulation's timings: the frenzied pack member's
+ * two dashes, the volley from cover, the taut balloon throwing its fan off a wall, the hotter
+ * bell pulsing faster.
+ */
+function turnedAnimate(sp: Species, g: Genome, tile: number) {
+  const moves = sp.moves!;
+  const wind = CHARGE_WIND(g.size) + CHARGE_LOCK, again = FRENZY_WIND + CHARGE_LOCK;
+  const cycle = moves === 'pack' ? wind + DASH_TIME + again + DASH_TIME + CHARGE_RECOVER + 1
+    : moves === 'bloom' ? (SURGE + GLIDE) * 0.6 * 3 : 2.4;
+  let t = 0, fired = 0;
+  return (view: Container, dt: number, beat: number) => {
+    const cell = view as RoleCell;
+    const fish = cell.fish.fish;
+    t += dt;
+    if (t > cycle) { t = 0; fired = 0; }
+    let pose: Pose = REST, thrust = 0.2, x = 0;
+    if (moves === 'pack') {
+      // out along the cell and back on the second dash, the bar over each wind-up
+      const out = g.size * 1.6;
+      const d1 = wind + DASH_TIME, w2 = d1 + again, d2 = w2 + DASH_TIME;
+      const k = t < wind ? 0 : t < d1 ? (t - wind) / DASH_TIME : t < w2 ? 1 : t < d2 ? 1 - (t - w2) / DASH_TIME : 0;
+      x = out * k - out * 0.5;
+      const winding = t < wind || (t >= d1 && t < w2);
+      pose = winding ? { windup: t < wind ? t / wind : (t - d1) / again, strike: 0, open: true }
+        : t < d2 ? { windup: 0, strike: 0.8, open: true } : REST;
+      thrust = winding ? 0.15 : t < d2 ? 1.6 : 0.2;
+      cell.bar.root.visible = winding;
+      if (winding) {
+        const len = t < wind ? wind : again, into = t < wind ? t : t - d1;
+        cell.bar.set(x, -g.size * BAR_OVER, into / (len - CHARGE_LOCK), into >= len - CHARGE_LOCK, SHOT_PX, t);
+      }
+    } else if (moves === 'volley' && sp.shot) {
+      // tucked low, out for a burst, and back
+      const out = Math.min(1, t / 0.4) * Math.max(0, Math.min(1, (cycle - 0.4 - t) / 0.4));
+      x = (out - 0.5) * g.size;
+      if (t > SPIT_WIND + 0.4 && fired < SALVO && t - SPIT_WIND - 0.4 >= fired * SALVO_GAP) {
+        fired++;
+        cell.fire(sp.shot, [-0.15], g.size * 0.55);
+      }
+      pose = t > 0.4 && t < SPIT_WIND + 0.4 ? { windup: (t - 0.4) / SPIT_WIND, strike: 0, open: true } : REST;
+      thrust = 0.5;
+    } else if (moves === 'balloon' && sp.shot) {
+      fish.swell = 1 + SWELL * TAUT;
+      if (!fired && t > 0.6) {
+        fired = 1;
+        cell.fire(sp.shot, Array.from({ length: FAN }, (_, k) => Math.PI + ((k / (FAN - 1)) - 0.5) * Math.PI * 0.8),
+          g.size * 0.4 * (1 + SWELL * TAUT));
+      }
+      thrust = 0.3;
+    } else if (moves === 'bloom') {
+      thrust = t % ((SURGE + GLIDE) * 0.6) < SURGE * 0.6 ? 1.4 : 0.1;
+    }
+    if (sp.shot) cell.fly(dt, SHOT_SPEED[sp.shot] * tile);
+    fish.animate(dt, thrust, beat, 0, pose);
+    fish.place(x, 0, 0, 1);
+    fish.show(true, 1, 0xffffff);
+  };
+}
+
 /** Every hostile with a role, in motion, and each kind of shot on its own. */
 function roleGroup(): DesignGroup {
   const tank = tankById('nursery');
@@ -1223,6 +1309,23 @@ function roleGroup(): DesignGroup {
       animate: roleAnimate(sp, g, tank.tile),
     };
   });
+  // a moveset's two halves side by side: whole, then turned at half health, in the body it
+  // turns into — the rebuild a turn makes, which is the phase as the player sees it
+  for (const sp of SPECIES.filter(sp => sp.moves)) {
+    const at = items.findIndex(it => it.id === `role-${sp.id}`);
+    const whole = items[at];
+    const notes = MOVE_NOTES[sp.moves!];
+    whole.note = notes.whole;
+    const g = woundedGenome(sp.moves!, whole.genome!) ?? whole.genome!;
+    items.splice(at + 1, 0, {
+      id: `role-${sp.id}-turned`, name: `${sp.name} · turned`, note: notes.turned,
+      source: 'src/sim/roles.ts', span: whole.span, depth: tank.depth, genome: g,
+      facts: { moveset: sp.moves!, ...whole.facts },
+      make: () => new RoleCell(g, sp.plan),
+      animate: turnedAnimate(sp, g, tank.tile),
+    });
+    whole.facts = { moveset: sp.moves!, ...whole.facts };
+  }
   // each kind twice, a hostile's beside the player's: the pair is the contrast to judge
   for (const kind of Object.keys(SHOT_SPEED) as FiredKind[]) {
     for (const hostile of [true, false]) {
@@ -1247,9 +1350,28 @@ function roleGroup(): DesignGroup {
       });
     }
   }
+  // the sting is never the player's, and never flies: it hangs where a bell left it
+  items.push({
+    id: 'shot-sting', name: 'shot · sting',
+    note: `left behind a sea nettle every fraction of a second; hangs, sinks and thins for ${STING_LIFE} s`,
+    source: 'src/render/shots.ts', span: 16, depth: tank.depth,
+    make: () => {
+      const c = new Container();
+      const b = new Sprite(glowTexture());
+      b.anchor.set(0.5);
+      b.blendMode = 'add';
+      b.tint = shotGlow('sting', true).color;
+      b.width = b.height = 20;
+      const s = new Sprite(shotTexture('sting', true));
+      s.anchor.set(0.5);
+      s.rotation = Math.PI / 2;
+      c.addChild(b, s);
+      return c;
+    },
+  });
   return {
     id: 'roles', name: 'Hostile roles',
-    note: 'How a room fights you: each role on its own timings, its tell, and what it fires.',
+    note: 'How a room fights you: each role on its own timings, its tell, and what it fires; a moveset whole and turned at half health.',
     items,
   };
 }

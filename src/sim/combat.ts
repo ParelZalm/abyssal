@@ -5,6 +5,7 @@ import type { Creature, Hurt } from './creature';
 import type { Blood } from './events';
 import { armourAgainst, biteRateOf, damageOf, gulpOf, primaryOf, strikeOf, takenOf, wound } from './organs';
 import { EXPOSED_TAKEN, PATTERN_CD, RUSH_BITE } from './patterns';
+import { bracedOf } from './roles';
 import type { World } from './world';
 import { surfaceGap } from './hull';
 
@@ -215,7 +216,8 @@ export class Combat {
     const armour = Math.max(0, armourAgainst(att, armourOf(def.genome)));
     // a guardian spent by a missed rush is open: everything lands half again as hard
     const open = def.exposed > 0 ? EXPOSED_TAKEN : 1;
-    return takenOf(def, Math.max(1, damageOf(att, biteDamage(att.genome), def) * mult - armour)) * open;
+    return takenOf(def, Math.max(1, damageOf(att, biteDamage(att.genome), def) * mult - armour)) * open *
+      bracedOf(def);
   }
 
   /** The damage, the organs, and the death, for a bite or a blow. */
@@ -385,6 +387,7 @@ export class Combat {
       t: Math.min(BLOOD_MAX, def.genome.size * BLOOD_LIFE), kind: def.species.plan };
     this.world.blood.push(spill);
     this.world.spilled.push(spill);
+    this.world.roles.died(def);
     if (!byPlayer) return;
     this.world.devoured.push(def.species.id);
     if (!def.hostile) this.world.felled.push({ x: def.x, y: def.y });

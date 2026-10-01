@@ -10,6 +10,7 @@ import { Creature, type Hurt } from './creature';
 import type { Bite, Blood, BossCue, Pulse } from './events';
 import { primaryOf, tick as tickOrgans, type Organ } from './organs';
 import { Patterns } from './patterns';
+import { Roles } from './roles';
 import { Spawner } from './spawn';
 import type { Terrain } from './terrain';
 import { collideHull, surfaceGap } from './hull';
@@ -83,6 +84,12 @@ export interface Shot {
   apex?: boolean;
   /** A lob that cannot hurt on its way: only what it bursts into can. */
   harmless?: boolean;
+  /**
+   * Something left in the water rather than sent across it — a sea nettle's sting — which
+   * fades out through its life and is gone at the end without a splash: a bell trails one
+   * every fraction of a second, and each breaking on its way out was a room of spray.
+   */
+  fades?: boolean;
 }
 /** A shot's reach, in tiles, and the seconds it flies before it is spent anyway. */
 const SHOT_R = 0.16;
@@ -200,12 +207,15 @@ export class World {
   readonly felled: { x: number; y: number }[] = [];
 
   readonly spawner: Spawner;
+  /** The hostiles' brains, here rather than in `Behaviour` because a death calls on them too (`Combat.slay`). */
+  readonly roles: Roles;
   private readonly combat: Combat;
   private readonly behaviour: Behaviour;
 
   constructor(private rng: Rng, readonly player: Creature) {
     this.combat = new Combat(this);
-    this.behaviour = new Behaviour(this, this.combat, new Patterns(this, this.combat));
+    this.roles = new Roles(this);
+    this.behaviour = new Behaviour(this, this.combat, new Patterns(this, this.combat), this.roles);
     this.spawner = new Spawner(this, rng);
     this.layer.addChild(player.view);
     this.glow.addChild(player.view.glow);
@@ -367,7 +377,7 @@ export class World {
    * Unlike a shot its way is in world units, since it is aimed at a place and not down a line.
    */
   lob(by: Creature, kind: ShotKind, x: number, y: number, vx: number, vy: number,
-      heavy: Shot['heavy'], life: number, then?: Pick<Shot, 'burst' | 'apex' | 'harmless'>) {
+      heavy: Shot['heavy'], life: number, then?: Pick<Shot, 'burst' | 'apex' | 'harmless' | 'fades'>) {
     const t = this.terrain;
     if (!t) return;
     this.shots.push({ kind, x, y, vx, vy, r: SHOT_R * t.tile, t: 0, life, mult: 1, by, heavy, ...then });
@@ -442,7 +452,7 @@ export class World {
       if (!spent && p.alive && !s.by.isPlayer && !s.harmless && s.t >= SHOT_ARM &&
           dist2(s.x, s.y, p.x, p.y) < reach * reach) {
         spent = true;
-        const got = p.takeHit(s.by, 1, 'shot');
+        const got = p.takeHit(s.by, 1, s.kind === 'sting' ? 'touch' : 'shot');
         if (got) {
           this.bites.push({ x: p.x, y: p.y, amount: got, fatal: p.hp < 1, onPlayer: true,
             byPlayer: false, size: p.genome.size });
@@ -450,6 +460,7 @@ export class World {
       }
       if (!spent) continue;
       this.shots.splice(i, 1);
+      if (s.fades && !struck && s.t > s.life) continue;
       // at the top of its arc, from where it was a step before; one that met rock short of
       // it only breaks there
       if (s.burst && (!s.apex || s.vy >= 0)) s.burst(s.x - s.vx * dt, s.y - s.vy * dt);

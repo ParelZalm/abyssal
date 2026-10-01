@@ -115,6 +115,11 @@ export class Impacts {
           fx.wake(f.x + (Math.random() - 0.5) * f.r, f.y, (Math.random() - 0.5) * f.r * 0.5,
             -f.r * (4 + Math.random() * 4), 0xe8f8ff, f.r * (0.1 + Math.random() * 0.1));
         }
+      } else if (f.kind === 'turn') {
+        // a hostile turning at half health: a hot ring and its embers, the fight changing
+        fx.ring(f.x, f.y, 0xff7a3a, f.r);
+        fx.burst(f.x, f.y, 0xffb08a, 10, f.r * 0.8, 2.2);
+        fx.flash(f.x, f.y, 0xff7a3a, f.r * 3, 0.7, 0.2);
       } else if (f.kind === 'exposed') {
         fx.ring(f.x, f.y, 0xffe28a, f.r);
       } else {

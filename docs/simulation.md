@@ -408,6 +408,44 @@ in every tank.
 - **Drifter** — comes on by the shortest water with its heading wobbling about it; the touch
   is its attack.
 
+**Movesets.** A role is the skeleton a species plays on, and a `Species.moves` is how it
+plays it (*Moveset* in `CONTEXT.md`): before them every species of a role was the same brain
+at another size, and four behaviours across twelve hostiles was what made the rooms between
+the bosses flat. A moveset hooks the role's own state machine rather than replacing it, so
+the tells, the bar and `Flow` are shared. Three things are common to all of them:
+
+- **The turn.** Under `WOUNDED` (half) of its health a hostile turns once (`Roles.turn`): a
+  `TURN` stagger, a `turn` pulse, and its body rebuilt from `woundedGenome`, so the phase is
+  on the animal and not only in its timings. Broods never turn.
+- **Tokens.** At most `TOKENS` (two) hostiles in a room wind up or strike at once
+  (`Roles.free`), and a pack has one dash between its members: Isaac's rooms take turns.
+- **Deaths.** `Combat.slay` calls `Roles.died`, which is why `World` owns the `Roles` and
+  hands them to `Behaviour`. A body swallowed whole leaves nothing.
+
+The nursery's:
+
+- **Pack** (mackerel) — dealt two at a time (`Spawner.hostiles`); circles the player
+  `ORBIT` tiles off, each its own way round and turning back off rock, and dashes one at a
+  time. Turned, it is flushed red with its jaw and fins up, and a missed dash chains into a
+  second on a `FRENZY_WIND` wind-up before the same lock.
+- **Volley** (archerfish) — `SALVO` spits `SALVO_GAP` apart, the first two at the player
+  and the last leading twice as far: the grace after a hit makes a burst one hit at most.
+  Turned, it keeps to cover between bursts — the nearest water the player cannot see into
+  and it can swim to straight — kept while it stays hidden, and comes out for a line.
+- **Balloon** (pufferfish) — its ring on the beat, and a puff at a player inside
+  `PUFF_NEAR`: `PUFF_HOLD` seconds braced at `PUFF_TAKEN` of every blow (`bracedOf`, in
+  `Combat.damage`), through which it fires nothing, then slack. Turned, its spines raised,
+  it leaves its spot and bounces on a diagonal at `BOUNCE` tiles a second, `FAN` spines off
+  each wall. Dead, it pops into a full ring.
+- **Bloom** (sea nettle) — pulses: a kick and a surge at the player, then a coast. Behind
+  it hang stings (`ShotKind` `sting`, `World.lob` with `fades`): a hit by touch, sinking and
+  thinning through `STING_LIFE`, gone without a splash. Turned, hotter and faster. Dead, it
+  buds into `BUDS` ephyrae, half its size and under a third of its health, which the room
+  waits on and which leave no stings.
+
+The reef's and the deep's hostiles still play their roles plain; their movesets are the next
+roadmap stage.
+
 A role runs its own attack clock (`Roles.tick`), so `Behaviour.tickStrike` — the ecology's
 strike clock — skips a role hostile; run on both, every step went by twice as fast and the
 recovery ended with no cooldown. **Ink** over the player hides it: a hostile abandons a

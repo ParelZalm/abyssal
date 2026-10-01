@@ -313,6 +313,44 @@ What it found, and what it leaves:
   grew past about 18 cm in the nursery no longer fits the clefts. The snagged squid's resting
   arms still reach past the pillar they are wrapped round; its size makes that hard to hide.
 
+## ~~Hostile movesets: the nursery~~
+
+Done next, from playing it: the bosses were fights and the rooms between them were not,
+since every species of a role ran the same brain. A role is now the skeleton and a moveset
+(`Species.moves`) how one species plays it, with a turn at half health — a stagger, a ring,
+the body rebuilt to show it — at most two hostiles winding up at once, and deaths that leave
+something (`Roles.died`). The mackerel come in pairs, circle, and dash one at a time,
+chaining a second dash once turned; the archerfish fires bursts of three and, turned, shoots
+from cover; the pufferfish puffs braced up close, bounces off the walls throwing fans once
+turned, and pops into a ring; the sea nettle pulses, trails stings that hang in the water,
+and buds into two ephyrae. The board's *Hostile roles* group has each moveset beside its
+turned body, and the sting.
+
+What it found, and what it leaves:
+
+- **The accent is not a phase.** A mackerel turned by its accent hue looked the same: on a
+  darter the accent is a few dots. The frenzy flushes the whole body.
+- **Cover looked for afresh never settled**: from wherever the archerfish was, the nearest
+  cover was always a little further on. It keeps a spot while the player cannot see into it.
+- An idle larva lasts about nine seconds against two mackerel and an archerfish, and fifteen
+  against a pufferfish, an archerfish and a nettle.
+- The dev panel's *clear the room* kills the ephyrae as they bud, which is what it is for.
+
+## Hostile movesets: the reef
+
+The ribbon eel burrows in the rock and lunges along a line from its hole, and turned hunts
+in the open; the triggerfish's jet knocks the player into the others' lines, and turned it
+goes red and charges; the lionfish herds with a fan of five, and turned flares into fan and
+ring; the moon jelly fades in and out, and turned buds an ephyra every few seconds.
+
+## Hostile movesets: the deep
+
+The barracuda strikes across the room the moment the player is on its line, and turned
+bounces three dashes off the walls; the gulper eel gulps, and turned spits out what it
+swallowed; the vampire squid's bolts curve, and turned it inverts into a spiked ball, clouds
+the water and jets away; the anglerfish's bolts circle its lure, and turned it lunges; the
+siphonophore is a chain that splits where it is cut.
+
 ## Later
 
 Bomb fish and secret rooms; tanks four and five (the sperm whale, the colossal squid, the

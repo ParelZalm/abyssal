@@ -80,6 +80,18 @@ lunges, a **spitter** fires aimed shots, a **turret** is fixed in place and fire
 beat, a **drifter** crosses slowly and hurts to touch.
 _Avoid_: archetype, enemy type
 
+**Moveset** — how one species plays its role: the move that makes it that animal and not
+another of its role, what it **turns** into below half its health, and what its death
+leaves. The mackerel's **pack** circles and dashes one at a time; the archerfish's
+**volley** fires in bursts; the pufferfish's **balloon** puffs up close, bounces once
+turned and pops when it dies; the sea nettle's **bloom** pulses, trails stings and buds
+into ephyrae.
+_Avoid_: AI, behaviour (that is the fauna's)
+
+**Turn** — the once-a-fight change of a hostile with a moveset as its health falls under
+half: a stagger and a ring, a body rebuilt to look it, and the moveset's second half.
+_Avoid_: phase (a run has phases), enrage
+
 **Shot** — something a spitter or a turret fires: it flies straight at one speed and is spent
 on the first rock or body it meets. Hitting the player is a hit like any other.
 _Avoid_: bullet, projectile, tear

@@ -26,15 +26,18 @@ export class Spawner {
    * A fight room's hostiles, `count` of them, dealt from the tank's by weight and placed as
    * the player comes in, away from the door they came through, so the first the player
    * knows of one is it coming. A role is held to `ROLE_MAX` a room: two turrets and a
-   * spitter is a room to wait out, not one to fight.
+   * spitter is a room to wait out, not one to fight. A pack species comes two at a time,
+   * since one mackerel circling is only a charger.
    */
   hostiles(room: Terrain, tank: Tank, player: Creature, count: number) {
     const dealt: Partial<Record<Role, number>> = {};
     let n = 0;
+    // a pack is dealt as a pack: the next one dealt after a pack member is another of it
+    let pack: Species | null = null;
     for (let guard = 0; n < count && guard < 40; guard++) {
-      const sp = speciesById(this.weighted(tank.hostiles));
+      const sp: Species = pack ?? speciesById(this.weighted(tank.hostiles));
       const role = sp.role ?? 'charger';
-      if ((dealt[role] ?? 0) >= ROLE_MAX[role]) continue;
+      if ((dealt[role] ?? 0) >= ROLE_MAX[role]) { pack = null; continue; }
       const at = room.openSpot(this.rng, sp.size[1] * 0.6);
       if (!at || Math.hypot(at.x - player.x, at.y - player.y) < room.width * 0.3) continue;
       const c = this.place(room, sp, at.x, at.y, tank);
@@ -47,6 +50,7 @@ export class Spawner {
       c.roleCd = this.rng.range(0.3, 1.4) + hidden * STEALTH_DELAY;
       dealt[role] = (dealt[role] ?? 0) + 1;
       n++;
+      pack = sp.moves === 'pack' && pack !== sp ? sp : null;
     }
   }
 

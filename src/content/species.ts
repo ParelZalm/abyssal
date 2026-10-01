@@ -7,14 +7,21 @@ export type Behavior = 'plankton' | 'school' | 'drift' | 'hunter' | 'ambush' | '
 
 /** How a hostile fights; see *Role* in `CONTEXT.md` and `sim/roles.ts`. */
 export type Role = 'charger' | 'spitter' | 'turret' | 'drifter';
-/** What a spitter or a turret fires: a jet of water, a spine, a blob of light. */
+/**
+ * A hostile's own way of playing its role (*Moveset* in `CONTEXT.md`, `sim/roles.ts`): the
+ * move that makes it this animal and not another of its role, what it turns into below half
+ * its health, and what its death leaves. A mackerel's pack, an archerfish's volley, a
+ * pufferfish's balloon, a sea nettle's bloom.
+ */
+export type Moveset = 'pack' | 'volley' | 'balloon' | 'bloom';
 /**
  * What a body fires: a jet of water, a spine, a blob of light — and the mantis shrimp's
- * urchin, which is thrown rather than fired, and never by the player.
+ * urchin, which is thrown rather than fired, and a sea nettle's sting, which is left hanging
+ * in the water. Neither of those last two is ever the player's.
  */
-export type ShotKind = 'spit' | 'spine' | 'bolt' | 'urchin';
-/** What a role fires, and a primary: every kind but the thrown one. */
-export type FiredKind = Exclude<ShotKind, 'urchin'>;
+export type ShotKind = 'spit' | 'spine' | 'bolt' | 'urchin' | 'sting';
+/** What a role fires, and a primary: every kind but the thrown and the left. */
+export type FiredKind = Exclude<ShotKind, 'urchin' | 'sting'>;
 
 export interface Species {
   id: string;
@@ -48,6 +55,8 @@ export interface Species {
    * what it does as fauna; a hostile has its role's brain instead (`sim/roles.ts`).
    */
   role?: Role;
+  /** Its moveset, for a hostile that plays its role its own way. */
+  moves?: Moveset;
   /** What it fires, for the roles that fire. */
   shot?: FiredKind;
   /**
@@ -131,7 +140,7 @@ export const SPECIES: Species[] = [
     nutrition: 1.6, weight: 15, finSize: 0.95 },
 
   { id: 'mackerel', name: 'Mackerel', behavior: 'hunter', plan: 'darter', role: 'charger',
-    zone: 'sunlit', band: 'open', bleed: 600,
+    moves: 'pack', zone: 'sunlit', band: 'open', bleed: 600,
     size: [20, 34], hue: [168, 192], accent: 205, speed: 210, bite: 8,
     nutrition: 2.0, weight: 11, jaw: 0.4, sense: 480 },
 
@@ -149,19 +158,19 @@ export const SPECIES: Species[] = [
   // an archerfish shoots water at what it wants, a puffer bristles, a nettle stings by being
   // brushed against
   { id: 'archerfish', name: 'Archerfish', behavior: 'hunter', plan: 'darter',
-    role: 'spitter', shot: 'spit',
+    role: 'spitter', shot: 'spit', moves: 'volley',
     zone: 'sunlit', band: 'reef',
     size: [12, 18], hue: [46, 58], accent: 220, speed: 150, bite: 3,
     nutrition: 1.7, weight: 6, jaw: 0.5, finSize: 1.1 },
 
   { id: 'pufferfish', name: 'Pufferfish', behavior: 'ambush', plan: 'darter',
-    role: 'turret', shot: 'spine',
+    role: 'turret', shot: 'spine', moves: 'balloon',
     zone: 'sunlit', band: 'reef',
     size: [14, 20], hue: [34, 48], accent: 28, speed: 70, bite: 4,
     nutrition: 1.8, weight: 5, armor: 1, spikes: 1, bulk: 0.8, finSize: 0.9 },
 
   { id: 'nettle', name: 'Sea Nettle', behavior: 'drift', plan: 'jelly', role: 'drifter',
-    zone: 'sunlit', band: 'open',
+    moves: 'bloom', zone: 'sunlit', band: 'open',
     // quick for a jelly: a drifter has to arrive, and a bell's pulse is most of its speed
     size: [12, 20], hue: [12, 28], accent: 8, speed: 64, bite: 5,
     nutrition: 1.3, weight: 5, translucent: 0.6, glow: 0.6, veil: 0.5 },
