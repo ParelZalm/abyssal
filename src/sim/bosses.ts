@@ -68,6 +68,18 @@ const HOME = 3;
  * in the walk home or the rain — so it does not stack on a move already in the water.
  */
 const RING_EVERY: [number, number] = [4, 7];
+/**
+ * Seconds a flip holds in the punch fight (`Creature.flipHold`): about as long as a larva at a
+ * cruise takes to cross over its back, so one pass is one turn and not a turn each way.
+ */
+const TURN_HOLD = 0.6;
+/**
+ * The longest it goes without beginning a move before it gives up on reaching the larva and
+ * goes home for the rain. A larva up in a pocket of the roof, out of its sight and under rock
+ * the urchin's arc cannot clear, left it pressed against the rock below for as long as the
+ * larva stayed there, with only the spit's clock to break the wait.
+ */
+const LULL = 3.5;
 const RING_HURT: [number, number] = [3, 5];
 export const RING_WIND = 0.6;
 export const RING_SPOKES = 8;
@@ -222,6 +234,8 @@ export class Bosses {
   // ------------------------------------------------------------------ punch
 
   private punch(c: Creature, dt: number, p: Creature, t: Terrain) {
+    c.flipHold = TURN_HOLD;
+    c.lull += dt;
     const d = Math.sqrt(dist2(c.x, c.y, p.x, p.y)) / t.tile;
     const aim = Math.atan2(p.y - c.y, p.x - c.x);
     const sees = t.clearLine(c.x, c.y, p.x, p.y);
@@ -307,6 +321,7 @@ export class Bosses {
       if (c.volley === 0) this.tell(c);
       return;
     }
+    if (c.lull > LULL && c.volley === 0) { this.homeward(c); return; }
     // sidle: in to the near edge of its band, out from under the player, and across it
     const [near, far] = SIDLE;
     let a: number;
@@ -812,6 +827,7 @@ export class Bosses {
     c.vx = c.vy = 0;
     c.attack = 'none';
     c.exposed = len;
+    c.lull = 0;
   }
 
   /**
@@ -840,11 +856,13 @@ export class Bosses {
   private begin(c: Creature, step: Creature['attack'], len: number) {
     c.attack = step;
     c.attackT = c.attackLen = len;
+    c.lull = 0;
   }
 
   /** Spent: open to blows for `len`, and the world is told so it can be seen. */
   private spent(c: Creature, len: number) {
     c.exposed = len;
+    c.lull = 0;
     c.attack = 'none';
     this.world.pulses.push({ x: c.x, y: c.y, r: c.radius * 1.6, kind: SPENT_PULSE });
   }

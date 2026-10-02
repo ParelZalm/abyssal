@@ -125,8 +125,9 @@ export class Creature {
    * seconds held fast by the room, at `pinX`, `pinY`: a mantis shrimp wedged in a cleft, a
    * squid's arms round a pillar. `cave` is the middle of the cleft a mantis shrimp last
    * jammed itself in, which it will not punch down again until it has jammed in the other;
-   * `spitCd` seconds to its next spit, the first a few seconds into the fight; and `unseen`
-   * how long the player has kept out of its reach.
+   * `spitCd` seconds to its next spit, the first a few seconds into the fight; `unseen`
+   * how long the player has kept out of its reach; and `lull` seconds since it last began a
+   * move of any kind.
    */
   move: '' | 'lob' | 'breach' | 'draw' | 'butt' | 'home' | 'spit' = '';
   rounds = 0;
@@ -136,6 +137,14 @@ export class Creature {
   cave = NaN;
   spitCd = 4;
   unseen = 0;
+  lull = 0;
+  /**
+   * Seconds a flip holds before another may undo it, and when the last was (`Creature.clock`).
+   * Zero for all but a boss: a larva darting back and forth over a mantis shrimp swung its
+   * heading across on every pass, and it flipped there and back in a few frames, a spin.
+   */
+  flipHold = 0;
+  flippedAt = -Infinity;
   /**
    * A boss's hull against the room (`World.integrate`, `collideHull`): whether it was on rock
    * last step, the way out of it, and seconds before another thud may be felt — a body
@@ -573,10 +582,17 @@ export class Creature {
     // `faceFor` holds a facing with — or a body swimming near vertical would flip on every
     // wobble. A bell has no side to turn to.
     if (throttle > 0.1 && this.swim.pulseEvery <= 0 && Math.cos(desired) * this.face < -0.2) {
-      this.angle = Math.PI - this.angle;
-      this.face = this.face > 0 ? -1 : 1;
-      this.vx *= FLIP_KEEP;
-      this.vy *= FLIP_KEEP;
+      if (Creature.clock - this.flippedAt >= this.flipHold) {
+        this.angle = Math.PI - this.angle;
+        this.face = this.face > 0 ? -1 : 1;
+        this.vx *= FLIP_KEEP;
+        this.vy *= FLIP_KEEP;
+        this.flippedAt = Creature.clock;
+      } else {
+        // held: the heading mirrored onto the side it faces, so it keeps the climb or dive
+        // and does not turn the long way round through its back to get there
+        desired = Math.PI - desired;
+      }
     }
     const rate = this.agility() * dt;
     const want = angleDelta(this.angle, desired);

@@ -65,8 +65,9 @@ export interface Species {
    * outright: a boss is fought in hearts and strikes, not on its body's scale. Its armour is
    * flat off every shot, so a boss's is kept to two or three: at the Great White's old five a
    * larva's spit did a fifth of itself, and the fight was over three hundred shots. Tuned to
-   * about 40, 75 and 115 shots of a larva that found no damage, and under half that for one
-   * that doubled it, since the armour comes off a bigger shot too.
+   * about 60, 75 and 115 shots of a larva that found no damage, and under half that for one
+   * that doubled it, since the armour comes off a bigger shot too. The mantis shrimp's was 40,
+   * and its fight was over before the den had been round once: two clefts jammed and a rain.
    */
   boss?: 'punch' | 'charge' | 'grab';
   bossHp?: number;
@@ -158,7 +159,7 @@ export const SPECIES: Species[] = [
   // armour, a body the room can hold and the larva can get round. At 36-44 it was six and a
   // half, a fifth of the den across, and could not turn in it without its hull in the rock
   { id: 'mantisshrimp', name: 'Mantis Shrimp', behavior: 'apex', plan: 'mantis',
-    zone: 'sunlit', band: 'reef', guardian: true, boss: 'punch', bossHp: 200,
+    zone: 'sunlit', band: 'reef', guardian: true, boss: 'punch', bossHp: 300,
     size: [22, 25], hue: [132, 150], accent: 18, speed: 170, bite: 20,
     nutrition: 3, weight: 1, armor: 2, claws: 2, segments: 4, finSize: 0.8, sense: 600 },
 
