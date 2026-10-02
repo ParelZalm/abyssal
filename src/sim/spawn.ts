@@ -1,5 +1,5 @@
 import { PLAN_FORMS } from '../content/form';
-import { dealtHostiles } from '../content/sprites';
+import { dealtHostiles, NEWEST } from '../content/sprites';
 import { speciesById, type Role, type Species } from '../content/species';
 import { TEMPO, type Tank } from '../content/tanks';
 import { type Rng, TAU } from '../core/util';
@@ -28,17 +28,23 @@ export class Spawner {
    * the player comes in, away from the door they came through, so the first the player
    * knows of one is it coming. A role is held to `ROLE_MAX` a room: two turrets and a
    * spitter is a room to wait out, not one to fight. A pack species comes two at a time,
-   * since one mackerel circling is only a charger.
+   * since one mackerel circling is only a charger. The tank's first fight (`first`) is dealt
+   * the newest reworked enemy alone, when the tank has it (`NEWEST`): it is there to be tested,
+   * and anything beside it was a second thing to watch.
    */
-  hostiles(room: Terrain, tank: Tank, player: Creature, count: number) {
+  hostiles(room: Terrain, tank: Tank, player: Creature, count: number, first = false) {
     const table = dealtHostiles(tank.hostiles);
-    if (Object.keys(table).length === 0) return;
+    const empty = Object.keys(table).length === 0;
+    let lead: Species | null = first && NEWEST && tank.hostiles[NEWEST] ? speciesById(NEWEST) : null;
+    if (empty && !lead) return;
+    if (lead) count = 1;
     const dealt: Partial<Record<Role, number>> = {};
     let n = 0;
     // a pack is dealt as a pack: the next one dealt after a pack member is another of it
     let pack: Species | null = null;
     for (let guard = 0; n < count && guard < 40; guard++) {
-      const sp: Species = pack ?? speciesById(this.weighted(table));
+      if (!lead && !pack && empty) break;
+      const sp: Species = lead ?? pack ?? speciesById(this.weighted(table));
       const role = sp.role ?? 'charger';
       if ((dealt[role] ?? 0) >= ROLE_MAX[role]) { pack = null; continue; }
       const at = room.openSpot(this.rng, sp.size[1] * (sp.drawn ?? 1) * 0.6);
@@ -53,6 +59,7 @@ export class Spawner {
       c.roleCd = this.rng.range(0.3, 1.4) + hidden * STEALTH_DELAY;
       dealt[role] = (dealt[role] ?? 0) + 1;
       n++;
+      lead = null;
       pack = sp.moves === 'pack' && pack !== sp ? sp : null;
     }
   }

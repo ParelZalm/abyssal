@@ -137,6 +137,8 @@ export interface MapCell { gx: number; gy: number; type: MapRoom['type']; visite
 export class TankMap {
   readonly cells: Cell[];
   private current = 0;
+  /** Whether a fight room has been dealt its hostiles yet: the first is dealt `NEWEST`. */
+  private fought = false;
   /** Seconds since the room the player is in was won; unbounded for one entered already won. */
   private calm = Infinity;
   /** The room's fauna not yet in the water: hiding from its fight, or still to be placed. */
@@ -296,7 +298,10 @@ export class TankMap {
     if (fight && !c.cleared) {
       // the boss room holds the tank's boss and nothing else of the fight
       if (c.map.type === 'boss') this.world.spawner.boss(t, tank, this.p);
-      else this.world.spawner.hostiles(t, tank, this.p, new Rng(c.seed).int(FIGHT_HOSTILES[0], FIGHT_HOSTILES[1]));
+      else {
+        this.world.spawner.hostiles(t, tank, this.p, new Rng(c.seed).int(FIGHT_HOSTILES[0], FIGHT_HOSTILES[1]), !this.fought);
+        this.fought = true;
+      }
       t.locked = true;
     } else {
       c.cleared = true;

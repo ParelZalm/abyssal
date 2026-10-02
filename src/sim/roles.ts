@@ -22,6 +22,9 @@ import type { World } from './world';
  * track the player to the instant it went, which at the game's tempo made a dash from two
  * tiles off a hit nothing could answer: whatever the player did in the wind-up, the line
  * followed. Locked, a sidestep once the bar is full is always a dodge.
+ *
+ * `DASH_RANGE` is every charger's but one with a `reach` of its own: the barracuda goes from
+ * across the room, which its speed carries it over, and its wind-up is the same tell.
  */
 const CHARGE_CLOSE = 0.55;
 const DASH_RANGE = 6;
@@ -256,7 +259,7 @@ export class Roles {
       return;
     }
     const sees = t.clearLine(c.x, c.y, p.x, p.y);
-    if (sees && d < DASH_RANGE * t.tile && c.roleCd <= 0 && this.free(c)) {
+    if (sees && d < (c.species.reach ?? DASH_RANGE) * t.tile && c.roleCd <= 0 && this.free(c)) {
       c.volley = 0;
       this.begin(c, 'windup', CHARGE_WIND(c.genome.size) + CHARGE_LOCK);
       c.aimA = Math.atan2(p.y - c.y, p.x - c.x);

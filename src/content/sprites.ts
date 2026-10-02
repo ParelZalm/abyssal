@@ -88,10 +88,22 @@ export const SPRITES: Record<string, SpriteArt> = {
  */
 export const REWORKED_ONLY = true;
 
-/** A tank's hostile table as it is dealt: the reworked enemies only, while `REWORKED_ONLY`. */
+/**
+ * The enemy last reworked, for testing it while the roster is converted: the first fight room
+ * the player enters in its tank holds it and nothing else, one of it, and no other room deals
+ * it — two side by side at different sizes read as two versions of it, and the rest of a room
+ * was more to watch than the one thing being tested. `/?tank=deep&room=fight` is that room.
+ * Null deals it as any other.
+ */
+export const NEWEST: string | null = 'barracuda';
+
+/**
+ * A tank's hostile table as it is dealt: the reworked enemies only, while `REWORKED_ONLY`,
+ * and never `NEWEST`, which `Spawner.hostiles` deals on its own.
+ */
 export function dealtHostiles(table: Record<string, number>): Record<string, number> {
-  if (!REWORKED_ONLY) return table;
-  return Object.fromEntries(Object.entries(table).filter(([id]) => SPRITES[id]));
+  return Object.fromEntries(Object.entries(table)
+    .filter(([id]) => (!REWORKED_ONLY || SPRITES[id]) && id !== NEWEST));
 }
 
 /** Sprite pixels per R unit, for a body of form `f`. */

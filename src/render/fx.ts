@@ -25,7 +25,16 @@ interface P {
  */
 export class Fx {
   layer = new Container();
+  /**
+   * What is light rather than lit: above the lighting pass, additive, as the blooms are
+   * (`Game.reset`). Under the dark a streak went out where nothing lit the water round it.
+   */
+  glow = new Container();
   private live: P[] = [];
+
+  constructor() {
+    this.glow.blendMode = 'add';
+  }
   /** Light thrown for a moment — a hit, a kill — and gone: world units, seconds. */
   private flashes: { x: number; y: number; r: number; color: number; a: number; t: number; max: number }[] = [];
   private dots: Sprite[] = [];
@@ -136,6 +145,22 @@ export class Fx {
       baseScale: s.scale.x });
   }
 
+  /**
+   * A line of light from (`x0`, `y0`) to (`x1`, `y1`), `w` across, left where it was laid and
+   * gone in `max` seconds: a dot stretched along it, so its ends are soft and a run of them
+   * laid end to end frame after frame is one line.
+   */
+  streak(x0: number, y0: number, x1: number, y1: number, w: number, color: number, alpha: number, max: number) {
+    const s = this.takeDot(1, color, alpha);
+    this.glow.addChild(s);
+    s.width = Math.hypot(x1 - x0, y1 - y0) + w;
+    s.height = w;
+    s.rotation = Math.atan2(y1 - y0, x1 - x0);
+    s.x = (x0 + x1) / 2; s.y = (y0 + y1) / 2;
+    this.live.push({ node: s, vx: 0, vy: 0, life: 0, max, grow: 0, spread: 1, lift: 0, peak: alpha,
+      baseScale: s.scale.x });
+  }
+
   ring(x: number, y: number, color: number, radius: number) {
     const g = this.rings.pop() ?? new Graphics();
     g.visible = true;
@@ -156,7 +181,7 @@ export class Fx {
       const t = p.life / p.max;
       if (t >= 1) {
         p.node.visible = false;
-        this.layer.removeChild(p.node);
+        p.node.parent?.removeChild(p.node);
         if (p.grow) this.rings.push(p.node as Graphics);
         else this.dots.push(p.node as Sprite);
         this.live.splice(i, 1);

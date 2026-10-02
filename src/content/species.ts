@@ -55,6 +55,13 @@ export interface Species {
    * what it does as fauna; a hostile has its role's brain instead (`sim/roles.ts`).
    */
   role?: Role;
+  /**
+   * A charger's dash, where it is not every charger's: `reach`, how many tiles off it winds up
+   * from (`Roles.charger`'s `DASH_RANGE` when unset), and `streak`, the colour of the light the
+   * dash leaves behind it (`Impacts.trail`), for a dash too fast to read from the body alone.
+   */
+  reach?: number;
+  streak?: number;
   /** Its moveset, for a hostile that plays its role its own way. */
   moves?: Moveset;
   /** What it fires, for the roles that fire. */
@@ -264,9 +271,11 @@ export const SPECIES: Species[] = [
     photophores: 0.6, segments: 2, heal: 0.45 },
 
   { id: 'barracuda', name: 'Barracuda', behavior: 'hunter', plan: 'eel', role: 'charger',
-    // drawn twice its size: at its own it was 40 texels long in the deep tank, a sliver
-    // under the anglerfish with no teeth left to it
-    zone: 'twilight', bleed: 900, drawn: 2,
+    // drawn bigger than its size: at its own it was 40 texels long in the deep tank, a sliver
+    // under the anglerfish with no teeth left to it, and at twice it was the gulper's length.
+    // It is the ambush from across the room: its dash, at its speed, covers eleven tiles in
+    // the deep, so it winds up from ten off, and its streak says how fast it came
+    zone: 'twilight', bleed: 900, drawn: 1.6, reach: 10, streak: 0xa8dcff,
     size: [34, 54], hue: [192, 212], accent: 45, speed: 250, bite: 15,
     nutrition: 2.2, weight: 8, jaw: 0.7, finSize: 0.7, sense: 560 },
 

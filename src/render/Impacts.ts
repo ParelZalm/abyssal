@@ -9,6 +9,7 @@ import type { Dread } from './Dread';
 import type { Fx } from './fx';
 import type { ShotMark } from '../sim/organs';
 import type { Shot } from '../sim/world';
+import { noseOf } from '../sim/hull';
 import { shotGlow } from './shots';
 import { lightAt, waterColor } from './water';
 
@@ -38,6 +39,8 @@ export class Impacts {
   private readonly toldCue = new Set<BossCue>();
   /** Seconds before another hint may toast, so a held state does not repeat itself. */
   private hintCd = 0;
+  /** Where each dashing body's streak was laid to last frame, so this frame's joins it. */
+  private readonly streaks = new WeakMap<Creature, { x: number; y: number }>();
 
   constructor(private readonly fx: Fx, private readonly camera: Camera,
               private readonly dread: Dread, private readonly ui: UI) {}
@@ -222,10 +225,25 @@ export class Impacts {
   /**
    * What the player's shots shed as they fly — every mark it carries, so one that does not
    * decide its shape or colour is still seen to be there — and the burn and the chill on a
-   * body, which a wound's flinch is over too soon to say.
+   * body, which a wound's flinch is over too soon to say. And the streak a charger with one
+   * (`Species.streak`) leaves through its dash, laid from its tail so it is behind the body.
    */
   trail(world: World, dt: number) {
     const { fx } = this;
+    for (const c of world.creatures) {
+      const color = c.species.streak;
+      if (!color) continue;
+      if (!c.alive || c.attack !== 'strike' || !c.view.visible) { this.streaks.delete(c); continue; }
+      const n = noseOf(c);
+      const tail = { x: 2 * c.x - n.x, y: 2 * c.y - n.y };
+      const last = this.streaks.get(c);
+      this.streaks.set(c, tail);
+      if (!last) continue;
+      fx.streak(last.x, last.y, tail.x, tail.y, c.radius * STREAK_CORE, 0xffffff, 0.7, STREAK_LIFE * 0.6);
+      fx.streak(last.x, last.y, tail.x, tail.y, c.radius * STREAK_HALO, color, 0.45, STREAK_LIFE);
+      // and it lights the water it goes through, or the dark round it says nothing passed
+      fx.flash(tail.x, tail.y, color, c.radius * 2, 0.35, STREAK_LIFE);
+    }
     for (const s of world.shots) {
       if (!s.marks) continue;
       for (const m of s.marks) if (Math.random() < TRAIL_RATE[m] * dt) shed(fx, s, m);
@@ -284,6 +302,14 @@ const TRAIL_RATE: Record<ShotMark, number> = {
   scald: 30, halo: 18, arc: 24, seek: 14, frost: 16, blast: 12, brood: 8, pierce: 24,
 };
 const EMBERS = 22;
+/**
+ * A dash's streak: seconds a stretch of it lasts, and how wide its white core and its coloured
+ * halo are, in radii of the body. At the barracuda's dash a quarter second is four tiles of
+ * line behind it, long enough to say where it came from and gone before the next.
+ */
+const STREAK_LIFE = 0.25;
+const STREAK_CORE = 0.16;
+const STREAK_HALO = 0.6;
 const RIME = 10;
 
 /** One mote of a mark off a shot in flight, sized off the shot. */

@@ -249,6 +249,8 @@ Open the preview. When something is off:
   Write the import command into the comment above the entry, flags and all, so it can be
   run again.
 - **`content/species.ts`**: set `drawn` (*Size*, below).
+- **`content/sprites.ts`**: point `NEWEST` at it, so the tank's first fight room holds it
+  alone to test.
 
 Nothing else changes: `FishView`, `Creature` and the board's cells already pass the species
 through, and `bakeFish` takes the sprite path for any species with frames loaded.

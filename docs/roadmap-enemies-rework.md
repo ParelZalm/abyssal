@@ -11,6 +11,10 @@ reworked enemy yet has its fight rooms open as soon as they are entered: today t
 and the reef. Bosses are dealt whatever they are drawn with, since a tank cannot lose its way
 down. Set `REWORKED_ONLY` false to see the whole roster again.
 
+**The enemy last reworked is tested on its own** (`NEWEST` in `content/sprites.ts`): the first
+fight room entered in its tank holds it alone, one of it, and no other room deals it.
+`/?tank=«tank»&room=fight` is that room. Point `NEWEST` at each enemy as it comes in.
+
 ## The flow, for one enemy
 
 | Step | Who | What | How |
@@ -20,7 +24,7 @@ down. Set `REWORKED_ONLY` false to see the whole roster again.
 | 3. Design sheet | art side | generate Stage A, choose the design | [Stage A](sprites.md#stage-a--the-reference-sheet-design) |
 | 4. Sprite sheet | art side | generate Stage B from the chosen design, check it, send the PNG | [Stage B](sprites.md#stage-b--the-sprite-sheet-production), [Before sending it back](sprites.md#before-sending-it-back) |
 | 5. Import | code side | `npm run sprite`, fix pitch or the strike's box if the preview says so | [Import it](sprites.md#2-import-it) |
-| 6. Wire | code side | `SOURCES`, `SPRITES` (with the import command in its comment), `drawn` | [Wire it](sprites.md#3-wire-it), [Size](sprites.md#size) |
+| 6. Wire | code side | `SOURCES`, `SPRITES` (with the import command in its comment), `drawn`, `NEWEST` | [Wire it](sprites.md#3-wire-it), [Size](sprites.md#size) |
 | 7. Check | code side | the board, a tank, the hitbox, the lights | [Check it](sprites.md#4-check-it) |
 | 8. Commit | code side | sheets, frames, tables, and the row below marked done, in one commit | [Commit](sprites.md#5-commit) |
 
@@ -38,7 +42,7 @@ needs the code named in *Blocked on* first.
 | --- | --- | --- | --- | --- |
 | Anglerfish | angler · turret | rest, strike (jaw) | **done** | drawn 2; `angler.webp`, `angler-sprite.webp` |
 | Gulper Eel | eel · charger | rest, strike (jaw and pouch) | **done** | drawn 1, already 3.7 tiles long; `gulper.webp`, `gulper-sprite.webp` |
-| Barracuda | eel · charger | rest, strike (jaw) | **done** | drawn 2; its sheet bled magenta round the outline (`--fringe`); `barracuda.webp`, `barracuda-sprite.webp` |
+| Barracuda | eel · charger | rest, strike (jaw) | **done** | drawn 1.6; dashes from 10 tiles (`reach`) and leaves a streak of light (`streak`); its sheet bled magenta round the outline (`--fringe`); `barracuda.webp`, `barracuda-sprite.webp` |
 | Siphonophore | jelly · drifter | rest | ready | the first drifter: check the pulse on the mesh reads |
 | Vampire Squid | squid · spitter | rest, strike (mouth) | blocked | rigged arms |
 

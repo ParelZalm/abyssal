@@ -297,7 +297,7 @@ export class Game {
     // one draw: they are the light, and the dark must not fall on them. The E prompt goes
     // last, over them all, since the dark must not swallow it either
     this.camera.over.addChild(layers.glow, this.drain.glow, this.pedestals.glow, this.pickups.glow,
-      this.shots.glow, world.glow, this.tells.root, this.prompt.root);
+      this.shots.glow, world.glow, this.fx.glow, this.tells.root, this.prompt.root);
     this.app.stage.addChild(this.water.layer, this.camera.root, this.lighting.sprite,
       this.camera.over, this.dropIn.root);
 
