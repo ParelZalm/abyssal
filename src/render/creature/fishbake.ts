@@ -23,6 +23,7 @@ import { lerp } from '../../core/util';
 import { BLOOM_TRAIL, hasSynergy, synergiesOf } from '../../sim/organs';
 import { artDensity } from '../pixel';
 import { palette, type Palette } from './bake/palette';
+import { bakeSprite, hasSprite } from './sprite';
 import { M, shade, Sheet, type Emitter } from './bake/sheet';
 import { flank, whaleSpots, camouflage, crazing, veins, ballast, viscera, mantle, cilia, scales } from './bake/body';
 import { caudalFin, fluke, mantleFins, dorsalRidge, medianFins, fins, ribbonFin, veil, bloomTrail,
@@ -118,14 +119,17 @@ function key(g: Genome, plan: Plan) {
  * blue canvas with the DOM HUD carrying on over it. Now only unused entries are evicted,
  * and if every entry is on screen the cache simply runs over its size until some free up.
  */
-export function bakeFish(g: Genome, plan: Plan): Baked {
-  const k = key(g, plan);
+export function bakeFish(g: Genome, plan: Plan, art?: string): Baked {
+  // a species with a sprite of its own is drawn from it (`sprite.ts`), keyed by its density
+  // and the length its form gives it, which is all the sprite's fit reads
+  const sprite = art && hasSprite(art) ? art : null;
+  const k = sprite ? `sprite|${sprite}|${resolutionFor(g)}|${formFor(g, plan).len}` : key(g, plan);
   let hit = cache.get(k);
   if (hit) {
     // re-inserting keeps the map in least-recently-used order for the eviction scan
     cache.delete(k);
   } else {
-    hit = paint(g, plan);
+    hit = sprite ? { ...bakeSprite(sprite, g, plan, resolutionFor(g)), users: 0 } : paint(g, plan);
     evict();
   }
   cache.set(k, hit);

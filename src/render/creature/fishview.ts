@@ -233,7 +233,11 @@ export class FishView extends Container {
   /** The art density this view was baked at; a new tier means a re-bake. */
   private version = artVersion;
 
-  constructor(private g: Genome, private plan: Plan = 'darter') {
+  /**
+   * `art` names a species drawn from a sprite (`content/sprites.ts`) rather than painted;
+   * only an animal that never changes has one, so a transformation never meets it.
+   */
+  constructor(private g: Genome, private plan: Plan = 'darter', private art?: string) {
     super();
     for (const s of [this.aura, this.halo, this.core, this.ember]) {
       s.anchor.set(0.5);
@@ -385,7 +389,7 @@ export class FishView extends Container {
     // take the new texture before letting go of the old one, so a rebuild onto the same
     // genome never leaves the entry at zero users for an eviction to catch
     const old = this.baked;
-    this.baked = bakeFish(g, this.plan);
+    this.baked = bakeFish(g, this.plan, this.art);
     this.hangLamps(this.baked.lights);
     if (old) releaseFish(old);
     const { front, back } = this.baked;

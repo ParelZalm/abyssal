@@ -153,6 +153,9 @@ Read `docs/decisions.md` before rebuilding anything that looks missing.
   `content/form.ts` (a spine and one depth curve; `edgeAt` places parts on it), the painting
   in `render/creature/fishbake.ts` (`paint()` is the order; the painters are in `bake/`,
   per pixel on a `Sheet`), the skinned mesh in `render/creature/fishview.ts`.
+- **An enemy may be drawn from a sprite instead** (`content/sprites.ts`,
+  `render/creature/sprite.ts`): enemies never mutate, so one authored picture can match a
+  reference where the painters cannot. The player and every plan it can take stay painted.
 - **Nothing on a creature is stroked.** A contour has a position of its own, so it draws
   twice wherever parts cross. Painters set what a pixel is; `bake/sheet.ts` shades it, and
   the outline and rim are read off the finished silhouette. See `docs/decisions.md`.

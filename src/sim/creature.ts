@@ -1,6 +1,7 @@
 import { FishView, type Pose } from '../render/creature/fishview';
 import { armourOf, maxHp, type Genome } from '../content/genome';
 import { hunts, type Species } from '../content/species';
+import { SPRITES } from '../content/sprites';
 import { drawnAngle } from '../content/form';
 import { angleDelta, clamp, TAU } from '../core/util';
 import { guardedOf, organsOf, swimOf, type Organ, type SwimMods } from './organs';
@@ -290,7 +291,7 @@ export class Creature {
     this.hp = this.hpMax;
     this.organs = organsOf(genome);
     this.swim = swimOf(genome, this.organs);
-    this.view = new FishView(genome, species.plan);
+    this.view = new FishView(genome, species.plan, SPRITES[species.id] ? species.id : undefined);
   }
 
   /**

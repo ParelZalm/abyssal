@@ -28,6 +28,22 @@ tail (`fan`), scales, a sparkle for photophores, and the lure, eye and specks in
 cold colour (`heat: 0` keeps menace from warming it). At the deep tank's zoom an anglerfish
 is 10 to 20 texels long, so most of that only shows on the board or on a big window.
 
+The painters could not get closer than that to the sheet (the board's comparison is on
+`prototype/angler-art`), so an enemy may instead be **drawn from a sprite**: it never
+mutates, and one picture of one animal can be the reference exactly. `content/sprites.ts`
+holds each sprite's landmarks in its own pixels — snout and tail root span the plan's form,
+so the hull lies inside the picture; the axis the swim bends about; the lure's bulb, which
+the trap fires from. `render/creature/sprite.ts` loads the frames before anything is drawn
+and resamples them to the bake's density through the same cache: a coverage-weighted mean
+per texel, snapped back to the sprite's own colours, ringed in its darkest. The player and
+every plan it can take stay painted. The anglerfish is the first
+(`render/creature/sprites/`), from `docs/media/reference/angler-sprite.webp`. A generated
+sheet is not on a clean grid, so it was snapped by hand in the console: the cell bounds
+are the strongest colour edge a pitch on from the last (its columns drifted by three
+pixels), each cell its median colour, the lot clustered to 22 colours. Its strike frame had
+been redrawn whole, which made the body shimmer on every bite, so the strike is the rest
+frame with only the jaw taken from it.
+
 ## The pixel grid
 
 `src/render/pixel.ts`. The whole game is drawn on one coarse grid: the canvas is created

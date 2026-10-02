@@ -19,6 +19,7 @@ import { createIcon, type IconName } from '../ui/icons';
 import type { Rarity } from '../content/traits';
 import { catalog, type DesignGroup, type DesignItem } from './catalog';
 import { followZoom } from '../render/pixel';
+import { loadSprites } from '../render/creature/sprite';
 
 const params = new URLSearchParams(location.search);
 // not the rooms, which are twenty seconds' baking: they bake when asked for
@@ -72,6 +73,7 @@ interface Cell {
   wait?: Text;
 }
 let cells: Cell[] = [];
+await loadSprites();
 const sections = catalog();
 const groups: DesignGroup[] = sections.flatMap(s => s.groups);
 

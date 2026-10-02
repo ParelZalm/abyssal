@@ -1,4 +1,5 @@
 import { drawnAngle, formFor, lureBulb, R } from '../../content/form';
+import { spriteBulb } from '../../content/sprites';
 import { dist2 } from '../../core/util';
 import { envenom, sting } from './effects';
 import { O, type Organ } from './types';
@@ -47,7 +48,8 @@ export const BODY: Organ[] = [
       const p = world.player;
       // an Angler brushing a fellow angler's light is not what it is fishing for
       if (!p.alive || c.spares(p)) return;
-      const b = lureBulb(c.genome, formFor(c.genome, c.species.plan));
+      // a sprite's bulb is where its picture hangs it, not where the painted lure would
+      const b = spriteBulb(c.species.id, c.genome, c.species.plan) ?? lureBulb(c.genome, formFor(c.genome, c.species.plan));
       const k = c.genome.size / R;
       // in the view's facing frame, so the bulb is struck where it is drawn
       const r = drawnAngle(c.angle, c.face, c.upright);
