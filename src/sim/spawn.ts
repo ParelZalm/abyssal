@@ -1,4 +1,5 @@
 import { PLAN_FORMS } from '../content/form';
+import { dealtHostiles } from '../content/sprites';
 import { speciesById, type Role, type Species } from '../content/species';
 import { TEMPO, type Tank } from '../content/tanks';
 import { type Rng, TAU } from '../core/util';
@@ -30,12 +31,14 @@ export class Spawner {
    * since one mackerel circling is only a charger.
    */
   hostiles(room: Terrain, tank: Tank, player: Creature, count: number) {
+    const table = dealtHostiles(tank.hostiles);
+    if (Object.keys(table).length === 0) return;
     const dealt: Partial<Record<Role, number>> = {};
     let n = 0;
     // a pack is dealt as a pack: the next one dealt after a pack member is another of it
     let pack: Species | null = null;
     for (let guard = 0; n < count && guard < 40; guard++) {
-      const sp: Species = pack ?? speciesById(this.weighted(tank.hostiles));
+      const sp: Species = pack ?? speciesById(this.weighted(table));
       const role = sp.role ?? 'charger';
       if ((dealt[role] ?? 0) >= ROLE_MAX[role]) { pack = null; continue; }
       const at = room.openSpot(this.rng, sp.size[1] * (sp.drawn ?? 1) * 0.6);

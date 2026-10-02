@@ -54,6 +54,21 @@ export const SPRITES: Record<string, SpriteArt> = {
                    [98.5, 19, 9.3], [72.5, 15.5, 8.1], [46.5, 13, 6], [21.5, 13, 1.7]] },
 };
 
+/**
+ * While the roster is converted (`docs/sprites.md`), only enemies drawn from a sprite are
+ * dealt into a fight room: the painted ones beside them made every room a mix of two art
+ * styles. A tank with none left to deal has its fight rooms open as soon as they are entered.
+ * The bosses are dealt whatever they are drawn with, since a tank cannot be left without its
+ * way down. False deals the whole roster again.
+ */
+export const REWORKED_ONLY = true;
+
+/** A tank's hostile table as it is dealt: the reworked enemies only, while `REWORKED_ONLY`. */
+export function dealtHostiles(table: Record<string, number>): Record<string, number> {
+  if (!REWORKED_ONLY) return table;
+  return Object.fromEntries(Object.entries(table).filter(([id]) => SPRITES[id]));
+}
+
 /** Sprite pixels per R unit, for a body of form `f`. */
 export function spriteScale(s: SpriteArt, f: Form) {
   return (s.snout - s.tail) / (f.len * R);

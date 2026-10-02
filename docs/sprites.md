@@ -277,29 +277,11 @@ they read.
 ### 5. Commit
 
 The sheet in `docs/media/reference/`, the frames in `render/creature/sprites/`, the
-`SOURCES` and `SPRITES` entries and `drawn`, in one commit. Mark the species done in the table
-below in the same commit.
+`SOURCES` and `SPRITES` entries and `drawn`, in one commit. Mark the species done in
+[roadmap-enemies-rework.md](roadmap-enemies-rework.md) in the same commit.
 
 ## Converting the current roster
 
-Every enemy as it stands, old (painted) to new (sprite). Bosses are left painted for now:
-their fights read off parts of their plans.
-
-| Tank | Enemy | Plan · role | Frames | Status |
-| --- | --- | --- | --- | --- |
-| deep | Anglerfish | angler · turret | rest, strike (jaw) | **done**, drawn 2 |
-| deep | Gulper Eel | eel · charger | rest, strike (the gape) | **done**, drawn 1 (already 3.7 tiles long) |
-| deep | Barracuda | eel · charger | rest, strike | ready |
-| deep | Siphonophore | jelly · drifter | rest | ready |
-| deep | Vampire Squid | squid · spitter | rest, strike | blocked: rigged arms |
-| reef | Ribbon Eel | eel · charger | rest, strike | ready |
-| reef | Triggerfish | darter · spitter | rest, strike | ready |
-| reef | Lionfish | darter · turret | rest, strike (spines up) | ready |
-| reef | Moon Jelly | jelly · drifter | rest | ready |
-| nursery | Mackerel | darter · charger, `pack` | rest, strike, wounded | blocked: wounded frame |
-| nursery | Archerfish | darter · spitter, `volley` | rest, strike | ready |
-| nursery | Pufferfish | darter · turret, `balloon` | rest, strike, wounded | blocked: wounded frame |
-| nursery | Sea Nettle | jelly · drifter, `bloom` | rest, wounded | blocked: wounded frame |
-
-The deep tank's are the natural next ones: the darkest water, so the art direction's lights
-carry them, and the anglerfish is already there to match.
+The list — which enemies are done, which are ready, which are blocked and on what, and the
+order — is [roadmap-enemies-rework.md](roadmap-enemies-rework.md). While it is under way only
+reworked enemies are dealt into fights (`REWORKED_ONLY` in `content/sprites.ts`).

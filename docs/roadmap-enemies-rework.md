@@ -1,0 +1,94 @@
+# Roadmap: the enemies rework
+
+Every enemy goes from painted (built from its genome by `render/creature/fishbake.ts`) to
+drawn from a sprite (`content/sprites.ts`), one at a time, through the flow below. This is
+the list: what is done, what can be done next, and what has to be built first. The how of
+each step is in [sprites.md](sprites.md); this page is the order and the record.
+
+**While the rework is under way, only reworked enemies are dealt into fights**
+(`REWORKED_ONLY` in `content/sprites.ts`), so no room mixes the two styles. A tank with no
+reworked enemy yet has its fight rooms open as soon as they are entered: today the nursery
+and the reef. Bosses are dealt whatever they are drawn with, since a tank cannot lose its way
+down. Set `REWORKED_ONLY` false to see the whole roster again.
+
+## The flow, for one enemy
+
+| Step | Who | What | How |
+| --- | --- | --- | --- |
+| 1. Pick | both | the next *ready* enemy below | — |
+| 2. Prompt | code side | fill in the two prompts for it and hand them over | [sprites.md › Stage A](sprites.md#stage-a--the-reference-sheet-design), [Stage B](sprites.md#stage-b--the-sprite-sheet-production), [Frames by role](sprites.md#frames-by-role) |
+| 3. Design sheet | art side | generate Stage A, choose the design | [Stage A](sprites.md#stage-a--the-reference-sheet-design) |
+| 4. Sprite sheet | art side | generate Stage B from the chosen design, check it, send the PNG | [Stage B](sprites.md#stage-b--the-sprite-sheet-production), [Before sending it back](sprites.md#before-sending-it-back) |
+| 5. Import | code side | `npm run sprite`, fix pitch or the strike's box if the preview says so | [Import it](sprites.md#2-import-it) |
+| 6. Wire | code side | `SOURCES`, `SPRITES` (with the import command in its comment), `drawn` | [Wire it](sprites.md#3-wire-it), [Size](sprites.md#size) |
+| 7. Check | code side | the board, a tank, the hitbox, the lights | [Check it](sprites.md#4-check-it) |
+| 8. Commit | code side | sheets, frames, tables, and the row below marked done, in one commit | [Commit](sprites.md#5-commit) |
+
+Step 3 can be skipped when the design is already settled; the Stage B prompt then takes the
+style sheets and a description instead of the animal's own Stage A sheet.
+
+## Status
+
+**done** is in the game from a sprite. **ready** can go through the flow now. **blocked**
+needs the code named in *Blocked on* first.
+
+### Deep tank
+
+| Enemy | Plan · role | Frames | Status | Notes |
+| --- | --- | --- | --- | --- |
+| Anglerfish | angler · turret | rest, strike (jaw) | **done** | drawn 2; `angler.webp`, `angler-sprite.webp` |
+| Gulper Eel | eel · charger | rest, strike (jaw and pouch) | **done** | drawn 1, already 3.7 tiles long; `gulper.webp`, `gulper-sprite.webp` |
+| Barracuda | eel · charger | rest, strike (jaw) | ready | |
+| Siphonophore | jelly · drifter | rest | ready | the first drifter: check the pulse on the mesh reads |
+| Vampire Squid | squid · spitter | rest, strike (mouth) | blocked | rigged arms |
+
+### Reef tank
+
+| Enemy | Plan · role | Frames | Status | Notes |
+| --- | --- | --- | --- | --- |
+| Ribbon Eel | eel · charger | rest, strike (jaw) | ready | |
+| Triggerfish | darter · spitter | rest, strike (mouth) | ready | |
+| Lionfish | darter · turret | rest, strike (spines up) | ready | its spines are its tell |
+| Moon Jelly | jelly · drifter | rest | ready | |
+
+### Nursery tank
+
+| Enemy | Plan · role | Frames | Status | Notes |
+| --- | --- | --- | --- | --- |
+| Archerfish | darter · spitter, `volley` | rest, strike (mouth) | ready | `volley` has no wounded look, so nothing blocks it |
+| Mackerel | darter · charger, `pack` | rest, strike, wounded | blocked | wounded frame (the pack flushes red) |
+| Pufferfish | darter · turret, `balloon` | rest, strike, wounded | blocked | wounded frame (grows spikes); its puff is a swell of the mesh and should carry over |
+| Sea Nettle | jelly · drifter, `bloom` | rest, wounded | blocked | wounded frame (glows) |
+
+### Bosses — later
+
+| Boss | Tank | Why later |
+| --- | --- | --- |
+| Mantis Shrimp | nursery | its club is a part of its plan the fight reads |
+| Great White | reef | its fight reads its snout and its tells off the plan |
+| Giant Squid | deep | its arms are rigged and torn off one at a time |
+
+## Blocked on
+
+Code to write before a blocked enemy can go through the flow. Each unblocks the rows that
+name it.
+
+- **A wounded frame.** The nursery's movesets change a hostile's look when it is hurt
+  (`woundedGenome` in `sim/roles.ts` repaints it). A sprite needs a third frame, *wounded*,
+  imported beside the other two and swapped in by `bakeSprite` when the view rebuilds a
+  wounded hostile. Unblocks the mackerel, pufferfish and sea nettle.
+- **Rigged arms.** A squid plan's arms are strips of their own (`armRig` in
+  `render/creature/fishbake.ts`) that reach and grab. A sprite needs the arm as its own image
+  and the rig to use it. Unblocks the vampire squid, and later the Giant Squid.
+
+## Order
+
+1. **Deep tank first:** the barracuda, then the siphonophore. The darkest water carries the
+   art direction's lights best, and the two done already set the style to match.
+2. **The reef** next, whole: four *ready* enemies, and its fights come back when the first one
+   is in.
+3. **The nursery's archerfish**, so the first tank has a fight again.
+4. **A wounded frame**, then the mackerel, pufferfish and sea nettle.
+5. **Rigged arms**, then the vampire squid.
+6. **Bosses**, each a question of its own.
+7. **`REWORKED_ONLY` comes out** once no fight room is short of enemies.
