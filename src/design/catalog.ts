@@ -7,7 +7,10 @@
  * that is the whole point of the page, so keep it accurate when things move.
  */
 import { Container, Graphics, Sprite } from 'pixi.js';
-import { PLAN_FORMS, type Plan } from '../content/form';
+import { formFor, PLAN_FORMS, R, type Plan } from '../content/form';
+import { bakeFish } from '../render/creature/fishbake';
+import { refCanvas, refReady, REF_FISH, REF_PER_LEN } from '../render/creature/proto-angler';
+import { artDensity } from '../render/pixel';
 import { FishView, REST, type Pose } from '../render/creature/fishview';
 import { FAMILY_NAMES, TRANSFORMS, type Family } from '../content/forms';
 import { baseGenome, type Genome } from '../content/genome';
@@ -701,6 +704,65 @@ function speciesGroup(): DesignGroup {
       };
     }),
   };
+}
+
+// ------------------------------------------------------------------ PROTOTYPE: angler art
+
+/**
+ * PROTOTYPE — `prototype/angler-art` only. The anglerfish four ways, each at the three sizes
+ * that matter: the reference shrunk (what the art would be if it could simply be scaled),
+ * the shipping bake, A (the per-part painter) and B (the reference cut out and snapped to its
+ * palette, as an authored sprite). 115 and 60 px are a big board cell; 30 px is the deep
+ * tank on a 1920-wide window, and 16 px a 1024-wide one.
+ */
+function protoAnglerGroup(): DesignGroup {
+  const sp = speciesById('anglerfish');
+  const idx = SPECIES.indexOf(sp);
+  const geno = () => genomeFor(sp, new Rng(1000 + idx * 77));
+  const sizeFor = (N: number) => {
+    const g = geno(); const f = formFor(g, 'angler');
+    return N / REF_FISH * REF_PER_LEN(f.len) * R / artDensity();
+  };
+  const items: DesignItem[] = [];
+  for (const N of [115, 60, 30, 16]) {
+    for (const v of ['ref', 'now', 'a', 'b'] as const) {
+      const made = () => { const g = geno(); g.size = sizeFor(N); if (v === 'a' || v === 'b') (g as Genome & { __art?: string }).__art = v; return g; };
+      const g = made();
+      items.push({
+        id: `${v}-${N}`,
+        name: `${{ ref: 'Reference', now: 'Shipping', a: 'A · painter', b: 'B · template' }[v]} · ${N} px`,
+        note: { ref: 'The reference sheet shrunk smoothly: the art if it could only be scaled.',
+                now: 'The bake as committed: genome-driven, one light for the whole body.',
+                a: 'Traced shape, each part lit as its own form, no dither, the reference palette.',
+                b: 'The reference cut out and snapped to its palette at this size: an authored sprite.' }[v],
+        source: 'src/render/creature/proto-angler.ts',
+        span: g.size * 3.2,
+        depth: 5100,
+        genome: g,
+        prepare: () => refReady(),
+        make: () => v === 'ref' ? refSprite(made(), N) : boardFish(made(), 'angler'),
+        animate: v === 'ref' ? undefined : fishAnimate,
+      });
+    }
+  }
+  return { id: 'proto-angler', name: 'PROTOTYPE · Angler art', note: 'Reference, shipping, A and B side by side at 115, 60, 30 and 16 px. Throwaway.', items };
+}
+
+/** The reference's fish shrunk to `N` px long, framed as the bake frames its strip. */
+function refSprite(g: Genome, N: number) {
+  const b = bakeFish({ ...g, __art: 'b' } as Genome, 'angler');
+  const k = N / REF_FISH;
+  const src = refCanvas();
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(src.width * k)); c.height = Math.max(1, Math.round(src.height * k));
+  const x = c.getContext('2d')!; x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, c.width, c.height);
+  const t = Texture.from(c); t.source.scaleMode = 'nearest';
+  const s = new Sprite(t);
+  const sc = g.size / R;
+  s.width = (b.front - b.back) * sc; s.height = b.halfH * 2 * sc;
+  s.x = b.back * sc; s.y = -b.halfH * sc;
+  const box = new Container(); box.addChild(s);
+  return box;
 }
 
 // ------------------------------------------------------------------ bosses to scale
@@ -1901,7 +1963,7 @@ export interface DesignSection {
 export function catalog(): DesignSection[] {
   return [
     { name: 'Tanks', groups: [roomGroup(), decorGroup(), waterGroup()] },
-    { name: 'Animals', groups: [speciesGroup(), roleGroup(), bossGroup(), guardianGroup()] },
+    { name: 'Animals', groups: [protoAnglerGroup(), speciesGroup(), roleGroup(), bossGroup(), guardianGroup()] },
     { name: 'The run', groups: [healthGroup(), powerGroup(), shotOrganGroup(), economyGroup()] },
     { name: 'The body', groups: [planGroup(), motionGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup()] },
     { name: 'Column era', archived: true, groups: [propGroup(), fieldGroup()] },

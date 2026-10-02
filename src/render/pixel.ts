@@ -45,6 +45,9 @@ export function followZoom(zoom: number) {
   }
 }
 
+/** PROTOTYPE (prototype/angler-art): every view rebakes, as if the tier had moved. */
+export function invalidateArt() { artVersion++; }
+
 /** Art texels per world unit at the current tier. */
 export function artDensity() {
   return STEP ** tier / PIXEL;

@@ -22,6 +22,7 @@ import { fbmSigned } from '../../core/noise';
 import { lerp } from '../../core/util';
 import { BLOOM_TRAIL, hasSynergy, synergiesOf } from '../../sim/organs';
 import { artDensity } from '../pixel';
+import { protoBake, refReady, type ProtoArt } from './proto-angler';
 import { palette, type Palette } from './bake/palette';
 import { M, shade, Sheet, type Emitter } from './bake/sheet';
 import { flank, whaleSpots, camouflage, crazing, veins, ballast, viscera, mantle, cilia, scales } from './bake/body';
@@ -79,7 +80,7 @@ const q = (v: number, step: number) => Math.round(v / step) * step;
  * steps of a sixth of an octave: finer and every individual of a species is a bake of its
  * own, coarser and an animal is visibly resampled onto the grid.
  */
-function resolutionFor(g: Genome) {
+export function resolutionFor(g: Genome) {
   const want = artDensity() * g.size / R;
   return Math.max(0.15, 2 ** (Math.round(Math.log2(want) * 6) / 6));
 }
@@ -119,7 +120,14 @@ function key(g: Genome, plan: Plan) {
  * and if every entry is on screen the cache simply runs over its size until some free up.
  */
 export function bakeFish(g: Genome, plan: Plan): Baked {
-  const k = key(g, plan);
+  // PROTOTYPE (prototype/angler-art): a genome tagged `__art` takes the prototype's texture
+  const art = (g as Genome & { __art?: ProtoArt }).__art;
+  const proto = art && plan === 'angler' ? `proto|${art}|${resolutionFor(g)}|${refReady()}` : null;
+  if (proto && !cache.has(proto)) {
+    const b = protoBake(g, art!, resolutionFor(g));
+    if (b) cache.set(proto, b);
+  }
+  const k = proto && cache.has(proto) ? proto : key(g, plan);
   let hit = cache.get(k);
   if (hit) {
     // re-inserting keeps the map in least-recently-used order for the eviction scan

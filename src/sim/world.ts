@@ -2,6 +2,7 @@ import { Container } from 'pixi.js';
 import { faceFor } from '../content/form';
 import type { ItemId } from '../content/items';
 import { genomeFor, type ShotKind, type Species } from '../content/species';
+import { protoAngler } from '../dev/proto-angler';
 import { DEPTH_MAX } from '../content/zones';
 import { angleDelta, clamp, dist2, type Rng, TAU } from '../core/util';
 import { Behaviour } from './behaviour';
@@ -251,7 +252,13 @@ export class World {
   }
 
   add(sp: Species, x: number, y: number) {
-    const c = new Creature(sp, genomeFor(sp, this.rng));
+    const g = genomeFor(sp, this.rng);
+    // PROTOTYPE (prototype/angler-art): the anglerfish by A or B, and bigger (C)
+    if (sp.id === 'anglerfish') {
+      if (protoAngler.art) (g as typeof g & { __art?: string }).__art = protoAngler.art;
+      g.size *= protoAngler.big;
+    }
+    const c = new Creature(sp, g);
     c.x = x;
     c.y = clamp(y, 40, DEPTH_MAX - 40);
     c.angle = this.rng.next() * TAU;
