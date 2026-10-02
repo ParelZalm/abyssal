@@ -70,6 +70,13 @@ export const SPRITES: Record<string, SpriteArt> = {
   mantisshrimp: { w: 164, h: 72, snout: 134, tail: 28, axis: 33, legs: { x0: 30, x1: 112, root: 44, tip: 69 },
                   hull: [[126.5, 55, 5], [115.5, 31, 13], [102.5, 29, 13], [88.5, 31, 11], [75.5, 32, 10.2],
                          [62.5, 32, 10.2], [49.5, 33, 9.8], [39.5, 34, 8.5], [29.5, 37, 7]] },
+  // `npm run sprite -- barracuda-sprite.png --id barracuda --fringe`: its sheet bled magenta
+  // into a cell round the outline. The hull is the body alone: the import counted the
+  // pectoral, the dorsals and the anal fin where they cross a sample, which made a long thin
+  // fish a string of bulges half again as deep as it is. No lights; the eye only catches it
+  barracuda: { w: 247, h: 72, snout: 245, tail: 46, axis: 35,
+               hull: [[238.5, 36, 6.8], [215.5, 37, 11.9], [192.5, 36.5, 14.9], [168.5, 36.5, 14.9], [145.5, 37, 15.3],
+                      [122.5, 36.5, 15], [98.5, 35.5, 13.2], [75.5, 36, 11.9], [52.5, 35.5, 8.1]] },
 };
 
 /**

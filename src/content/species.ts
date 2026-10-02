@@ -264,7 +264,9 @@ export const SPECIES: Species[] = [
     photophores: 0.6, segments: 2, heal: 0.45 },
 
   { id: 'barracuda', name: 'Barracuda', behavior: 'hunter', plan: 'eel', role: 'charger',
-    zone: 'twilight', bleed: 900,
+    // drawn twice its size: at its own it was 40 texels long in the deep tank, a sliver
+    // under the anglerfish with no teeth left to it
+    zone: 'twilight', bleed: 900, drawn: 2,
     size: [34, 54], hue: [192, 212], accent: 45, speed: 250, bite: 15,
     nutrition: 2.2, weight: 8, jaw: 0.7, finSize: 0.7, sense: 560 },
 

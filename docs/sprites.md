@@ -233,6 +233,7 @@ Open the preview. When something is off:
 | doubled or missing rows or columns, a smeared grid | `--pitch` with the right period, measured off the sheet: the outline climbs a gentle slope in steps one art pixel high |
 | the strike's seam cuts through something, or misses part of what moved | `--keep x0,y0,x1,y1`, the box in the rest frame's cells |
 | banding, colours merged that should not be | `--colours 28` |
+| magenta or dark-violet specks round the outline: the background bled into the rim cells, too dark to key out | `--fringe`, unless the animal is magenta itself (it goes by hue; the gulper and the mantis shrimp would lose their outlines) |
 
 ### 3. Wire it
 

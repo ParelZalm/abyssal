@@ -3,7 +3,7 @@
  * Import a generated sprite sheet as an enemy's frames — the code side of `docs/sprites.md`.
  *
  *   npm run sprite -- <sheet.png> --id <species> [--pitch 6.54] [--colours 22]
- *                     [--keep x0,y0,x1,y1] [--out src/render/creature/sprites]
+ *                     [--keep x0,y0,x1,y1] [--fringe] [--out src/render/creature/sprites]
  *
  * The sheet is one or two frames side by side on flat #FF00FF: the rest, and optionally the
  * strike. A generator's "8× pixel art" is never on a clean grid — the anglerfish's was 6.5
@@ -36,7 +36,7 @@ const opt = (name, fallback) => {
 const sheet = argv.find((a, i) => !a.startsWith('--') && !(i > 0 && argv[i - 1].startsWith('--')));
 const id = opt('id');
 if (!sheet || !id) {
-  console.error('usage: npm run sprite -- <sheet.png> --id <species> [--pitch n] [--colours n] [--keep x0,y0,x1,y1] [--out dir]');
+  console.error('usage: npm run sprite -- <sheet.png> --id <species> [--pitch n] [--colours n] [--keep x0,y0,x1,y1] [--fringe] [--out dir]');
   process.exit(1);
 }
 const out = opt('out', 'src/render/creature/sprites');
@@ -173,6 +173,36 @@ function gridOf(b) {
   return { w, h, cells };
 }
 const grids = boxes.map(gridOf);
+
+// the fringe, with `--fringe`: cells the background bled into. The barracuda's sheet ringed
+// its outline with a cell of dark magenta, too dark for `isBg` to key out, and clustered it
+// became three of the palette's colours. A magenta cell on the rim with a dark cell inside it
+// is the bleed round an outline and goes; any other is an outline cell the bleed coloured,
+// and darkens to the outline. Opt-in, because hue is all that tells bleed from paint: the
+// gulper and the mantis shrimp are violet-magenta themselves, and it ate their outlines.
+const hue = ([r, g, b]) => {
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+  if (mx - mn < 24 || (mx - mn) / mx < 0.6) return -1;
+  return mx === b ? 240 + 60 * (r - g) / (mx - mn) : mx === r ? (360 + 60 * (g - b) / (mx - mn)) % 360 : -1;
+};
+const isFringe = c => c && hue(c) >= 272 && hue(c) <= 330 && c[1] < c[0] && c[1] < c[2];
+const lum = c => c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
+let fringe = 0;
+if (argv.includes('--fringe')) for (const g of grids) {
+  const at = (i, j) => i < 0 || j < 0 || i >= g.w || j >= g.h ? null : g.cells[j * g.w + i];
+  const ink = g.cells.filter(c => c && !isFringe(c));
+  const outline = ink.reduce((a, c) => lum(c) < lum(a) ? c : a, ink[0]);
+  const next = g.cells.slice();
+  for (let j = 0; j < g.h; j++) for (let i = 0; i < g.w; i++) {
+    const c = at(i, j);
+    if (!isFringe(c)) continue;
+    const nb = [at(i + 1, j), at(i - 1, j), at(i, j + 1), at(i, j - 1)];
+    const rim = nb.includes(null), backed = nb.some(n => n && !isFringe(n) && lum(n) < 40);
+    next[j * g.w + i] = rim && backed ? null : outline;
+    fringe++;
+  }
+  g.cells = next;
+}
 
 // one palette for both frames: k-means from colours spread far apart
 const all = grids.flatMap(g => g.cells.filter(Boolean));
@@ -328,7 +358,7 @@ const lm = [`w: ${fw}`, `h: ${frameH}`, `snout: ${snout}`, `tail: ${tail}`, `axi
 if (bulb) lm.push(`bulb: [${bulb.join(', ')}] /* a lure's, or delete */`);
 lm.push(`hull: [${hull.map(h => `[${h.join(', ')}]`).join(', ')}]`);
 if (blobs.length) lm.push(`lights: [${blobs.map(b => `{ at: [${b.at.join(', ')}], color: ${b.color}, strength: 0.5 }`).join(', ')}] /* candidates: keep the real ones */`);
-console.log(`pitch ${P.toFixed(3)} px · grid ${grids.map(g => `${g.w}×${g.h}`).join(' and ')} · ${pal.length} colours`);
+console.log(`pitch ${P.toFixed(3)} px · grid ${grids.map(g => `${g.w}×${g.h}`).join(' and ')} · ${pal.length} colours${fringe ? ` · ${fringe} fringe cells cleaned` : ''}`);
 if (strikeIdx) console.log(`strike lined up at (${off.join(', ')}); taken from it: x ${keep.x0}..${keep.x1}, y ${keep.y0}..${keep.y1} (--keep to override)`);
 console.log(`wrote ${join(out, `${id}.png`)}${strikeIdx ? ` and ${id}-strike.png` : ''}`);
 console.log(`preview ${previewPath}`);

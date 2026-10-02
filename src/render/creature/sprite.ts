@@ -23,11 +23,14 @@ import gulperRest from './sprites/gulper.png';
 import gulperStrike from './sprites/gulper-strike.png';
 import mantisRest from './sprites/mantisshrimp.png';
 import mantisStrike from './sprites/mantisshrimp-strike.png';
+import barracudaRest from './sprites/barracuda.png';
+import barracudaStrike from './sprites/barracuda-strike.png';
 
 const SOURCES: Record<string, [rest: string, strike: string]> = {
   anglerfish: [anglerRest, anglerStrike],
   gulper: [gulperRest, gulperStrike],
   mantisshrimp: [mantisRest, mantisStrike],
+  barracuda: [barracudaRest, barracudaStrike],
 };
 
 interface Frames { rest: ImageData; strike: ImageData; palette: number[][] }
