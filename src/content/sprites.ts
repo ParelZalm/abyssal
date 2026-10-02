@@ -90,10 +90,10 @@ export const REWORKED_ONLY = true;
 
 /**
  * The enemy last reworked, for testing it while the roster is converted: the first fight room
- * the player enters in its tank holds it and nothing else, one of it, and no other room deals
- * it — two side by side at different sizes read as two versions of it, and the rest of a room
- * was more to watch than the one thing being tested. `/?tank=deep&room=fight` is that room.
- * Null deals it as any other.
+ * entered in every tank holds it and nothing else, one of it, scaled to that tank, so a run
+ * meets it in its first fight. No other room deals it — two side by side at different sizes
+ * read as two versions of it, and the rest of a room was more to watch than the one thing
+ * being tested. Null deals it as any other.
  */
 export const NEWEST: string | null = 'barracuda';
 

@@ -12,8 +12,8 @@ and the reef. Bosses are dealt whatever they are drawn with, since a tank cannot
 down. Set `REWORKED_ONLY` false to see the whole roster again.
 
 **The enemy last reworked is tested on its own** (`NEWEST` in `content/sprites.ts`): the first
-fight room entered in its tank holds it alone, one of it, and no other room deals it.
-`/?tank=«tank»&room=fight` is that room. Point `NEWEST` at each enemy as it comes in.
+fight room entered in every tank holds it alone, one of it, scaled to that tank, so a run's
+first fight is it; no other room deals it. Point `NEWEST` at each enemy as it comes in.
 
 ## The flow, for one enemy
 
