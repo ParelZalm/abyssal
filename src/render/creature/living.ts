@@ -24,12 +24,17 @@
  *   comes and goes. Every decision is made per texel and held for a frame, so
  *   nothing is a smooth warp laid over the grid — an earlier sine field was, and it read as
  *   the art wobbling rather than the fins moving.
+ * - **Legs.** A sprite with a row of legs (`SpriteArt.legs`) walks them: each leg's tip swings
+ *   back along the ground and comes forward lifted, the root held, and the stroke runs from
+ *   the tail to the head a leg behind the next, as a mantis shrimp's legs and swimmerets beat
+ *   and a centipede's go. Also by whole texels per held frame, so a leg bends in steps.
  *
  * The cost is the batch: a mesh with a shader of its own is a draw call of its own, so every
  * body on screen is one. The strip was batched before this, but each bake is a texture of its
  * own, so a school of distinct animals was already close to a call apiece.
  */
 import { GlProgram, Shader, UniformGroup, type Texture } from 'pixi.js';
+import type { Baked } from './fishbake';
 
 // GLSL 300 es, unlike `FramePass`: the edge blend is sized with `fwidth`, which ES 1.0 only
 // has behind an extension
@@ -68,6 +73,7 @@ uniform float uFlip;
 uniform float uFlash;
 uniform float uRim;
 uniform vec3 uRimColor;
+uniform vec4 uLegs;
 
 float hash(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
 
@@ -114,6 +120,22 @@ void main() {
   // an instant — the in-between a pixel animator draws instead of a turn
   if (uFlip > 0.0) nub = nub || hash(cell.x * 3.7 + up * 1.3 + floor(uClock * 20.0) * 5.3) < uFlip * 0.55;
   if (edge && nub) d.y += up;
+  // the legs: u0, u1 across and the root and tip down, in uv; none when u1 is not past u0
+  if (uLegs.y > uLegs.x && cuv.x > uLegs.x && cuv.x < uLegs.y && cuv.y > uLegs.z) {
+    float down = clamp((cuv.y - uLegs.z) / (uLegs.w - uLegs.z), 0.0, 1.0);
+    // two waves along the row, some four legs to a wave on the mantis shrimp's: shorter and a
+    // column's offset differs from the next by more than a texel, and a leg tears in two
+    float wave = (uLegs.y - uLegs.x) * uSize.x * 0.5;
+    float fromTail = cell.x - uLegs.x * uSize.x;
+    // an eighth of a stride a held frame, on the fins' frames: at twice their rate the stride
+    // came round three times a second and was a shimmer, not legs
+    float phase = frame * 0.785 - fromTail * 6.283 / wave;
+    // the tip's swing, a third of a leg's spacing each way, and never under a texel
+    float step = max(1.0, uSize.x * 0.018);
+    d.x += floor(down * step * cos(phase) + 0.5);
+    // lifted while it comes forward, when the cosine climbs; on the ground going back
+    d.y -= floor(down * step * 0.6 * max(0.0, -sin(phase)) + 0.5);
+  }
   // only the tail's last few columns step, and by one texel, when the stroke is near its peak
   d.y += floor(clamp((0.1 - cuv.x) / 0.1, 0.0, 1.0) * sin(frame * 0.7) + 0.5);
   // sampled from the other side: to show a texel moved by d, read the one d behind it
@@ -158,7 +180,7 @@ export interface LivingSkin {
  * A skin for one strip. `body` is the body's half-depth over the strip's half-height, which
  * is how the shader tells a fin from a flank without a mask baked for it.
  */
-export function livingSkin(texture: Texture, body: number): LivingSkin {
+export function livingSkin(texture: Texture, body: number, legs: Baked['legs'] = null): LivingSkin {
   program ??= GlProgram.from({ vertex, fragment, name: 'creature-living' });
   const uniforms = new UniformGroup({
     uSize: { value: new Float32Array([texture.source.pixelWidth, texture.source.pixelHeight]),
@@ -176,6 +198,8 @@ export function livingSkin(texture: Texture, body: number): LivingSkin {
     // a carcass's red outline, 0 off to 1 full (`FishView.lie`)
     uRim: { value: 0, type: 'f32' },
     uRimColor: { value: new Float32Array([1, 0.16, 0.12]), type: 'vec3<f32>' },
+    // a sprite's legs, walked in a wave (`Baked.legs`); off at zero width
+    uLegs: { value: new Float32Array(legs ?? [0, 0, 0, 0]), type: 'vec4<f32>' },
   });
   const shader = Object.assign(
     new Shader({ glProgram: program, resources: { uTexture: texture.source, living: uniforms } }),

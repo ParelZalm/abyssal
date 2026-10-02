@@ -458,7 +458,7 @@ export class FishView extends Container {
       }
     }
     this.skin?.shader.destroy();
-    this.skin = livingSkin(this.baked.texture, this.baked.depth / this.baked.halfH);
+    this.skin = livingSkin(this.baked.texture, this.baked.depth / this.baked.halfH, this.baked.legs);
     this.mesh = new MeshSimple({ texture: this.baked.texture, vertices: verts, uvs,
                                  indices: idx, shader: this.skin.shader });
     this.addChild(this.mesh);

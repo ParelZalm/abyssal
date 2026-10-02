@@ -21,10 +21,13 @@ import anglerRest from './sprites/anglerfish.png';
 import anglerStrike from './sprites/anglerfish-strike.png';
 import gulperRest from './sprites/gulper.png';
 import gulperStrike from './sprites/gulper-strike.png';
+import mantisRest from './sprites/mantisshrimp.png';
+import mantisStrike from './sprites/mantisshrimp-strike.png';
 
 const SOURCES: Record<string, [rest: string, strike: string]> = {
   anglerfish: [anglerRest, anglerStrike],
   gulper: [gulperRest, gulperStrike],
+  mantisshrimp: [mantisRest, mantisStrike],
 };
 
 interface Frames { rest: ImageData; strike: ImageData; palette: number[][] }
@@ -143,7 +146,10 @@ export function bakeSprite(id: string, g: Genome, plan: Plan, res: number): Omit
   const lights: Emitter[] = (s.lights ?? []).map(l => ({ ...spritePoint(s, f, l.at), color: l.color, strength: l.strength }));
   let depth = 0;
   for (let i = 0; i <= 40; i++) depth = Math.max(depth, halfWidth(i / 40, f));
-  return { texture: texture(shut), open: texture(open), canvas: shut, lights, depth, arm: null,
+  const legs: Baked['legs'] = s.legs
+    ? [s.legs.x0 / s.w, s.legs.x1 / s.w, (s.legs.root + oy) / (halfPx * 2), (s.legs.tip + oy) / (halfPx * 2)]
+    : null;
+  return { texture: texture(shut), open: texture(open), canvas: shut, lights, depth, arm: null, legs,
            back, front, halfH: halfPx / per };
 }
 

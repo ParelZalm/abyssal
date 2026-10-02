@@ -64,7 +64,7 @@ needs the code named in *Blocked on* first.
 
 | Boss | Tank | Why later |
 | --- | --- | --- |
-| Mantis Shrimp | nursery | its club is a part of its plan the fight reads |
+| Mantis Shrimp | nursery | **done**: the fight reads the club only as the hull's nose, set on the folded heel by hand; the strike frame is the club cocked, its tell; the legs walk in the skin (`SpriteArt.legs`); `mantisshrimp.webp`, `mantisshrimp-sprite.webp` |
 | Great White | reef | its fight reads its snout and its tells off the plan |
 | Giant Squid | deep | its arms are rigged and torn off one at a time |
 

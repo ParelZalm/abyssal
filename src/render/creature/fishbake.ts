@@ -54,6 +54,8 @@ export interface Baked {
   arm: Rig | null;
   /** The light organs, in R units, for the view to hang blooms on. */
   lights: Emitter[];
+  /** A sprite's legs, as the strip's u across and v down (`SpriteArt.legs`). Null when painted. */
+  legs: [u0: number, u1: number, root: number, tip: number] | null;
 }
 
 /** A rigged arm's texture and where the arms leave the body, in R units. */
@@ -204,7 +206,7 @@ function paint(g: Genome, plan: Plan): Baked {
   return { texture, open: gaping ? pixelTexture(cut(shade(gaping, pal), crop)) : texture,
            canvas, users: 0, lights: shut.lights, depth,
            back: back + crop.x / res, front: back + (crop.x + crop.w) / res, halfH: crop.h / 2 / res,
-           arm: rigged ? armRig(f, pal, A, g, res) : null };
+           arm: rigged ? armRig(f, pal, A, g, res) : null, legs: null };
 }
 
 interface Painting {

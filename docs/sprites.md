@@ -242,7 +242,9 @@ Open the preview. When something is off:
   board before trusting it. They are what ties the picture to the simulation: `snout` to
   `tail` spans the plan's form, so the length the simulation uses is the picture's; `axis` is
   the line the swim bends about; `hull` is the hitbox (`sim/hull.ts`); `bulb` is where a
-  lure's trap fires; `lights` are where the view hangs a bloom, in each organ's own colour.
+  lure's trap fires; `lights` are where the view hangs a bloom, in each organ's own colour;
+  `legs`, set by hand, is the box a row of legs hangs in, which the skin walks in a wave from
+  the tail to the head (the mantis shrimp's; keep the arms and fins out of it).
   Write the import command into the comment above the entry, flags and all, so it can be
   run again.
 - **`content/species.ts`**: set `drawn` (*Size*, below).
