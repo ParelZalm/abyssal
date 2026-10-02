@@ -20,6 +20,8 @@
  */
 import { Container, MeshSimple, Sprite } from 'pixi.js';
 import { bakeFish, releaseFish, type Baked, type Rig } from './fishbake';
+import { SPRITES } from '../../content/sprites';
+import type { Species } from '../../content/species';
 import { drawnAngle, PLAN_ART, quintic, R, type Plan } from '../../content/form';
 import { menace, type Genome } from '../../content/genome';
 import { glowTexture } from '../textures';
@@ -233,12 +235,21 @@ export class FishView extends Container {
   /** The art density this view was baked at; a new tier means a re-bake. */
   private version = artVersion;
 
+  /** A species drawn from a sprite (`content/sprites.ts`) rather than painted, or none. */
+  private readonly art?: string;
+  /** How much bigger than its genome the species is drawn (`Species.drawn`). */
+  private readonly drawn: number;
+  /** The genome as given, before the drawn size: what a re-bake starts from. */
+  private source!: Genome;
+
   /**
-   * `art` names a species drawn from a sprite (`content/sprites.ts`) rather than painted;
-   * only an animal that never changes has one, so a transformation never meets it.
+   * `species`, for an animal of the roster: whether it has a sprite and how big it is drawn.
+   * Only an animal that never changes has either, so a transformation never meets them.
    */
-  constructor(private g: Genome, private plan: Plan = 'darter', private art?: string) {
+  constructor(private g: Genome, private plan: Plan = 'darter', species?: Species) {
     super();
+    this.art = species && SPRITES[species.id] ? species.id : undefined;
+    this.drawn = species?.drawn ?? 1;
     for (const s of [this.aura, this.halo, this.core, this.ember]) {
       s.anchor.set(0.5);
       s.blendMode = 'add';
@@ -378,6 +389,10 @@ export class FishView extends Container {
   }
 
   rebuild(g: Genome) {
+    this.source = g;
+    // everything the view draws reads the size off the genome it holds, so a species drawn
+    // bigger holds a copy at the size it is drawn
+    if (this.drawn !== 1) g = { ...g, size: g.size * this.drawn };
     this.g = g;
     this.version = artVersion;
     const m = this.motion = motionFor(g, this.plan);
@@ -784,7 +799,7 @@ export class FishView extends Container {
   swell = 1;
 
   animate(dt: number, thrust: number, beat: number, bank: number, act: Pose = REST) {
-    if (this.version !== artVersion) this.rebuild(this.g);
+    if (this.version !== artVersion) this.rebuild(this.source);
     this.clock += dt;
     this.flipT = Math.max(0, this.flipT - dt / FLIP_TIME);
     if (this.facing !== this.face) { this.facing = this.face; this.flipT = 1; }

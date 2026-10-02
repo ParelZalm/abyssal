@@ -28,7 +28,7 @@ const hulls = new WeakMap<Creature, Hull>();
 
 function hullOf(c: Creature): Hull {
   const g = c.genome;
-  const key = `${c.species.plan}|${g.size}|${g.segments}|${g.eel}|${g.armor}|${g.coral}|${g.jaw}`;
+  const key = `${c.species.plan}|${c.drawnSize}|${g.segments}|${g.eel}|${g.armor}|${g.coral}|${g.jaw}`;
   const had = hulls.get(c);
   if (had?.key === key) return had;
   const f = formFor(g, c.species.plan);
@@ -54,7 +54,7 @@ function hullOf(c: Creature): Hull {
  */
 export function surfaceGap(c: Creature, px: number, py: number): number {
   const h = hullOf(c);
-  const k = c.genome.size / R;
+  const k = c.drawnSize / R;
   const dx = px - c.x, dy = py - c.y;
   const far = Math.hypot(dx, dy) / k - h.bound;
   if (far > 0) return far * k;
@@ -91,13 +91,13 @@ function toWorld(c: Creature, x: number, y: number, k: number, angle = c.angle) 
  */
 export function noseOf(c: Creature, angle = c.angle): { x: number; y: number } {
   const h = hullOf(c);
-  const o = toWorld(c, h.x[0], h.y[0], c.genome.size / R, angle);
+  const o = toWorld(c, h.x[0], h.y[0], c.drawnSize / R, angle);
   return { x: c.x + o.x, y: c.y + o.y };
 }
 
 /** How far the nose runs ahead of the body's middle, world units. */
 export function noseReach(c: Creature) {
-  return hullOf(c).x[0] * c.genome.size / R;
+  return hullOf(c).x[0] * c.drawnSize / R;
 }
 
 /** Half the body's depth at its deepest, world units: what decides whether it fits a gap. */
@@ -105,7 +105,7 @@ export function depthOf(c: Creature) {
   const h = hullOf(c);
   let r = 0;
   for (let i = 0; i < SAMPLES; i++) r = Math.max(r, h.r[i]);
-  return r * c.genome.size / R;
+  return r * c.drawnSize / R;
 }
 
 /**
@@ -137,7 +137,7 @@ const MAX_PUSH = 0.4;
  */
 export function collideHull(c: Creature, t: Terrain): Bump | null {
   const h = hullOf(c);
-  const k = c.genome.size / R;
+  const k = c.drawnSize / R;
   const vx0 = c.vx, vy0 = c.vy, x0 = c.x, y0 = c.y;
   const probe = { x: 0, y: 0, vx: 0, vy: 0 };
   let px = 0, py = 0, hx = 0, hy = 0, hr = 0, ox = 0, oy = 0, hit = false;

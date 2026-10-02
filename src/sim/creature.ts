@@ -1,7 +1,6 @@
 import { FishView, type Pose } from '../render/creature/fishview';
 import { armourOf, maxHp, type Genome } from '../content/genome';
 import { hunts, type Species } from '../content/species';
-import { SPRITES } from '../content/sprites';
 import { drawnAngle } from '../content/form';
 import { angleDelta, clamp, TAU } from '../core/util';
 import { guardedOf, organsOf, swimOf, type Organ, type SwimMods } from './organs';
@@ -291,7 +290,7 @@ export class Creature {
     this.hp = this.hpMax;
     this.organs = organsOf(genome);
     this.swim = swimOf(genome, this.organs);
-    this.view = new FishView(genome, species.plan, SPRITES[species.id] ? species.id : undefined);
+    this.view = new FishView(genome, species.plan, species);
   }
 
   /**
@@ -420,8 +419,12 @@ export class Creature {
     return other.isPlayer && other.species.plan === this.species.plan &&
       other.hp > other.hpMax * KIN_SPARED;
   }
+  /** The size it is drawn at, and met at (`Species.drawn`); the genome's size is its stats'. */
+  get drawnSize() {
+    return this.genome.size * (this.species.drawn ?? 1);
+  }
   get radius() {
-    return this.genome.size * 0.62;
+    return this.drawnSize * 0.62;
   }
   syncView() {
     this.view.place(this.x, this.y, this.angle, this.face, this.upright);

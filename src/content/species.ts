@@ -72,6 +72,14 @@ export interface Species {
   bossHp?: number;
 
   size: [number, number];
+  /**
+   * How much bigger it is drawn than its genome's size. The picture and everything that
+   * meets it — the hitbox, the radius, the lure's trap, where its shots leave the skin, the
+   * water it is spawned into — take this; its health, bite, senses and what it is worth eaten
+   * do not, since those are the genome's size. A way to let an enemy be read on screen without
+   * retuning the fight (`Creature.drawnSize`).
+   */
+  drawn?: number;
   hue: [number, number];
   accent: number;
   speed: number;
@@ -296,7 +304,9 @@ export const SPECIES: Species[] = [
   // Navy under cyan lights, after `docs/media/reference/angler.webp`
   { id: 'anglerfish', name: 'Anglerfish', behavior: 'ambush', plan: 'angler',
     role: 'turret', shot: 'bolt',
-    zone: 'midnight', bleed: 800,
+    // drawn twice its size: at its own it was 20 to 30 texels long in the deep tank, and its
+    // sprite's fangs and comb were gone
+    zone: 'midnight', bleed: 800, drawn: 2,
     size: [40, 66], hue: [222, 236], accent: 188, speed: 130, bite: 26,
     nutrition: 2.6, weight: 7, jaw: 1.1, glow: 0.9, armor: 2, spikes: 1, lure: 1,
     gape: 0.7, eyeAdapt: 0.3, photophores: 0.3, sense: 520, lurk: 1 },

@@ -44,6 +44,12 @@ pixels), each cell its median colour, the lot clustered to 22 colours. Its strik
 been redrawn whole, which made the body shimmer on every bite, so the strike is the rest
 frame with only the jaw taken from it.
 
+A sprite's detail needs the pixels to show, and at its own size an anglerfish had 20 to 30
+of them, so it is **drawn at twice its size** (`Species.drawn`, `Creature.drawnSize`). The
+picture and what meets it scale — hitbox, radius, the lure's trap, where its shots leave the
+skin, the water it is spawned into — and the stats do not: its health, bite and senses are
+still the genome's size, so the fight is the one it was, against a bigger target.
+
 ## The pixel grid
 
 `src/render/pixel.ts`. The whole game is drawn on one coarse grid: the canvas is created

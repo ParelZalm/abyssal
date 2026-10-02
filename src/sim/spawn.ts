@@ -38,7 +38,7 @@ export class Spawner {
       const sp: Species = pack ?? speciesById(this.weighted(tank.hostiles));
       const role = sp.role ?? 'charger';
       if ((dealt[role] ?? 0) >= ROLE_MAX[role]) { pack = null; continue; }
-      const at = room.openSpot(this.rng, sp.size[1] * 0.6);
+      const at = room.openSpot(this.rng, sp.size[1] * (sp.drawn ?? 1) * 0.6);
       if (!at || Math.hypot(at.x - player.x, at.y - player.y) < room.width * 0.3) continue;
       const c = this.place(room, sp, at.x, at.y, tank);
       if (!c) continue;
@@ -178,7 +178,7 @@ export class Spawner {
   }
 
   private place(room: Terrain, sp: Species, x: number, y: number, tank: Tank) {
-    if (!room.clearAt(x, y, sp.size[1] * 0.4)) return null;
+    if (!room.clearAt(x, y, sp.size[1] * (sp.drawn ?? 1) * 0.4)) return null;
     const c = this.world.add(sp, x, y);
     // a room takes as long to cross in every tank, at the game's tempo
     c.genome.speed *= tank.pace * TEMPO;

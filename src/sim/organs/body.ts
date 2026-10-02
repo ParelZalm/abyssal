@@ -50,14 +50,14 @@ export const BODY: Organ[] = [
       if (!p.alive || c.spares(p)) return;
       // a sprite's bulb is where its picture hangs it, not where the painted lure would
       const b = spriteBulb(c.species.id, c.genome, c.species.plan) ?? lureBulb(c.genome, formFor(c.genome, c.species.plan));
-      const k = c.genome.size / R;
+      const k = c.drawnSize / R;
       // in the view's facing frame, so the bulb is struck where it is drawn
       const r = drawnAngle(c.angle, c.face, c.upright);
       const cr = Math.cos(r), sr = Math.sin(r);
       const lx = b.x * c.face;
       const bx = c.x + (lx * cr - b.y * sr) * k, by = c.y + (lx * sr + b.y * cr) * k;
       const cos = Math.cos(c.angle), sin = Math.sin(c.angle);
-      const touch = p.radius * 0.8 + c.genome.size * 0.25;
+      const touch = p.radius * 0.8 + c.drawnSize * 0.25;
       if (dist2(p.x, p.y, bx, by) > touch * touch) return;
       c.angle = Math.atan2(p.y - c.y, p.x - c.x);
       c.vx += cos * c.genome.speed;

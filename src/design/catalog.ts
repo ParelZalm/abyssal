@@ -13,7 +13,6 @@ import { FAMILY_NAMES, TRANSFORMS, type Family } from '../content/forms';
 import { baseGenome, type Genome } from '../content/genome';
 import { PROP_SIZE, propTexture, type PropKind } from '../render/props';
 import { genomeFor, rangeOf, SPECIES } from '../content/species';
-import { SPRITES } from '../content/sprites';
 import { TRAITS, type Rarity, type Trait } from '../content/traits';
 import { BANDS, zoneOf } from '../content/zones';
 import { ROOMS, tankById, TANKS, TEMPO } from '../content/tanks';
@@ -107,24 +106,22 @@ export interface DesignGroup {
  */
 class BoardFish extends Container {
   fish: FishView;
-  constructor(private readonly g: Genome, private readonly plan: Plan, private readonly art?: string) {
+  constructor(private readonly g: Genome, private readonly plan: Plan, private readonly sp?: Species) {
     super();
-    this.fish = new FishView(g, plan, art);
+    this.fish = new FishView(g, plan, sp);
     this.addChild(this.fish.fog, this.fish.glow, this.fish);
   }
   /** A fresh animal in place of this one — how a death cell loops. */
   respawn() {
     this.fish.destroy({ children: true });
-    this.fish = new FishView(this.g, this.plan, this.art);
+    this.fish = new FishView(this.g, this.plan, this.sp);
     this.addChild(this.fish.fog, this.fish.glow, this.fish);
   }
 }
 
-/** The species' sprite, when it is drawn from one rather than painted (`content/sprites.ts`). */
-const artOf = (id: string) => SPRITES[id] ? id : undefined;
-
-function boardFish(g: Genome, plan: Plan, art?: string): BoardFish {
-  return new BoardFish(g, plan, art);
+/** `sp`, for an animal of the roster: its sprite and drawn size come with it. */
+function boardFish(g: Genome, plan: Plan, sp?: Species): BoardFish {
+  return new BoardFish(g, plan, sp);
 }
 
 /** How a game creature swims on the board: the same calls `world.ts` makes each frame. */
@@ -199,9 +196,9 @@ function motionGroup(): DesignGroup {
     for (const act of Object.keys(ACTS) as Act[]) {
       items.push({
         id: `${id}-${act}`, name: `${sp.name} · ${act}`, note: ACTS[act],
-        source: 'src/render/creature/fishview.ts', span: g.size * 3,
+        source: 'src/render/creature/fishview.ts', span: g.size * (sp.drawn ?? 1) * 3,
         depth: (rangeOf(sp)[0] + rangeOf(sp)[1]) / 2, genome: g,
-        make: () => boardFish(g, sp.plan, artOf(sp.id)),
+        make: () => boardFish(g, sp.plan, sp),
         animate: actAnimate(act, Math.min(0.42, Math.max(0.12, 0.12 + g.size / 480))),
       });
     }
@@ -692,7 +689,7 @@ function speciesGroup(): DesignGroup {
         name: sp.name,
         note: `${sp.zone}${sp.band ? ` · ${sp.band}` : ''} · ${sp.behavior} · ${sp.plan}`,
         source: 'src/content/species.ts',
-        span: g.size * 3,
+        span: g.size * (sp.drawn ?? 1) * 3,
         depth: (rangeOf(sp)[0] + rangeOf(sp)[1]) / 2,
         facts: {
           plan: sp.plan, behavior: sp.behavior, size: Math.round(g.size),
@@ -700,7 +697,7 @@ function speciesGroup(): DesignGroup {
           translucent: sp.translucent ?? 0,
         },
         genome: g,
-        make: () => boardFish(g, sp.plan, artOf(sp.id)),
+        make: () => boardFish(g, sp.plan, sp),
         animate: fishAnimate,
       };
     }),
@@ -1135,9 +1132,9 @@ class RoleCell extends Container {
   readonly blooms = new Container();
   /** The charge bar, for a charger's cell. */
   readonly bar = new ChargeBar();
-  constructor(g: Genome, plan: Plan, private readonly hostile = true, art?: string) {
+  constructor(g: Genome, plan: Plan, private readonly hostile = true, sp?: Species) {
     super();
-    this.fish = boardFish(g, plan, art);
+    this.fish = boardFish(g, plan, sp);
     this.bar.root.visible = false;
     this.addChild(this.blooms, this.fish, this.shots, this.bar.root);
   }
@@ -1306,10 +1303,10 @@ function roleGroup(): DesignGroup {
     const g = genomeFor(sp, new Rng(1000 + i * 77));
     return {
       id: `role-${sp.id}`, name: `${sp.name} · ${sp.role}`, note: ROLE_NOTES[sp.role!],
-      source: 'src/sim/roles.ts', span: Math.max(g.size * 4, 80),
+      source: 'src/sim/roles.ts', span: Math.max(g.size * (sp.drawn ?? 1) * 4, 80),
       depth: tank.depth, genome: g,
       facts: { role: sp.role!, shot: sp.shot ?? '—', size: Math.round(g.size), speed: sp.speed },
-      make: () => new RoleCell(g, sp.plan, true, artOf(sp.id)),
+      make: () => new RoleCell(g, sp.plan, true, sp),
       animate: roleAnimate(sp, g, tank.tile),
     };
   });
@@ -1325,7 +1322,7 @@ function roleGroup(): DesignGroup {
       id: `role-${sp.id}-turned`, name: `${sp.name} · turned`, note: notes.turned,
       source: 'src/sim/roles.ts', span: whole.span, depth: tank.depth, genome: g,
       facts: { moveset: sp.moves!, ...whole.facts },
-      make: () => new RoleCell(g, sp.plan, true, artOf(sp.id)),
+      make: () => new RoleCell(g, sp.plan, true, sp),
       animate: turnedAnimate(sp, g, tank.tile),
     });
     whole.facts = { moveset: sp.moves!, ...whole.facts };
