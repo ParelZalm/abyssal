@@ -123,15 +123,18 @@ export class Creature {
    * A boss's fight beyond its main move (`sim/bosses.ts`). `move` is the set piece in hand —
    * '' for the main one — and `rounds` how many of the main one since the last. `stuck` is
    * seconds held fast by the room, at `pinX`, `pinY`: a mantis shrimp wedged in a cleft, a
-   * squid's arms round a pillar. `wary` is seconds a boss that was caught will not be caught
-   * the same way, and `unseen` how long the player has kept out of its reach.
+   * squid's arms round a pillar. `cave` is the middle of the cleft a mantis shrimp last
+   * jammed itself in, which it will not punch down again until it has jammed in the other;
+   * `spitCd` seconds to its next spit, the first a few seconds into the fight; and `unseen`
+   * how long the player has kept out of its reach.
    */
-  move: '' | 'lob' | 'breach' | 'draw' = '';
+  move: '' | 'lob' | 'breach' | 'draw' | 'butt' | 'home' | 'spit' = '';
   rounds = 0;
   stuck = 0;
   pinX = 0;
   pinY = 0;
-  wary = 0;
+  cave = NaN;
+  spitCd = 4;
   unseen = 0;
   /**
    * A boss's hull against the room (`World.integrate`, `collideHull`): whether it was on rock

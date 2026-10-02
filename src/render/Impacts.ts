@@ -19,6 +19,7 @@ import { lightAt, waterColor } from './water';
 const CUES: Record<BossCue, string> = {
   wedged: 'Wedged in the cleft — strike it while it is stuck',
   lob: 'Digging up an urchin — its spines rain down: find a gap, or get under rock',
+  spit: 'Swelling to spit a ring — slip between its spokes, or keep rock between you',
   dazed: 'It rammed the rock and is dazed — strike now; lure its rush into rock',
   breach: 'Lurking under you — get out of the line of its bubbles',
   draw: 'Drawing you in — swim hard away, or put rock between you',

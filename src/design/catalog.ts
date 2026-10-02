@@ -40,7 +40,7 @@ import { HATCHED } from '../run/starts';
 import { shotGlow, shotRound, shotTexture } from '../render/shots';
 import { glowTexture } from '../render/textures';
 import { BAR_OVER, ChargeBar } from '../render/tells';
-import { BREACH_LOCK, DRAW_TIME, LOB_WIND, LURK, PUNCH_WIND, SNAGGED, SPACING, WEDGED } from '../sim/bosses';
+import { BREACH_LOCK, DRAW_TIME, LOB_WIND, LURK, PUNCH_WIND, SNAGGED, RING_SPOKES, RING_WIND, SPACING, WEDGED } from '../sim/bosses';
 import { PickupView } from '../render/pickups';
 import type { Pickup } from '../sim/world';
 import {
@@ -1692,7 +1692,7 @@ const CELL_ROCK = 0x1c2230;
 
 /**
  * Each boss's set pieces, and what the room does to it, looped on the simulation's timings:
- * the mantis shrimp wedged in a cleft and digging up its urchin, the spines' fan, the Great
+ * the mantis shrimp wedged in a cleft, digging up its urchin and spitting its ring, the spines' fan, the Great
  * White's breach, the Giant Squid snagged on rock and drawing water in. The rock is a slab in
  * the cell; the room's own is on the Rooms group.
  */
@@ -1721,7 +1721,7 @@ function bossMoves(): DesignItem[] {
   return [
     cell('mantisshrimp', 'wedged',
       'A punch down a cleft it does not fit: the head jammed in, the tail beating, open to blows. No burst.',
-      { held: `${WEDGED} s`, then: 'wary: lobs rather than punching after a larva in a narrow place' },
+      { held: `${WEDGED} s`, then: 'back to the middle to rain urchins; not that cleft again until the other' },
       (c, g) => {
         // the cleft: two walls a little over half a tile apart, the body jammed at their lip
         const w = g.size * 0.35;
@@ -1763,6 +1763,23 @@ function bossMoves(): DesignItem[] {
           s.position.set(g.size * 0.8 + (i - 2) * g.size * 0.55 * Math.min(1, f * 3),
             -g.size * 1.8 + Math.max(0, f - 0.2) * g.size * 1.6);
           s.rotation = Math.PI / 2;
+        });
+      }),
+    cell('mantisshrimp', 'spit',
+      'Between the set pieces, at random: still and swelling — the tell — then a ring of spit with gaps a larva slips through.',
+      { tell: `${RING_WIND} s`, ring: `${RING_SPOKES}, turned at random`, every: '4–7 s, 3–5 s under half health' },
+      (c) => { for (let i = 0; i < RING_SPOKES; i++) c.props.addChild(shotSprite('spit')); },
+      (c, g, t, dt, beat) => {
+        const cycle = RING_WIND + 1.6, k = t % cycle;
+        const swell = k < RING_WIND;
+        c.fish.animate(dt, 0.1, beat, 0,
+          swell ? { windup: k / RING_WIND, strike: 0, open: k / RING_WIND > 0.5 } : REST);
+        c.fish.place(0, 0, 0, 1);
+        const out = Math.max(0, k - RING_WIND) * g.size * 1.4;
+        c.props.children.forEach((s, i) => {
+          const a = (i / RING_SPOKES) * Math.PI * 2;
+          s.visible = !swell;
+          s.position.set(g.size * 0.5 + Math.cos(a) * out, Math.sin(a) * out);
         });
       }),
     cell('greatwhite', 'breach',

@@ -42,11 +42,37 @@ const SPRAY = 6;
 /**
  * The den turns on it. A punch thrown down a gap narrower than its body — a cleft — jams
  * its head in: `WEDGED` seconds held fast and open to blows, and no burst, since the club
- * never swung clear. Wrenched free, it is `WARY` of a larva in a narrow place, and lobs
- * urchins in after it rather than punching.
+ * never swung clear. Wrenched free, it goes back to the middle of the den to rain on the
+ * larva, and it will not punch down that cleft again until it has jammed in the other.
  */
 export const WEDGED = 3.5;
-const WARY = 12;
+/**
+ * The den runs on a timer. A larva that slips into a cleft the shrimp has not jammed in is
+ * gone after at once: to the cleft's mouth, and one headbutt down it, from over the mouth or
+ * after `APPROACH` however near it got. Over the last `HOLD` tiles across it keeps its facing
+ * and backs when it overshoots — turning there flipped it to and fro across the mouth, the
+ * spot falling on its other side with every overshoot. Jammed or not, it then swims back to
+ * the middle of the den, for up to `HOME`, and lobs its urchin from there: the rain is what
+ * moves the larva on to the other cleft, and round again. A larva that stays in the cleft it
+ * jammed in is rained on from the middle every `LOB_CD`.
+ */
+const APPROACH = 4;
+const HOLD = 2;
+const HOME = 3;
+/**
+ * The spit, between the set pieces: every `RING_EVERY` at random, `RING_HURT` under half its
+ * health, it swells still through `RING_WIND` and spits a ring of `RING_SPOKES` at `RING_SPEED`.
+ * Three tiles out the spokes are over two tiles apart, so a larva that sees the swell steps
+ * into a gap, and the ring is turned at random so the gap is never where it was. It comes
+ * at the next free moment once due — never mid combo, never with the larva in a cleft, never
+ * in the walk home or the rain — so it does not stack on a move already in the water.
+ */
+const RING_EVERY: [number, number] = [4, 7];
+const RING_HURT: [number, number] = [3, 5];
+export const RING_WIND = 0.6;
+export const RING_SPOKES = 8;
+const RING_SPEED = 3.5;
+const RING_REST = 0.4;
 /**
  * The urchin. Dug out of the sand — the tell, `LOB_WIND`, nose down — and thrown in an arc
  * that tops out a tile under the ceiling over the player, where it bursts into `SPINES`
@@ -57,8 +83,8 @@ const WARY = 12;
  * it throws a second `SECOND` after the first, over wherever the player has gone.
  *
  * It throws after every `LOB_EVERY` rests, when the player has kept out of its reach for
- * `AWAY`, and whenever it is wary and the player is in a narrow place — which is what digs a
- * larva out of a cleft. `LOB_CD` holds the next punch off until the rain is mostly down.
+ * `AWAY`, and from the middle of the den after every headbutt down a cleft — which is what
+ * digs a larva out of it. `LOB_CD` holds the next punch off until the rain is mostly down.
  */
 export const LOB_WIND = 1.0;
 const LOB_G = 14;
@@ -167,7 +193,6 @@ export class Bosses {
     if (!t) return;
     if (this.flowOf !== t) { this.flowOf = t; this.flow = new Flow(t); }
     c.roleCd = Math.max(0, c.roleCd - dt);
-    c.wary = Math.max(0, c.wary - dt);
     // held fast by the room: nothing else it does matters until it is free
     if (c.stuck > 0) { this.held(c, dt); return; }
     if (c.fade < 1 || !p.alive) { c.drive(dt, c.angle, 0); return; }
@@ -203,22 +228,33 @@ export class Bosses {
     const reach = sees && d < PUNCH_RANGE;
     c.unseen = reach ? 0 : c.unseen + dt;
     if (c.move === 'lob') { this.lob(c, dt, p, t); return; }
+    if (c.move === 'home') { this.home(c, dt, t); return; }
+    if (c.move === 'spit') { this.spit(c, dt); return; }
+    if (c.move === 'butt' && c.attack === 'none') { this.approach(c, dt, p, t); return; }
+    // the spit's clock runs through the open fight, combos and all, and comes due at the next
+    // free moment; not with the larva in a cleft, or it would greet it on the way out
+    if (c.move === '' && !t.cleftAt(p.x, p.y)) c.spitCd -= dt;
     if (c.attack === 'windup') {
       // cocked: square on and still, following the player until the lock, and then not:
       // the line and the spot on it are the ones the club is thrown at
       if (c.attackT > PUNCH_LOCK) {
-        c.aimA = aim;
+        // down a cleft, straight down: the spot over the mouth is for that, and an aim across
+        // its facing would turn it round
+        c.aimA = c.move === 'butt' ? Math.PI / 2 : aim;
         c.aimD = clamp(d * t.tile - noseReach(c), t.tile * 0.5, PUNCH_REACH * t.tile);
       }
       c.drive(dt, c.aimA, c.attackT > PUNCH_LOCK ? 0.12 : 0, 1);
-      if (c.attackT <= PUNCH_LOCK) { c.vx *= Math.exp(-8 * dt); c.vy *= Math.exp(-8 * dt); }
+      // and over a cleft, still from the start: the way on of the approach carried it a tile
+      // past the mouth, and the punch down onto the flat beside it
+      if (c.attackT <= PUNCH_LOCK || c.move === 'butt') { c.vx *= Math.exp(-8 * dt); c.vy *= Math.exp(-8 * dt); }
       if ((c.attackT -= dt) <= 0) this.begin(c, 'strike', PUNCH_TIME);
       return;
     }
     if (c.attack === 'strike') {
       const v = c.aimD / PUNCH_TIME;
       c.angle = c.aimA;
-      c.face = Math.cos(c.aimA) >= 0 ? 1 : -1;
+      // a punch straight down keeps the facing it was cocked on: a body pointed down has no side
+      if (Math.cos(c.aimA) * c.face < -0.2) c.face = c.face > 0 ? -1 : 1;
       c.vx = Math.cos(c.aimA) * v;
       c.vy = Math.sin(c.aimA) * v;
       c.thrust = 1.6;
@@ -226,7 +262,7 @@ export class Bosses {
       // thrown down a gap it does not fit, the punch ends with its head jammed in the rock:
       // the crack ahead of the club, or the club on rock after a larva in a narrow place —
       // which is the one at the mouth of a cleft, where its lips flare too wide to pinch
-      if (this.pinched(c, c.aimA, t) || (c.onRock && this.narrow(t, p.x, p.y, depthOf(c)))) this.wedge(c);
+      if (this.pinched(c, c.aimA, t) || (c.onRock && this.narrow(t, p.x, p.y, depthOf(c)))) this.wedge(c, p, t);
       else this.cavitate(c, p, t);
       return;
     }
@@ -234,6 +270,8 @@ export class Bosses {
       c.drive(dt, c.angle, 0.1);
       if ((c.attackT -= dt) > 0) return;
       c.attack = 'none';
+      // the headbutt is one, whatever it found: then the walk home and the rain
+      if (c.move === 'butt') { this.homeward(c); return; }
       if (c.volley >= COMBO) {
         c.volley = 0;
         c.rounds++;
@@ -242,37 +280,124 @@ export class Bosses {
       }
       c.roleCd = c.volley > 0 ? BETWEEN : 0.8;
     }
+    // what the den asks of it, in its turn: a larva in a cleft it has not jammed in is gone
+    // after at once; one in the cleft it has is rained out of it from the middle of the den
+    const cave = c.volley === 0 ? caveOf(t, p.x, p.y) : null;
+    if (cave && cave.x !== c.cave) {
+      c.move = 'butt';
+      c.attackT = APPROACH;
+      return;
+    }
+    if (c.volley === 0 && c.spitCd <= 0 && !cave) { this.swell(c); return; }
+    if (cave) {
+      if (c.roleCd <= 0) { this.homeward(c); return; }
+      // waiting on the rain in the middle: on its facing, as over the mouth, or it flips on the spot
+      const [hx, hy] = middleOf(t);
+      if (Math.hypot(hx - c.x, hy - c.y) < HOLD * t.tile) c.strafe(dt, hx - c.x, hy - c.y, 0.2);
+      else c.drive(dt, clearHeading(t, c, this.wayTo(c, t, hx, hy)), 0.4);
+      return;
+    }
     if (c.roleCd <= 0 && c.volley === 0) {
-      // the urchin, in its turn, for a player kept out of reach, and for one it cannot punch
-      // after without jamming itself again
-      const hiding = c.wary > 0 && this.narrow(t, p.x, p.y, depthOf(c));
-      // and only with the water clear over it: from under a ledge it swims out first
-      if ((hiding || c.rounds >= LOB_EVERY || c.unseen > AWAY) && this.arc(c, p, t)) {
-        c.move = 'lob';
-        c.rounds = 0;
-        c.unseen = 0;
-        this.begin(c, 'windup', LOB_WIND);
-        this.tell(c, false);
-        this.world.cue = 'lob';
-        return;
-      }
+      // the urchin, in its turn, for a player kept out of reach; and only with the water
+      // clear over it: from under a ledge it swims out first
+      if ((c.rounds >= LOB_EVERY || c.unseen > AWAY) && this.arc(c, p, t)) { this.dig(c); return; }
     }
     if (c.roleCd <= 0 && reach) {
       this.begin(c, 'windup', c.volley === 0 ? PUNCH_WIND : FOLLOW_WIND);
       if (c.volley === 0) this.tell(c);
       return;
     }
-    // sidle: in to the near edge of its band, out from under the player, and across it. Wary
-    // of a larva in a narrow place, it stands off at the far edge instead, and leaves the
-    // mouth of the cleft free: a larva rained out of it has to have a way out
+    // sidle: in to the near edge of its band, out from under the player, and across it
     const [near, far] = SIDLE;
-    const off = c.wary > 0 && this.narrow(t, p.x, p.y, depthOf(c));
     let a: number;
-    if (off) a = aim + (d < far + 1 ? Math.PI : (Math.sin(c.wander * 0.5) >= 0 ? 1 : -1) * Math.PI / 2);
-    else if (!sees || d > far) a = this.way(c, p, t, sees);
+    if (!sees || d > far) a = this.way(c, p, t, sees);
     else if (d < near) a = aim + Math.PI;
     else a = aim + (Math.sin(c.wander * 0.5) >= 0 ? 1 : -1) * Math.PI / 2;
     c.drive(dt, clearHeading(t, c, a), d > far ? 0.8 : 0.5);
+  }
+
+  /**
+   * To the mouth of the cleft the larva is in, for the headbutt down it: where its nose, once
+   * it points down, is a little over the mouth — not its middle, since a body pointed down is
+   * drawn at a capped pitch with its nose well out ahead of it. Near it, it keeps its facing
+   * (`Creature.strafe`), backing where it overshot; at the spot, or when `APPROACH` runs out,
+   * it cocks its club — or, with no sight of the larva then, gives up on it for the rain.
+   * `attackT` runs the approach while `attack` is 'none'.
+   */
+  private approach(c: Creature, dt: number, p: Creature, t: Terrain) {
+    const cave = caveOf(t, p.x, p.y);
+    // out of it again before the punch: back to the open fight
+    if (!cave || cave.x === c.cave) { c.move = ''; return; }
+    const down = noseOf(c, Math.PI / 2);
+    const sx = cave.x - (down.x - c.x), sy = cave.y - (down.y - c.y) - t.tile * 0.4;
+    const dx = sx - c.x, dy = sy - c.y;
+    // run out of time with the larva out of its sight, a punch would only hit rock: the rain
+    if ((c.attackT -= dt) <= 0 && !t.clearLine(c.x, c.y, p.x, p.y)) { this.homeward(c); return; }
+    if ((Math.abs(dx) < t.tile * 0.35 && Math.abs(dy) < t.tile * 0.6) || c.attackT <= 0) {
+      this.begin(c, 'windup', PUNCH_WIND);
+      this.tell(c);
+      return;
+    }
+    const throttle = clamp(Math.hypot(dx, dy) / (t.tile * 1.5), 0.25, 0.8);
+    if (Math.abs(dx) < HOLD * t.tile && t.clearLine(c.x, c.y, sx, sy)) {
+      // straight at the spot, not round the rock: that close it is the lips clearHeading
+      // would steer off, and the hull holds the body out of them
+      c.strafe(dt, dx, dy, throttle);
+    } else {
+      c.drive(dt, clearHeading(t, c, this.wayTo(c, t, sx, sy)), throttle);
+    }
+  }
+
+  /** Back to the middle of the den, for the rain: `attackT` runs the walk while `attack` is 'none'. */
+  private homeward(c: Creature) {
+    c.move = 'home';
+    c.volley = 0;
+    c.attack = 'none';
+    c.attackT = HOME;
+  }
+
+  private home(c: Creature, dt: number, t: Terrain) {
+    const [hx, hy] = middleOf(t);
+    const d = Math.hypot(hx - c.x, hy - c.y);
+    c.attackT -= dt;
+    if (d < t.tile || c.attackT <= 0) { this.dig(c); return; }
+    c.drive(dt, clearHeading(t, c, this.wayTo(c, t, hx, hy)), clamp(d / (t.tile * 2), 0.3, 0.9));
+  }
+
+  /** The urchin's tell: nose down into the sand, where it is. */
+  private dig(c: Creature) {
+    c.move = 'lob';
+    c.rounds = 0;
+    c.unseen = 0;
+    this.begin(c, 'windup', LOB_WIND);
+    this.tell(c, false);
+    this.world.cue = 'lob';
+  }
+
+  /** The spit's tell: still, and swelling. */
+  private swell(c: Creature) {
+    c.move = 'spit';
+    this.begin(c, 'windup', RING_WIND);
+    this.tell(c, false);
+    this.world.cue = 'spit';
+  }
+
+  /** Swollen, still on its facing, and then the ring from its mouth. */
+  private spit(c: Creature, dt: number) {
+    c.strafe(dt, 0, 0, 0);
+    if ((c.attackT -= dt) > 0) return;
+    if (c.attack === 'windup') {
+      const turn = Math.random() * TAU / RING_SPOKES;
+      for (let k = 0; k < RING_SPOKES; k++) {
+        this.world.fire(c, 'spit', c.mouthX, c.mouthY, turn + (k / RING_SPOKES) * TAU, RING_SPEED);
+      }
+      c.view.chomp();
+      this.begin(c, 'recover', RING_REST);
+      return;
+    }
+    c.move = '';
+    c.attack = 'none';
+    c.spitCd = this.cd(c.hp < c.hpMax * 0.5 ? RING_HURT : RING_EVERY);
   }
 
   /** Where the club lands, the water boils: the hit, a burst, and under half health a ring of spray. */
@@ -312,11 +437,15 @@ export class Bosses {
     return (t.solidAt(x - w, y) && t.solidAt(x + w, y)) || (t.solidAt(x, y - w) && t.solidAt(x, y + w));
   }
 
-  /** Jammed: the head in the cleft, the body held where it stopped, open to every blow. */
-  private wedge(c: Creature) {
+  /**
+   * Jammed: the head in the cleft, the body held where it stopped, open to every blow — and
+   * when it is free, home for the rain, with that cleft the one it will not punch down again.
+   */
+  private wedge(c: Creature, p: Creature, t: Terrain) {
     const w = this.world;
     this.pin(c, WEDGED);
-    c.volley = 0;
+    this.homeward(c);
+    c.cave = caveOf(t, p.x, p.y)?.x ?? c.cave;
     const nose = noseOf(c);
     w.pulses.push({ x: nose.x, y: nose.y, r: c.radius * 0.8, kind: 'dust' });
     w.pulses.push({ x: c.x, y: c.y, r: c.radius * 1.6, kind: SPENT_PULSE });
@@ -699,7 +828,6 @@ export class Bosses {
     c.thrust = 1.2;
     if (c.stuck > 0) return;
     c.exposed = 0;
-    c.wary = WARY;
     c.view.grab(null);
     const back = c.aimA + Math.PI, v = Math.max(1, c.genome.speed) * 1.2;
     c.vx = Math.cos(back) * v;
@@ -739,6 +867,29 @@ export class Bosses {
     const direct = Math.atan2(p.y - c.y, p.x - c.x);
     return sees ? direct : this.flow!.toward(c.x, c.y, p.x, p.y) ?? direct;
   }
+
+  /** The same to a place: straight with a clear line, otherwise down the room's water. */
+  private wayTo(c: Creature, t: Terrain, x: number, y: number) {
+    const direct = Math.atan2(y - c.y, x - c.x);
+    return t.clearLine(c.x, c.y, x, y) ? direct : this.flow!.toward(c.x, c.y, x, y) ?? direct;
+  }
+}
+
+/** The middle of a room, where the mantis shrimp's den is open water: its centre stage. */
+function middleOf(t: Terrain): [number, number] {
+  return [t.x0 + t.width / 2, t.y0 + t.height / 2];
+}
+
+/**
+ * The cleft a point is in, as the middle of its column and the top of it — its mouth; null
+ * outside one.
+ */
+function caveOf(t: Terrain, x: number, y: number) {
+  if (!t.cleftAt(x, y)) return null;
+  const i = Math.floor((x - t.x0) / t.tile);
+  let j = Math.floor((y - t.y0) / t.tile);
+  while (t.cleftAt(x, t.y0 + (j - 0.5) * t.tile)) j--;
+  return { x: t.x0 + (i + 0.5) * t.tile, y: t.y0 + j * t.tile };
 }
 
 /** The top of the floor straight under a point: the first rock down its column. */
@@ -755,7 +906,7 @@ function floorUnder(t: Terrain, x: number, y: number) {
  */
 export function lockOf(c: Creature): { fill: number; locked: boolean } | null {
   if (c.attack !== 'windup') return null;
-  const lock = c.move === 'breach' ? BREACH_LOCK : c.move === '' && c.species.boss === 'punch' ? PUNCH_LOCK : 0;
+  const lock = c.move === 'breach' ? BREACH_LOCK : (c.move === '' || c.move === 'butt') && c.species.boss === 'punch' ? PUNCH_LOCK : 0;
   if (!lock) return null;
   const done = c.attackLen - c.attackT;
   return { fill: Math.min(1, done / Math.max(0.01, c.attackLen - lock)), locked: c.attackT <= lock };

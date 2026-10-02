@@ -35,7 +35,7 @@ export interface Blood {
  * its moves, and the room turning on it — the mantis shrimp wedged in a cleft, the Great
  * White dazed on rock, the Giant Squid's arms wrapped round it.
  */
-export type BossCue = 'lob' | 'wedged' | 'breach' | 'dazed' | 'draw' | 'snagged';
+export type BossCue = 'lob' | 'wedged' | 'spit' | 'breach' | 'dazed' | 'draw' | 'snagged';
 
 export interface Pulse {
   x: number; y: number; r: number;

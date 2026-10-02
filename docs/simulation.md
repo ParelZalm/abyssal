@@ -510,14 +510,25 @@ first-time toast that names the answer (`Impacts`).
   facing up the crack (`PlayerController.nook`, `Creature.upright`, which lifts `drawnAngle`'s
   pitch cap for the drawing, the hitbox and the mouth alike): it backs in and out facing out,
   fires up it on the up arrow, lies down again for a sideways aim, and tucks itself in on the
-  way (`FishView.nestle`). Freed, it is
-  wary for 12 s — it stands off a larva in a narrow place and lobs an urchin instead of
-  punching after it. The urchin is dug up through a 1 s tell and thrown (`World.lob`, a shot
+  way (`FishView.nestle`). The den runs on a timer: a larva that slips into a cleft the
+  shrimp has not jammed in is gone after at once — to the spot where its nose, pointed down,
+  is over the mouth (a body pointed down is drawn at a capped pitch, so that is well behind
+  the mouth), holding its facing over the last two tiles (`Creature.strafe`) since turning
+  there flipped it to and fro across the mouth — and gets one headbutt down it, from the spot
+  or after 4 s. Jammed or not, it swims back to the middle of the room and lobs its urchin
+  from there; the rain reaches into the cleft, which is what moves the larva on to the other
+  one, and round again. It does not punch down the cleft it last jammed in (`Creature.cave`)
+  until it has jammed in the other: a larva that stays is rained on from the middle every
+  2.5 s. The urchin is dug up through a 1 s tell and thrown (`World.lob`, a shot
   with `heavy`) to the top of an arc a tile under whatever roofs the player's column; there
   it bursts into nine spines, 1.5 tiles apart with one over the player, that sink at up to 3
   tiles a second. It lobs only along an open arc, and an urchin that meets rock before its
   apex breaks there and rains nothing, so a ledge is a roof. Two urchins under half health.
   It also lobs after every second rest, and at a player out of its reach for five seconds.
+  Between the set pieces it spits: every 4–7 s at random (3–5 under half health), counted
+  through the open fight and fired at its next free moment, it swells still for 0.6 s and
+  spits a ring of eight at 3.5 tiles a second, turned at random — over two tiles between
+  spokes three tiles out.
 - **Great White: dazed, and the breach.** A rush that ends on rock leaves it dazed for 3.4 s,
   where a miss in the open leaves it 1.2 s. After every second charge — every one under half
   health — with the player five tiles over the floor, it dives to the sand under the player,

@@ -74,18 +74,24 @@ export function surfaceGap(c: Creature, px: number, py: number): number {
   return best * k;
 }
 
-/** A body point in R units (nose +x, back -y) to its world offset from the body's middle. */
-function toWorld(c: Creature, x: number, y: number, k: number) {
-  const a = drawnAngle(c.angle, c.face, c.upright);
+/**
+ * A body point in R units (nose +x, back -y) to its world offset from the body's middle,
+ * with the body at `angle`.
+ */
+function toWorld(c: Creature, x: number, y: number, k: number, angle = c.angle) {
+  const a = drawnAngle(angle, c.face, c.upright);
   const cos = Math.cos(a), sin = Math.sin(a);
   const u = x * c.face * k, v = y * k;
   return { x: u * cos - v * sin, y: u * sin + v * cos };
 }
 
-/** Where the hull's nose is in the world: what a boss's club, snout or arms meet things with. */
-export function noseOf(c: Creature): { x: number; y: number } {
+/**
+ * Where the hull's nose is in the world: what a boss's club, snout or arms meet things with.
+ * Given an `angle`, where it would be with the body turned to it.
+ */
+export function noseOf(c: Creature, angle = c.angle): { x: number; y: number } {
   const h = hullOf(c);
-  const o = toWorld(c, h.x[0], h.y[0], c.genome.size / R);
+  const o = toWorld(c, h.x[0], h.y[0], c.genome.size / R, angle);
   return { x: c.x + o.x, y: c.y + o.y };
 }
 
