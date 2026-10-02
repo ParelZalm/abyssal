@@ -8,6 +8,7 @@ import { EXPOSED_TAKEN, PATTERN_CD, RUSH_BITE } from './patterns';
 import { bracedOf } from './roles';
 import type { World } from './world';
 import { surfaceGap } from './hull';
+import { SPRITES } from '../content/sprites';
 
 /** A school holds as a bait ball with this many of its own kind packed around a body. */
 const BALL_N = 6;
@@ -272,11 +273,11 @@ export class Combat {
     if (att.species.boss && att.exposed > 0) return;
     // the body as drawn, against the player's middle and a little of it — a mackerel's head
     // on the larva used to be out of its reach, a circle at its middle being all that hurt.
-    // The old circle stays beside it for a drifter only, whose tentacles trail outside the
-    // bell: on anything long it stood deeper than the body, and a barracuda's dash passing
-    // under the player still landed
+    // The old circle stays beside it for a painted drifter only, whose tentacles trail outside
+    // the bell: on anything long it stood deeper than the body, and a barracuda's dash passing
+    // under the player still landed. A drifter drawn from a sprite has its tentacles in its hull
     const r = att.radius * 0.7 + p.radius * 0.5;
-    const trails = att.species.role === 'drifter';
+    const trails = att.species.role === 'drifter' && !SPRITES[att.species.id]?.hull;
     if (surfaceGap(att, p.x, p.y) > p.radius * 0.35 && (!trails || dist2(att.x, att.y, p.x, p.y) > r * r)) return;
     const got = this.hitPlayer(att, p, att.species.role === 'drifter' ? 'touch' : 'bite');
     // a dash ends on what it found

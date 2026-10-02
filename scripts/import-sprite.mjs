@@ -3,7 +3,7 @@
  * Import a generated sprite sheet as an enemy's frames — the code side of `docs/sprites.md`.
  *
  *   npm run sprite -- <sheet.png> --id <species> [--pitch 6.54] [--colours 22]
- *                     [--keep x0,y0,x1,y1] [--fringe] [--out src/render/creature/sprites]
+ *                     [--keep x0,y0,x1,y1] [--fringe [hue]] [--out src/render/creature/sprites]
  *
  * The sheet is one or two frames side by side on flat #FF00FF: the rest, and optionally the
  * strike. A generator's "8× pixel art" is never on a clean grid — the anglerfish's was 6.5
@@ -36,7 +36,7 @@ const opt = (name, fallback) => {
 const sheet = argv.find((a, i) => !a.startsWith('--') && !(i > 0 && argv[i - 1].startsWith('--')));
 const id = opt('id');
 if (!sheet || !id) {
-  console.error('usage: npm run sprite -- <sheet.png> --id <species> [--pitch n] [--colours n] [--keep x0,y0,x1,y1] [--fringe] [--out dir]');
+  console.error('usage: npm run sprite -- <sheet.png> --id <species> [--pitch n] [--colours n] [--keep x0,y0,x1,y1] [--fringe [hue]] [--out dir]');
   process.exit(1);
 }
 const out = opt('out', 'src/render/creature/sprites');
@@ -177,28 +177,38 @@ const grids = boxes.map(gridOf);
 // the fringe, with `--fringe`: cells the background bled into. The barracuda's sheet ringed
 // its outline with a cell of dark magenta, too dark for `isBg` to key out, and clustered it
 // became three of the palette's colours. A magenta cell on the rim with a dark cell inside it
-// is the bleed round an outline and goes; any other is an outline cell the bleed coloured,
-// and darkens to the outline. Opt-in, because hue is all that tells bleed from paint: the
-// gulper and the mantis shrimp are violet-magenta themselves, and it ate their outlines.
+// is the bleed round an outline and goes; any other is a cell of the animal the bleed tinted,
+// and takes the clean colour nearest its brightness — the siphonophore's thin tentacles were
+// tinted whole, and darkened to the outline they were gone against the water. Opt-in, because
+// hue is all that tells bleed from paint: the gulper and the mantis shrimp are violet-magenta
+// themselves, and it ate their outlines. `--fringe 240` takes bleed from 240° (violet) up,
+// for a sheet with no violet in it, where bleed into blue lands at 245–270°; by default from
+// 272°, which spares the barracuda's violet fins (257°).
+const fringeAt = argv.indexOf('--fringe');
+const fringeFrom = fringeAt >= 0 && /^\d+$/.test(argv[fringeAt + 1] ?? '') ? Number(argv[fringeAt + 1]) : 272;
 const hue = ([r, g, b]) => {
   const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
-  if (mx - mn < 24 || (mx - mn) / mx < 0.6) return -1;
+  if (mx - mn < 24 || (mx - mn) / mx < 0.4) return -1;
   return mx === b ? 240 + 60 * (r - g) / (mx - mn) : mx === r ? (360 + 60 * (g - b) / (mx - mn)) % 360 : -1;
 };
-const isFringe = c => c && hue(c) >= 272 && hue(c) <= 330 && c[1] < c[0] && c[1] < c[2];
+const isFringe = c => c && hue(c) >= fringeFrom && hue(c) <= 330 && c[1] < c[0] && c[1] < c[2];
 const lum = c => c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
 let fringe = 0;
-if (argv.includes('--fringe')) for (const g of grids) {
+if (fringeAt >= 0) for (const g of grids) {
   const at = (i, j) => i < 0 || j < 0 || i >= g.w || j >= g.h ? null : g.cells[j * g.w + i];
-  const ink = g.cells.filter(c => c && !isFringe(c));
-  const outline = ink.reduce((a, c) => lum(c) < lum(a) ? c : a, ink[0]);
+  const ink = g.cells.filter(c => c && !isFringe(c)).sort((a, z) => lum(a) - lum(z));
+  const nearest = l => {
+    let lo = 0, hi = ink.length - 1;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (lum(ink[m]) < l) lo = m + 1; else hi = m; }
+    return lo > 0 && l - lum(ink[lo - 1]) < lum(ink[lo]) - l ? ink[lo - 1] : ink[lo];
+  };
   const next = g.cells.slice();
   for (let j = 0; j < g.h; j++) for (let i = 0; i < g.w; i++) {
     const c = at(i, j);
     if (!isFringe(c)) continue;
     const nb = [at(i + 1, j), at(i - 1, j), at(i, j + 1), at(i, j - 1)];
     const rim = nb.includes(null), backed = nb.some(n => n && !isFringe(n) && lum(n) < 40);
-    next[j * g.w + i] = rim && backed ? null : outline;
+    next[j * g.w + i] = rim && backed ? null : nearest(lum(c));
     fringe++;
   }
   g.cells = next;

@@ -265,7 +265,9 @@ export const SPECIES: Species[] = [
     stealth: 0.9, segments: 1 },
 
   { id: 'siphon', name: 'Siphonophore', behavior: 'drift', plan: 'jelly', role: 'drifter',
-    zone: 'twilight', bleed: 1400,
+    // drawn four times its size: a jelly's form is a bell and a half long, and the colony at
+    // that was under a tile in the deep, a smudge where it should be a chain of lights
+    zone: 'twilight', bleed: 1400, drawn: 4,
     size: [30, 58], hue: [188, 208], accent: 175, speed: 34, bite: 16,
     nutrition: 2.2, weight: 7, translucent: 0.6, glow: 0.85, veil: 0.9,
     photophores: 0.6, segments: 2, heal: 0.45 },

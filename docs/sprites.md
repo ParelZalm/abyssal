@@ -234,6 +234,7 @@ Open the preview. When something is off:
 | the strike's seam cuts through something, or misses part of what moved | `--keep x0,y0,x1,y1`, the box in the rest frame's cells |
 | banding, colours merged that should not be | `--colours 28` |
 | magenta or dark-violet specks round the outline: the background bled into the rim cells, too dark to key out | `--fringe`, unless the animal is magenta itself (it goes by hue; the gulper and the mantis shrimp would lose their outlines) |
+| thin parts tinted violet whole, on an animal with no violet in it | `--fringe 240`, which takes bleed from 240° up: bleed into blue lands at 245–270°, under the default's 272° (the siphonophore's tentacles) |
 
 ### 3. Wire it
 
@@ -245,7 +246,10 @@ Open the preview. When something is off:
   the line the swim bends about; `hull` is the hitbox (`sim/hull.ts`); `bulb` is where a
   lure's trap fires; `lights` are where the view hangs a bloom, in each organ's own colour;
   `legs`, set by hand, is the box a row of legs hangs in, which the skin walks in a wave from
-  the tail to the head (the mantis shrimp's; keep the arms and fins out of it).
+  the tail to the head (the mantis shrimp's; keep the arms and fins out of it); `bells`, set
+  by hand, is a jet-swimmer's swimming bells and their mouths: only they squeeze on the pulse,
+  and each squeeze squirts water from the mouths (the siphonophore's). A drifter has one
+  frame, and `SOURCES` takes it alone.
   Write the import command into the comment above the entry, flags and all, so it can be
   run again.
 - **`content/species.ts`**: set `drawn` (*Size*, below).

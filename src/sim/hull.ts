@@ -1,5 +1,5 @@
 import { drawnAngle, edgeAt, formFor, R, spineAt } from '../content/form';
-import { SPRITES, spritePoint, spriteScale } from '../content/sprites';
+import { SPRITES, spritePoint, spriteScale, type Pt } from '../content/sprites';
 import type { Creature } from './creature';
 import type { Terrain } from './terrain';
 
@@ -107,6 +107,15 @@ function toWorld(c: Creature, x: number, y: number, k: number, angle = c.angle) 
 export function noseOf(c: Creature, angle = c.angle): { x: number; y: number } {
   const h = hullOf(c);
   const o = toWorld(c, h.x[0], h.y[0], c.drawnSize / R, angle);
+  return { x: c.x + o.x, y: c.y + o.y };
+}
+
+/** A point on a body's sprite, in the sprite's pixels, where it is in the world now. */
+export function spriteAt(c: Creature, at: Pt): { x: number; y: number } | null {
+  const s = SPRITES[c.species.id];
+  if (!s) return null;
+  const p = spritePoint(s, formFor(c.genome, c.species.plan), at);
+  const o = toWorld(c, p.x, p.y, c.drawnSize / R);
   return { x: c.x + o.x, y: c.y + o.y };
 }
 

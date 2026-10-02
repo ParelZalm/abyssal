@@ -43,7 +43,7 @@ needs the code named in *Blocked on* first.
 | Anglerfish | angler · turret | rest, strike (jaw) | **done** | drawn 2; `angler.webp`, `angler-sprite.webp` |
 | Gulper Eel | eel · charger | rest, strike (jaw and pouch) | **done** | drawn 1, already 3.7 tiles long; `gulper.webp`, `gulper-sprite.webp` |
 | Barracuda | eel · charger | rest, strike (jaw) | **done** | drawn 1.6; dashes from 10 tiles (`reach`) and leaves a streak of light (`streak`); its sheet bled magenta round the outline (`--fringe`); `barracuda.webp`, `barracuda-sprite.webp` |
-| Siphonophore | jelly · drifter | rest | ready | the first drifter: check the pulse on the mesh reads |
+| Siphonophore | jelly · drifter | rest | **done** | drawn 4; one frame; its bells alone squeeze on the pulse and squirt from their mouths (`bells`); its tentacles are in its hull; `siphon.webp`, `siphon-sprite.webp` |
 | Vampire Squid | squid · spitter | rest, strike (mouth) | blocked | rigged arms |
 
 ### Reef tank
@@ -87,7 +87,7 @@ name it.
 
 ## Order
 
-1. **Deep tank first:** the barracuda (done), then the siphonophore. The darkest water carries the
+1. **Deep tank first:** the barracuda, then the siphonophore (both done). The darkest water carries the
    art direction's lights best, and the two done already set the style to match.
 2. **The reef** next, whole: four *ready* enemies, and its fights come back when the first one
    is in.

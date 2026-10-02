@@ -20,13 +20,13 @@
  */
 import { Container, MeshSimple, Sprite } from 'pixi.js';
 import { bakeFish, releaseFish, type Baked, type Rig } from './fishbake';
-import { SPRITES } from '../../content/sprites';
+import { SPRITES, spritePoint } from '../../content/sprites';
 import type { Species } from '../../content/species';
-import { drawnAngle, PLAN_ART, quintic, R, type Plan } from '../../content/form';
+import { drawnAngle, formFor, PLAN_ART, quintic, R, type Plan } from '../../content/form';
 import { menace, type Genome } from '../../content/genome';
 import { glowTexture } from '../textures';
 import type { Light } from '../lighting';
-import { hsl, lerp } from '../../core/util';
+import { clamp, hsl, lerp } from '../../core/util';
 import { artDensity, artVersion } from '../pixel';
 import { livingSkin, type LivingSkin } from './living';
 import type { Emitter } from './bake/sheet';
@@ -189,6 +189,11 @@ export class FishView extends Container {
   private skin: LivingSkin | null = null;
   private verts = new Float32Array(0);
   private colX: number[] = [];
+  /**
+   * How much of the pulse each column takes, for a sprite whose bells alone squeeze
+   * (`SpriteArt.bells`): 1 in the bells, easing to 0 a little past them. Null pulses it all.
+   */
+  private squeeze: number[] | null = null;
   private baked: Baked | null = null;
   private motion = MOTION.darter;
   /** Counts down from 1 through a bite, driving the squash-and-snap. */
@@ -438,6 +443,13 @@ export class FishView extends Container {
       }
     }
     this.verts = verts;
+    const bells = this.art ? SPRITES[this.art]?.bells : undefined;
+    if (bells) {
+      const s = SPRITES[this.art!], f = formFor(g, this.plan);
+      const a = spritePoint(s, f, [bells.x0, s.axis]).x, b = spritePoint(s, f, [bells.x1, s.axis]).x;
+      const ease = (b - a) * 0.25;
+      this.squeeze = this.colX.map(x => clamp(Math.min(x - a, b - x) / ease + 1, 0, 1));
+    } else this.squeeze = null;
     // arms first, so they sit under the body: the crown is tucked beneath the head
     const rig = this.baked.arm;
     if (rig) {
@@ -475,7 +487,12 @@ export class FishView extends Container {
     // heated by menace as the painted accent is (`palette.ts`), and no further than the plan
     // lets it: an angler's halo is the colour of its lure, not a warning
     const heat = men * 0.75 * PLAN_ART[this.plan].heat;
-    const tint = hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, heat), 0.6 + men * 0.3, 0.55);
+    // a sprite with lights of its own carries its colour in them: the halo and the core are
+    // theirs, mixed by strength, not the accent heated by menace — on a siphonophore that was
+    // a warm disc on its bare stem, a colour nowhere in the picture
+    const lit = this.art && SPRITES[this.art] ? this.baked.lights : [];
+    const own = lit.length ? mixed(lit) : null;
+    const tint = own ?? hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, heat), 0.6 + men * 0.3, 0.55);
     this.halo.visible = true;
     const gr = R * (4 + g.glow * 7);
     this.halo.width = this.halo.height = gr * 2;
@@ -492,8 +509,8 @@ export class FishView extends Container {
     this.core.visible = g.glow > 0.05;
     const cr = R * (1.5 + g.glow * 1.6);
     this.core.width = this.core.height = cr * 2;
-    this.core.tint = hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, heat),
-                         0.45 + men * 0.35, 0.72);
+    this.core.tint = own ?? hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, heat),
+                                0.45 + men * 0.35, 0.72);
     this.core.alpha = Math.min(0.8, g.glow * 0.75);
     this.aura.visible = men > 0.25;
     if (this.aura.visible) {
@@ -704,8 +721,10 @@ export class FishView extends Container {
     }
     // the body's origin is at x 0 on the strip, so facing -x is the strip mirrored in place
     const c = this.facing;
-    // a bell does not undulate, it contracts: the strip narrows and lengthens on the beat
+    // a bell does not undulate, it contracts: the strip narrows and lengthens on the beat —
+    // or, where only the bells squeeze, they narrow and the stem behind them holds its length
     const pulse = m.pulse ? 1 + Math.sin(beat) * m.pulse : 1;
+    const sq = this.squeeze;
     for (let j = 0; j < n; j++) {
       const x = this.colX[j] * c;
       const y = spineY[j];
@@ -715,10 +734,11 @@ export class FishView extends Container {
       const dx = this.colX[jb] - this.colX[ja], dy = spineY[jb] - spineY[ja];
       const l = Math.hypot(dx, dy) || 1;
       const nx = -dy / l * c, ny = dx / l;
-      const hw = h * (m.pulse ? 2 - pulse : 1);
-      this.verts[j * 4] = x * pulse + nx * hw;
+      const hw = h * (m.pulse ? 1 - (pulse - 1) * (sq ? sq[j] : 1) : 1);
+      const xs = sq ? x : x * pulse;
+      this.verts[j * 4] = xs + nx * hw;
       this.verts[j * 4 + 1] = y + ny * hw;
-      this.verts[j * 4 + 2] = x * pulse - nx * hw;
+      this.verts[j * 4 + 2] = xs - nx * hw;
       this.verts[j * 4 + 3] = y - ny * hw;
     }
     this.mesh.vertices = this.verts;
@@ -925,4 +945,14 @@ function mul(a: number, b: number) {
 function lerpColor(a: number, b: number, t: number) {
   const ch = (s: number) => Math.round(lerp((a >> s) & 255, (b >> s) & 255, t));
   return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+}
+
+/** Lights' colours mixed by their strength. */
+function mixed(lights: Emitter[]) {
+  let r = 0, g = 0, b = 0, w = 0;
+  for (const e of lights) {
+    r += (e.color >> 16) * e.strength; g += ((e.color >> 8) & 255) * e.strength; b += (e.color & 255) * e.strength;
+    w += e.strength;
+  }
+  return (Math.round(r / w) << 16) | (Math.round(g / w) << 8) | Math.round(b / w);
 }

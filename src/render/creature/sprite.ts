@@ -25,12 +25,15 @@ import mantisRest from './sprites/mantisshrimp.png';
 import mantisStrike from './sprites/mantisshrimp-strike.png';
 import barracudaRest from './sprites/barracuda.png';
 import barracudaStrike from './sprites/barracuda-strike.png';
+import siphonRest from './sprites/siphon.png';
 
-const SOURCES: Record<string, [rest: string, strike: string]> = {
+/** Each species' frames. A drifter has no strike, and shows its rest for one (`Baked.open`). */
+const SOURCES: Record<string, [rest: string, strike?: string]> = {
   anglerfish: [anglerRest, anglerStrike],
   gulper: [gulperRest, gulperStrike],
   mantisshrimp: [mantisRest, mantisStrike],
   barracuda: [barracudaRest, barracudaStrike],
+  siphon: [siphonRest],
 };
 
 interface Frames { rest: ImageData; strike: ImageData; palette: number[][] }
@@ -53,7 +56,7 @@ function pixels(url: string) {
 
 export async function loadSprites() {
   await Promise.all(Object.entries(SOURCES).map(async ([id, [a, b]]) => {
-    const [rest, strike] = await Promise.all([pixels(a), pixels(b)]);
+    const [rest, strike] = await Promise.all([pixels(a), b ? pixels(b) : null]).then(([r, k]) => [r, k ?? r]);
     const seen = new Set<number>();
     for (const d of [rest, strike]) {
       for (let i = 0; i < d.data.length; i += 4) {

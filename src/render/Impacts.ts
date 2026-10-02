@@ -9,7 +9,8 @@ import type { Dread } from './Dread';
 import type { Fx } from './fx';
 import type { ShotMark } from '../sim/organs';
 import type { Shot } from '../sim/world';
-import { noseOf } from '../sim/hull';
+import { noseOf, spriteAt } from '../sim/hull';
+import { SPRITES } from '../content/sprites';
 import { shotGlow } from './shots';
 import { lightAt, waterColor } from './water';
 
@@ -41,6 +42,8 @@ export class Impacts {
   private hintCd = 0;
   /** Where each dashing body's streak was laid to last frame, so this frame's joins it. */
   private readonly streaks = new WeakMap<Creature, { x: number; y: number }>();
+  /** Each jet-swimmer's count of squeezes so far, off its beat: a new one is a squirt. */
+  private readonly pulses = new WeakMap<Creature, number>();
 
   constructor(private readonly fx: Fx, private readonly camera: Camera,
               private readonly dread: Dread, private readonly ui: UI) {}
@@ -244,6 +247,24 @@ export class Impacts {
       // and it lights the water it goes through, or the dark round it says nothing passed
       fx.flash(tail.x, tail.y, color, c.radius * 2, 0.35, STREAK_LIFE);
     }
+    // a siphonophore's bells squirt out of their mouths on each squeeze, back along the body
+    for (const c of world.creatures) {
+      const bells = SPRITES[c.species.id]?.bells;
+      if (!bells) continue;
+      // the bells are narrowest where the beat's sine crests (`FishView.pose`)
+      const squeezes = Math.floor((c.beat - Math.PI / 2) / (Math.PI * 2));
+      const last = this.pulses.get(c);
+      this.pulses.set(c, squeezes);
+      if (last === undefined || squeezes === last || !c.alive || !c.view.visible) continue;
+      const n = noseOf(c);
+      const d = Math.hypot(n.x - c.x, n.y - c.y) || 1;
+      const bx = (c.x - n.x) / d, by = (c.y - n.y) / d;
+      for (const at of bells.jets) {
+        const p = spriteAt(c, at);
+        if (!p) continue;
+        fx.spray(p.x, p.y, bx, by, JET, JET_DOTS, c.radius * JET_POWER, c.radius * JET_SIZE, 0.25);
+      }
+    }
     for (const s of world.shots) {
       if (!s.marks) continue;
       for (const m of s.marks) if (Math.random() < TRAIL_RATE[m] * dt) shed(fx, s, m);
@@ -307,6 +328,14 @@ const EMBERS = 22;
  * halo are, in radii of the body. At the barracuda's dash a quarter second is four tiles of
  * line behind it, long enough to say where it came from and gone before the next.
  */
+/**
+ * A bell's jet: pale water thrown back out of its mouth on the squeeze, a few dots each and
+ * sized off the body, so it reads as the push and not as a cloud round the colony.
+ */
+const JET = 0xbfefff;
+const JET_DOTS = 3;
+const JET_POWER = 2.2;
+const JET_SIZE = 0.05;
 const STREAK_LIFE = 0.25;
 const STREAK_CORE = 0.16;
 const STREAK_HALO = 0.6;

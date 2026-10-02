@@ -42,6 +42,13 @@ export interface SpriteArt {
    * Nothing else may be in the box, or it walks too.
    */
   legs?: { x0: number; x1: number; root: number; tip: number };
+  /**
+   * A jet-swimmer's bells, `x0` to `x1` across, and the mouth of each, `jets`: the bells alone
+   * squeeze on the pulse (`FishView.pose`), and each squeeze squirts water out of the mouths
+   * (`Impacts.trail`). A jelly plan's pulse is otherwise the whole strip's, which on a long
+   * colony stretched its stem with its bells.
+   */
+  bells?: { x0: number; x1: number; jets: Pt[] };
 }
 
 export const SPRITES: Record<string, SpriteArt> = {
@@ -77,6 +84,21 @@ export const SPRITES: Record<string, SpriteArt> = {
   barracuda: { w: 247, h: 72, snout: 245, tail: 46, axis: 35,
                hull: [[238.5, 36, 6.8], [215.5, 37, 11.9], [192.5, 36.5, 14.9], [168.5, 36.5, 14.9], [145.5, 37, 15.3],
                       [122.5, 36.5, 15], [98.5, 35.5, 13.2], [75.5, 36, 11.9], [52.5, 35.5, 8.1]] },
+  // `npm run sprite -- siphon-sprite.png --id siphon --fringe 240`: one frame, since a drifter
+  // has no strike, drawn finer than asked (3 image pixels to the art pixel), and its thin
+  // tentacles tinted whole by the magenta, which only bleed from 240° catches. The hull is set
+  // by hand: the float, the bells whole, and behind them a band from the stem down through
+  // the polyps and the top of the tentacles, since the tentacles are what stings; the shields
+  // over the stem and the lures at the tentacles' tips are a near miss, as a fin is. The
+  // lights are the float's tip and each tentacle's cluster of lures, dimmer toward the back;
+  // the jets are the six swimming bells' mouths, which open toward the stem
+  siphon: { w: 496, h: 123, snout: 492, tail: 57, axis: 46,
+            lights: [{ at: [488, 44], color: 0xe8ffff, strength: 0.9 }, { at: [305, 82], color: 0xa8f0ff, strength: 0.45 },
+                     { at: [235, 82], color: 0xa8f0ff, strength: 0.4 }, { at: [164, 84], color: 0xa8f0ff, strength: 0.35 },
+                     { at: [93, 81], color: 0xa8f0ff, strength: 0.3 }, { at: [41, 77], color: 0xa8f0ff, strength: 0.25 }],
+            bells: { x0: 305, x1: 445, jets: [[314, 34], [343, 21], [352, 62], [379, 31], [394, 66], [412, 35]] },
+            hull: [[480, 46, 11], [446, 46, 16], [410, 50, 33], [375, 50, 33], [340, 48, 27],
+                   [285, 58, 16], [220, 58, 16], [150, 58, 15], [80, 54, 10]] },
 };
 
 /**
@@ -95,7 +117,7 @@ export const REWORKED_ONLY = true;
  * read as two versions of it, and the rest of a room was more to watch than the one thing
  * being tested. Null deals it as any other.
  */
-export const NEWEST: string | null = 'barracuda';
+export const NEWEST: string | null = 'siphon';
 
 /**
  * A tank's hostile table as it is dealt: the reworked enemies only, while `REWORKED_ONLY`,
