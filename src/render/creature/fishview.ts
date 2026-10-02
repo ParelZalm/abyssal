@@ -103,6 +103,9 @@ export const REST: Pose = { windup: 0, strike: 0, open: false };
  */
 const FLIP_TIME = 0.2;
 
+/** How much of the swim wave a strike thrown dead straight takes out. */
+const STRAIGHT = 0.88;
+
 /** Columns per rigged arm. An arm is thin, so it needs length resolution and nothing else. */
 const ARM_COLS = 12;
 
@@ -665,7 +668,8 @@ export class FishView extends Container {
    * first and second derivatives vanish at the head — the wave has to arrive at the skull
    * with no slope and no curvature, or there is a crease there that reads as a joint.
    */
-  private pose(beat: number, bank: number, thrust: number, dt: number) {
+  /** `straight`, 0 to 1, flattens the swim wave and the turn's bend toward a straight body. */
+  private pose(beat: number, bank: number, thrust: number, dt: number, straight = 0) {
     if (!this.mesh || !this.baked) return;
     const m = this.motion;
     const h = this.baked.halfH;
@@ -674,7 +678,8 @@ export class FishView extends Container {
     // curls the animal like a banana
     const d = this.baked.depth;
     const n = this.colX.length;
-    const amp = d * m.amp * SIDE_ON * (0.45 + thrust * 0.75);
+    // a little of the tail's beat survives a straight body, or it reads as a frozen sprite
+    const amp = d * m.amp * SIDE_ON * (0.45 + thrust * 0.75) * (1 - straight * STRAIGHT);
     const spineY: number[] = [];
     // A turn bends the whole body into a C rather than rotating a rigid strip about its
     // middle: head and tail both fall to the inside of the turn, so the nose leads into it
@@ -685,7 +690,7 @@ export class FishView extends Container {
     const mid = (x0 + x1) / 2, half = Math.abs(x0 - x1) / 2 || 1;
     // turned round, the strip is mirrored across x, so the same steer curls the other way
     // unless the bend turns with it
-    const bend = m.pulse ? 0 : bank * d * 1.25 * this.facing;
+    const bend = m.pulse ? 0 : bank * d * 1.25 * this.facing * (1 - straight);
     for (let j = 0; j < n; j++) {
       const s = j / (n - 1);
       const env = quintic(s);
@@ -887,8 +892,12 @@ export class FishView extends Container {
       u.uFlash = this.hurtT > HURT_WHITE ? 0.9 * ((this.hurtT - HURT_WHITE) / (1 - HURT_WHITE)) ** 0.5 : 0;
       this.skin.uniforms.update();
     }
+    // a strike is thrown straight: the charge drove the wave to its widest, so a gulper's
+    // dash wriggled harder than its cruise when it should go like a thrown spear. Held
+    // through most of it, and let go over its last quarter as the swim comes back
+    const straight = Math.min(1, k * 4);
     // the stroke's tail sweeps wider than the cruise's: the snap is what the eye reads as a kick
-    this.pose(beat, bank, thrust * (1 + w * 0.9) + b * 0.7, dt);
+    this.pose(beat, bank, thrust * (1 + w * 0.9) + b * 0.7, dt, straight);
   }
 
   private skinWith(texture: Baked['texture']) {

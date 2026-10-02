@@ -168,6 +168,11 @@ is smooth, and `FramePass` steps and dithers it onto the grid with everything el
   layer over the dark with the E prompt) fills amber as it winds up and flashes red and
   white while its line is locked. The pose and the light say something is coming; the bar
   says when.
+- **A strike is thrown straight.** The wind-up coils the body and curls the tail harder; the
+  strike then flattens the swim wave and the turn's bend (`STRAIGHT` in `fishview.ts`) and
+  lets them back over its last quarter. A charge drives thrust to its top, so before this the
+  dash wriggled harder than the cruise — a gulper's 3.5 R units of wave across the body,
+  now 0.4. The contrast with the coil is what makes the dash read as one.
 - **A pickup lying loose stands in a beam and turns.** A shaft of its colour falls on it from
   above (`beamTexture`), its light pools round it, and it turns on the spot like Isaac's coin,
   its width stepping through whole art pixels and its back a shade darker (`PickupView`). A
