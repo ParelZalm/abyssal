@@ -28,10 +28,9 @@ export interface SpriteArt {
 }
 
 export const SPRITES: Record<string, SpriteArt> = {
-  // `docs/media/reference/angler-sprite.webp`, snapped back onto its grid (the generator's
-  // drifted by three pixels across the frame) and its strike reduced to the jaw, since the
-  // second frame was redrawn whole and swapping it in made the body shimmer
-  anglerfish: { w: 136, h: 81, snout: 110, tail: 22, axis: 37, bulb: [129.4, 32.1], eye: [81.2, 27.1] },
+  // `npm run sprite -- angler-sprite.png --id anglerfish` (`docs/sprites.md`), from
+  // `docs/media/reference/angler-sprite.webp` as a PNG
+  anglerfish: { w: 135, h: 79, snout: 109, tail: 22, axis: 36, bulb: [129.1, 30.5], eye: [82, 29] },
 };
 
 /** Sprite pixels per R unit, for a body of form `f`. */

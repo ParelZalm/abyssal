@@ -10,6 +10,7 @@ npm run dev      # vite dev server with HMR
 npm run build    # tsc --noEmit && vite build  — this is the only gate
 npm run preview  # serve dist/
 npm run design   # vite, opened on /design.html — the design board
+npm run sprite -- <sheet.png> --id <species>   # import an enemy's sprite sheet (docs/sprites.md)
 ```
 
 There is **no test suite and no linter**. `npm run build` type-checks (strict) and is
@@ -156,6 +157,8 @@ Read `docs/decisions.md` before rebuilding anything that looks missing.
 - **An enemy may be drawn from a sprite instead** (`content/sprites.ts`,
   `render/creature/sprite.ts`): enemies never mutate, so one authored picture can match a
   reference where the painters cannot. The player and every plan it can take stay painted.
+  The whole workflow — the prompts for whoever makes the art, `npm run sprite` to import a
+  sheet, the wiring and the checks — is `docs/sprites.md`.
 - **Nothing on a creature is stroked.** A contour has a position of its own, so it draws
   twice wherever parts cross. Painters set what a pixel is; `bake/sheet.ts` shades it, and
   the outline and rim are read off the finished silhouette. See `docs/decisions.md`.

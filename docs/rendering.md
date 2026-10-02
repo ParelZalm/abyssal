@@ -37,12 +37,9 @@ the trap fires from. `render/creature/sprite.ts` loads the frames before anythin
 and resamples them to the bake's density through the same cache: a coverage-weighted mean
 per texel, snapped back to the sprite's own colours, ringed in its darkest. The player and
 every plan it can take stay painted. The anglerfish is the first
-(`render/creature/sprites/`), from `docs/media/reference/angler-sprite.webp`. A generated
-sheet is not on a clean grid, so it was snapped by hand in the console: the cell bounds
-are the strongest colour edge a pitch on from the last (its columns drifted by three
-pixels), each cell its median colour, the lot clustered to 22 colours. Its strike frame had
-been redrawn whole, which made the body shimmer on every bite, so the strike is the rest
-frame with only the jaw taken from it.
+(`render/creature/sprites/`), from `docs/media/reference/angler-sprite.webp`, imported with
+`npm run sprite`. How a sheet is asked for, imported and checked is
+[`sprites.md`](sprites.md).
 
 A sprite's detail needs the pixels to show, and at its own size an anglerfish had 20 to 30
 of them, so it is **drawn at twice its size** (`Species.drawn`, `Creature.drawnSize`). The
