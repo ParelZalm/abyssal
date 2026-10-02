@@ -19,6 +19,15 @@ same room as a cave). What they agree on, and what every stage should build towa
 - **Isaac's HUD.** Hearts, then currency, bombs and keys under them at top left; the
   minimap at top right.
 
+Single animals get a reference sheet of their own beside the two frames: the animal in game,
+flat, taken apart and its palette, side-on and facing right. Nothing is traced from one —
+the bake paints every body from its genome — so a sheet is matched by the plan's row in
+`PLAN_ART` and its species' colours. `angler.webp` is the first: a navy body under violet
+fins (`finHue`), a jaw held open on cold fangs (`maw`), a comb of spines (`crest`), a fan
+tail (`fan`), scales, a sparkle for photophores, and the lure, eye and specks in the one
+cold colour (`heat: 0` keeps menace from warming it). At the deep tank's zoom an anglerfish
+is 10 to 20 texels long, so most of that only shows on the board or on a big window.
+
 ## The pixel grid
 
 `src/render/pixel.ts`. The whole game is drawn on one coarse grid: the canvas is created

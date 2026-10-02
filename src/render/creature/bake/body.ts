@@ -3,7 +3,7 @@
  * see-through body. Countershading and speckle are not painted here — the shader derives
  * them from the palette (`sheet.ts`), so they cannot disagree with the body they sit on.
  */
-import { edgeAt, halfWidth, spineAt, R, type Form } from '../../../content/form';
+import { edgeAt, halfWidth, shoulderAt, spineAt, R, type Form } from '../../../content/form';
 import { fbm, fbmSigned } from '../../../core/noise';
 import { lerp, TAU } from '../../../core/util';
 import type { Palette, RGB } from './palette';
@@ -45,6 +45,36 @@ export function mass(s: Sheet, pts: Pt[]) {
     x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
   }
   for (let ix = Math.floor(s.px(x0)); ix <= Math.ceil(s.px(x1)); ix++) s.column(ix, s.py(y0), s.py(y1));
+}
+
+/**
+ * Scales (`PlanArt.scales`): rows of them across the flank behind the head, each one's free
+ * edge a dark arc bowed toward the tail, every other row offset by half. Each arc is walked a
+ * texel at a time, so it reads as a line and not as a dotted screen. Painted last, and only
+ * on bare flank — not through a fin, the jaw or anything lit — so the shading under them
+ * still models the body. Below three texels a scale they are only noise, and are left off.
+ */
+export function scales(s: Sheet, f: Form, pal: Palette) {
+  const size = halfWidth(shoulderAt(f), f) * 0.36;
+  if (size * s.res < 3) return;
+  const rowH = size * 0.75, r = size * 0.6;
+  const steps = Math.max(4, Math.ceil(r * Math.PI * s.res));
+  const x0 = spineAt(0.94, f), x1 = spineAt(0.26, f);
+  for (let row = Math.floor(-s.halfH / rowH); row * rowH < s.halfH; row++) {
+    const cy = (row + 0.5) * rowH;
+    const off = row & 1 ? size * 0.5 : 0;
+    for (let cx = Math.floor(x0 / size) * size + off; cx < x1; cx += size) {
+      for (let i = 0; i <= steps; i++) {
+        const a = Math.PI * (0.5 + i / steps);
+        const ix = Math.floor(s.px(cx + Math.cos(a) * r)), iy = Math.floor(s.py(cy + Math.sin(a) * r));
+        const j = iy * s.w + ix;
+        if (s.get(ix, iy) !== M.BODY || s.decal.has(j)) continue;
+        const t = tAt(s.rx(ix), f);
+        if (t < 0.26 || t > 0.94) continue;
+        s.dotPx(ix, iy, pal.ramp[1], 0.55);
+      }
+    }
+  }
 }
 
 /**

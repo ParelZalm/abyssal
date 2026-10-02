@@ -292,11 +292,12 @@ export const SPECIES: Species[] = [
     nutrition: 2.5, weight: 7, jaw: 1.0, glow: 0.5, photophores: 0.8,
     barbels: 0.9, eyeAdapt: 0.6, gape: 0.4 },
 
-  // its lure throws light in a ring, which is the one thing about it that is not waiting
+  // its lure throws light in a ring, which is the one thing about it that is not waiting.
+  // Navy under cyan lights, after `docs/media/reference/angler.webp`
   { id: 'anglerfish', name: 'Anglerfish', behavior: 'ambush', plan: 'angler',
     role: 'turret', shot: 'bolt',
     zone: 'midnight', bleed: 800,
-    size: [40, 66], hue: [252, 278], accent: 55, speed: 130, bite: 26,
+    size: [40, 66], hue: [222, 236], accent: 188, speed: 130, bite: 26,
     nutrition: 2.6, weight: 7, jaw: 1.1, glow: 0.9, armor: 2, spikes: 1, lure: 1,
     gape: 0.7, eyeAdapt: 0.3, photophores: 0.3, sense: 520, lurk: 1 },
 

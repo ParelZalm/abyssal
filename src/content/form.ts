@@ -115,9 +115,14 @@ export const PLAN_FORMS: Record<Plan, Form> = {
                fluke: 0.26, fork: 0 },
   squid:     { len: 2.5, width: 0.52, fore: 1.5, aft: 0.85, peduncle: 0.3, trunk: 0, shoulder: 0, nose: 0, cheek: 0.05,
                fluke: 0.26, fork: 0.2 },
-  // all hump: the back bows up over a head that is most of the animal
-  angler:    { len: 1.9, width: 0.95, fore: 0.7, aft: 1.5, peduncle: 0.12, trunk: 0, shoulder: 0, nose: 0, cheek: 0.2,
-               fluke: 0.26, fork: 0.3, up: 0.5, arch: 0.25 },
+  // an egg on a short wrist (`docs/media/reference/angler.webp`): nearly full depth right to
+  // a rounded face, deepest a third of the way back, and a back that stays convex down to a
+  // short stalk under a fan. One beta curve cannot give a blunt face, a forward peak and a
+  // full rear at once — its `fore` sets both the face and the peak — so this is the shark's
+  // cone, trunk and taper with a big cap for the face. It was as deep as it was long, and
+  // with an ambusher's broad head and its gape's cheek on top it drew as a diamond.
+  angler:    { len: 2.1, width: 0.56, fore: 0.55, aft: 0.8, peduncle: 0.16, trunk: 0.25, shoulder: 0.22, nose: 0.7, cheek: 0.05,
+               fluke: 0.3, fork: 0, up: 0.54, arch: 0.12 },
   leviathan: { len: 3.1, width: 0.7, fore: 0.85, aft: 1.4, peduncle: 0.13, trunk: 0, shoulder: 0, nose: 0, cheek: 0.13,
                fluke: 0.38, fork: 0.9, up: 0.55, arch: 0.1 },
   // Side-on a great white is a deep animal, a third again as deep as the reef shark, with
@@ -181,6 +186,12 @@ export interface FinPair {
   chord: number;
   /** Tip sharpness: 0 a round paddle, 1 a point. */
   taper: number;
+  /**
+   * Where on the flank the root sits, -1 the back to 1 the belly. Unset, the pectoral sits
+   * just under the spine and the rest hang from the belly; an angler's fan is held at the
+   * middle of a body deep enough that just under the spine is its lower third.
+   */
+  k?: number;
 }
 
 /** What every plan had before fins were a per-plan decision. */
@@ -294,11 +305,42 @@ export interface PlanArt {
   stalks: boolean;
   /** Armour across the trunk in bands, a crustacean's segments, each plate's edge lit. */
   bands: boolean;
+  /**
+   * How far round the wheel the fins sit from the body, in degrees. 0 is one ramp for the
+   * whole animal; the angler's navy body under violet fins is a second ramp, and a two-tone
+   * fish cannot be had by lightness alone.
+   */
+  finHue: number;
+  /**
+   * How far menace heats the accent toward red and amber, 0 to 1. Right for a body whose
+   * accent is a warning; wrong for one whose accent is its lights, since deep water carries
+   * blue-green and the lure is the colour it has to be to be seen.
+   */
+  heat: number;
+  /**
+   * A jaw that never shuts: held ajar on its fangs, lipped, the lower jaw jutting past the
+   * upper. The angler's face is its mouth; shut to a seam, it read as a cliff with an eye.
+   */
+  maw: boolean;
+  /** The dorsal's rays stand proud of its membrane as spines: a comb, not a sail. */
+  crest: boolean;
+  /** The tail as a round fan on its rays rather than a fork or a squared paddle. */
+  fan: boolean;
+  /** Rows of scales across the flank, each edge a dark arc facing the tail. */
+  scales: boolean;
+  /** Eyes lit in the light organs' colour, as the tapetum shines in deep water. */
+  eyeLamp: boolean;
+  /**
+   * The photophores scattered over the back as specks, rather than in rows down the belly:
+   * the skin sparkles instead of counter-lighting.
+   */
+  sparkle: boolean;
 }
 
 const art = (o: Partial<PlanArt> = {}): PlanArt => ({
   arms: 0, armCount: 0, armLen: 0, armWidth: 0, armPair: 1, armReach: 0, grasp: 0, spines: true,
   gills: true, cilia: false, paleEyes: false, caudal: 1, samples: 90, smoke: false, club: false, stalks: false, bands: false,
+  finHue: 0, heat: 1, maw: false, crest: false, fan: false, scales: false, eyeLamp: false, sparkle: false,
   tail: 'caudal', blunt: 0, dorsalFin: 0, fins: FISH_FINS, eye: 1, eyeAt: 0.16, mottle: 1, tone: 1, shade: 1, finRays: true, mouth: 1, eyeGlow: 0, fog: 0, ...o,
 });
 
@@ -320,7 +362,14 @@ export const PLAN_ART: Record<Plan, PlanArt> = {
   // squid's mantle is smooth
   squid:      art({ arms: 1.15, armCount: 8, armLen: 1.5, armWidth: 0.12, armReach: 0.6, armPair: 1.6,
                     grasp: 0.9, spines: false }),
-  angler:     art({ paleEyes: true }),
+  // after `docs/media/reference/angler.webp`: a navy body under violet fins, a jaw held open
+  // on long fangs, a comb of dorsal spines, a fan tail, and cold lights — the lure, the eye
+  // and a sparkle over the back. One round pectoral and no pelvics; the blades every
+  // menacing animal wears would stand among the comb's spines.
+  angler:     art({ paleEyes: true, spines: false, gills: false, eyeAt: 0.22, eye: 1.2, caudal: 2.2,
+                    finHue: 34, heat: 0, maw: true, crest: true, fan: true, scales: true,
+                    eyeLamp: true, sparkle: true,
+                    fins: [{ at: 0.48, len: 0.75, rake: 0.85, chord: 0.85, taper: 0, k: 0.02 }] }),
   leviathan:  art({ eyeGlow: 1, fog: 1.25, paleEyes: true, samples: 110, caudal: 1.8, eye: 0.45,
                     fins: [{ at: 0.4, len: 1.4, rake: 0.8, chord: 0.5, taper: 0.8 },
                            { at: 0.6, len: 0.7, rake: 0.8, chord: 0.5, taper: 0.6 }] }),
@@ -416,14 +465,22 @@ export function halfWidth(t: number, f: Form): number {
 }
 
 /**
- * Where a lure's bulb hangs, in R units: up over the head and out in front of the jaw, on
- * its stalk off the forehead. Shared by the paint and by the organ that strikes whatever
- * touches the bulb, so the light you see is the trigger that fires. Local to the animal,
- * which faces +x with its back at -y; `faceFor` says which way that is in the world.
+ * Where a lure's bulb hangs, in R units: out in front of the jaw at the height of the eye,
+ * dangled off a rod that arches up from the forehead and over (`lureArch`). Shared by the
+ * paint and by the organ that strikes whatever touches the bulb, so the light you see is the
+ * trigger that fires — and it hangs before the mouth, where the strike comes from. It used
+ * to ride high over the head, which put the trap above the animal rather than in its face.
+ * Local to the animal, which faces +x with its back at -y; `faceFor` says which way that is
+ * in the world.
  */
 export function lureBulb(g: Genome, f: Form) {
-  return { x: spineAt(0, f) + R * (0.3 + g.lure * 0.3),
-           y: edgeAt(0.14, f, -1) - R * (0.55 + g.lure * 0.3) };
+  return { x: spineAt(0, f) + R * (0.45 + g.lure * 0.25),
+           y: edgeAt(0.1, f, -0.45) };
+}
+
+/** The top of the lure's rod, in R units: how far above the head its arch climbs. */
+export function lureArch(g: Genome, f: Form) {
+  return edgeAt(0.16, f, -1) - R * (0.5 + g.lure * 0.25);
 }
 
 /**

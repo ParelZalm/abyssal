@@ -24,7 +24,7 @@ import { BLOOM_TRAIL, hasSynergy, synergiesOf } from '../../sim/organs';
 import { artDensity } from '../pixel';
 import { palette, type Palette } from './bake/palette';
 import { M, shade, Sheet, type Emitter } from './bake/sheet';
-import { flank, whaleSpots, camouflage, crazing, veins, ballast, viscera, mantle, cilia } from './bake/body';
+import { flank, whaleSpots, camouflage, crazing, veins, ballast, viscera, mantle, cilia, scales } from './bake/body';
 import { caudalFin, fluke, mantleFins, dorsalRidge, medianFins, fins, ribbonFin, veil, bloomTrail,
          tentacles } from './bake/fins';
 import { bluntSnout, head, lureAt, lure, barbels } from './bake/head';
@@ -173,7 +173,7 @@ function paint(g: Genome, plan: Plan): Baked {
   const rigged = A.grasp > 0;
   const L = g.lure > 0 ? lureAt(g, f) : null;
   const bloom = hasSynergy(g, 'driftingbloom');
-  const reachUp = Math.max(widest * 3.2, L ? -L.y + L.r * 3 : 0,
+  const reachUp = Math.max(widest * 3.2, L ? Math.max(-L.y + L.r * 3, -L.top + R * 0.2) : 0,
                            widest * (1 + 0.7 * urchinReach(g)) * 1.6) + R * 0.4;
   const front = spineAt(0, f) + Math.max(R * 0.4, L ? L.x - spineAt(0, f) + L.r * 3 : 0,
     A.club || hasSynergy(g, 'ballistic') ? ballisticReach(g) + R * 0.2 : 0, widest * 0.5,
@@ -227,7 +227,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   }
   if (A.dorsalFin > 0) dorsalRidge(s, f, A);
   else if (A.finRays && A.fins.length > 0 && A.tail === 'caudal' && A.arms === 0 && g.eel <= 0) {
-    medianFins(s, f, g);
+    medianFins(s, f, g, A);
   }
 
   // --- the body itself ---------------------------------------------------
@@ -242,7 +242,9 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
 
   // --- on its skin --------------------------------------------------------
   if (hasSynergy(g, 'whaleshark')) whaleSpots(s, f, seed);
-  if (g.lurk > 0) camouflage(s, f, pal, seed);
+  // a scaled coat is a pattern of its own: blotches laid over it hid the scales and the fin
+  // across them, and the beard hung where the angler's lower jaw is
+  if (g.lurk > 0 && !A.scales) camouflage(s, f, pal, seed);
   if (g.brittle > 0) crazing(s, f, seed);
   if (g.veins > 0) veins(s, f, seed);
   if (g.lead > 0) ballast(s, f);
@@ -257,7 +259,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   if (A.bands) armourBands(s, f, pal, g.segments);
   if (g.mantle > 0) mantle(s, f, pal);
   if (smoke) viscera(s, f, pal);
-  if (photophoreOf(g) > 0) photophores(s, f, pal, g, seed);
+  if (photophoreOf(g) > 0) photophores(s, f, pal, g, A, seed);
   if (hasSynergy(g, 'flashsense')) flankLights(s, f, pal);
   if (g.glare > 0) embers(s, f, seed);
   if (len < SMALL) return false;
@@ -277,6 +279,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   if (g.lure > 0) lure(s, f, pal, g);
   if (g.pierce > 0) needleBill(s, f);
   if (g.halo > 0) halo(s, f, g);
+  if (A.scales) scales(s, f, pal);
   return true;
 }
 

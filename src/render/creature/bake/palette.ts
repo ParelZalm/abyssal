@@ -15,7 +15,11 @@ export type RGB = [number, number, number];
 
 export interface Palette {
   ramp: RGB[];
+  /** The fins' ramp: the body's own, unless the plan turns them round the wheel. */
+  fin: RGB[];
   accent: RGB;
+  /** Round the lips of a held-open jaw (`PlanArt.maw`). */
+  lip: RGB;
   dark: RGB;
   bone: RGB;
   mouth: RGB;
@@ -62,14 +66,24 @@ export function palette(g: Genome, men: number, A: PlanArt, seed: number): Palet
   // within, near white, and only its darks keep the cold of the water
   const pale = g.pale;
   const hi = lerp((0.74 - men * 0.2) * t, 0.95, pale);
-  const accentHue = lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, men * 0.75);
+  const accentHue = lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, men * 0.75 * A.heat);
+  const sat = (0.34 + men * 0.1) * (1 - 0.55 * pale);
+  const lo = lerp(0.035, 0.16, pale);
+  const body = ramp(g.hue, sat, lo, Math.max(0.2, hi));
+  // a held-open jaw shows its fangs against a dark throat, so they take the cold of the
+  // lights rather than bone's warm white, which read as a grin
+  const fangs = A.maw ? rgbOf(g.accentHue, 0.55, 0.8) : rgbOf(72, 0.22, 0.78);
   return {
-    ramp: ramp(g.hue, (0.34 + men * 0.1) * (1 - 0.55 * pale), lerp(0.035, 0.16, pale), Math.max(0.2, hi)),
+    ramp: body,
+    fin: A.finHue ? ramp(g.hue + A.finHue, sat * 1.3, lo * 2.5, Math.min(0.78, hi * 1.45)) : body,
     accent: rgbOf(accentHue, 0.6 + men * 0.3, 0.58),
+    lip: rgbOf(g.hue + 85, 0.5, 0.36),
     dark: rgbOf(g.hue, 0.5, 0.06),
-    bone: rgbOf(72, 0.22, 0.78),
-    mouth: rgbOf(g.hue - 30, 0.55, 0.09),
-    filament: rgbOf(g.hue, 0.3, Math.max(0.3, hi * 0.72)),
+    bone: fangs,
+    // a throat held open is a gap across the face, and the teal of a seam read as a wall
+    mouth: A.maw ? rgbOf(g.hue + 15, 0.5, 0.05) : rgbOf(g.hue - 30, 0.55, 0.09),
+    filament: A.finHue ? rgbOf(g.hue + A.finHue, sat * 1.2, Math.max(0.3, hi * 0.72))
+      : rgbOf(g.hue, 0.3, Math.max(0.3, hi * 0.72)),
     counter: 0.62 * A.shade,
     grain: 0.2 * A.mottle,
     alpha: 1 - Math.min(0.55, fadeOf(g) * 0.6),
