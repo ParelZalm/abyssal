@@ -272,9 +272,12 @@ export class Combat {
     if (att.species.boss && att.exposed > 0) return;
     // the body as drawn, against the player's middle and a little of it — a mackerel's head
     // on the larva used to be out of its reach, a circle at its middle being all that hurt.
-    // The old circle stays beside it for a drifter, whose tentacles trail outside the bell
+    // The old circle stays beside it for a drifter only, whose tentacles trail outside the
+    // bell: on anything long it stood deeper than the body, and a barracuda's dash passing
+    // under the player still landed
     const r = att.radius * 0.7 + p.radius * 0.5;
-    if (surfaceGap(att, p.x, p.y) > p.radius * 0.35 && dist2(att.x, att.y, p.x, p.y) > r * r) return;
+    const trails = att.species.role === 'drifter';
+    if (surfaceGap(att, p.x, p.y) > p.radius * 0.35 && (!trails || dist2(att.x, att.y, p.x, p.y) > r * r)) return;
     const got = this.hitPlayer(att, p, att.species.role === 'drifter' ? 'touch' : 'bite');
     // a dash ends on what it found
     if (got && att.attack === 'strike') {

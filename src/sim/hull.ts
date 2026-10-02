@@ -21,8 +21,6 @@ interface Hull {
   key: string;
   /** In the body frame, R units: along the spine, off it, and the half-height there. */
   x: Float32Array; y: Float32Array; r: Float32Array;
-  /** How far from the body's origin any of it reaches, R units: the cheap reject. */
-  bound: number;
 }
 
 const hulls = new WeakMap<Creature, Hull>();
@@ -34,7 +32,6 @@ function hullOf(c: Creature): Hull {
   if (had?.key === key) return had;
   const f = formFor(g, c.species.plan);
   const x = new Float32Array(SAMPLES), y = new Float32Array(SAMPLES), r = new Float32Array(SAMPLES);
-  let bound = 0;
   // a body drawn from a sprite is hit where the sprite is, measured off its silhouette when it
   // was imported: the form under it is only the plan's, and a gulper's pouch hung outside it
   const sprite = SPRITES[c.species.id];
@@ -44,9 +41,8 @@ function hullOf(c: Creature): Hull {
       x[i] = spritePoint(sprite, f, [sx, sy]).x;
       y[i] = (sy - sprite.axis) / per;
       r[i] = sr / per;
-      bound = Math.max(bound, Math.hypot(x[i], y[i]) + r[i]);
     });
-    const h = { key, x, y, r, bound };
+    const h = { key, x, y, r };
     hulls.set(c, h);
     return h;
   }
@@ -57,9 +53,8 @@ function hullOf(c: Creature): Hull {
     x[i] = spineAt(t, f);
     y[i] = (top + bottom) / 2;
     r[i] = (bottom - top) / 2;
-    bound = Math.max(bound, Math.hypot(x[i], y[i]) + r[i]);
   }
-  const h = { key, x, y, r, bound };
+  const h = { key, x, y, r };
   hulls.set(c, h);
   return h;
 }
@@ -67,13 +62,17 @@ function hullOf(c: Creature): Hull {
 /**
  * How far (`px`, `py`) is from the body's surface, in world units; negative inside it. What a
  * shot, a bite and a hostile's touch all measure, so what can be hit is what is drawn.
+ *
+ * Always measured to the hull, never cut short. It used to return the distance to a circle
+ * round the whole body for anything outside that circle, as a cheap reject — but every
+ * caller compares the gap with a small reach, and on a long body that circle stands half
+ * its length off its back: a barracuda's dash hit a player a hundred units above it, over a
+ * body twenty deep. Eight capsules a body is cheap at a room's few dozen.
  */
 export function surfaceGap(c: Creature, px: number, py: number): number {
   const h = hullOf(c);
   const k = c.drawnSize / R;
   const dx = px - c.x, dy = py - c.y;
-  const far = Math.hypot(dx, dy) / k - h.bound;
-  if (far > 0) return far * k;
   // into the body's frame: unpitched, then unmirrored, so the nose is +x and the back -y
   const a = drawnAngle(c.angle, c.face, c.upright);
   const cos = Math.cos(a), sin = Math.sin(a);
