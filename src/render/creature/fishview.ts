@@ -445,8 +445,10 @@ export class FishView extends Container {
     // Every animal carries a floor of it, glowing organs or not — against water this dark
     // an unlit body is a hole in the frame, and the bloom is what gives it a silhouette
     // without stroking one.
-    const tint = hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, men * 0.75),
-                     0.6 + men * 0.3, 0.55);
+    // heated by menace as the painted accent is (`palette.ts`), and no further than the plan
+    // lets it: an angler's halo is the colour of its lure, not a warning
+    const heat = men * 0.75 * PLAN_ART[this.plan].heat;
+    const tint = hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, heat), 0.6 + men * 0.3, 0.55);
     this.halo.visible = true;
     const gr = R * (4 + g.glow * 7);
     this.halo.width = this.halo.height = gr * 2;
@@ -463,7 +465,7 @@ export class FishView extends Container {
     this.core.visible = g.glow > 0.05;
     const cr = R * (1.5 + g.glow * 1.6);
     this.core.width = this.core.height = cr * 2;
-    this.core.tint = hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, men * 0.75),
+    this.core.tint = hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, heat),
                          0.45 + men * 0.35, 0.72);
     this.core.alpha = Math.min(0.8, g.glow * 0.75);
     this.aura.visible = men > 0.25;
