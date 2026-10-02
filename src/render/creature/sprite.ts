@@ -19,9 +19,12 @@ import type { Emitter } from './bake/sheet';
 import type { Baked } from './fishbake';
 import anglerRest from './sprites/anglerfish.png';
 import anglerStrike from './sprites/anglerfish-strike.png';
+import gulperRest from './sprites/gulper.png';
+import gulperStrike from './sprites/gulper-strike.png';
 
 const SOURCES: Record<string, [rest: string, strike: string]> = {
   anglerfish: [anglerRest, anglerStrike],
+  gulper: [gulperRest, gulperStrike],
 };
 
 interface Frames { rest: ImageData; strike: ImageData; palette: number[][] }
@@ -137,9 +140,7 @@ export function bakeSprite(id: string, g: Genome, plan: Plan, res: number): Omit
   const shut = resample(fr.rest, fr.palette, k, w, h, oy);
   const open = resample(fr.strike, fr.palette, k, w, h, oy);
 
-  const lights: Emitter[] = [];
-  if (s.bulb) { const b = spritePoint(s, f, s.bulb); lights.push({ ...b, color: 0x29e0ff, strength: 1.1 }); }
-  if (s.eye) { const e = spritePoint(s, f, s.eye); lights.push({ ...e, color: 0x29e0ff, strength: 0.35 }); }
+  const lights: Emitter[] = (s.lights ?? []).map(l => ({ ...spritePoint(s, f, l.at), color: l.color, strength: l.strength }));
   let depth = 0;
   for (let i = 0; i <= 40; i++) depth = Math.max(depth, halfWidth(i / 40, f));
   return { texture: texture(shut), open: texture(open), canvas: shut, lights, depth, arm: null,

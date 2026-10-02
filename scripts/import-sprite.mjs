@@ -127,7 +127,7 @@ function pitchOf(b) {
   const edges = [];
   for (let x = b.x0; x < b.x1; x += 2) for (let y = b.y0; y < b.y1; y++) if (diff(y * W + x, (y + 1) * W + x) > 80) edges.push(y + 1);
   let best = 0, at = 8;
-  for (let p = 4; p <= 16; p += 0.005) {
+  for (let p = 2.5; p <= 16; p += 0.005) {
     let c = 0, s = 0;
     for (const e of edges) { const a = 2 * Math.PI * e / p; c += Math.cos(a); s += Math.sin(a); }
     const m = Math.hypot(c, s) / edges.length;
@@ -258,27 +258,47 @@ let snout = fw - 1;
 while (snout > tail && !bodyAt(snout)) snout--;
 snout += 1;
 void most;
-// lights: bright cyan-white clusters, the one past the snout a bulb and the one in the head an eye
-const lit = [];
-for (let j = 0; j < frameH; j++) for (let i = 0; i < fw; i++) {
-  const k = restIdx[j * fw + i];
-  if (k >= 0 && pal[k][1] > 170 && pal[k][2] > 200) lit.push([i, j]);
-}
-const mean = a => a.length ? a.reduce((s, p) => [s[0] + p[0], s[1] + p[1]], [0, 0]).map(v => +(v / a.length + 0.5).toFixed(1)) : null;
-const bulb = mean(lit.filter(p => p[0] > snout));
-// the eye: the biggest lit blob in the head above the axis — specks are single cells
-const head = new Set(lit.filter(p => p[0] <= snout && p[0] > tail + (snout - tail) * 0.55 && p[1] < axis).map(p => p[1] * fw + p[0]));
-let eyeBlob = [];
-for (const start of head) {
+// lights: blobs of bright, saturated colour (a lure's bulb, an eye, a tail organ) — single
+// cells are photophores, painted into the art and lit by the body's halo, not lights of
+// their own. A lit blob past the snout is printed as the bulb too, if the animal has a lure.
+// bright, or a warm organ's pink-red: a body's lit blue tops out well under either
+const hot = k => { const [r, g, b] = pal[k]; return r * 0.3 + g * 0.59 + b * 0.11 > 140 || (r > 200 && g < 140); };
+const litSet = new Set();
+for (let j = 0; j < frameH; j++) for (let i = 0; i < fw; i++) { const k = restIdx[j * fw + i]; if (k >= 0 && hot(k)) litSet.add(j * fw + i); }
+const blobs = [];
+for (const start of [...litSet]) {
+  if (!litSet.has(start)) continue;
   const blob = [], stack = [start];
-  head.delete(start);
+  litSet.delete(start);
   while (stack.length) {
-    const c = stack.pop(); blob.push([c % fw, Math.floor(c / fw)]);
-    for (const n of [c - 1, c + 1, c - fw, c + fw]) if (head.has(n)) { head.delete(n); stack.push(n); }
+    const c = stack.pop(); blob.push(c);
+    for (const n of [c - 1, c + 1, c - fw, c + fw, c - fw - 1, c - fw + 1, c + fw - 1, c + fw + 1]) if (litSet.has(n)) { litSet.delete(n); stack.push(n); }
   }
-  if (blob.length > eyeBlob.length) eyeBlob = blob;
+  if (blob.length < 3) continue;
+  const at = [blob.reduce((t, c) => t + (c % fw), 0) / blob.length + 0.5, blob.reduce((t, c) => t + Math.floor(c / fw), 0) / blob.length + 0.5].map(v => +v.toFixed(1));
+  const rgb = [0, 1, 2].map(ch => Math.round(blob.reduce((t, c) => t + pal[restIdx[c]][ch], 0) / blob.length));
+  blobs.push({ at, size: blob.length, color: '0x' + rgb.map(v => v.toString(16).padStart(2, '0')).join('') });
 }
-const eye = eyeBlob.length >= 3 ? mean(eyeBlob) : null;
+blobs.sort((p, q) => q.size - p.size);
+// the biggest few are the candidates: teeth and specks catch the light too
+blobs.splice(4);
+const bulb = blobs.find(b => b.at[0] > snout)?.at ?? null;
+
+// the hitbox: nine samples snout to tail (sim/hull.ts's SAMPLES), each the run that holds the
+// axis — fins joined to the body count, a lure's rod above it is a run of its own and does
+// not — at 85% of its depth, a little inside the picture as Isaac's hitboxes are
+const hull = [];
+for (let n = 0; n < 9; n++) {
+  const i = Math.round(snout - 1 - (0.03 + (n / 8) * 0.94) * (snout - 1 - tail));
+  let j = axis, best = -1;
+  for (let d = 0; d < frameH && best < 0; d++) { if (solid(i, axis - d)) best = axis - d; else if (solid(i, axis + d)) best = axis + d; }
+  if (best < 0) { hull.push([i + 0.5, axis, 0.5]); continue; }
+  let t = best, b = best;
+  while (solid(i, t - 1)) t--;
+  while (solid(i, b + 1)) b++;
+  j = (t + b + 1) / 2;
+  hull.push([i + 0.5, +j.toFixed(1), +(((b + 1 - t) / 2) * 0.85).toFixed(1)]);
+}
 
 // ------------------------------------------------------------------ out
 
@@ -305,8 +325,9 @@ const previewPath = join(tmpdir(), `${id}-sprite-preview.png`);
 writeFileSync(previewPath, encodePng(pw, ph, prev));
 
 const lm = [`w: ${fw}`, `h: ${frameH}`, `snout: ${snout}`, `tail: ${tail}`, `axis: ${axis}`];
-if (bulb) lm.push(`bulb: [${bulb.join(', ')}]`);
-if (eye) lm.push(`eye: [${eye.join(', ')}]`);
+if (bulb) lm.push(`bulb: [${bulb.join(', ')}] /* a lure's, or delete */`);
+lm.push(`hull: [${hull.map(h => `[${h.join(', ')}]`).join(', ')}]`);
+if (blobs.length) lm.push(`lights: [${blobs.map(b => `{ at: [${b.at.join(', ')}], color: ${b.color}, strength: 0.5 }`).join(', ')}] /* candidates: keep the real ones */`);
 console.log(`pitch ${P.toFixed(3)} px · grid ${grids.map(g => `${g.w}×${g.h}`).join(' and ')} · ${pal.length} colours`);
 if (strikeIdx) console.log(`strike lined up at (${off.join(', ')}); taken from it: x ${keep.x0}..${keep.x1}, y ${keep.y0}..${keep.y1} (--keep to override)`);
 console.log(`wrote ${join(out, `${id}.png`)}${strikeIdx ? ` and ${id}-strike.png` : ''}`);

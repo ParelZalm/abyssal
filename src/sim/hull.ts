@@ -1,4 +1,5 @@
 import { drawnAngle, edgeAt, formFor, R, spineAt } from '../content/form';
+import { SPRITES, spritePoint, spriteScale } from '../content/sprites';
 import type { Creature } from './creature';
 import type { Terrain } from './terrain';
 
@@ -34,6 +35,21 @@ function hullOf(c: Creature): Hull {
   const f = formFor(g, c.species.plan);
   const x = new Float32Array(SAMPLES), y = new Float32Array(SAMPLES), r = new Float32Array(SAMPLES);
   let bound = 0;
+  // a body drawn from a sprite is hit where the sprite is, measured off its silhouette when it
+  // was imported: the form under it is only the plan's, and a gulper's pouch hung outside it
+  const sprite = SPRITES[c.species.id];
+  if (sprite?.hull) {
+    const per = spriteScale(sprite, f);
+    sprite.hull.forEach(([sx, sy, sr], i) => {
+      x[i] = spritePoint(sprite, f, [sx, sy]).x;
+      y[i] = (sy - sprite.axis) / per;
+      r[i] = sr / per;
+      bound = Math.max(bound, Math.hypot(x[i], y[i]) + r[i]);
+    });
+    const h = { key, x, y, r, bound };
+    hulls.set(c, h);
+    return h;
+  }
   for (let i = 0; i < SAMPLES; i++) {
     // just inside each end: the nose's cap and the tail root both run out to nothing
     const t = 0.03 + (i / (SAMPLES - 1)) * 0.94;

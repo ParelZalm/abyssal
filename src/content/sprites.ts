@@ -16,6 +16,9 @@ import type { Genome } from './genome';
 
 export type Pt = [number, number];
 
+/** A light organ on the picture: where the view hangs a bloom, its colour and how bright. */
+export interface SpriteLight { at: Pt; color: number; strength: number }
+
 export interface SpriteArt {
   /** Pixel size of each frame; the rest and the strike share it so they swap in place. */
   w: number;
@@ -24,13 +27,31 @@ export interface SpriteArt {
   tail: number;
   axis: number;
   bulb?: Pt;
-  eye?: Pt;
+  lights?: SpriteLight[];
+  /**
+   * The hitbox, measured off the silhouette by the import: nine samples snout to tail, each
+   * the middle and 85% of the half-depth of the run holding the axis there — fins that join
+   * the body count, a lure's rod above it does not — so it sits a little inside the picture,
+   * as Isaac's hitboxes do.
+   * Exactly `SAMPLES` of `sim/hull.ts`. Unset, the hitbox is the plan's form.
+   */
+  hull?: [x: number, y: number, r: number][];
 }
 
 export const SPRITES: Record<string, SpriteArt> = {
   // `npm run sprite -- angler-sprite.png --id anglerfish` (`docs/sprites.md`), from
   // `docs/media/reference/angler-sprite.webp` as a PNG
-  anglerfish: { w: 135, h: 79, snout: 109, tail: 22, axis: 36, bulb: [129.1, 30.5], eye: [82, 29] },
+  anglerfish: { w: 135, h: 79, snout: 109, tail: 22, axis: 36, bulb: [129.1, 30.5],
+                lights: [{ at: [129.1, 30.5], color: 0x29e0ff, strength: 1.1 }, { at: [82, 29], color: 0x29e0ff, strength: 0.35 }],
+                hull: [[105.5, 37.5, 3.8], [95.5, 40, 15.3], [85.5, 27, 11.9], [75.5, 40.5, 21.7], [65.5, 36, 24.6],
+                       [55.5, 34, 23.8], [45.5, 33, 21.3], [35.5, 41.5, 21.7], [25.5, 37, 5.1]] },
+  // `npm run sprite -- gulper-sprite.png --id gulper --pitch 4 --keep 160,6,240,62`: drawn finer
+  // than asked (four image pixels to the art pixel) and its strike a little narrower than its
+  // rest, so the pitch and the jaw's box are given. No lure; the light is the tail's organ
+  gulper: { w: 240, h: 57, snout: 234, tail: 14, axis: 14,
+            lights: [{ at: [5.1, 18.4], color: 0xff4d7a, strength: 0.9 }, { at: [226.3, 5], color: 0x29e0ff, strength: 0.3 }],
+            hull: [[226.5, 16.5, 6.4], [201.5, 19, 14.4], [175.5, 17, 11], [149.5, 16, 11.9], [124.5, 19.5, 10.6],
+                   [98.5, 19, 9.3], [72.5, 15.5, 8.1], [46.5, 13, 6], [21.5, 13, 1.7]] },
 };
 
 /** Sprite pixels per R unit, for a body of form `f`. */

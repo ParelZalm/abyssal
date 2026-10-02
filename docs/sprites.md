@@ -203,7 +203,8 @@ folder, and prints the landmarks. What it does, and why:
 - **Frames** are the wide runs of columns with anything on them, left to right: rest, then
   strike.
 - **The grid is found, not assumed.** The pitch is the period the row edges agree on (the
-  anglerfish's was 6.545 image pixels, not the 8 asked for), and each cell boundary is the
+  anglerfish's was 6.545 image pixels and the gulper's 3.955, not the 8 asked for — a sheet
+  drawn finer than asked is fine, since the game shrinks it anyway), and each cell boundary is the
   strongest colour edge within a fifth of a pitch of where the last one says it should be.
   The anglerfish's columns drifted by three art pixels across a frame; a fixed pitch doubled
   and dropped columns.
@@ -216,13 +217,20 @@ folder, and prints the landmarks. What it does, and why:
   all of it in made the anglerfish's whole body shimmer on every bite.
 - **Landmarks** are guessed from the picture: the tail root is the narrowest column of the
   back third, the axis the middle of it, the snout the last column with body just under the
-  axis, a bulb the lit blob past the snout, an eye the biggest lit blob in the head.
+  axis. A lit blob past the snout is offered as a lure's bulb (delete it if the animal has
+  none), and the four biggest lit blobs as light candidates: keep the real organs, drop the
+  teeth and photophores that catch the light too.
+- **The hitbox** is measured off the silhouette: nine samples snout to tail, each the run of
+  body holding the axis at 85% of its depth, so it sits a little inside the picture. Fins
+  that join the body count; a lure's rod is a run of its own and does not. The plan's form
+  under a sprite is only roughly its shape — the gulper's pouch hung outside it — so a sprite
+  is hit where it is drawn.
 
 Open the preview. When something is off:
 
 | Looks like | Fix |
 | --- | --- |
-| doubled or missing rows or columns, a smeared grid | `--pitch` with the right period, measured off the sheet |
+| doubled or missing rows or columns, a smeared grid | `--pitch` with the right period, measured off the sheet: the outline climbs a gentle slope in steps one art pixel high |
 | the strike's seam cuts through something, or misses part of what moved | `--keep x0,y0,x1,y1`, the box in the rest frame's cells |
 | banding, colours merged that should not be | `--colours 28` |
 
@@ -232,8 +240,11 @@ Open the preview. When something is off:
   species id.
 - **`content/sprites.ts`**: add the printed landmarks to `SPRITES`, and look at each on the
   board before trusting it. They are what ties the picture to the simulation: `snout` to
-  `tail` spans the plan's form, so the hitbox (`sim/hull.ts`, built from the form) lies inside
-  the picture; `axis` is the line the swim bends about; `bulb` is where a lure's trap fires.
+  `tail` spans the plan's form, so the length the simulation uses is the picture's; `axis` is
+  the line the swim bends about; `hull` is the hitbox (`sim/hull.ts`); `bulb` is where a
+  lure's trap fires; `lights` are where the view hangs a bloom, in each organ's own colour.
+  Write the import command into the comment above the entry, flags and all, so it can be
+  run again.
 - **`content/species.ts`**: set `drawn` (*Size*, below).
 
 Nothing else changes: `FishView`, `Creature` and the board's cells already pass the species
@@ -261,7 +272,7 @@ they read.
 - **A tank:** `/?tank=«tank»&room=fight&god=1` and swim up to it: the strike frame on a bite,
   shots leaving its skin, a lure's trap firing at the bulb you see.
 - **The hitbox:** shots should stop on the drawn body, not in the water beside it. If they do
-  not, the form's length or `snout`/`tail` is wrong.
+  not, `hull` or `snout`/`tail` is wrong.
 
 ### 5. Commit
 
@@ -277,7 +288,7 @@ their fights read off parts of their plans.
 | Tank | Enemy | Plan · role | Frames | Status |
 | --- | --- | --- | --- | --- |
 | deep | Anglerfish | angler · turret | rest, strike (jaw) | **done**, drawn 2 |
-| deep | Gulper Eel | eel · charger | rest, strike (the gape) | ready |
+| deep | Gulper Eel | eel · charger | rest, strike (the gape) | **done**, drawn 1 (already 3.7 tiles long) |
 | deep | Barracuda | eel · charger | rest, strike | ready |
 | deep | Siphonophore | jelly · drifter | rest | ready |
 | deep | Vampire Squid | squid · spitter | rest, strike | blocked: rigged arms |
