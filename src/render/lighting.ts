@@ -58,9 +58,10 @@ export class Lighting {
     this.scene.addChild(this.ambient, this.lights);
   }
 
-  /** Start a frame's lights. */
-  begin() {
+  /** Start a frame's lights, over `ambient`: the tank's own dark unless a stage is lit. */
+  begin(ambient = this.level) {
     this.n = 0;
+    this.ambient.tint = ambient;
   }
 
   add(l: Light) {

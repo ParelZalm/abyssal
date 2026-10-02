@@ -60,7 +60,8 @@ export class Scene {
    * Draw the frame and return how frightening it is, for the HUD. `lights` are the room's
    * standing lights — the decoration's — added to what the bodies throw.
    */
-  draw(view: View, world: World, p: Creature, phase: Phase, dread: Dread, lights: readonly Light[]) {
+  draw(view: View, world: World, p: Creature, phase: Phase, dread: Dread, lights: readonly Light[],
+       ambient?: number) {
     // close round the body: at 4.4 radii it was a bubble a room's width of fish swam inside
     const halo = p.radius * (3 + Math.sin(view.t * 1.1) * 0.1);
     this.focus.x = p.x;
@@ -132,7 +133,7 @@ export class Scene {
     }
     // the lights the frame is made of: the larva's pool first, then every lamp in the room
     const lit = this.lighting;
-    lit.begin();
+    lit.begin(ambient);
     if (phase !== 'over') {
       lit.add({ x: p.x, y: p.y, r: p.radius * POOL, color: 0xd6e2ff, a: 1 });
     }

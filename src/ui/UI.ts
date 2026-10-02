@@ -2,6 +2,7 @@ import type { Codex } from '../run/codex';
 import type { Transformation } from '../content/forms';
 import { Hud } from './hud/Hud';
 import type { Component } from './Component';
+import { BossIntro, type BossIntroInfo } from './screens/BossIntro';
 import { CodexScreen } from './screens/CodexScreen';
 import { DeathScreen } from './screens/DeathScreen';
 import { PauseScreen } from './screens/PauseScreen';
@@ -83,6 +84,13 @@ export class UI {
       this.hide();
       onContinue();
     }));
+  }
+
+  /** The boss's intro over the stilled room; the caller ticks it and hides it when it is over. */
+  showBossIntro(info: BossIntroInfo): BossIntro {
+    const intro = new BossIntro(info);
+    this.show(intro);
+    return intro;
   }
 
   showPause(info: PauseInfo) {

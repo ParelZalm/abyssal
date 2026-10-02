@@ -235,6 +235,11 @@ export class FishView extends Container {
   /** Set once the animal is dead and this view is playing its death. */
   private deathT = -1;
   private fall = { vx: 0, vy: 0, whole: false };
+  /** The body as baked, mouth shut — what a screen shows of it (the boss intro). */
+  get portrait(): HTMLCanvasElement | null {
+    return this.baked?.canvas ?? null;
+  }
+
   /** The art density this view was baked at; a new tier means a re-bake. */
   private version = artVersion;
 

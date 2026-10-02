@@ -377,3 +377,28 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 .caption[hidden] { display: none; }
 @keyframes caption-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .caption { animation: none; } }
+
+/* the boss's intro: the room held still under a band, the larva facing the boss across it */
+.boss-intro { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center;
+  gap: 18px; pointer-events: none; background: rgba(1, 6, 13, .45); }
+.boss-intro .band { width: 100%; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: 4vw; padding: 26px 6vw; box-sizing: border-box; background: rgba(4, 10, 22, .92);
+  border-top: 2px solid #d8384a; border-bottom: 2px solid #d8384a;
+  animation: intro-band .32s steps(4) both; }
+.boss-intro canvas { display: block; image-rendering: pixelated; }
+.boss-intro .who.larva { justify-self: end; animation: intro-left .4s steps(5) .12s both; }
+/* the bake faces right; the boss turns to face the larva */
+.boss-intro .who.boss { justify-self: start; transform: scaleX(-1);
+  animation: intro-right .4s steps(5) .12s both; }
+.boss-intro .vs { font-size: 30px; letter-spacing: .2em; text-transform: uppercase; color: #ffb8a8;
+  text-shadow: 0 3px 0 rgba(0,0,0,.85); animation: intro-pop .2s steps(2) .5s both; }
+.boss-intro .title { text-align: center; animation: intro-pop .24s steps(3) .62s both; }
+.boss-intro h2 { margin: 0 0 6px; font-size: 13px; font-weight: 500; letter-spacing: .3em;
+  text-transform: uppercase; color: var(--dim); }
+.boss-intro h1 { margin: 0; font-size: clamp(30px, 5.4vw, 56px); font-weight: 300; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink); text-shadow: 0 3px 0 rgba(0,0,0,.85); }
+@keyframes intro-band { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes intro-left { from { transform: translateX(-40vw); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes intro-right { from { transform: translateX(40vw) scaleX(-1); opacity: 0; } to { transform: scaleX(-1); opacity: 1; } }
+@keyframes intro-pop { from { opacity: 0; transform: scale(1.4); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .boss-intro * { animation: none !important; } }

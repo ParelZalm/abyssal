@@ -23,6 +23,7 @@ import { ShotView } from './render/shots';
 import { BOB, DrainView, GLYPH, PedestalsView } from './render/pedestals';
 import { DropIn } from './render/dropin';
 import { Lighting, lightTexture } from './render/lighting';
+import { STAGE_LEVEL, stageLights } from './render/stage';
 import { Scene } from './render/Scene';
 import { Water } from './render/water';
 import { Best } from './run/best';
@@ -38,6 +39,7 @@ import { startById, type Start } from './run/starts';
 import { SYNERGIES } from './sim/organs';
 import { Creature } from './sim/creature';
 import { World, type Pickup, type PickupKind } from './sim/world';
+import type { BossIntro } from './ui/screens/BossIntro';
 import type { RunChoice } from './ui/screens/TitleScreen';
 import { UI } from './ui/UI';
 
@@ -110,6 +112,9 @@ export class Game {
   private drain!: DrainView;
   /** The drop-in: the tank from outside the glass, at every descent and every run's start. */
   private readonly dropIn = new DropIn();
+  /** The boss's intro while it shows, and the room it was last shown for (`TankMap.version`). */
+  private intro: BossIntro | null = null;
+  private introduced = -1;
   /** The rooms' display slots, made once a run and handed to each tank's map in turn. */
   private layers!: RoomLayers;
   run!: Run;
@@ -428,6 +433,18 @@ export class Game {
     this.dropIn.play(this.run.tank, this.player.genome, this.player.species.plan);
   }
 
+  /** Isaac's boss intro: the room held still under a band with the two bodies and the boss's name. */
+  private introduce() {
+    this.introduced = this.tank.version;
+    const b = this.world.creatures.find(c => c.hostile && c.species.boss && c.alive);
+    if (!b) return;
+    this.phase = 'intro';
+    this.ui.hud.setChrome(false);
+    this.input.anyPress = false;
+    this.intro = this.ui.showBossIntro({ name: b.species.name, place: this.run.tank.name,
+                                          boss: b.view.portrait, player: this.player.view.portrait });
+  }
+
   private togglePause() {
     if (this.phase === 'play') {
       this.phase = 'paused';
@@ -466,6 +483,17 @@ export class Game {
         this.ui.caption(null);
       }
     }
+    if (this.phase === 'intro') {
+      if (this.input.anyPress) { this.input.anyPress = false; this.intro?.skip(); }
+      if (!this.intro?.update(dt)) {
+        this.intro = null;
+        this.ui.hideOverlay();
+        this.ui.hud.setChrome(true);
+        this.phase = 'play';
+      }
+    }
+    // a boss's stage is introduced the first frame the room is the player's, before it moves
+    if (this.phase === 'play' && this.tank.stage && this.tank.version !== this.introduced) this.introduce();
     if (this.phase === 'play' && this.tank.sliding) {
       // between rooms the world holds still while the camera pans across
       this.tank.update(dt);
@@ -551,9 +579,11 @@ export class Game {
     this.drain.update(this.tank.drain, view.zoom, view.t);
     const within = this.phase === 'play' && !this.tank.sliding ? this.within() : null;
     this.prompt.update(within, view.zoom, view.t);
+    const stage = this.tank.stage;
     const dread = this.scene.draw(view, this.world, p, this.phase, this.dread,
       [...this.tank.lights, ...this.shots.lights, ...this.pedestals.lights, ...this.pots.lights, ...this.drain.lights,
-        ...this.pickups.lights, ...this.fx.lights]);
+        ...this.pickups.lights, ...this.fx.lights, ...(stage ? stageLights(this.tank.room) : [])],
+      stage ? STAGE_LEVEL : undefined);
     this.lighting.render(this.camera);
     if ((this.phase === 'play' || this.phase === 'draft') && !this.tank.sliding) {
       // round the room, not the camera: just after a slide the camera is still panning off

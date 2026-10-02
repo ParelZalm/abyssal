@@ -591,6 +591,11 @@ export class TankMap {
     return true;
   }
 
+  /** Whether the room is a boss's stage with its boss still in it: lit as one (`render/stage.ts`). */
+  get stage() {
+    return !this.slide && this.cell.map.type === 'boss' && !this.cell.cleared;
+  }
+
   /** What the current room's decoration lights it with. */
   get lights() {
     return this.viewsOf(this.current).decor.lights;
