@@ -181,6 +181,19 @@ export const SPRITES: Record<string, SpriteArt> = {
                        [70.5, 57, 16.2], [57.5, 56.5, 14], [44.5, 57, 11.9], [31.5, 57.5, 6.4]],
                 woundedHull: [[127, 55, 5.5], [117, 58, 11], [109, 58, 19.5], [98, 58, 30], [86, 58, 33.9],
                               [76, 58, 33.7], [66, 58, 31.9], [56, 58, 28], [48, 58, 19]] },
+  // `npm run sprite -- nettle-sprite.png --id nettle --key green --fringe --pitch 7.5
+  // --wounded-palette '#080D1C,#332437,#A86B28,#F4CC76,#842D23,#551B35,#DCCAB3,#FFF0D1/#190D1D,#652334,#F59722,#FFF1BC,#EE342B,#C53736,#EEAD86,#FFD8AF'`:
+  // a drifter, its rest alone on the sheet, and its wounded the rest recoloured through the
+  // Stage A palette's two rows, since its turn is only its colours, lit hot. The pitch search
+  // missed the grid. The bell alone squeezes on the pulse, as the moon jelly's does, and rows
+  // rather than jets; a wave runs down the tentacles and oral arms behind it. The hull is the
+  // bell, kept inside the dome, and the oral arms behind it; the tentacles round them are a near
+  // miss. One warm light in the bell, the glow the painted nettle had
+  nettle: { w: 224, h: 103, snout: 223, tail: 13, axis: 51,
+            bells: { x0: 161, x1: 223, jets: [] }, trail: { x0: 4, x1: 161 },
+            lights: [{ at: [190, 51], color: 0xf59722, strength: 0.5 }],
+            hull: [[220, 51, 3], [213, 51, 10], [204, 51, 19], [193, 51, 29], [180, 51, 38],
+                   [168, 51, 41], [148, 55, 20], [124, 55, 17], [100, 52, 13]] },
 };
 
 /**
@@ -199,7 +212,7 @@ export const REWORKED_ONLY = true;
  * read as two versions of it, and the rest of a room was more to watch than the one thing
  * being tested. Null deals it as any other.
  */
-export const NEWEST: string | null = 'pufferfish';
+export const NEWEST: string | null = 'nettle';
 
 /**
  * A tank's hostile table as it is dealt: the reworked enemies only, while `REWORKED_ONLY`,

@@ -5,6 +5,7 @@
  *   npm run sprite -- <sheet.png> --id <species> [--pitch 6.54] [--colours 22]
  *                     [--keep x0,y0,x1,y1] [--key green] [--fringe [hue]]
  *                     [--frames rest,strike,wounded,wounded-strike] [--keep-wounded x0,y0,x1,y1]
+ *                     [--wounded-palette #a1,#b1,…/#a2,#b2,…]
  *                     [--out src/render/creature/sprites]
  *
  * The sheet is one to four frames side by side on flat #FF00FF, or #00FF00 with `--key green`
@@ -45,7 +46,7 @@ const opt = (name, fallback) => {
 const sheet = argv.find((a, i) => !a.startsWith('--') && !(i > 0 && argv[i - 1].startsWith('--')));
 const id = opt('id');
 if (!sheet || !id) {
-  console.error('usage: npm run sprite -- <sheet.png> --id <species> [--pitch n] [--colours n] [--keep x0,y0,x1,y1] [--key green] [--fringe [hue]] [--frames names] [--keep-wounded x0,y0,x1,y1] [--out dir]');
+  console.error('usage: npm run sprite -- <sheet.png> --id <species> [--pitch n] [--colours n] [--keep x0,y0,x1,y1] [--key green] [--fringe [hue]] [--frames names] [--keep-wounded x0,y0,x1,y1] [--wounded-palette from/to] [--out dir]');
   process.exit(1);
 }
 const out = opt('out', 'src/render/creature/sprites');
@@ -365,6 +366,34 @@ if (S > 0) out4.push({ name: 'strike', ...struck(0, S) });
 if (Wd > 0) out4.push({ name: 'wounded', idx: whole(Wd) });
 if (WS > 0) out4.push({ name: 'wounded-strike', ...struck(Wd, WS) });
 
+// `--wounded-palette <from>/<to>`, two rows of hex swatches in the same roles, the Stage A
+// palette's: a wounded frame (and wounded strike) made from the rest (and strike) by recolouring
+// it, for a turn that changes colour and nothing else. Each colour goes to its nearest swatch
+// in the first row and is moved by that swatch's step to the second, so the shades between the
+// swatches keep their place. The sea nettle's sheet came with its rest alone, and its wounded
+// was only its colours, lit hot: recoloured, it cannot drift off the rest as a redrawn frame does.
+const recolour = opt('wounded-palette');
+if (recolour) {
+  if (Wd > 0) throw new Error('--wounded-palette makes the wounded frame; this sheet has one');
+  const [from, to] = recolour.split('/').map(row => row.split(',').map(h => [0, 2, 4].map(i => parseInt(h.replace(/^#|^0x/, '').slice(i, i + 2), 16))));
+  if (from.length !== to.length || from.some(c => c.some(Number.isNaN))) throw new Error('--wounded-palette: two rows of hex colours, the same length, split by /');
+  const moved = new Map();
+  const hot = k => {
+    if (k < 0) return -1;
+    if (!moved.has(k)) {
+      const c = pal[k];
+      let best = 0, bd = Infinity;
+      from.forEach((f, i) => { const d = (f[0] - c[0]) ** 2 * 0.3 + (f[1] - c[1]) ** 2 * 0.59 + (f[2] - c[2]) ** 2 * 0.11; if (d < bd) { bd = d; best = i; } });
+      pal.push(c.map((v, ch) => Math.max(0, Math.min(255, Math.round(v + to[best][ch] - from[best][ch])))));
+      moved.set(k, pal.length - 1);
+    }
+    return moved.get(k);
+  };
+  out4.push({ name: 'wounded', idx: restIdx.map(hot) });
+  const strike = out4.find(f => f.name === 'strike');
+  if (strike) out4.push({ name: 'wounded-strike', idx: strike.idx.map(hot) });
+}
+
 // ------------------------------------------------------------------ landmarks
 
 const solid = (i, j) => i >= 0 && j >= 0 && i < fw && j < frameH && restIdx[j * fw + i] >= 0;
@@ -456,6 +485,7 @@ if (blobs.length) lm.push(`lights: [${blobs.map(b => `{ at: [${b.at.join(', ')}]
 console.log(`pitch ${P.toFixed(3)} px · grid ${grids.map(g => `${g.w}×${g.h}`).join(', ')} · frames ${names.join(', ')} · ${pal.length} colours${fringe ? ` · ${fringe} fringe cells cleaned` : ''}`);
 out4.forEach((f, k) => {
   if (!k) return;
+  if (!names.includes(f.name)) { console.log(`${f.name} recoloured from the ${f.name === 'wounded' ? 'rest' : 'strike'} (--wounded-palette)`); return; }
   const o = off[names.indexOf(f.name)];
   const kept = f.keep ? `; taken from it: x ${f.keep.x0 - lft}..${f.keep.x1 - lft}, y ${f.keep.y0 - top}..${f.keep.y1 - top} (--keep to override)` : ', taken whole';
   console.log(`${f.name} lined up at (${o.join(', ')})${kept}`);

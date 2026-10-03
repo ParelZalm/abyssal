@@ -1,10 +1,9 @@
 # Sprite prompts: the nursery
 
 The two prompts for each nursery enemy, filled in from
-[sprites.md](sprites.md#the-art-side), the one in hand first. The archerfish, the mackerel and
-the pufferfish are done; the sea nettle is the last of the nursery. Like the last two it
-changes its look when it turns at half health, and is drawn with a wounded frame beside the
-rest ([Frames by role](sprites.md#frames-by-role)).
+[sprites.md](sprites.md#the-art-side), the one in hand first. All four are done: the nursery is
+through. The last three change their look when they turn at half health, and are drawn with a
+wounded frame or pair beside the rest ([Frames by role](sprites.md#frames-by-role)).
 
 **Attach every time:** `docs/media/reference/cave-room.webp` and `tank-room.webp` for the world,
 and `barracuda.webp` and `triggerfish.webp` for finished animals. For Stage B, attach the chosen
@@ -14,7 +13,7 @@ Stage A sheet as well.
 
 ---
 
-## Sea Nettle — drifter, bloom: rest, wounded
+## Sea Nettle — drifter, bloom: rest, wounded — done
 
 It swims in pulses, a surge at the player and a coast, and wherever it goes it leaves its
 tentacles in the water: a sting every fifth of a second that hangs and sinks. At half health it
@@ -164,6 +163,13 @@ The two frames are a drifter's, named, since two frames would otherwise be read 
 strike. Then set by hand, as the moon jelly's were: `bells` across the bell with no jets (a
 nettle rows), `trail` from the rim back to the tentacles' tips, `lights` on the bell, and a
 hull of the bell and the top of the trail, since the tentacles are what stings.
+
+As it went: the sheet came with the rest alone. Its wounded is only its colours, so it was made
+from the rest, recoloured through the Stage A palette's two rows (`--wounded-palette`), which
+cannot drift off the rest as a redrawn frame can. The sheet was drawn at 7.5 image pixels to
+the art pixel (`--pitch 7.5`). The tentacles came out maroon, nearly the outline's dark: at the
+game's density they read in the rest as a dark veil behind the bell, and red only once it
+turns.
 
 ---
 

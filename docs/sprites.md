@@ -281,6 +281,7 @@ Open the preview. When something is off:
 | thin parts tinted violet whole, on an animal with no violet in it | `--fringe 240`, which takes bleed from 240° up: bleed into blue lands at 245–270°, under the default's 272° (the siphonophore's tentacles) |
 | an animal that is violet, pink or red, which magenta's bleed cannot be told from | have the sheet made on flat green #00FF00 and import it with `--key green` (with `--fringe`, the bleed is green from 75° to 170°) |
 | brown or olive specks round a red outline on green: the bleed mixed into the red | `--fringe 30`, on an animal with no yellow or orange in it (the mackerel's flushed frames) |
+| a sheet without its wounded frame, for a turn that is only colour | `--wounded-palette` with the Stage A palette's two rows, `#from1,#from2,…/#to1,#to2,…`: the rest (and strike) recoloured, each colour moved by its nearest swatch's step (the sea nettle's) |
 
 ### 3. Wire it
 

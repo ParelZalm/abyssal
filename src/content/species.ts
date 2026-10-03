@@ -192,7 +192,11 @@ export const SPECIES: Species[] = [
     nutrition: 1.8, weight: 5, armor: 1, spikes: 1, bulk: 0.8, finSize: 0.9 },
 
   { id: 'nettle', name: 'Sea Nettle', behavior: 'drift', plan: 'jelly', role: 'drifter',
-    moves: 'bloom', zone: 'sunlit', band: 'open',
+    // drawn three times its size, as the moon jelly is: its whole picture, the long tentacles
+    // with it, is fitted to a jelly's short form and the bell is a quarter of that, so at its
+    // own size it was eighteen texels long with a bell of five. At three it is as long as the
+    // nursery's other enemies, and its bell about the larva
+    moves: 'bloom', zone: 'sunlit', band: 'open', drawn: 3,
     // quick for a jelly: a drifter has to arrive, and a bell's pulse is most of its speed
     size: [12, 20], hue: [12, 28], accent: 8, speed: 64, bite: 5,
     nutrition: 1.3, weight: 5, translucent: 0.6, glow: 0.6, veil: 0.5 },

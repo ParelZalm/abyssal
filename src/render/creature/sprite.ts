@@ -43,6 +43,8 @@ import pufferRest from './sprites/pufferfish.png';
 import pufferStrike from './sprites/pufferfish-strike.png';
 import pufferWounded from './sprites/pufferfish-wounded.png';
 import pufferWoundedStrike from './sprites/pufferfish-wounded-strike.png';
+import nettleRest from './sprites/nettle.png';
+import nettleWounded from './sprites/nettle-wounded.png';
 
 /**
  * Each species' frames. A drifter has no strike, and shows its rest for one (`Baked.open`). A
@@ -65,6 +67,7 @@ const SOURCES: Record<string, Sources> = {
   archerfish: { rest: archerRest, strike: archerStrike },
   mackerel: { rest: mackerelRest, strike: mackerelStrike, wounded: mackerelWounded, woundedStrike: mackerelWoundedStrike },
   pufferfish: { rest: pufferRest, strike: pufferStrike, wounded: pufferWounded, woundedStrike: pufferWoundedStrike },
+  nettle: { rest: nettleRest, wounded: nettleWounded },
 };
 
 /** A frame shut and open, and the colours both may snap to. */
