@@ -52,7 +52,7 @@ needs the code named in *Blocked on* first.
 | --- | --- | --- | --- | --- |
 | Ribbon Eel | eel · charger | rest, strike (jaw) | **done** | drawn 1, already 3.8 tiles; on green (`--key green`); hull the body without its fins; `ribbon.webp`, `ribbon-sprite.webp` |
 | Triggerfish | darter · spitter | rest, strike (mouth) | **done** | drawn 2; spits from its drawn mouth (`mouth`); hull the body without its fins; `triggerfish.webp`, `triggerfish-sprite.webp` |
-| Lionfish | darter · turret | rest, strike (spines up) | ready | its spines are its tell |
+| Lionfish | darter · turret | rest, strike (spines up) | **done** | drawn 2; its spines rise as its tell, the frames padded 38 cells for them; hull the body under the spines and fans; `lionfish.webp`, `lionfish-sprite.webp` |
 | Moon Jelly | jelly · drifter | rest | ready | |
 
 ### Nursery tank

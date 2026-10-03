@@ -214,7 +214,10 @@ folder, and prints the landmarks. What it does, and why:
 - **The strike is lined up on the rest** by the back half of the body, and **only the part
   that moved is taken from it**: the box round where the two silhouettes disagree in a
   solid patch, grown by four cells. A generator's second frame is redrawn whole, and swapping
-  all of it in made the anglerfish's whole body shimmer on every bite.
+  all of it in made the anglerfish's whole body shimmer on every bite. A strike taller than the rest
+  (the lionfish's spines raised) is searched for as far as it is taller, and both frames are
+  padded at the top for it; before, the import looked six cells either way and cut off
+  whatever stood above the rest frame.
 - **Landmarks** are guessed from the picture: the tail root is the narrowest column of the
   back third, the axis the middle of it, the snout the last column with body just under the
   axis. A lit blob past the snout is offered as a lure's bulb (delete it if the animal has

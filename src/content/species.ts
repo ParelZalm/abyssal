@@ -218,7 +218,9 @@ export const SPECIES: Species[] = [
 
   { id: 'lionfish', name: 'Lionfish', behavior: 'ambush', plan: 'darter',
     role: 'turret', shot: 'spine',
-    zone: 'sunlit', band: 'reef',
+    // drawn twice its size, as the triggerfish is: at its own it was a tile and a bit, and
+    // its spines, which are its tell, were a smudge over its back
+    zone: 'sunlit', band: 'reef', drawn: 2,
     size: [24, 36], hue: [4, 16], accent: 30, speed: 80, bite: 8,
     nutrition: 2.0, weight: 5, spikes: 2, finSize: 1.9 },
 

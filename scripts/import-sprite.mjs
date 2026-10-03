@@ -246,12 +246,17 @@ const snapped = grids.map(g => g.cells.map(c => c ? near(c) : -1));
 // ------------------------------------------------------------------ the strike, reduced to what moves
 
 const rest = grids[0], R = snapped[0];
-let frameH = rest.h, strikeIdx = null, keep = null, off = [0, 0];
+// `top`: rows the strike reaches above the rest's first, which both frames are padded down by —
+// the lionfish's raised spines stand seventy cells over its resting back
+let frameH = rest.h, strikeIdx = null, keep = null, off = [0, 0], top = 0;
+const at = (g, idx, i, j) => (i < 0 || j < 0 || i >= g.w || j >= g.h) ? -1 : idx[j * g.w + i];
 if (grids[1]) {
   const S = grids[1], s = snapped[1];
-  const at = (g, idx, i, j) => (i < 0 || j < 0 || i >= g.w || j >= g.h) ? -1 : idx[j * g.w + i];
   let best = -1;
-  for (let dx = -6; dx <= 6; dx++) for (let dy = -6; dy <= 6; dy++) {
+  // each frame is cut to its own box, so a strike that grows taller than the rest (spines
+  // raised) starts that much higher: search as far down as it is taller, not a few cells
+  const reach = Math.max(0, S.h - rest.h);
+  for (let dx = -6; dx <= 6; dx++) for (let dy = -6; dy <= 6 + reach; dy++) {
     let same = 0, n = 0;
     for (let j = 0; j < rest.h; j++) for (let i = 0; i < Math.floor(rest.w * 0.55); i++) {
       const a = at(rest, R, i, j), b = at(S, s, i + dx, j + dy);
@@ -260,16 +265,18 @@ if (grids[1]) {
     }
     if (same / n > best) { best = same / n; off = [dx, dy]; }
   }
-  frameH = Math.max(rest.h, S.h - off[1]);
+  top = Math.max(0, off[1]);
+  frameH = Math.max(rest.h, S.h - off[1]) + top;
   const given = opt('keep');
   if (given) {
+    // in the rest frame's cells, so a box written for an unpadded frame still holds
     const [x0, y0, x1, y1] = given.split(',').map(Number);
-    keep = { x0, y0, x1, y1 };
+    keep = { x0, y0: y0 + top, x1, y1: y1 + top };
   } else {
     // where one silhouette has the animal and the other does not — but a redrawn outline
     // disagrees by a cell all the way round, so only the cells whose whole neighbourhood
     // disagrees count: what is left is a part that moved. Its box, grown by four cells.
-    const xor = (i, j) => (at(rest, R, i, j) < 0) !== (at(S, s, i + off[0], j + off[1]) < 0);
+    const xor = (i, j) => (at(rest, R, i, j - top) < 0) !== (at(S, s, i + off[0], j - top + off[1]) < 0);
     keep = { x0: Infinity, y0: Infinity, x1: -1, y1: -1 };
     for (let j = 0; j < frameH; j++) for (let i = 0; i < rest.w; i++) {
       let all = true;
@@ -282,11 +289,11 @@ if (grids[1]) {
   strikeIdx = [];
   for (let j = 0; j < frameH; j++) for (let i = 0; i < rest.w; i++) {
     const inside = i >= keep.x0 && i <= keep.x1 && j >= keep.y0 && j <= keep.y1;
-    strikeIdx.push(inside ? at(S, s, i + off[0], j + off[1]) : at(rest, R, i, j));
+    strikeIdx.push(inside ? at(S, s, i + off[0], j - top + off[1]) : at(rest, R, i, j - top));
   }
 }
 const restIdx = [];
-for (let j = 0; j < frameH; j++) for (let i = 0; i < rest.w; i++) restIdx.push(j < rest.h ? R[j * rest.w + i] : -1);
+for (let j = 0; j < frameH; j++) for (let i = 0; i < rest.w; i++) restIdx.push(at(rest, R, i, j - top));
 
 // ------------------------------------------------------------------ landmarks
 
@@ -378,7 +385,7 @@ if (bulb) lm.push(`bulb: [${bulb.join(', ')}] /* a lure's, or delete */`);
 lm.push(`hull: [${hull.map(h => `[${h.join(', ')}]`).join(', ')}]`);
 if (blobs.length) lm.push(`lights: [${blobs.map(b => `{ at: [${b.at.join(', ')}], color: ${b.color}, strength: 0.5 }`).join(', ')}] /* candidates: keep the real ones */`);
 console.log(`pitch ${P.toFixed(3)} px · grid ${grids.map(g => `${g.w}×${g.h}`).join(' and ')} · ${pal.length} colours${fringe ? ` · ${fringe} fringe cells cleaned` : ''}`);
-if (strikeIdx) console.log(`strike lined up at (${off.join(', ')}); taken from it: x ${keep.x0}..${keep.x1}, y ${keep.y0}..${keep.y1} (--keep to override)`);
+if (strikeIdx) console.log(`strike lined up at (${off.join(', ')}); taken from it: x ${keep.x0}..${keep.x1}, y ${keep.y0 - top}..${keep.y1 - top} (--keep to override)${top ? `; both frames padded ${top} cells at the top for it` : ''}`);
 console.log(`wrote ${join(out, `${id}.png`)}${strikeIdx ? ` and ${id}-strike.png` : ''}`);
 console.log(`preview ${previewPath}`);
 console.log(`\ncontent/sprites.ts — check on the board before trusting it:\n  ${id}: { ${lm.join(', ')} },`);

@@ -63,10 +63,10 @@ export const SPRITES: Record<string, SpriteArt> = {
   // `npm run sprite -- gulper-sprite.png --id gulper --pitch 4 --keep 160,6,240,62`: drawn finer
   // than asked (four image pixels to the art pixel) and its strike a little narrower than its
   // rest, so the pitch and the jaw's box are given. No lure; the light is the tail's organ
-  gulper: { w: 240, h: 57, snout: 234, tail: 14, axis: 14,
-            lights: [{ at: [5.1, 18.4], color: 0xff4d7a, strength: 0.9 }, { at: [226.3, 5], color: 0x29e0ff, strength: 0.3 }],
-            hull: [[226.5, 16.5, 6.4], [201.5, 19, 14.4], [175.5, 17, 11], [149.5, 16, 11.9], [124.5, 19.5, 10.6],
-                   [98.5, 19, 9.3], [72.5, 15.5, 8.1], [46.5, 13, 6], [21.5, 13, 1.7]] },
+  gulper: { w: 240, h: 61, snout: 234, tail: 14, axis: 18,
+            lights: [{ at: [5.1, 22.4], color: 0xff4d7a, strength: 0.9 }, { at: [226.3, 9], color: 0x29e0ff, strength: 0.3 }],
+            hull: [[226.5, 20.5, 6.4], [201.5, 23, 14.4], [175.5, 21, 11], [149.5, 20, 11.9], [124.5, 23.5, 10.6],
+                   [98.5, 23, 9.3], [72.5, 19.5, 8.1], [46.5, 17, 6], [21.5, 17, 1.7]] },
   // `npm run sprite -- mantisshrimp-sprite.png --id mantisshrimp`, then the landmarks set by
   // hand. Its strike frame is the club cocked: the open frame shows from a third into the
   // wind-up (`Creature.pose`), so it is the punch's tell, and a club drawn thrown would look
@@ -106,9 +106,9 @@ export const SPRITES: Record<string, SpriteArt> = {
   // grid finer than its own, so the pitch is given. The hull is the blue body alone, as the
   // barracuda's is: its fins run the whole length above and below, and counted they made the
   // ribbon twice as deep as the body a shot should meet. No lights
-  ribbon: { w: 244, h: 53, snout: 236, tail: 12, axis: 25,
-            hull: [[228.5, 22, 4], [202.5, 26, 5.5], [176.5, 26, 7.2], [150.5, 24, 7.2], [124.5, 24.5, 6.8],
-                   [97.5, 26, 6.4], [71.5, 25.5, 5.1], [45.5, 24.5, 3.4], [19.5, 25, 2]] },
+  ribbon: { w: 244, h: 54, snout: 236, tail: 12, axis: 26,
+            hull: [[228.5, 23, 4], [202.5, 27, 5.5], [176.5, 27, 7.2], [150.5, 25, 7.2], [124.5, 25.5, 6.8],
+                   [97.5, 27, 6.4], [71.5, 26.5, 5.1], [45.5, 25.5, 3.4], [19.5, 26, 2]] },
   // `npm run sprite -- triggerfish-sprite.png --id triggerfish --key green --fringe`. Its
   // strike is the mouth pursed to blow, and nothing else moved; `mouth` is where it blows from. The hull is the body alone,
   // read off the outline the trigger spines and the tall second dorsal and anal fins stand
@@ -116,6 +116,15 @@ export const SPRITES: Record<string, SpriteArt> = {
   triggerfish: { w: 174, h: 93, snout: 173, tail: 38, axis: 52, mouth: [171, 61],
                  hull: [[168.5, 61, 6.8], [152.5, 55.5, 12.3], [136.5, 56, 17], [121.5, 52.5, 22.5], [105.5, 53, 22.5],
                         [89.5, 52.5, 21.7], [74.5, 52, 18.7], [58.5, 52, 11.9], [42.5, 52.5, 5.5]] },
+  // `npm run sprite -- lionfish-sprite.png --id lionfish --key green --fringe`. Its strike is
+  // the spines raised and the fans spread, the tell before its ring: the two frames are padded
+  // 38 cells at the top for the spines, and the whole fish is taken from the strike, since
+  // the spines and fans cross all of it. The hull is the body under them, set by hand off the
+  // outline of its back, belly and head: the import's took the fans and spines, twice as deep.
+  // No lights
+  lionfish: { w: 218, h: 183, snout: 216, tail: 41, axis: 100,
+              hull: [[210, 108, 8], [192, 100, 17], [172, 98, 18], [152, 96, 18], [134, 96, 16],
+                     [116, 96, 14], [98, 97, 11], [78, 97, 8], [56, 98, 5.5]] },
 };
 
 /**
@@ -134,7 +143,7 @@ export const REWORKED_ONLY = true;
  * read as two versions of it, and the rest of a room was more to watch than the one thing
  * being tested. Null deals it as any other.
  */
-export const NEWEST: string | null = 'triggerfish';
+export const NEWEST: string | null = 'lionfish';
 
 /**
  * A tank's hostile table as it is dealt: the reworked enemies only, while `REWORKED_ONLY`,
