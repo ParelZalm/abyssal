@@ -28,6 +28,9 @@
  *   back along the ground and comes forward lifted, the root held, and the stroke runs from
  *   the tail to the head a leg behind the next, as a mantis shrimp's legs and swimmerets beat
  *   and a centipede's go. Also by whole texels per held frame, so a leg bends in steps.
+ * - **Trails.** What hangs behind a drifter's bell (`SpriteArt.trail`) is sent a wave on each
+ *   pulse, root to tip: held at the bell, swinging most at the tips, a strand a little behind
+ *   the one above it. Without it the bell pulsed and the tentacles hung as if painted on.
  *
  * The cost is the batch: a mesh with a shader of its own is a draw call of its own, so every
  * body on screen is one. The strip was batched before this, but each bake is a texture of its
@@ -74,6 +77,7 @@ uniform float uFlash;
 uniform float uRim;
 uniform vec3 uRimColor;
 uniform vec4 uLegs;
+uniform vec2 uTrail;
 
 float hash(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
 
@@ -136,6 +140,20 @@ void main() {
     // lifted while it comes forward, when the cosine climbs; on the ground going back
     d.y -= floor(down * step * 0.6 * max(0.0, -sin(phase)) + 0.5);
   }
+  // the trail: tips at u0, root at u1; none when u1 is not past u0
+  if (uTrail.y > uTrail.x && cuv.x < uTrail.y) {
+    float along = clamp((uTrail.y - cuv.x) / (uTrail.y - uTrail.x), 0.0, 1.0);
+    float fromRoot = (uTrail.y - cuv.x) * uSize.x;
+    // a wave and a half down the trail, one to each pulse: the beat is the bell's, so the
+    // ripple leaves the rim as it squeezes. Held a twelfth of a pulse at a time
+    float wave = (uTrail.y - uTrail.x) * uSize.x / 1.5;
+    float beat = floor(uBeat * 2.0) / 2.0;
+    // a strand runs a little behind the one above it, so they do not swing as one sheet; a
+    // fraction of a radian a row, or neighbouring rows part by more than a texel and a strand tears
+    float phase = beat - fromRoot * 6.283 / wave + cell.y * 0.08;
+    float swing = max(1.0, uSize.y * 0.05);
+    d.y += floor(pow(along, 1.3) * swing * sin(phase) + 0.5);
+  }
   // only the tail's last few columns step, and by one texel, when the stroke is near its peak
   d.y += floor(clamp((0.1 - cuv.x) / 0.1, 0.0, 1.0) * sin(frame * 0.7) + 0.5);
   // sampled from the other side: to show a texel moved by d, read the one d behind it
@@ -180,7 +198,8 @@ export interface LivingSkin {
  * A skin for one strip. `body` is the body's half-depth over the strip's half-height, which
  * is how the shader tells a fin from a flank without a mask baked for it.
  */
-export function livingSkin(texture: Texture, body: number, legs: Baked['legs'] = null): LivingSkin {
+export function livingSkin(texture: Texture, body: number, legs: Baked['legs'] = null,
+                           trail: Baked['trail'] = null): LivingSkin {
   program ??= GlProgram.from({ vertex, fragment, name: 'creature-living' });
   const uniforms = new UniformGroup({
     uSize: { value: new Float32Array([texture.source.pixelWidth, texture.source.pixelHeight]),
@@ -200,6 +219,8 @@ export function livingSkin(texture: Texture, body: number, legs: Baked['legs'] =
     uRimColor: { value: new Float32Array([1, 0.16, 0.12]), type: 'vec3<f32>' },
     // a sprite's legs, walked in a wave (`Baked.legs`); off at zero width
     uLegs: { value: new Float32Array(legs ?? [0, 0, 0, 0]), type: 'vec4<f32>' },
+    // what trails behind a sprite's bell, waved on the pulse (`Baked.trail`); off at zero width
+    uTrail: { value: new Float32Array(trail ?? [0, 0]), type: 'vec2<f32>' },
   });
   const shader = Object.assign(
     new Shader({ glProgram: program, resources: { uTexture: texture.source, living: uniforms } }),

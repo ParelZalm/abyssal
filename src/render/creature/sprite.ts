@@ -166,7 +166,8 @@ export function bakeSprite(id: string, g: Genome, plan: Plan, res: number): Omit
   const legs: Baked['legs'] = s.legs
     ? [s.legs.x0 / s.w, s.legs.x1 / s.w, (s.legs.root + oy) / (halfPx * 2), (s.legs.tip + oy) / (halfPx * 2)]
     : null;
-  return { texture: texture(shut), open: texture(open), canvas: shut, lights, depth, arm: null, legs,
+  const trail: Baked['trail'] = s.trail ? [s.trail.x0 / s.w, s.trail.x1 / s.w] : null;
+  return { texture: texture(shut), open: texture(open), canvas: shut, lights, depth, arm: null, legs, trail,
            back, front, halfH: halfPx / per };
 }
 

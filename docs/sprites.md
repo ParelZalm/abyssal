@@ -253,7 +253,9 @@ Open the preview. When something is off:
   `legs`, set by hand, is the box a row of legs hangs in, which the skin walks in a wave from
   the tail to the head (the mantis shrimp's; keep the arms and fins out of it); `bells`, set
   by hand, is a jet-swimmer's swimming bells and their mouths: only they squeeze on the pulse,
-  and each squeeze squirts water from the mouths (the siphonophore's). A drifter has one
+  and each squeeze squirts water from the mouths (the siphonophore's); `trail`, set by hand,
+  is what hangs behind a drifter's bell, root to tips, which the skin sends a wave down on
+  each pulse. A drifter has one
   frame, and `SOURCES` takes it alone.
   Write the import command into the comment above the entry, flags and all, so it can be
   run again.

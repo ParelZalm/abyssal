@@ -56,6 +56,8 @@ export interface Baked {
   lights: Emitter[];
   /** A sprite's legs, as the strip's u across and v down (`SpriteArt.legs`). Null when painted. */
   legs: [u0: number, u1: number, root: number, tip: number] | null;
+  /** What trails behind a sprite's bell, as the strip's u from tips to root (`SpriteArt.trail`). Null when painted. */
+  trail: [u0: number, u1: number] | null;
 }
 
 /** A rigged arm's texture and where the arms leave the body, in R units. */
@@ -206,7 +208,7 @@ function paint(g: Genome, plan: Plan): Baked {
   return { texture, open: gaping ? pixelTexture(cut(shade(gaping, pal), crop)) : texture,
            canvas, users: 0, lights: shut.lights, depth,
            back: back + crop.x / res, front: back + (crop.x + crop.w) / res, halfH: crop.h / 2 / res,
-           arm: rigged ? armRig(f, pal, A, g, res) : null, legs: null };
+           arm: rigged ? armRig(f, pal, A, g, res) : null, legs: null, trail: null };
 }
 
 interface Painting {

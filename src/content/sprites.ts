@@ -51,6 +51,13 @@ export interface SpriteArt {
    * colony stretched its stem with its bells.
    */
   bells?: { x0: number; x1: number; jets: Pt[] };
+  /**
+   * What trails behind a drifter, from its root at `x1` (the bell's rim) back to its tips at
+   * `x0`: the skin sends a wave down it on each pulse (`render/creature/living.ts`), held at
+   * the root and swinging most at the tips. Without it the bell pulsed and its tentacles hung
+   * as if painted on.
+   */
+  trail?: { x0: number; x1: number };
 }
 
 export const SPRITES: Record<string, SpriteArt> = {
@@ -99,6 +106,7 @@ export const SPRITES: Record<string, SpriteArt> = {
                      { at: [235, 82], color: 0xa8f0ff, strength: 0.4 }, { at: [164, 84], color: 0xa8f0ff, strength: 0.35 },
                      { at: [93, 81], color: 0xa8f0ff, strength: 0.3 }, { at: [41, 77], color: 0xa8f0ff, strength: 0.25 }],
             bells: { x0: 305, x1: 445, jets: [[314, 34], [343, 21], [352, 62], [379, 31], [394, 66], [412, 35]] },
+            trail: { x0: 0, x1: 305 },
             hull: [[480, 46, 11], [446, 46, 16], [410, 50, 33], [375, 50, 33], [340, 48, 27],
                    [285, 58, 16], [220, 58, 16], [150, 58, 15], [80, 54, 10]] },
   // `npm run sprite -- ribbon-sprite.png --id ribbon --key green --fringe --pitch 4.1`: on
@@ -131,7 +139,7 @@ export const SPRITES: Record<string, SpriteArt> = {
   // tentacles that fan round them are a near miss. The lights are the two gonads, which the
   // prompt left flat for the game to light
   moonjelly: { w: 201, h: 116, snout: 200, tail: 19, axis: 63,
-               bells: { x0: 135, x1: 200, jets: [] },
+               bells: { x0: 135, x1: 200, jets: [] }, trail: { x0: 4, x1: 135 },
                lights: [{ at: [181, 43], color: 0xd4a6fd, strength: 0.45 }, { at: [180, 71], color: 0xd4a6fd, strength: 0.45 }],
                hull: [[198, 59, 11], [188, 58, 30], [172, 57.5, 42], [152, 57.5, 47], [132, 60, 16],
                       [112, 60, 13], [88, 66, 18], [62, 70, 16], [34, 63, 14]] },
