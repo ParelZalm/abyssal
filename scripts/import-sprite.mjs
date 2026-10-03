@@ -201,7 +201,9 @@ const grids = boxes.map(gridOf);
 // for a sheet with no violet in it, where bleed into blue lands at 245–270°; by default from
 // 272°, which spares the barracuda's violet fins (257°). On green (`--key green`) bleed is
 // green from 75° to 170° — clear of a yellow fin's 50°, which green bleed pushes toward 70° —
-// and the number moves the 75.
+// and the number moves the 75. Bled into a red outline it is a brown at 35–40°, which the
+// mackerel's flushed frames were specked with: `--fringe 30` takes it, on an animal with no
+// yellow or orange in it.
 const fringeAt = argv.indexOf('--fringe');
 const fringeFrom = fringeAt >= 0 && /^\d+$/.test(argv[fringeAt + 1] ?? '') ? Number(argv[fringeAt + 1]) : green ? 75 : 272;
 const fringeTo = green ? 170 : 330;
@@ -212,7 +214,7 @@ const hue = ([r, g, b]) => {
     : 120 + 60 * (b - r) / (mx - mn);
 };
 const isFringe = c => c && hue(c) >= fringeFrom && hue(c) <= fringeTo &&
-  (green ? c[1] > c[0] && c[1] > c[2] : c[1] < c[0] && c[1] < c[2]);
+  (green ? c[1] > c[2] : c[1] < c[0] && c[1] < c[2]);
 const lum = c => c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
 let fringe = 0;
 if (fringeAt >= 0) for (const g of grids) {

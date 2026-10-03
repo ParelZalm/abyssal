@@ -61,7 +61,7 @@ needs the code named in *Blocked on* first.
 | Enemy | Plan · role | Frames | Status | Notes |
 | --- | --- | --- | --- | --- |
 | Archerfish | darter · spitter, `volley` | rest, strike (mouth) | **done** | drawn 1.6; its strike taken from the head only (`--keep`); its volley leaves its drawn mouth (`mouth`); `archerfish.webp`, `archerfish-sprite.webp` |
-| Mackerel | darter · charger, `pack` | rest, strike, wounded, wounded strike | prompted | the pack flushes red, jaw and fins up; on green, its back steel blue; [prompts](sprite-prompts-nursery.md#mackerel--charger-pack-rest-strike-jaw-wounded-wounded-strike) |
+| Mackerel | darter · charger, `pack` | rest, strike, wounded, wounded strike | **done** | drawn 1, as big as the archerfish already; the first through with a wounded pair, the frenzy flushed red with its first dorsal up; on green, its back steel blue; drawn at 3.5 image pixels to the art pixel (`--pitch 3.46`), and the green bled into the red outline as a brown (`--fringe 30`); hull the body without its fins; `mackerel.webp`, `mackerel-sprite.webp` |
 | Pufferfish | darter · turret, `balloon` | rest, strike, wounded, wounded strike | ready | turned, its spines stand up; its puff is a swell of the mesh and should carry over |
 | Sea Nettle | jelly · drifter, `bloom` | rest, wounded | ready | turned, it glows hotter; `--frames rest,wounded` |
 

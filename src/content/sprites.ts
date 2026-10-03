@@ -151,6 +151,16 @@ export const SPRITES: Record<string, SpriteArt> = {
   archerfish: { w: 179, h: 81, snout: 168, tail: 29, axis: 41, mouth: [174, 31],
                 hull: [[164, 33, 10.2], [148, 37, 16], [132, 39.5, 20], [116, 40.5, 21], [100, 40, 21],
                        [84, 42, 22], [68, 40, 18.5], [52, 41, 13], [38, 41, 8]] },
+  // `npm run sprite -- mackerel-sprite.png --id mackerel --key green --fringe 30 --pitch 3.46`:
+  // four frames, the last two its frenzy, flushed red with its first dorsal up. On green, since
+  // the flush is red; its sheet was drawn at three and a half image pixels to the art pixel,
+  // which the pitch search missed, and the green bled into the red outline as a brown that
+  // only bleed from 30° catches. The hull is the body without its fins, which the import
+  // counted under the first dorsal and the pectoral, and the second dorsal and the anal fin.
+  // No lights
+  mackerel: { w: 137, h: 58, snout: 135, tail: 20, axis: 32,
+              hull: [[131.5, 32.5, 3.8], [117.5, 32.5, 7.2], [104.5, 33, 9.3], [90.5, 33, 10.2], [77.5, 32.5, 10.6],
+                     [64.5, 32.5, 9.8], [50.5, 32.5, 8.9], [37.5, 32.5, 7], [23.5, 32, 4.7]] },
 };
 
 /**
@@ -169,7 +179,7 @@ export const REWORKED_ONLY = true;
  * read as two versions of it, and the rest of a room was more to watch than the one thing
  * being tested. Null deals it as any other.
  */
-export const NEWEST: string | null = 'archerfish';
+export const NEWEST: string | null = 'mackerel';
 
 /**
  * A tank's hostile table as it is dealt: the reworked enemies only, while `REWORKED_ONLY`,

@@ -278,6 +278,7 @@ Open the preview. When something is off:
 | magenta or dark-violet specks round the outline: the background bled into the rim cells, too dark to key out | `--fringe`, unless the animal is magenta itself (it goes by hue; the gulper and the mantis shrimp would lose their outlines) |
 | thin parts tinted violet whole, on an animal with no violet in it | `--fringe 240`, which takes bleed from 240° up: bleed into blue lands at 245–270°, under the default's 272° (the siphonophore's tentacles) |
 | an animal that is violet, pink or red, which magenta's bleed cannot be told from | have the sheet made on flat green #00FF00 and import it with `--key green` (with `--fringe`, the bleed is green from 75° to 170°) |
+| brown or olive specks round a red outline on green: the bleed mixed into the red | `--fringe 30`, on an animal with no yellow or orange in it (the mackerel's flushed frames) |
 
 ### 3. Wire it
 
