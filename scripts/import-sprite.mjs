@@ -3,10 +3,12 @@
  * Import a generated sprite sheet as an enemy's frames — the code side of `docs/sprites.md`.
  *
  *   npm run sprite -- <sheet.png> --id <species> [--pitch 6.54] [--colours 22]
- *                     [--keep x0,y0,x1,y1] [--fringe [hue]] [--out src/render/creature/sprites]
+ *                     [--keep x0,y0,x1,y1] [--key green] [--fringe [hue]]
+ *                     [--out src/render/creature/sprites]
  *
- * The sheet is one or two frames side by side on flat #FF00FF: the rest, and optionally the
- * strike. A generator's "8× pixel art" is never on a clean grid — the anglerfish's was 6.5
+ * The sheet is one or two frames side by side on flat #FF00FF, or #00FF00 with `--key green`
+ * for an animal that is violet, pink or red, into which magenta's bleed cannot be told from
+ * paint: the rest, and optionally the strike. A generator's "8× pixel art" is never on a clean grid — the anglerfish's was 6.5
  * image pixels to the art pixel, and its columns drifted by three art pixels across a frame —
  * so the grid is found, not assumed: each cell boundary is the strongest colour edge a pitch on
  * from the last, which follows a drifting grid where a fixed pitch would double or drop
@@ -36,7 +38,7 @@ const opt = (name, fallback) => {
 const sheet = argv.find((a, i) => !a.startsWith('--') && !(i > 0 && argv[i - 1].startsWith('--')));
 const id = opt('id');
 if (!sheet || !id) {
-  console.error('usage: npm run sprite -- <sheet.png> --id <species> [--pitch n] [--colours n] [--keep x0,y0,x1,y1] [--fringe [hue]] [--out dir]');
+  console.error('usage: npm run sprite -- <sheet.png> --id <species> [--pitch n] [--colours n] [--keep x0,y0,x1,y1] [--key green] [--fringe [hue]] [--out dir]');
   process.exit(1);
 }
 const out = opt('out', 'src/render/creature/sprites');
@@ -102,8 +104,10 @@ function encodePng(w, h, px) {
 // ------------------------------------------------------------------ the sheet
 
 const { w: W, h: H, px: D } = decodePng(readFileSync(sheet));
-const isBg = i => D[i * 4 + 3] < 128 ||
-  (D[i * 4] > 170 && D[i * 4 + 1] < 110 && D[i * 4 + 2] > 170 && D[i * 4] - D[i * 4 + 1] > 100);
+const green = opt('key', 'magenta') === 'green';
+const isBg = i => D[i * 4 + 3] < 128 || (green
+  ? D[i * 4 + 1] > 170 && D[i * 4] < 110 && D[i * 4 + 2] < 110 && D[i * 4 + 1] - Math.max(D[i * 4], D[i * 4 + 2]) > 100
+  : D[i * 4] > 170 && D[i * 4 + 1] < 110 && D[i * 4 + 2] > 170 && D[i * 4] - D[i * 4 + 1] > 100);
 const diff = (i, j) => Math.abs(D[i * 4] - D[j * 4]) + Math.abs(D[i * 4 + 1] - D[j * 4 + 1]) + Math.abs(D[i * 4 + 2] - D[j * 4 + 2]);
 
 // the frames: runs of columns with anything on them, the wide ones, left to right
@@ -183,15 +187,20 @@ const grids = boxes.map(gridOf);
 // hue is all that tells bleed from paint: the gulper and the mantis shrimp are violet-magenta
 // themselves, and it ate their outlines. `--fringe 240` takes bleed from 240° (violet) up,
 // for a sheet with no violet in it, where bleed into blue lands at 245–270°; by default from
-// 272°, which spares the barracuda's violet fins (257°).
+// 272°, which spares the barracuda's violet fins (257°). On green (`--key green`) bleed is
+// green from 75° to 170° — clear of a yellow fin's 50°, which green bleed pushes toward 70° —
+// and the number moves the 75.
 const fringeAt = argv.indexOf('--fringe');
-const fringeFrom = fringeAt >= 0 && /^\d+$/.test(argv[fringeAt + 1] ?? '') ? Number(argv[fringeAt + 1]) : 272;
+const fringeFrom = fringeAt >= 0 && /^\d+$/.test(argv[fringeAt + 1] ?? '') ? Number(argv[fringeAt + 1]) : green ? 75 : 272;
+const fringeTo = green ? 170 : 330;
 const hue = ([r, g, b]) => {
   const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
   if (mx - mn < 24 || (mx - mn) / mx < 0.4) return -1;
-  return mx === b ? 240 + 60 * (r - g) / (mx - mn) : mx === r ? (360 + 60 * (g - b) / (mx - mn)) % 360 : -1;
+  return mx === b ? 240 + 60 * (r - g) / (mx - mn) : mx === r ? (360 + 60 * (g - b) / (mx - mn)) % 360
+    : 120 + 60 * (b - r) / (mx - mn);
 };
-const isFringe = c => c && hue(c) >= fringeFrom && hue(c) <= 330 && c[1] < c[0] && c[1] < c[2];
+const isFringe = c => c && hue(c) >= fringeFrom && hue(c) <= fringeTo &&
+  (green ? c[1] > c[0] && c[1] > c[2] : c[1] < c[0] && c[1] < c[2]);
 const lum = c => c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
 let fringe = 0;
 if (fringeAt >= 0) for (const g of grids) {

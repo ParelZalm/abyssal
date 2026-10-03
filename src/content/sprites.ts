@@ -99,6 +99,14 @@ export const SPRITES: Record<string, SpriteArt> = {
             bells: { x0: 305, x1: 445, jets: [[314, 34], [343, 21], [352, 62], [379, 31], [394, 66], [412, 35]] },
             hull: [[480, 46, 11], [446, 46, 16], [410, 50, 33], [375, 50, 33], [340, 48, 27],
                    [285, 58, 16], [220, 58, 16], [150, 58, 15], [80, 54, 10]] },
+  // `npm run sprite -- ribbon-sprite.png --id ribbon --key green --fringe --pitch 4.1`: on
+  // green, since magenta bleed cannot be told from its violet, and its fins' ribs read as a
+  // grid finer than its own, so the pitch is given. The hull is the blue body alone, as the
+  // barracuda's is: its fins run the whole length above and below, and counted they made the
+  // ribbon twice as deep as the body a shot should meet. No lights
+  ribbon: { w: 244, h: 53, snout: 236, tail: 12, axis: 25,
+            hull: [[228.5, 22, 4], [202.5, 26, 5.5], [176.5, 26, 7.2], [150.5, 24, 7.2], [124.5, 24.5, 6.8],
+                   [97.5, 26, 6.4], [71.5, 25.5, 5.1], [45.5, 24.5, 3.4], [19.5, 25, 2]] },
 };
 
 /**
@@ -117,7 +125,7 @@ export const REWORKED_ONLY = true;
  * read as two versions of it, and the rest of a room was more to watch than the one thing
  * being tested. Null deals it as any other.
  */
-export const NEWEST: string | null = 'siphon';
+export const NEWEST: string | null = 'ribbon';
 
 /**
  * A tank's hostile table as it is dealt: the reworked enemies only, while `REWORKED_ONLY`,
