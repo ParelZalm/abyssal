@@ -30,9 +30,14 @@ import ribbonRest from './sprites/ribbon.png';
 import ribbonStrike from './sprites/ribbon-strike.png';
 import triggerRest from './sprites/triggerfish.png';
 import triggerStrike from './sprites/triggerfish-strike.png';
+import triggerWounded from './sprites/triggerfish-wounded.png';
+import triggerWoundedStrike from './sprites/triggerfish-wounded-strike.png';
 import lionRest from './sprites/lionfish.png';
 import lionStrike from './sprites/lionfish-strike.png';
+import lionWounded from './sprites/lionfish-wounded.png';
+import lionWoundedStrike from './sprites/lionfish-wounded-strike.png';
 import moonRest from './sprites/moonjelly.png';
+import moonWounded from './sprites/moonjelly-wounded.png';
 import archerRest from './sprites/archerfish.png';
 import archerStrike from './sprites/archerfish-strike.png';
 import mackerelRest from './sprites/mackerel.png';
@@ -61,9 +66,9 @@ const SOURCES: Record<string, Sources> = {
   barracuda: { rest: barracudaRest, strike: barracudaStrike },
   siphon: { rest: siphonRest },
   ribbon: { rest: ribbonRest, strike: ribbonStrike },
-  triggerfish: { rest: triggerRest, strike: triggerStrike },
-  lionfish: { rest: lionRest, strike: lionStrike },
-  moonjelly: { rest: moonRest },
+  triggerfish: { rest: triggerRest, strike: triggerStrike, wounded: triggerWounded, woundedStrike: triggerWoundedStrike },
+  lionfish: { rest: lionRest, strike: lionStrike, wounded: lionWounded, woundedStrike: lionWoundedStrike },
+  moonjelly: { rest: moonRest, wounded: moonWounded },
   archerfish: { rest: archerRest, strike: archerStrike },
   mackerel: { rest: mackerelRest, strike: mackerelStrike, wounded: mackerelWounded, woundedStrike: mackerelWoundedStrike },
   pufferfish: { rest: pufferRest, strike: pufferStrike, wounded: pufferWounded, woundedStrike: pufferWoundedStrike },

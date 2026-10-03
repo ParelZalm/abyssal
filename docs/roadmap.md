@@ -354,12 +354,31 @@ What it found, and what it leaves:
   spits in three seconds, where the numbers say about eighteen without them. Nothing is tuned yet
   against a full stack; no synergies pair them yet (a burst that scalds, a chill that arcs).
 
-## Hostile movesets: the reef
+## ~~Hostile movesets: the reef~~
 
-The ribbon eel burrows in the rock and lunges along a line from its hole, and turned hunts
-in the open; the triggerfish's jet knocks the player into the others' lines, and turned it
-goes red and charges; the lionfish herds with a fan of five, and turned flares into fan and
-ring; the moon jelly fades in and out, and turned buds an ephyra every few seconds.
+Done: the reef's four play their roles their own way (*Movesets* in `simulation.md`). The ribbon
+eel waits in a hole in the rock with its head out, lunges along the line out of it, swims to the
+nearest hole and backs in tail first, and turned hunts in the open; the triggerfish's jet throws
+the player along its line, and it works round to blow the player into the others, and turned it
+goes red and charges; the lionfish herds with a fan of five at the player, and turned flares into
+fan and ring together; the moon jelly fades out of the room, untouchable and quicker, and back,
+and turned stays and buds an ephyra every few seconds. The triggerfish, lionfish and moon jelly
+have their turned looks as wounded frames recoloured from their sheets (`--wounded-palette`). The
+board's *Hostile roles* group has each whole and turned, the eel in a block of rock.
+
+What it found, and what it leaves:
+
+- **An eel's body swings in the rock.** Its head follows the player by turning the body about
+  the mouth, and a hole checked only straight in showed the tail swung up over a ledge a tile
+  thick. A hole now has rock for the body at either edge of the cone, which puts most of them in
+  the room's outer walls, floor and ceiling.
+- **An ambusher can be sat out.** Two eels left in their holes never lunged at a larva off their
+  lines. An eel now moves, after five seconds of nothing on its line, to a hole that has the
+  player on it; idle against two, a larva takes a hit about every seven seconds.
+- **The jet fired as soon as it could**, from wherever it was, and blew the player anywhere. It
+  holds its jet until it is behind the player from the others, for a second and a half at most.
+- Ephyrae and their mother converge on the player by the same water and stack on it; nothing
+  keeps hostiles apart. The deep's movesets are next.
 
 ## Hostile movesets: the deep
 

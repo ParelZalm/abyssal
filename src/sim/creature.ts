@@ -107,9 +107,12 @@ export class Creature {
    * A hostile's moveset (`Roles`): whether it has turned at half health, seconds left of the
    * stagger it turns in, and whether it is a brood — something a death left (a nettle's
    * ephyrae), which neither turns nor buds again. `salvo` is shots left in a burst and
-   * `salvoT` seconds to the next, or to the next sting a bell leaves; `guardCd` seconds before
-   * a pufferfish may puff again, or an archerfish looks for cover again; `surgeT` how far
-   * through its pulse a bell is; `orbit` which way round the player a pack circles.
+   * `salvoT` seconds to the next, or to the next sting a bell leaves — or the seconds an eel
+   * has waited in its hole with nothing on its line, or a triggerfish ready to blow has waited
+   * to get behind the player; `guardCd` seconds before a pufferfish may puff again, an
+   * archerfish looks for cover again, or an eel gives up on the hole it is swimming for;
+   * `surgeT` how far through its pulse a bell is; `orbit` which way round the player a pack
+   * circles.
    */
   wounded = false;
   turnT = 0;
@@ -119,6 +122,20 @@ export class Creature {
   guardCd = 0;
   surgeT = 0;
   orbit: 1 | -1 = Math.random() < 0.5 ? 1 : -1;
+  /**
+   * A ribbon eel's hole (`Roles.lurk`): its mouth on the rock face and the heading out of it,
+   * and how far into it the body is — `back` backing in tail first, `home` in it with the head
+   * out, `out` leaving it. Anything but '' is a body in the rock: the water does not move it
+   * and the rock does not push it out, its brain puts it where it is.
+   */
+  den: { x: number; y: number; a: number } | null = null;
+  burrow: '' | 'back' | 'home' | 'out' = '';
+  /**
+   * How far a moon jelly has faded from the room, 0 there and 1 gone (`Roles.wane`), and the
+   * seconds into its cycle. Past `GHOST` it can neither be hit nor hurt.
+   */
+  wane = 0;
+  waneT = Math.random() * 2;
   /**
    * A boss's fight beyond its main move (`sim/bosses.ts`). `move` is the set piece in hand —
    * '' for the main one — and `rounds` how many of the main one since the last. `stuck` is

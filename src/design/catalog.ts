@@ -7,7 +7,7 @@
  * that is the whole point of the page, so keep it accurate when things move.
  */
 import { Container, Graphics, Sprite } from 'pixi.js';
-import { PLAN_FORMS, type Plan } from '../content/form';
+import { formFor, PLAN_FORMS, R, type Plan } from '../content/form';
 import { FishView, REST, type Pose } from '../render/creature/fishview';
 import { FAMILY_NAMES, TRANSFORMS, type Family } from '../content/forms';
 import { baseGenome, type Genome } from '../content/genome';
@@ -44,10 +44,11 @@ import { BREACH_LOCK, DRAW_TIME, LOB_WIND, LURK, PUNCH_WIND, SNAGGED, RING_SPOKE
 import { PickupView } from '../render/pickups';
 import type { Pickup } from '../sim/world';
 import {
-  BOUNCE, CHARGE_LOCK, CHARGE_RECOVER, CHARGE_WIND, DASH_TIME, FAN, FRENZY_WIND, GLIDE, SALVO, SALVO_GAP,
-  SHOT_SPEED, SPIT_RECOVER, SPIT_WIND, SPOKES, STING_LIFE, SURGE, SWELL, TAUT, TURRET_RECOVER, TURRET_WIND,
-  woundedGenome,
+  BOUNCE, CHARGE_LOCK, CHARGE_RECOVER, CHARGE_WIND, DASH_TIME, FAN, FRENZY_WIND, GLIDE, HEAD_OUT, HERD, HERD_GAP,
+  SALVO, SALVO_GAP, SHOT_SPEED, SPIT_RECOVER, SPIT_WIND, SPOKES, STING_LIFE, SURGE, SWELL, TAUT, TURRET_RECOVER,
+  TURRET_WIND, WANE_FADE, WANE_GONE, WANE_SHOWN, woundedGenome,
 } from '../sim/roles';
+import { SPRITES, spritePoint } from '../content/sprites';
 import type { FiredKind, Moveset, Role, ShotKind, Species } from '../content/species';
 import { Texture } from 'pixi.js';
 import { speciesById } from '../content/species';
@@ -1121,7 +1122,36 @@ const MOVE_NOTES: Record<Moveset, { whole: string; turned: string }> = {
     whole: `Pulses: a surge at you, a coast. Its tentacles hang behind it, each a sting for ${STING_LIFE} s.`,
     turned: 'Glows hotter and pulses faster. Dead, it buds into two ephyrae the room waits on.',
   },
+  burrow: {
+    whole: 'In a hole in the rock, its head out, following you. Lunges along the line out of it, then swims to the nearest hole and backs in.',
+    turned: 'Leaves the rock for good and hunts in the open: a plain charger.',
+  },
+  jet: {
+    whole: 'Its spit is a jet that throws you along its line, landed or not, and it works round to blow you into the others.',
+    turned: 'Flushed red, it stops blowing and charges: a wind-up, the lock, the dash.',
+  },
+  herd: {
+    whole: `A fan of ${HERD} spines at you on the beat instead of a ring: out of it is to the side, where it wants you.`,
+    turned: 'Flared hot, it fires the fan and the ring together.',
+  },
+  wane: {
+    whole: `Fades out of the room for ${WANE_GONE} s every ${WANE_SHOWN} s: untouchable, quicker, its light left faint to follow.`,
+    turned: 'Stays, its gonads hot, and buds an ephyra every few seconds, three at a time.',
+  },
 };
+
+/**
+ * The hole on the board for a burrowing cell whose eel lies at `x`: its mouth, `HEAD_OUT` tiles
+ * back from the nose, and its back, behind the tail. The eel is drawn from a sprite, so the
+ * nose and the tail are the sprite's snout and tail.
+ */
+function boardDen(sp: Species, g: Genome, x: number, tile: number) {
+  const s = SPRITES[sp.id];
+  const k = g.size * (sp.drawn ?? 1) / R, f = formFor(g, sp.plan);
+  const nose = s ? spritePoint(s, f, [s.snout, s.axis]).x * k : g.size * (sp.drawn ?? 1) * 1.1;
+  const tail = s ? spritePoint(s, f, [0, s.axis]).x * k : -nose;
+  return { mouth: x + nose - HEAD_OUT * tile, back: x + tail - tile * 0.3 };
+}
 
 /**
  * A role cell: the body, and the shots it throws, which fly out and are spent as in play —
@@ -1133,11 +1163,18 @@ class RoleCell extends Container {
   readonly blooms = new Container();
   /** The charge bar, for a charger's cell. */
   readonly bar = new ChargeBar();
+  /** The rock a burrowing eel lies in, drawn over it as the room's is. */
+  readonly rock = new Graphics();
   constructor(g: Genome, plan: Plan, private readonly hostile = true, sp?: Species, wounded = false) {
     super();
     this.fish = boardFish(g, plan, sp, wounded);
     this.bar.root.visible = false;
-    this.addChild(this.blooms, this.fish, this.shots, this.bar.root);
+    this.addChild(this.blooms, this.fish, this.shots, this.rock, this.bar.root);
+  }
+
+  /** A block of rock from `back` to its face at `x`, `h` tall. */
+  wall(back: number, x: number, h: number) {
+    this.rock.clear().rect(back, -h / 2, x - back, h).fill(0x1c2433).rect(x - 1.5, -h / 2, 1.5, h).fill(0x3d4c6e);
   }
   private flights: { a: number; d: number; t: number; s: Sprite; b: Sprite }[] = [];
 
@@ -1184,17 +1221,28 @@ function roleAnimate(sp: Species, g: Genome, tile: number) {
   const salvo = sp.moves === 'volley' ? SALVO : 1;
   const strike = role === 'charger' ? DASH_TIME : SALVO_GAP * (salvo - 1) + 0.12;
   const recover = role === 'charger' ? CHARGE_RECOVER : role === 'turret' ? TURRET_RECOVER : SPIT_RECOVER;
-  const cycle = role === 'drifter' && sp.moves === 'bloom' ? (SURGE + GLIDE) * 2 : wind + strike + recover + 1.2;
-  let t = 0, fired = 0, volley = 0;
+  const cycle = role === 'drifter' && sp.moves === 'bloom' ? (SURGE + GLIDE) * 2
+    : sp.moves === 'wane' ? WANE_SHOWN + WANE_FADE * 2 + WANE_GONE : wind + strike + recover + 1.2;
+  // an eel's hole, and how far its head is out of it ahead of its middle, where the bar goes
+  const den = sp.moves === 'burrow' ? boardDen(sp, g, -g.size * 0.8, tile) : null;
+  const head = den ? den.mouth + HEAD_OUT * tile + g.size * 0.8 : 0;
+  let t = 0, fired = 0, volley = 0, walled = false;
   return (view: Container, dt: number, beat: number) => {
     const cell = view as RoleCell;
     const fish = cell.fish.fish;
     t += dt;
     if (t > cycle) { t = 0; fired = 0; }
-    let pose: Pose = REST, thrust = 0.1, x = 0;
+    let pose: Pose = REST, thrust = 0.1, x = 0, alpha = 1;
     if (role === 'drifter') {
       // a bloom's bell pulses: hard through the surge, slack through the coast
       thrust = sp.moves === 'bloom' ? (t % (SURGE + GLIDE) < SURGE ? 1.4 : 0.1) : 0.85;
+      if (sp.moves === 'wane') {
+        // as `Roles.wane` fades it, and as `Scene` shows it faded
+        const k = t - WANE_SHOWN;
+        const w = k < 0 ? 0 : k < WANE_FADE ? k / WANE_FADE : k < WANE_FADE + WANE_GONE ? 1
+          : 1 - (k - WANE_FADE - WANE_GONE) / WANE_FADE;
+        alpha = 1 - w * 0.92;
+      }
     } else if (t < wind) {
       pose = { windup: t / wind, strike: 0, open: t / wind > 0.35 };
     } else if (t < wind + strike) {
@@ -1205,7 +1253,10 @@ function roleAnimate(sp: Species, g: Genome, tile: number) {
         cell.fire(sp.shot, [-0.15], g.size * 0.55);
       } else if (!fired && sp.shot) {
         fired = 1;
-        if (role === 'turret') {
+        if (role === 'turret' && sp.moves === 'herd') {
+          cell.fire(sp.shot, Array.from({ length: HERD }, (_, k) => (k - (HERD - 1) / 2) * HERD_GAP),
+            g.size * 0.4 * (1 + SWELL));
+        } else if (role === 'turret') {
           const turn = (volley++ % 2) * (Math.PI / SPOKES);
           cell.fire(sp.shot, Array.from({ length: SPOKES }, (_, k) => turn + (k / SPOKES) * Math.PI * 2),
             g.size * 0.4 * (1 + SWELL));
@@ -1215,14 +1266,19 @@ function roleAnimate(sp: Species, g: Genome, tile: number) {
       }
     }
     if (role === 'charger') {
-      // the dash carried out along the cell and eased back through the recovery and rest
+      // the dash carried out along the cell and eased back through the recovery and rest; an
+      // eel's out of its hole, and backed into it tail first
       const out = g.size * 1.6;
       const k = t < wind ? 0 : t < wind + strike ? (t - wind) / strike : Math.max(0, 1 - (t - wind - strike) / (recover + 1.2));
       x = out * k - out * 0.5;
+      if (den && !walled) {
+        walled = true;
+        cell.wall(den.back, den.mouth, g.size * (sp.drawn ?? 1) * 0.9);
+      }
       // the bar over it through the wind-up, as `TellView` stands it: filling, then locked
       cell.bar.root.visible = t < wind;
       if (t < wind) {
-        cell.bar.set(x, -g.size * BAR_OVER, t / (wind - CHARGE_LOCK), t >= wind - CHARGE_LOCK, SHOT_PX, t);
+        cell.bar.set(x + head, -g.size * BAR_OVER, t / (wind - CHARGE_LOCK), t >= wind - CHARGE_LOCK, SHOT_PX, t);
       }
     }
     if (role === 'turret') {
@@ -1232,7 +1288,7 @@ function roleAnimate(sp: Species, g: Genome, tile: number) {
     if (sp.shot) cell.fly(dt, SHOT_SPEED[sp.shot] * tile);
     fish.animate(dt, thrust, beat, 0, pose);
     fish.place(x, 0, role === 'spitter' && pose.windup > 0 ? -0.15 : 0, 1);
-    fish.show(true, 1, 0xffffff);
+    fish.show(true, alpha, 0xffffff);
   };
 }
 
@@ -1244,7 +1300,10 @@ function roleAnimate(sp: Species, g: Genome, tile: number) {
 function turnedAnimate(sp: Species, g: Genome, tile: number) {
   const moves = sp.moves!;
   const wind = CHARGE_WIND(g.size) + CHARGE_LOCK, again = FRENZY_WIND + CHARGE_LOCK;
+  const charges = moves === 'burrow' || moves === 'jet';
   const cycle = moves === 'pack' ? wind + DASH_TIME + again + DASH_TIME + CHARGE_RECOVER + 1
+    : charges ? wind + DASH_TIME + CHARGE_RECOVER + 1.2
+    : moves === 'herd' ? TURRET_WIND + TURRET_RECOVER + 1.2
     : moves === 'bloom' ? (SURGE + GLIDE) * 0.6 * 3 : 2.4;
   let t = 0, fired = 0;
   return (view: Container, dt: number, beat: number) => {
@@ -1288,6 +1347,30 @@ function turnedAnimate(sp: Species, g: Genome, tile: number) {
       thrust = 0.3;
     } else if (moves === 'bloom') {
       thrust = t % ((SURGE + GLIDE) * 0.6) < SURGE * 0.6 ? 1.4 : 0.1;
+    } else if (charges) {
+      // a charger in the open: the eel out of the rock, the triggerfish done blowing
+      const out = g.size * 1.6;
+      const k = t < wind ? 0 : t < wind + DASH_TIME ? (t - wind) / DASH_TIME
+        : Math.max(0, 1 - (t - wind - DASH_TIME) / (CHARGE_RECOVER + 1.2));
+      x = out * k - out * 0.5;
+      pose = t < wind ? { windup: t / wind, strike: 0, open: t / wind > 0.35 }
+        : t < wind + DASH_TIME ? { windup: 0, strike: 1 - (t - wind) / DASH_TIME, open: true } : REST;
+      thrust = t < wind ? 0.15 : t < wind + DASH_TIME ? 1.6 : 0.2;
+      cell.bar.root.visible = t < wind;
+      if (t < wind) cell.bar.set(x, -g.size * BAR_OVER, t / (wind - CHARGE_LOCK), t >= wind - CHARGE_LOCK, SHOT_PX, t);
+    } else if (moves === 'herd' && sp.shot) {
+      // flared: the fan and the ring in one
+      fish.swell = 1 + SWELL * (t < TURRET_WIND ? t / TURRET_WIND
+        : t < TURRET_WIND + TURRET_RECOVER ? 1 - (t - TURRET_WIND) / TURRET_RECOVER : 0);
+      pose = t < TURRET_WIND ? { windup: t / TURRET_WIND, strike: 0, open: t / TURRET_WIND > 0.35 } : REST;
+      if (!fired && t >= TURRET_WIND) {
+        fired = 1;
+        const r = g.size * 0.4 * (1 + SWELL);
+        cell.fire(sp.shot, Array.from({ length: HERD }, (_, k) => (k - (HERD - 1) / 2) * HERD_GAP), r);
+        cell.fire(sp.shot, Array.from({ length: SPOKES }, (_, k) => (k / SPOKES) * Math.PI * 2 + Math.PI / SPOKES), r);
+      }
+    } else if (moves === 'wane') {
+      thrust = 0.85;
     }
     if (sp.shot) cell.fly(dt, SHOT_SPEED[sp.shot] * tile);
     fish.animate(dt, thrust, beat, 0, pose);

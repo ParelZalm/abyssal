@@ -85,7 +85,9 @@ another of its role, what it **turns** into below half its health, and what its 
 leaves. The mackerel's **pack** circles and dashes one at a time; the archerfish's
 **volley** fires in bursts; the pufferfish's **balloon** puffs up close, bounces once
 turned and pops when it dies; the sea nettle's **bloom** pulses, trails stings and buds
-into ephyrae.
+into ephyrae. The ribbon eel's **burrow** waits in a hole in the rock and lunges out along
+its line; the triggerfish's **jet** blows the player into the others; the lionfish's **herd**
+fires a fan; the moon jelly's **wane** fades out of the room and back.
 _Avoid_: AI, behaviour (that is the fauna's)
 
 **Turn** — the once-a-fight change of a hostile with a moveset as its health falls under

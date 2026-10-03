@@ -10,10 +10,11 @@ export type Role = 'charger' | 'spitter' | 'turret' | 'drifter';
 /**
  * A hostile's own way of playing its role (*Moveset* in `CONTEXT.md`, `sim/roles.ts`): the
  * move that makes it this animal and not another of its role, what it turns into below half
- * its health, and what its death leaves. A mackerel's pack, an archerfish's volley, a
- * pufferfish's balloon, a sea nettle's bloom.
+ * its health, and what its death leaves. The nursery's: a mackerel's pack, an archerfish's
+ * volley, a pufferfish's balloon, a sea nettle's bloom. The reef's: a ribbon eel's burrow, a
+ * triggerfish's jet, a lionfish's herd, a moon jelly's wane.
  */
-export type Moveset = 'pack' | 'volley' | 'balloon' | 'bloom';
+export type Moveset = 'pack' | 'volley' | 'balloon' | 'bloom' | 'burrow' | 'jet' | 'herd' | 'wane';
 /**
  * What a body fires: a jet of water, a spine, a blob of light — and the mantis shrimp's
  * urchin, which is thrown rather than fired, and a sea nettle's sting, which is left hanging
@@ -209,27 +210,29 @@ export const SPECIES: Species[] = [
   { id: 'moonjelly', name: 'Moon Jelly', behavior: 'drift', plan: 'jelly', role: 'drifter',
     // drawn three times its size: a jelly's form is a bell and a half long, and at its own
     // the moon jelly was a tile in the reef, its gonads and arms gone
-    zone: 'sunlit', band: 'reef', bleed: 900, drawn: 3,
+    moves: 'wane', zone: 'sunlit', band: 'reef', bleed: 900, drawn: 3,
     size: [12, 26], hue: [280, 310], accent: 295, speed: 26, bite: 7,
     nutrition: 1.4, weight: 10, translucent: 0.72, glow: 0.3, veil: 0.4,
     stealth: 0.4, heal: 0.3 },
 
+  // a ribbon eel lives in a hole in the reef with its head out, and backs into it tail first
   { id: 'ribbon', name: 'Ribbon Eel', behavior: 'ambush', plan: 'eel', role: 'charger',
-    zone: 'sunlit', band: 'reef',
+    moves: 'burrow', zone: 'sunlit', band: 'reef',
     size: [26, 44], hue: [250, 275], accent: 50, speed: 150, bite: 12,
     nutrition: 2.1, weight: 8, jaw: 0.8, segments: 3, stealth: 0.5, eel: 1, lurk: 1 },
 
   // a triggerfish blows jets of water at the sand to turn up what is under it
   { id: 'triggerfish', name: 'Triggerfish', behavior: 'hunter', plan: 'darter',
-    role: 'spitter', shot: 'spit',
+    role: 'spitter', shot: 'spit', moves: 'jet',
     // drawn twice its size: at its own it was 39 texels long in the reef, its eye and the
     // gold lines of its face, which are what make it a triggerfish, gone
     zone: 'sunlit', band: 'reef', drawn: 2,
     size: [24, 38], hue: [196, 220], accent: 52, speed: 150, bite: 9,
     nutrition: 2.0, weight: 6, jaw: 0.6, armor: 1, bulk: 0.4, finSize: 1.2 },
 
+  // a lionfish hunts by herding: fins spread wide, it corners what it is after
   { id: 'lionfish', name: 'Lionfish', behavior: 'ambush', plan: 'darter',
-    role: 'turret', shot: 'spine',
+    role: 'turret', shot: 'spine', moves: 'herd',
     // drawn twice its size, as the triggerfish is: at its own it was a tile and a bit, and
     // its spines, which are its tell, were a smudge over its back
     zone: 'sunlit', band: 'reef', drawn: 2,

@@ -3,7 +3,7 @@ import type { Moveset, Role } from '../content/species';
 import { angleDelta, clamp, dist2, TAU } from '../core/util';
 import type { Creature } from './creature';
 import { Flow } from './flow';
-import { noseReach, spriteAt, wallR } from './hull';
+import { depthOf, noseOf, noseReach, spriteAt, tailReach, wallR } from './hull';
 import { SPRITES } from '../content/sprites';
 import { stealthOf } from './organs';
 import type { Terrain } from './terrain';
@@ -152,10 +152,90 @@ const BUD_SIZE = 0.5;
 const BUD_HP = 0.3;
 
 /**
+ * The burrow (the ribbon eel). A charger that waits in a hole in the rock with `HEAD_OUT` tiles
+ * of its head out, and lunges along the line out of it at a player inside `LURK_REACH` tiles and
+ * `LURK_CONE` radians of that line, which its head follows round. The rock is drawn over the
+ * bodies, so the body in it is hidden, and a shot meets the rock before it: only the head can be
+ * hit. After the lunge it swims to the nearest free hole — the opening — and backs into it tail
+ * first in `BACK_IN` seconds, as ribbon and garden eels do. A hole is a rock face with rock
+ * behind it for the whole body and `DEN_CLEAR` tiles of water in front. Below half health it
+ * leaves the rock for good and hunts in the open, a plain charger.
+ */
+export const HEAD_OUT = 1.2;
+const LURK_REACH = 9;
+const LURK_CONE = 0.45;
+/** Radians a second the head turns after the player in its hole. */
+const LOOK = 2.5;
+const BACK_IN = 0.7;
+/** Seconds in its hole before it may lunge again, so its arrival reads as one. */
+const SETTLE = 0.6;
+const DEN_CLEAR = 4;
+/** Seconds swimming for a hole before it gives that one up and looks again. */
+const DEN_GIVE_UP = 6;
+/**
+ * Seconds in a hole with the player off its line before it moves to one that has the player on
+ * it: an eel left where it was was a room the player could sit out of reach in, and a head to
+ * shoot from the side at leisure. A hole with the player on its line counts `COVERED` of its
+ * distance when one is chosen.
+ */
+const LURK_BORED = 5;
+const COVERED = 0.3;
+/** Seconds in or out of standing up in a hole in the floor or the ceiling (`Creature.upright`). */
+const STAND = 0.35;
+/** The ways a hole is looked for from open water: across to a wall, down to the floor, up to the ceiling. */
+const DIRS: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+/**
+ * The jet (the triggerfish). A spitter whose shot is a jet of water that throws the player
+ * `JET_KNOCK` tiles a second along its line, landed or not, and which between shots works round
+ * to `JET_BEHIND` tiles off the player on the far side from the room's other hostiles, and
+ * blows once it is there, so the jet blows the player into them. Below half health it is flushed red and stops blowing: it
+ * charges, a charger's wind-up, lock and dash.
+ */
+const JET_KNOCK = 9;
+const JET_BEHIND = 6;
+/**
+ * How near the line from it through the player to the others a triggerfish has to be to blow,
+ * in radians, and the seconds it will wait to get there before it blows from wherever it is.
+ */
+const JET_LINED = 0.8;
+const JET_WAIT = 1.5;
+
+/**
+ * The herd (the lionfish). A turret whose beat is a fan of `HERD` spines at the player,
+ * `HERD_GAP` radians apart, instead of a ring. The way out of a fan is to its side, so it moves
+ * the player where the lionfish chooses rather than only where it is not: into the room's
+ * others and its corners, the way a lionfish corners a fish with its fins spread. Below half
+ * health it is flared hot and fires the fan and the ring together.
+ */
+export const HERD = 5;
+export const HERD_GAP = 0.24;
+
+/**
+ * The wane (the moon jelly). A drifter that fades out of the room and back: `WANE_SHOWN`
+ * seconds there, `WANE_FADE` going, `WANE_GONE` gone and `WANE_FADE` coming back. Faded past
+ * `GHOST` it can neither be hit nor hurt, and it comes on `WANE_HASTE` times as fast unseen, so
+ * it is back nearer than it went; its own light stays on, faint (`Scene`), which is how it is
+ * followed. Below half health it stays, flushed, and buds an ephyra every `SPAWN_EVERY`
+ * seconds, `SPAWN_MAX` of them at a time.
+ */
+export const WANE_SHOWN = 2.8;
+export const WANE_FADE = 0.5;
+export const WANE_GONE = 1.6;
+const WANE_HASTE = 1.6;
+export const GHOST = 0.5;
+const SPAWN_EVERY = 3.5;
+const SPAWN_MAX = 3;
+
+/**
  * What a moveset looks like turned: the mackerel flushed red with its jaw and fins up, the
- * pufferfish's spines raised, the nettle's bell hotter. A turn is a rebuild of the bake with
- * this, once, so the phase is on the animal and not only in its timings. Null for one whose
- * turn is all in what it does: the archerfish going to ground is its own tell.
+ * pufferfish's spines raised, the nettle's bell hotter, the triggerfish flushed red, the
+ * lionfish flared, the moon jelly's gonads hot. A turn is a rebuild of the bake with this, once,
+ * so the phase is on the animal and not only in its timings; a body drawn from a sprite has the
+ * look drawn instead, as its wounded pair, and the genome only says it for a painted one. Only
+ * colours for the reef's, which every sprite of theirs is: a fin or a jaw changes the form, and
+ * the form is what a sprite is scaled to. Null for one whose turn is all in what it does: the
+ * archerfish going to ground and the ribbon eel leaving the rock are their own tells.
  */
 export function woundedGenome(moves: Moveset, g: Genome): Genome | null {
   switch (moves) {
@@ -163,8 +243,29 @@ export function woundedGenome(moves: Moveset, g: Genome): Genome | null {
     case 'pack': return { ...g, hue: 6, accentHue: 356, jaw: g.jaw + 0.2, finSize: g.finSize * 1.3 };
     case 'balloon': return { ...g, spikes: g.spikes + 1 };
     case 'bloom': return { ...g, glow: Math.min(1, g.glow + 0.35) };
-    case 'volley': return null;
+    case 'jet': return { ...g, hue: 4, accentHue: 48 };
+    case 'herd': return { ...g, hue: 22, accentHue: 44 };
+    case 'wane': return { ...g, glow: Math.min(1, g.glow + 0.3) };
+    case 'volley': case 'burrow': return null;
   }
+}
+
+/**
+ * The role a hostile plays now, which is its species' but for a turned triggerfish: it stops
+ * blowing and charges.
+ */
+export function roleOf(c: Creature): Role | undefined {
+  return c.wounded && c.species.moves === 'jet' ? 'charger' : c.species.role;
+}
+
+/** Whether a body has faded too far out of the room to be hit or to hurt: a waning moon jelly. */
+export function ghostly(c: Creature) {
+  return c.wane > GHOST;
+}
+
+/** Whether an eel is in the rock, held where its brain puts it rather than swimming. */
+function inRock(c: Creature) {
+  return c.burrow === 'home' || c.burrow === 'back';
 }
 
 /** The share of a blow a hostile takes: a puffed pufferfish is braced against it. */
@@ -177,7 +278,7 @@ export function bracedOf(c: Creature) {
  * tracking part, and `locked` once the line is fixed. Null for anything not winding up a charge.
  */
 export function chargeOf(c: Creature): { fill: number; locked: boolean } | null {
-  if (c.species.role !== 'charger' || c.attack !== 'windup') return null;
+  if (roleOf(c) !== 'charger' || c.attack !== 'windup') return null;
   const done = c.attackLen - c.attackT;
   return { fill: Math.min(1, done / Math.max(0.01, c.attackLen - CHARGE_LOCK)), locked: c.attackT <= CHARGE_LOCK };
 }
@@ -209,34 +310,45 @@ export class Roles {
     if (!t) return;
     if (this.flowOf !== t) { this.flowOf = t; this.flow = new Flow(t); }
     c.roleCd = Math.max(0, c.roleCd - dt);
+    // a body in the rock does not swim: a drive levels it out, and an eel standing in the
+    // floor levelled would swing through the rock round its middle
+    const rock = inRock(c);
     // arriving: it resolves out of the murk before it does anything, the moment Isaac gives
     // a room's monsters before they move
-    if (c.fade < 1) { c.drive(dt, c.angle, 0); return; }
-    if (!p.alive) { c.drive(dt, c.angle, 0.2); return; }
+    if (c.fade < 1) { if (!rock) c.drive(dt, c.angle, 0); return; }
+    if (!p.alive) { if (!rock) c.drive(dt, c.angle, 0.2); return; }
     c.guardCd = Math.max(0, c.guardCd - dt);
     if (!c.wounded && !c.brood && c.species.moves && c.hp < c.hpMax * WOUNDED) this.turn(c, p);
     if (c.turnT > 0) {
       c.turnT -= dt;
-      c.drive(dt, c.angle, 0);
+      if (!rock) c.drive(dt, c.angle, 0);
       return;
     }
     // a bouncing pufferfish aims at nothing, so ink has nothing to hide from it
     if (c.wounded && c.species.moves === 'balloon') { this.bounce(c); return; }
     // in ink the player is not there to be found: whatever was not already under way is
-    // abandoned, and the room's hostiles drift where they were until it thins
-    const inked = this.world.inks.some(k => dist2(k.x, k.y, p.x, p.y) < k.r * k.r);
-    if (inked && c.attack !== 'strike') {
+    // abandoned, and the room's hostiles drift where they were until it thins. An eel in its
+    // hole stays in it, and `lurk` asks the same before it lunges
+    if (this.inked(p) && c.attack !== 'strike' && !rock) {
       if (c.attack === 'windup') c.attack = 'none';
       c.swell = 1;
       c.drive(dt, clearHeading(t, c, c.angle + Math.sin(c.wander * 0.8) * 0.8), 0.25);
       return;
     }
-    switch (role) {
-      case 'charger': this.charger(c, dt, p, t); break;
+    switch (c.wounded && c.species.moves === 'jet' ? 'charger' : role) {
+      case 'charger':
+        if (c.species.moves === 'burrow') this.lurk(c, dt, p, t);
+        else this.charger(c, dt, p, t);
+        break;
       case 'spitter': this.spitter(c, dt, p, t); break;
       case 'turret': this.turret(c, dt, p); break;
       case 'drifter': this.drifter(c, dt, p, t); break;
     }
+  }
+
+  /** Whether the player is in ink, where no hostile can find it. */
+  private inked(p: Creature) {
+    return this.world.inks.some(k => dist2(k.x, k.y, p.x, p.y) < k.r * k.r);
   }
 
   private charger(c: Creature, dt: number, p: Creature, t: Terrain) {
@@ -247,13 +359,7 @@ export class Roles {
         if (c.attackT > CHARGE_LOCK) c.aimA = Math.atan2(p.y - c.y, p.x - c.x);
         c.drive(dt, c.aimA, c.attackT > CHARGE_LOCK ? 0.15 : 0, 1);
       } else if (c.attack === 'strike') {
-        // committed: the heading is the one it wound up on, and the speed is held
-        const v = Math.max(1, c.genome.speed) * DASH;
-        c.angle = c.aimA;
-        c.face = Math.cos(c.aimA) >= 0 ? 1 : -1;
-        c.vx = Math.cos(c.aimA) * v;
-        c.vy = Math.sin(c.aimA) * v;
-        c.thrust = 1.6;
+        this.dash(c);
       } else {
         c.drive(dt, c.angle, 0.1);
       }
@@ -268,6 +374,229 @@ export class Roles {
     }
     if (c.species.moves === 'pack' && sees && d < (ORBIT + 2) * t.tile) { this.circle(c, dt, p, t); return; }
     c.drive(dt, this.way(c, p, t, sees), CHARGE_CLOSE);
+  }
+
+  /** A charger's dash: committed, the heading the one it wound up on, and the speed held. */
+  private dash(c: Creature) {
+    const v = Math.max(1, c.genome.speed) * DASH;
+    c.angle = c.aimA;
+    // straight up or down either facing will do, and an eel out of the floor keeps its own
+    if (Math.abs(Math.cos(c.aimA)) > 0.2) c.face = Math.cos(c.aimA) >= 0 ? 1 : -1;
+    c.vx = Math.cos(c.aimA) * v;
+    c.vy = Math.sin(c.aimA) * v;
+    c.thrust = 1.6;
+  }
+
+  /**
+   * The ribbon eel: in its hole, out of it along its line, and back to the nearest free one.
+   * Turned, it comes out and is a charger in the open.
+   */
+  private lurk(c: Creature, dt: number, p: Creature, t: Terrain) {
+    // leaving the rock it is let through it until its middle is clear, and then the rock is
+    // the rock again
+    if (c.burrow === 'out' && t.clearAt(c.x, c.y, wallR(c))) c.burrow = '';
+    const den = c.den;
+    const stand = inRock(c) && den && Math.abs(Math.sin(den.a)) > 0.7 ? 1 : 0;
+    c.upright += clamp(stand - c.upright, -dt / STAND, dt / STAND);
+    if (c.wounded) {
+      if (c.burrow) c.drive(dt, c.aimA, 0.6);
+      else this.charger(c, dt, p, t);
+      return;
+    }
+    if (this.tick(c, dt)) {
+      if (c.attack === 'windup' && den) {
+        // the head after the player inside its cone, and held on the line for the last beat
+        if (c.attackT > CHARGE_LOCK) c.aimA = this.coned(den, p);
+        this.look(c, dt, c.aimA, den, p);
+      } else if (c.attack === 'strike') {
+        this.dash(c);
+      } else {
+        // spent, and still coming out of the rock along the line it went
+        c.drive(dt, c.angle, c.burrow ? 0.5 : 0.1);
+      }
+      return;
+    }
+    if (c.burrow === 'home' && den) {
+      const a = this.coned(den, p);
+      this.look(c, dt, a, den, p);
+      if (!this.covers(den, p, t)) {
+        // nothing has crossed its line for a while: out, and to a hole that has the player
+        // in its, which is the eel in the open between the two
+        if ((c.salvoT += dt) < LURK_BORED) return;
+        c.salvoT = 0;
+        const next = this.hole(c, t, p, den);
+        if (!next) return;
+        c.burrow = 'out';
+        c.aimA = den.a;
+        c.den = next;
+        c.guardCd = DEN_GIVE_UP;
+        this.world.pulses.push({ x: den.x, y: den.y, r: depthOf(c) * 2, kind: 'dust' });
+        return;
+      }
+      c.salvoT = 0;
+      if (c.roleCd <= 0 && !this.inked(p) && this.free(c)) {
+        c.volley = 0;
+        c.aimA = a;
+        this.begin(c, 'windup', CHARGE_WIND(c.genome.size) + CHARGE_LOCK);
+      }
+      return;
+    }
+    if (c.burrow === 'back' && den) {
+      // tail first along the line out of the hole, faster than it could swim it
+      const h = this.homeOf(c, den, den.a);
+      const dx = h.x - c.x, dy = h.y - c.y, d = Math.hypot(dx, dy);
+      const step = (noseReach(c) + tailReach(c)) / BACK_IN * dt;
+      if (d <= step) {
+        c.x = h.x;
+        c.y = h.y;
+        c.burrow = 'home';
+        // settled before it goes again, so its arrival is seen as one
+        c.roleCd = Math.max(c.roleCd, SETTLE);
+        return;
+      }
+      c.x += (dx / d) * step;
+      c.y += (dy / d) * step;
+      return;
+    }
+    // out of the rock the way it went in: along the line out of the hole it left
+    if (c.burrow === 'out') { c.drive(dt, c.aimA, 0.6); return; }
+    // in the open, after a lunge: the nearest free hole, given up on if it cannot be reached
+    if (c.guardCd <= 0) {
+      c.den = this.hole(c, t, p);
+      c.guardCd = c.den ? DEN_GIVE_UP : 1;
+    }
+    if (!c.den) { this.charger(c, dt, p, t); return; }
+    const f = this.front(c, c.den, t);
+    if (dist2(c.x, c.y, f.x, f.y) < (t.tile * 0.8) ** 2) {
+      // turned to face out, and in it goes
+      c.burrow = 'back';
+      c.angle = c.den.a;
+      c.face = this.faceIn(c.den, p, c.face);
+      c.attack = 'none';
+      this.world.pulses.push({ x: c.den.x, y: c.den.y, r: depthOf(c) * 2, kind: 'dust' });
+      return;
+    }
+    const sees = t.clearLine(c.x, c.y, f.x, f.y);
+    const to = Math.atan2(f.y - c.y, f.x - c.x);
+    c.drive(dt, clearHeading(t, c, sees ? to : this.flow!.toward(c.x, c.y, f.x, f.y) ?? to), 0.8);
+  }
+
+  /** Whether the player is on a hole's line: inside its cone and reach, with nothing between. */
+  private covers(den: NonNullable<Creature['den']>, p: Creature, t: Terrain) {
+    return Math.abs(angleDelta(den.a, Math.atan2(p.y - den.y, p.x - den.x))) < LURK_CONE &&
+      dist2(den.x, den.y, p.x, p.y) < (LURK_REACH * t.tile) ** 2 && t.clearLine(den.x, den.y, p.x, p.y);
+  }
+
+  /** The heading out of a hole nearest the player's, inside the eel's cone. */
+  private coned(den: NonNullable<Creature['den']>, p: Creature) {
+    const off = angleDelta(den.a, Math.atan2(p.y - den.y, p.x - den.x));
+    return den.a + clamp(off, -LURK_CONE, LURK_CONE);
+  }
+
+  /**
+   * The facing in a hole: out of it, for one in a wall; in the floor or the ceiling it stands
+   * near straight, where either facing is the same eel, and it takes the player's side, flipping
+   * only once the player is a tile across — every sway of its head would mirror it otherwise.
+   */
+  private faceIn(den: NonNullable<Creature['den']>, p: Creature, face: 1 | -1): 1 | -1 {
+    if (Math.abs(Math.sin(den.a)) <= 0.7) return Math.cos(den.a) >= 0 ? 1 : -1;
+    const across = (p.x - den.x) * face;
+    return across < -this.world.terrain!.tile ? (face > 0 ? -1 : 1) : face;
+  }
+
+  /** In its hole, the head turned toward `want` and the body held so the head is at the mouth. */
+  private look(c: Creature, dt: number, want: number, den: NonNullable<Creature['den']>, p: Creature) {
+    c.face = this.faceIn(den, p, c.face);
+    c.angle += clamp(angleDelta(c.angle, want), -LOOK * dt, LOOK * dt);
+    const h = this.homeOf(c, den, c.angle);
+    c.x = h.x;
+    c.y = h.y;
+  }
+
+  /**
+   * Where the body's middle is with its nose `HEAD_OUT` tiles out of the hole along `a`: the
+   * nose as drawn, so the head is where the picture's is whatever the pitch it is drawn at.
+   */
+  private homeOf(c: Creature, den: NonNullable<Creature['den']>, a: number) {
+    const n = noseOf(c, a);
+    const ox = n.x - c.x, oy = n.y - c.y, d = Math.hypot(ox, oy) || 1;
+    const out = HEAD_OUT * this.world.terrain!.tile;
+    return { x: den.x + (ox / d) * out - ox, y: den.y + (oy / d) * out - oy };
+  }
+
+  /** Where a body is with its tail at a hole's mouth, facing out: where it backs in from. */
+  private front(c: Creature, den: NonNullable<Creature['den']>, t: Terrain) {
+    const d = tailReach(c) + t.tile * 0.4;
+    return { x: den.x + Math.cos(den.a) * d, y: den.y + Math.sin(den.a) * d };
+  }
+
+  /**
+   * The nearest free hole: a rock face found from open water straight across, up or down, with
+   * rock behind its mouth for the whole body as it lies in it and `DEN_CLEAR` tiles of open
+   * water in front, away from the doors and another eel's. One with the player on its line
+   * (`covers`) counts as `COVERED` of its distance, so an eel goes where it can lunge from. Not
+   * `left`, the hole it is leaving. Sampled, not searched: a room's faces are many and any near
+   * one will do. Null when the room has none.
+   */
+  private hole(c: Creature, t: Terrain, p?: Creature, left?: Creature['den']): Creature['den'] {
+    const tile = t.tile, step = t.cell;
+    const deep = noseReach(c) + tailReach(c) - HEAD_OUT * tile + tile * 0.3;
+    const side = depthOf(c);
+    const ahead = tailReach(c) + tile * 0.4;
+    const doors = t.doors.map(s => t.doorRect(s));
+    let best: Creature['den'] = null, bd = Infinity;
+    for (let n = 0; n < 48; n++) {
+      const x = t.x0 + Math.random() * t.width, y = t.y0 + Math.random() * t.height;
+      if (t.solidAt(x, y)) continue;
+      for (const [dx, dy] of DIRS) {
+        let k = 0;
+        while (k < 4 * tile && !t.solidAt(x + dx * k, y + dy * k)) k += step;
+        if (k >= 4 * tile) continue;
+        const mx = x + dx * (k - step), my = y + dy * (k - step);
+        // the body turns about the mouth as the head follows the player, so the rock has to
+        // take it at either edge of the cone as well as straight in: a ledge a tile thick held
+        // the eel lying straight and showed its tail swung up over it
+        let ok = true;
+        for (const turn of [0, -LURK_CONE, LURK_CONE]) {
+          const ux = dx * Math.cos(turn) - dy * Math.sin(turn), uy = dx * Math.sin(turn) + dy * Math.cos(turn);
+          for (let s = tile * 0.4; s <= deep && ok; s += tile * 0.4) {
+            const bx = mx + ux * s, by = my + uy * s;
+            ok = t.solidAt(bx, by) && t.solidAt(bx - uy * side, by + ux * side) && t.solidAt(bx + uy * side, by - ux * side);
+          }
+        }
+        if (!ok) continue;
+        const fx = mx - dx * ahead, fy = my - dy * ahead;
+        if (!t.clearLine(mx, my, mx - dx * DEN_CLEAR * tile, my - dy * DEN_CLEAR * tile) || !t.clearAt(fx, fy, wallR(c))) continue;
+        if (doors.some(r => mx > r.x - tile * 2 && mx < r.x + r.w + tile * 2 && my > r.y - tile * 2 && my < r.y + r.h + tile * 2)) continue;
+        if (this.world.creatures.some(o => o !== c && o.alive && o.den && dist2(o.den.x, o.den.y, mx, my) < (tile * 3) ** 2)) continue;
+        if (left && dist2(left.x, left.y, mx, my) < (tile * 3) ** 2) continue;
+        const den = { x: mx, y: my, a: Math.atan2(-dy, -dx) };
+        const d = Math.sqrt(dist2(c.x, c.y, fx, fy)) * (p && this.covers(den, p, t) ? COVERED : 1);
+        if (d < bd) { bd = d; best = den; }
+      }
+    }
+    return best;
+  }
+
+  /**
+   * An eel put straight into a hole as it arrives (`Spawner.hostiles`), so the first the player
+   * sees of it is a head out of the rock. False when the room has none, and it arrives in the
+   * open as any charger does.
+   */
+  dig(c: Creature) {
+    const t = this.world.terrain;
+    if (!t) return false;
+    c.den = this.hole(c, t);
+    if (!c.den) return false;
+    c.burrow = 'home';
+    c.angle = c.den.a;
+    c.face = this.faceIn(c.den, this.world.player, Math.cos(c.den.a) >= 0 ? 1 : -1);
+    c.upright = Math.abs(Math.sin(c.den.a)) > 0.7 ? 1 : 0;
+    c.vx = c.vy = 0;
+    const h = this.homeOf(c, c.den, c.angle);
+    c.x = h.x;
+    c.y = h.y;
+    return true;
   }
 
   /**
@@ -301,7 +630,13 @@ export class Roles {
     }
     const m = spitFrom(c);
     const sees = t.clearLine(m.x, m.y, p.x, p.y);
-    if (sees && d < SPIT_RANGE * t.tile && c.roleCd <= 0 && this.free(c)) {
+    // a triggerfish holds its jet until it is behind the player from the others, or has waited
+    // long enough that a jet anywhere is better than none
+    const jet = c.species.moves === 'jet';
+    if (jet && c.roleCd <= 0) c.salvoT += dt;
+    const ready = !jet || c.salvoT > JET_WAIT || this.lined(c, p);
+    if (sees && d < SPIT_RANGE * t.tile && c.roleCd <= 0 && ready && this.free(c)) {
+      c.salvoT = 0;
       this.begin(c, 'windup', SPIT_WIND);
       return;
     }
@@ -317,12 +652,45 @@ export class Roles {
       dx = Math.cos(a); dy = Math.sin(a);
       throttle = 0.7;
     } else {
+      const behind = c.species.moves === 'jet' ? this.behind(c, p, t) : null;
       const side = Math.sin(c.wander * 0.6) >= 0 ? 1 : -1;
-      const a = clearHeading(t, c, aim + side * Math.PI / 2);
+      const a = clearHeading(t, c, behind ?? aim + side * Math.PI / 2);
       dx = Math.cos(a); dy = Math.sin(a);
-      throttle = 0.3;
+      throttle = behind === null ? 0.3 : 0.5;
     }
     c.strafe(dt, dx, dy, throttle);
+  }
+
+  /** The hostile nearest the player but `c`, which a triggerfish blows the player into. */
+  private partner(c: Creature, p: Creature) {
+    let o: Creature | null = null, od = Infinity;
+    for (const k of this.world.creatures) {
+      if (k === c || !k.alive || !k.hostile) continue;
+      const d = dist2(k.x, k.y, p.x, p.y);
+      if (d < od) { od = d; o = k; }
+    }
+    return o;
+  }
+
+  /** Whether a jet from `c` would blow the player toward the others: `JET_LINED` of the line to one. */
+  private lined(c: Creature, p: Creature) {
+    const o = this.partner(c, p);
+    return !o || Math.abs(angleDelta(Math.atan2(p.y - c.y, p.x - c.x), Math.atan2(o.y - p.y, o.x - p.x))) < JET_LINED;
+  }
+
+  /**
+   * A triggerfish between jets: the way to the water `JET_BEHIND` tiles off the player on the
+   * far side from the nearest other hostile, so the jet blows the player toward it. Null with
+   * no other in the room, or already there, and it drifts across the line as any spitter does.
+   */
+  private behind(c: Creature, p: Creature, t: Terrain) {
+    const o = this.partner(c, p);
+    if (!o) return null;
+    const away = Math.atan2(p.y - o.y, p.x - o.x);
+    const r = JET_BEHIND * t.tile;
+    const x = p.x + Math.cos(away) * r, y = p.y + Math.sin(away) * r;
+    if (dist2(c.x, c.y, x, y) < (t.tile * 1.5) ** 2) return null;
+    return Math.atan2(y - c.y, x - c.x);
   }
 
   /**
@@ -431,7 +799,33 @@ export class Roles {
     // a bell does not aim so much as lean: the heading wanders about the way to the player
     const wobble = Math.sin(c.wander * 1.3) * 0.5;
     if (c.species.moves === 'bloom') { this.pulse(c, dt, p, t, sees, wobble); return; }
-    c.drive(dt, this.way(c, p, t, sees) + wobble, DRIFT_THROTTLE);
+    const haste = c.species.moves === 'wane' && !c.brood ? this.wane(c, dt) : 1;
+    c.drive(dt, this.way(c, p, t, sees) + wobble, DRIFT_THROTTLE, 0, haste);
+  }
+
+  /**
+   * A moon jelly's cycle out of the room and back, or, turned, its budding; returns how hard it
+   * swims, which unseen is harder.
+   */
+  private wane(c: Creature, dt: number) {
+    if (c.wounded) {
+      c.wane = Math.max(0, c.wane - dt / WANE_FADE);
+      if ((c.waneT -= dt) > 0) return 1;
+      c.waneT = SPAWN_EVERY;
+      let n = 0;
+      for (const o of this.world.creatures) if (o.alive && o.brood && o.species === c.species) n++;
+      if (n < SPAWN_MAX) {
+        this.bud(c, c.angle + Math.PI + (Math.random() - 0.5) * 1.2);
+        this.world.pulses.push({ x: c.x, y: c.y, r: c.radius, kind: 'turn' });
+      }
+      return 1;
+    }
+    const cycle = WANE_SHOWN + WANE_FADE * 2 + WANE_GONE;
+    c.waneT = (c.waneT + dt) % cycle;
+    const k = c.waneT - WANE_SHOWN;
+    c.wane = k < 0 ? 0 : k < WANE_FADE ? k / WANE_FADE : k < WANE_FADE + WANE_GONE ? 1
+      : 1 - (k - WANE_FADE - WANE_GONE) / WANE_FADE;
+    return ghostly(c) ? WANE_HASTE : 1;
   }
 
   /**
@@ -463,7 +857,7 @@ export class Roles {
   private tick(c: Creature, dt: number): boolean {
     if (c.attack === 'none') return false;
     if ((c.attackT -= dt) > 0) return true;
-    const role = c.species.role!;
+    const role = roleOf(c)!;
     const moves = c.species.moves;
     if (c.attack === 'windup') {
       this.strike(c, role);
@@ -525,6 +919,12 @@ export class Roles {
       c.anchor = null;
       c.aimA = Math.atan2(p.y >= c.y ? 1 : -1, p.x >= c.x ? 1 : -1);
     }
+    // an eel turned in its hole comes out of it, along its line, for good
+    if (c.burrow) {
+      c.burrow = 'out';
+      if (c.den) c.aimA = c.den.a;
+    }
+    if (c.species.moves === 'wane') c.waneT = SPAWN_EVERY * 0.5;
     c.view.hurt();
     this.world.pulses.push({ x: c.x, y: c.y, r: c.radius * 1.8, kind: 'turn' });
   }
@@ -578,10 +978,25 @@ export class Roles {
       this.spit(c, volley ? 0 : LEAD);
     } else if (role === 'turret' && kind) {
       c.volley++;
-      const turn = (c.volley % 2) * (TAU / SPOKES / 2);
-      for (let k = 0; k < SPOKES; k++) this.spine(c, turn + (k / SPOKES) * TAU, 1);
+      const herd = c.species.moves === 'herd';
+      if (herd) {
+        // the fan at the player, its middle spine down the line to it
+        const p = this.world.player;
+        const at = Math.atan2(p.y - c.y, p.x - c.x);
+        for (let k = 0; k < HERD; k++) this.spine(c, at + (k - (HERD - 1) / 2) * HERD_GAP, 1);
+      }
+      if (!herd || c.wounded) {
+        const turn = (c.volley % 2) * (TAU / SPOKES / 2);
+        for (let k = 0; k < SPOKES; k++) this.spine(c, turn + (k / SPOKES) * TAU, 1);
+      }
     } else if (role === 'charger') {
       c.landed = false;
+      // out of its hole along the line: the rock is let go of until the body is out of it
+      if (c.burrow) {
+        c.burrow = 'out';
+        c.guardCd = 0;
+        if (c.den) this.world.pulses.push({ x: c.den.x, y: c.den.y, r: depthOf(c) * 2.5, kind: 'dust' });
+      }
     }
   }
 
@@ -591,7 +1006,8 @@ export class Roles {
     const wide = (Math.random() * 2 - 1) * Math.max(0, stealthOf(p)) * STEALTH_AIM;
     const m = spitFrom(c);
     const a = Math.atan2(p.y + p.vy * lead - m.y, p.x + p.vx * lead - m.x) + wide;
-    w.fire(c, kind, m.x, m.y, a, SHOT_SPEED[kind]);
+    const s = w.fire(c, kind, m.x, m.y, a, SHOT_SPEED[kind]);
+    if (s && c.species.moves === 'jet') s.knock = JET_KNOCK * w.terrain!.tile;
   }
 
   /**

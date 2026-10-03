@@ -3,6 +3,7 @@ import { clamp, dist2 } from '../core/util';
 import { sightOf } from '../content/genome';
 import { DEPTH_MAX } from '../content/zones';
 import type { Phase } from '../run/phase';
+import { noseOf } from '../sim/hull';
 import { feelOf, stealthOf } from '../sim/organs';
 import type { Creature } from '../sim/creature';
 import type { World } from '../sim/world';
@@ -38,6 +39,12 @@ const POOL = 11;
  */
 const PRESENCE = { r: 2.4, a: 0.3, color: [0x9f, 0xb4, 0xd8] };
 const TELL = { r: 2, a: 0.95, color: [0xff, 0x7a, 0x4a] };
+/**
+ * How much of a waned moon jelly is gone (`Creature.wane`): its body all but, and its light
+ * only half, so it is followed by the glow it leaves while it cannot be seen or hit.
+ */
+const WANED = 0.92;
+const WANED_LIGHT = 0.5;
 
 /**
  * What the player can make out this frame: which bodies show and how clearly, the ring
@@ -121,7 +128,7 @@ export class Scene {
       // then snaps across the screen — worst along a seal, where band-holding bodies bob
       // across the frame edge all the time
       if (seen && !c.view.visible) c.syncView();
-      c.view.show(seen, alpha * c.emergence, tint);
+      c.view.show(seen, alpha * c.emergence * (1 - c.wane * WANED), tint);
     }
 
     const level = dread.level(danger);
@@ -146,8 +153,10 @@ export class Scene {
       if (!c.hostile || !c.alive || !c.view.visible) continue;
       const k = c.attack === 'windup' ? 1 - c.attackT / c.attackLen : 0;
       const [r, g, b] = PRESENCE.color.map((v, i) => Math.round(v + (TELL.color[i] - v) * k));
-      lit.add({ x: c.x, y: c.y, r: c.radius * (PRESENCE.r + TELL.r * k), color: (r << 16) | (g << 8) | b,
-        a: (PRESENCE.a + TELL.a * k) * c.emergence });
+      // an eel in the rock lights the water at its head, not the rock round its middle
+      const at = c.burrow ? noseOf(c) : c;
+      lit.add({ x: at.x, y: at.y, r: c.radius * (PRESENCE.r + TELL.r * k), color: (r << 16) | (g << 8) | b,
+        a: (PRESENCE.a + TELL.a * k) * c.emergence * (1 - c.wane * WANED_LIGHT) });
     }
     for (const l of lights) lit.add(l);
     // a tank has no thermocline: the shader's seal is put below the floor of the world, open.

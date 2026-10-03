@@ -11,7 +11,7 @@ import type { Bite, Blood, BossCue, Pulse } from './events';
 import { primaryOf, shotHit, shotModsOf, shotSpent, tick as tickOrgans, type Organ,
          type ShotMark } from './organs';
 import { Patterns } from './patterns';
-import { Roles } from './roles';
+import { ghostly, Roles } from './roles';
 import { Spawner } from './spawn';
 import type { Terrain } from './terrain';
 import { collideHull, surfaceGap, WALL_R, wallR } from './hull';
@@ -90,6 +90,11 @@ export interface Shot {
   pierce?: boolean;
   /** Radians a second it bends toward a hostile ahead of it (Hunting Nares). */
   seek?: number;
+  /**
+   * World units a second it throws the player along its line, whether or not the hit lands:
+   * a triggerfish's jet (`Roles`' `JET_KNOCK`) is water, and moves what it meets.
+   */
+  knock?: number;
   /** The bodies it has already landed on, which it passes without landing again. */
   hit?: Creature[];
   /**
@@ -388,10 +393,12 @@ export class World {
     if (!t) return;
     const v = speed * t.tile;
     const m = shotModsOf(by);
-    this.shots.push({ kind, x, y, vx: Math.cos(a) * v + cvx, vy: Math.sin(a) * v + cvy, r: SHOT_R * t.tile,
+    const s: Shot = { kind, x, y, vx: Math.cos(a) * v + cvx, vy: Math.sin(a) * v + cvy, r: SHOT_R * t.tile,
       t: 0, life: range / speed, mult, by,
-      ...(m.marks.length ? { marks: m.marks, pierce: m.pierce, seek: m.seek } : {}) });
+      ...(m.marks.length ? { marks: m.marks, pierce: m.pierce, seek: m.seek } : {}) };
+    this.shots.push(s);
     this.pulses.push({ x, y, r: by.radius * 0.6, kind: 'shot', shot: kind, hostile: !by.isPlayer });
+    return s;
   }
 
   /**
@@ -426,7 +433,7 @@ export class World {
    * the larva and a mackerel soaked up every shot aimed through it.
    */
   canHit(c: Creature) {
-    return c.alive && !c.isPlayer && (!this.terrain?.locked || c.hostile);
+    return c.alive && !c.isPlayer && !ghostly(c) && (!this.terrain?.locked || c.hostile);
   }
 
   /** Break every pot within `r` of a point: a burst breaks all it reaches, not the first. */
@@ -532,6 +539,12 @@ export class World {
       if (!spent && p.alive && !s.by.isPlayer && !s.harmless && s.t >= SHOT_ARM &&
           dist2(s.x, s.y, p.x, p.y) < reach * reach) {
         spent = true;
+        if (s.knock) {
+          const v = Math.hypot(s.vx, s.vy) || 1;
+          p.vx += (s.vx / v) * s.knock;
+          p.vy += (s.vy / v) * s.knock;
+          this.pulses.push({ x: p.x, y: p.y, r: p.radius * 1.4, kind: 'bubbles' });
+        }
         const got = p.takeHit(s.by, 1, s.kind === 'sting' ? 'touch' : 'shot');
         if (got) {
           this.bites.push({ x: p.x, y: p.y, amount: got, fatal: p.hp < 1, onPlayer: true,
@@ -709,10 +722,13 @@ export class World {
   }
 
   private integrate(c: Creature, dt: number) {
+    // an eel in its hole is where its brain put it: a shot's knock or a flash's drift would
+    // carry it through the rock, which is not there to hold it
+    if (c.burrow === 'home' || c.burrow === 'back') c.vx = c.vy = 0;
     c.x += c.vx * dt;
     c.y = clamp(c.y + c.vy * dt, 30, DEPTH_MAX);
     if (c.species.boss && this.terrain) this.meetRock(c, this.terrain, dt);
-    else this.terrain?.collide(c, wallR(c));
+    else if (!c.burrow) this.terrain?.collide(c, wallR(c));
     c.biteCd = Math.max(0, c.biteCd - dt);
     c.invuln = Math.max(0, c.invuln - dt);
     c.boosting = Math.max(0, c.boosting - dt);
@@ -730,7 +746,9 @@ export class World {
       c.vy *= k;
     }
     if (c.fade < 1) c.fade = Math.min(1, c.fade + dt / FADE_IN);
-    c.face = faceFor(c.face, c.angle);
+    // in a hole in the floor the eel stands near straight up, where every sway of its head
+    // would mirror it: its brain keeps the facing there
+    if (!c.burrow) c.face = faceFor(c.face, c.angle);
     // nothing heals while a wound is still working on it
     const wounded = c.poisonT > 0 || c.bleedT > 0 || c.burnT > 0;
     if (c.poisonT > 0) {

@@ -5,7 +5,7 @@ import type { Creature, Hurt } from './creature';
 import type { Blood } from './events';
 import { armourAgainst, biteRateOf, damageOf, gulpOf, kindle, primaryOf, strikeOf, takenOf, wound } from './organs';
 import { EXPOSED_TAKEN, PATTERN_CD, RUSH_BITE } from './patterns';
-import { bracedOf } from './roles';
+import { bracedOf, ghostly } from './roles';
 import type { World } from './world';
 import { surfaceGap } from './hull';
 import { SPRITES } from '../content/sprites';
@@ -121,7 +121,7 @@ export class Combat {
       // a body with a primary fires its strike and bites nothing with it (`World.fly`); in a
       // fight it bites what the fight is with, as its shots do
       if (att.attack !== 'strike' || primaryOf(att)) return;
-      if (!def.hostile && this.world.terrain?.locked) return;
+      if ((!def.hostile && this.world.terrain?.locked) || ghostly(def)) return;
       // the reach is to the body as drawn, so a bite at a long animal's head or tail lands
       if (surfaceGap(def, att.biteX, att.biteY) <= att.radius * 1.1 + att.genome.size * 0.45) this.bite(att, def);
       return;
@@ -271,6 +271,8 @@ export class Combat {
     // a spent boss — dazed, wedged, snagged, resting — is the opening, and a larva that bites
     // has to be against it to take it: its body hurting then made the fight's one answer a hit
     if (att.species.boss && att.exposed > 0) return;
+    // a moon jelly faded from the room is not in it: what cannot be hit does not hurt
+    if (ghostly(att)) return;
     // the body as drawn, against the player's middle and a little of it — a mackerel's head
     // on the larva used to be out of its reach, a circle at its middle being all that hurt.
     // The old circle stays beside it for a painted drifter only, whose tentacles trail outside

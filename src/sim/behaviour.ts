@@ -86,7 +86,8 @@ export class Behaviour {
     if (c.stun > 0) {
       c.attack = 'none';
       c.stun = Math.max(0, c.stun - dt);
-      c.drive(dt, c.angle, 0);
+      // an eel in its hole is held in it (`Roles.lurk`): a drive would level it in the rock
+      if (c.burrow !== 'home' && c.burrow !== 'back') c.drive(dt, c.angle, 0);
       return;
     }
     // a boss has its fight, fitted to its room, before any of the column's patterns

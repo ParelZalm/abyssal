@@ -124,14 +124,19 @@ export const SPRITES: Record<string, SpriteArt> = {
   ribbon: { w: 244, h: 54, snout: 236, tail: 12, axis: 26,
             hull: [[228.5, 23, 4], [202.5, 27, 5.5], [176.5, 27, 7.2], [150.5, 25, 7.2], [124.5, 25.5, 6.8],
                    [97.5, 27, 6.4], [71.5, 26.5, 5.1], [45.5, 25.5, 3.4], [19.5, 26, 2]] },
-  // `npm run sprite -- triggerfish-sprite.png --id triggerfish --key green --fringe`. Its
-  // strike is the mouth pursed to blow, and nothing else moved; `mouth` is where it blows from. The hull is the body alone,
+  // `npm run sprite -- triggerfish-sprite.png --id triggerfish --key green --fringe
+  // --wounded-palette '#0D246D,#143499,#1743C6,#1D57E7,#2C6EF5,#4888F9,#5C9AFB,#90BFFD,#ADD1FE,#030709,#FACD28,#F7B921,#FAE159,#EC9317,#DC7714,#FCF1AB,#E7BF5D,#BC935B,#813F13,#28110A,#9899AC,#534B5C/#5A0F14,#85161B,#B01E1E,#D42C22,#E84A2C,#F26840,#F78358,#FBAE8E,#FDCDB8,#030709,#FACD28,#F7B921,#FAE159,#EC9317,#DC7714,#FCF1AB,#E7BF5D,#BC935B,#813F13,#28110A,#9899AC,#534B5C'`.
+  // Its strike is the mouth pursed to blow, and nothing else moved; `mouth` is where it blows
+  // from. Its turned pair is the two recoloured, the blues flushed red and the gold lines kept,
+  // since it charges red and nothing else about it changes. The hull is the body alone,
   // read off the outline the trigger spines and the tall second dorsal and anal fins stand
   // behind: counted, they made the middle half again as deep as the body. No lights
   triggerfish: { w: 174, h: 93, snout: 173, tail: 38, axis: 52, mouth: [171, 61],
                  hull: [[168.5, 61, 6.8], [152.5, 55.5, 12.3], [136.5, 56, 17], [121.5, 52.5, 22.5], [105.5, 53, 22.5],
                         [89.5, 52.5, 21.7], [74.5, 52, 18.7], [58.5, 52, 11.9], [42.5, 52.5, 5.5]] },
-  // `npm run sprite -- lionfish-sprite.png --id lionfish --key green --fringe`. Its strike is
+  // `npm run sprite -- lionfish-sprite.png --id lionfish --key green --fringe
+  // --wounded-palette '#FDF5E7,#FAE2C6,#F3CFAD,#ECBC99,#E2A986,#CD9876,#CFB79C,#C97D60,#AA816B,#89614F,#B23022,#8E211A,#691615,#CB4531,#E1644B,#ED8B6E,#994234,#B8604A,#5F372D,#3C0C0C,#0F0A05,#C2F5C1/#FFF4C2,#FFE08A,#FFCB6B,#FFB457,#FF9E48,#F08A3E,#FFD58C,#F2753A,#D9783E,#B05A2E,#E0381F,#BA2516,#8A1A10,#FA5326,#FF7436,#FF9A55,#C84A24,#E66A34,#7A3420,#4A0C08,#0F0A05,#C2F5C1'`.
+  // Its turned pair is the two recoloured flared, its cream bands gone hot amber. Its strike is
   // the spines raised and the fans spread, the tell before its ring: the two frames are padded
   // 38 cells at the top for the spines, and the whole fish is taken from the strike, since
   // the spines and fans cross all of it. The hull is the body under them, set by hand off the
@@ -140,7 +145,9 @@ export const SPRITES: Record<string, SpriteArt> = {
   lionfish: { w: 218, h: 183, snout: 216, tail: 41, axis: 100,
               hull: [[210, 108, 8], [192, 100, 17], [172, 98, 18], [152, 96, 18], [134, 96, 16],
                      [116, 96, 14], [98, 97, 11], [78, 97, 8], [56, 98, 5.5]] },
-  // `npm run sprite -- moonjelly-sprite.png --id moonjelly --key green --fringe`: one frame.
+  // `npm run sprite -- moonjelly-sprite.png --id moonjelly --key green --fringe
+  // --wounded-palette '#E092FD,#A542FA,#C05AFC,#D9DAFD,#E5E7FE,#B2B5FC,#C3CAFC,#9FA6FB,#8392F9,#8DC1FC,#75ABFA,#5D7FF7,#5894F1,#406EF0,#2A5FE4,#1D53D4,#0F3EA2,#021852,#01153F,#072877,#013441,#536FAC/#FF7AC8,#FF2E9A,#FF4DB4,#FAD6F0,#FDE6F6,#F2B4E2,#F7C6EA,#E89ED6,#C88AF0,#8DC1FC,#75ABFA,#5D7FF7,#5894F1,#406EF0,#2A5FE4,#1D53D4,#0F3EA2,#021852,#01153F,#072877,#013441,#536FAC'`:
+  // one frame, and its turned one recoloured, its gonads hot pink and its arms flushed with it.
   // The bell alone squeezes on the pulse, as the siphonophore's bells do, but squirts nothing:
   // a moon jelly rows. The hull is the bell and the two oral arms behind it; the fine rim
   // tentacles that fan round them are a near miss. The lights are the two gonads, which the

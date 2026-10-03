@@ -1,6 +1,7 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 import type { Creature } from '../sim/creature';
 import { lockOf } from '../sim/bosses';
+import { noseOf } from '../sim/hull';
 import { chargeOf } from '../sim/roles';
 
 /**
@@ -87,7 +88,9 @@ export class TellView {
       }
       const b = this.bars[n++];
       b.root.visible = true;
-      b.set(c.x, c.y - c.genome.size * BAR_OVER, charge.fill, charge.locked, px, t);
+      // over an eel's head out of its hole, not over its middle in the rock
+      const at = c.burrow ? noseOf(c) : c;
+      b.set(at.x, at.y - c.genome.size * BAR_OVER, charge.fill, charge.locked, px, t);
     }
     for (let i = n; i < this.bars.length; i++) this.bars[i].root.visible = false;
   }

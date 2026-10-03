@@ -443,8 +443,36 @@ The nursery's:
   buds into `BUDS` ephyrae, half its size and under a third of its health, which the room
   waits on and which leave no stings.
 
-The reef's and the deep's hostiles still play their roles plain; their movesets are the next
-roadmap stage.
+The reef's:
+
+- **Burrow** (ribbon eel) — a charger in a hole in the rock (`Roles.lurk`, `Creature.den` and
+  `burrow`), its head `HEAD_OUT` tiles out of the mouth and the rest in the rock, which is drawn
+  over the bodies, so a shot meets the rock before anything but the head. A hole is a face found
+  straight across, up or down from open water, with rock behind it for the whole body at either
+  edge of `LURK_CONE` — the body turns about the mouth as the head follows the player — and
+  `DEN_CLEAR` tiles of water in front. In one, the body is placed by its brain: the water does not
+  move it (`World.integrate`), the rock does not push it out, and in a floor or ceiling it stands
+  straight (`Creature.upright`) with its facing held. It lunges a charger's wind-up, lock and dash
+  at a player on its line, swims to the nearest free hole — one with the player on its line
+  counts `COVERED` of its distance — and backs in tail first in `BACK_IN`; after `LURK_BORED` with
+  nothing on its line it moves to one that has. It arrives in a hole (`Roles.dig`). Turned, it
+  leaves the rock for good and is a plain charger.
+- **Jet** (triggerfish) — its spit carries a `knock` (`Shot.knock`): `JET_KNOCK` tiles a second
+  along its line on the player, landed or not. Between jets it works round to `JET_BEHIND` tiles
+  off the player on the far side from the nearest other hostile, and blows once it is within
+  `JET_LINED` of that line, or after `JET_WAIT` of waiting. Turned, flushed red, it plays a
+  charger (`roleOf`).
+- **Herd** (lionfish) — a turret whose beat is a fan of `HERD` spines at the player, `HERD_GAP`
+  apart, not a ring: out of a fan is to its side. Turned, flared hot, the fan and the ring at
+  once.
+- **Wane** (moon jelly) — fades from the room and back on a cycle (`Creature.wane`): past
+  `GHOST` it can be neither hit nor hurt (`ghostly`, in `World.canHit` and `Combat.touch`) and
+  swims `WANE_HASTE` as hard; `Scene` draws it nearly gone and leaves half its light, which is
+  how it is followed. Turned, it stays and buds an ephyra every `SPAWN_EVERY`, `SPAWN_MAX` at a
+  time.
+
+The deep's hostiles still play their roles plain, but for the barracuda's reach; their
+movesets are the next roadmap stage.
 
 A role runs its own attack clock (`Roles.tick`), so `Behaviour.tickStrike` — the ecology's
 strike clock — skips a role hostile; run on both, every step went by twice as fast and the

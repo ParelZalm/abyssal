@@ -31,8 +31,9 @@ Check the animal against this before asking for art; each is code to write first
 | A boss's set-piece parts | the mantis shrimp's club, the Giant Squid's arms torn one at a time | per-part images; not planned |
 
 A moveset's turned look at half health (`woundedGenome` in `sim/roles.ts`: the mackerel
-flushed red, the pufferfish's spines up, the nettle glowing) is a pair of frames of its own,
-*wounded* and *wounded strike* (*Frames by role*, below).
+flushed red, the pufferfish's spines up, the nettle glowing, the triggerfish red, the lionfish
+flared, the moon jelly flushed) is a pair of frames of its own, *wounded* and *wounded strike*
+(*Frames by role*, below).
 
 Everything else — the swim, the flip, a hit's whitening and knockback, the belly-up death, the
 glow and bloom, the facing mirror — works on a sprite as it does on a painted body, because
@@ -194,8 +195,8 @@ body carries (`Baked.open`), shown through a bite or a strike.
 | spitter (archerfish, triggerfish, vampire squid) | rest, strike | the mouth opens to fire |
 | turret (pufferfish, lionfish, anglerfish) | rest, strike | the jaw; a spined turret can raise its spines instead |
 | drifter (jellies, siphonophore) | rest | — (the pulse is the mesh's) |
-| a wounded moveset (`pack`, `balloon`) | rest, strike, wounded, wounded strike | the wounded frame is the turned look whole; its strike moves as the strike does |
-| a wounded drifter (`bloom`) | rest, wounded | — |
+| a wounded moveset (`pack`, `balloon`, `jet`, `herd`) | rest, strike, wounded, wounded strike | the wounded frame is the turned look whole; its strike moves as the strike does |
+| a wounded drifter (`bloom`, `wane`) | rest, wounded | — |
 
 The wounded pair is swapped in for good when the hostile turns at half health (`Roles.turn`),
 so a turned animal still shows its tell. Without a wounded strike the wounded frame stands

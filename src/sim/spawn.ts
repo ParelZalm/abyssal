@@ -66,6 +66,8 @@ export class Spawner {
       }
       c.hostile = true;
       c.hp = c.hpMax = c.hpMax * tank.hostileHp;
+      // an eel arrives in a hole, its head out of the rock, rather than in the open
+      if (sp.moves === 'burrow') this.world.roles.dig(c);
       // staggered, so a room does not open fire all at once the moment it resolves
       // a shining body (Blood Lamp) is found at once, whatever its stealth
       const hidden = glareOf(player) > 0 ? 0 : Math.max(0, stealthOf(player));

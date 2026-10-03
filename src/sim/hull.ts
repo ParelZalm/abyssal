@@ -147,6 +147,11 @@ export function noseReach(c: Creature) {
   return hullOf(c).x[0] * c.drawnSize / R;
 }
 
+/** How far the tail root runs behind the body's middle, world units. */
+export function tailReach(c: Creature) {
+  return -hullOf(c).x[SAMPLES - 1] * c.drawnSize / R;
+}
+
 /** Half the body's depth at its deepest, world units: what decides whether it fits a gap. */
 export function depthOf(c: Creature) {
   const h = hullOf(c);
