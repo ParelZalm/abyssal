@@ -33,7 +33,8 @@ style sheets and a description instead of the animal's own Stage A sheet.
 
 ## Status
 
-**done** is in the game from a sprite. **ready** can go through the flow now. **blocked**
+**done** is in the game from a sprite. **prompted** has its prompts written and waits on the
+art. **ready** can go through the flow now. **blocked**
 needs the code named in *Blocked on* first.
 
 ### Deep tank
@@ -60,7 +61,7 @@ needs the code named in *Blocked on* first.
 | Enemy | Plan · role | Frames | Status | Notes |
 | --- | --- | --- | --- | --- |
 | Archerfish | darter · spitter, `volley` | rest, strike (mouth) | **done** | drawn 1.6; its strike taken from the head only (`--keep`); its volley leaves its drawn mouth (`mouth`); `archerfish.webp`, `archerfish-sprite.webp` |
-| Mackerel | darter · charger, `pack` | rest, strike, wounded, wounded strike | ready | the pack flushes red, jaw and fins up |
+| Mackerel | darter · charger, `pack` | rest, strike, wounded, wounded strike | prompted | the pack flushes red, jaw and fins up; on green, its back steel blue; [prompts](sprite-prompts-nursery.md#mackerel--charger-pack-rest-strike-jaw-wounded-wounded-strike) |
 | Pufferfish | darter · turret, `balloon` | rest, strike, wounded, wounded strike | ready | turned, its spines stand up; its puff is a swell of the mesh and should carry over |
 | Sea Nettle | jelly · drifter, `bloom` | rest, wounded | ready | turned, it glows hotter; `--frames rest,wounded` |
 

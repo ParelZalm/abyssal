@@ -91,15 +91,24 @@ The same animal taken apart, like a technical exploded diagram: each part drawn
 separately with a clear gap, in its original position and orientation, pulled slightly
 outward, each with a small plain label. Flat white background.
 
-IMAGE 4 — "palette"
+«IMAGE 4 — "turned" (only for a moveset that turns, before the palette)
+The same animal «turned: how it looks», same pose and same outline as image 1 except
+«what has to change», on the same water.»
+
+IMAGE «4 / 5» — "palette"
 A single row of 6–8 large square colour swatches taken from image 1, each with its hex
-code under it: outline, deep shadow, body, highlight, fin, mouth, light, eye.
+code under it: outline, deep shadow, body, highlight, fin, mouth, light, eye. «For a
+turned animal, a second row under it: the same roles taken from the turned image.»
 
 AVOID
 Three-quarter or front views, curved or bent bodies, a dynamic swimming pose, several
 animals, a scene, smooth gradients, big soft bloom or halos, depth of field,
 watermarks, frames, borders.
 ```
+
+An animal with a wounded pair (*Frames by role*) gets the turned image, so its turned look is
+argued out with the rest of the design rather than invented by Stage B, and the second row of
+swatches is the palette its frames 3 and 4 are drawn in.
 
 ### Stage B — the sprite sheet (production)
 
