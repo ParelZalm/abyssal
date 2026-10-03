@@ -51,7 +51,7 @@ needs the code named in *Blocked on* first.
 | Enemy | Plan · role | Frames | Status | Notes |
 | --- | --- | --- | --- | --- |
 | Ribbon Eel | eel · charger | rest, strike (jaw) | **done** | drawn 1, already 3.8 tiles; on green (`--key green`); hull the body without its fins; `ribbon.webp`, `ribbon-sprite.webp` |
-| Triggerfish | darter · spitter | rest, strike (mouth) | ready | |
+| Triggerfish | darter · spitter | rest, strike (mouth) | **done** | drawn 2; spits from its drawn mouth (`mouth`); hull the body without its fins; `triggerfish.webp`, `triggerfish-sprite.webp` |
 | Lionfish | darter · turret | rest, strike (spines up) | ready | its spines are its tell |
 | Moon Jelly | jelly · drifter | rest | ready | |
 

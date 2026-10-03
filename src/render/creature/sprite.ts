@@ -28,6 +28,8 @@ import barracudaStrike from './sprites/barracuda-strike.png';
 import siphonRest from './sprites/siphon.png';
 import ribbonRest from './sprites/ribbon.png';
 import ribbonStrike from './sprites/ribbon-strike.png';
+import triggerRest from './sprites/triggerfish.png';
+import triggerStrike from './sprites/triggerfish-strike.png';
 
 /** Each species' frames. A drifter has no strike, and shows its rest for one (`Baked.open`). */
 const SOURCES: Record<string, [rest: string, strike?: string]> = {
@@ -37,6 +39,7 @@ const SOURCES: Record<string, [rest: string, strike?: string]> = {
   barracuda: [barracudaRest, barracudaStrike],
   siphon: [siphonRest],
   ribbon: [ribbonRest, ribbonStrike],
+  triggerfish: [triggerRest, triggerStrike],
 };
 
 interface Frames { rest: ImageData; strike: ImageData; palette: number[][] }

@@ -245,7 +245,8 @@ Open the preview. When something is off:
   board before trusting it. They are what ties the picture to the simulation: `snout` to
   `tail` spans the plan's form, so the length the simulation uses is the picture's; `axis` is
   the line the swim bends about; `hull` is the hitbox (`sim/hull.ts`); `bulb` is where a
-  lure's trap fires; `lights` are where the view hangs a bloom, in each organ's own colour;
+  lure's trap fires; `mouth`, set by hand, is where a spitter's shots leave it, which at the
+  body's radius was inside a drawn-bigger head; `lights` are where the view hangs a bloom, in each organ's own colour;
   `legs`, set by hand, is the box a row of legs hangs in, which the skin walks in a wave from
   the tail to the head (the mantis shrimp's; keep the arms and fins out of it); `bells`, set
   by hand, is a jet-swimmer's swimming bells and their mouths: only they squeeze on the pulse,

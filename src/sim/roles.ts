@@ -3,7 +3,8 @@ import type { Moveset, Role } from '../content/species';
 import { angleDelta, clamp, dist2, TAU } from '../core/util';
 import type { Creature } from './creature';
 import { Flow } from './flow';
-import { noseReach } from './hull';
+import { noseReach, spriteAt } from './hull';
+import { SPRITES } from '../content/sprites';
 import { stealthOf } from './organs';
 import type { Terrain } from './terrain';
 import type { World } from './world';
@@ -298,7 +299,8 @@ export class Roles {
       }
       return;
     }
-    const sees = t.clearLine(c.mouthX, c.mouthY, p.x, p.y);
+    const m = spitFrom(c);
+    const sees = t.clearLine(m.x, m.y, p.x, p.y);
     if (sees && d < SPIT_RANGE * t.tile && c.roleCd <= 0 && this.free(c)) {
       this.begin(c, 'windup', SPIT_WIND);
       return;
@@ -584,8 +586,9 @@ export class Roles {
   private spit(c: Creature, lead: number) {
     const w = this.world, p = w.player, kind = c.species.shot!;
     const wide = (Math.random() * 2 - 1) * Math.max(0, stealthOf(p)) * STEALTH_AIM;
-    const a = Math.atan2(p.y + p.vy * lead - c.mouthY, p.x + p.vx * lead - c.mouthX) + wide;
-    w.fire(c, kind, c.mouthX, c.mouthY, a, SHOT_SPEED[kind]);
+    const m = spitFrom(c);
+    const a = Math.atan2(p.y + p.vy * lead - m.y, p.x + p.vx * lead - m.x) + wide;
+    w.fire(c, kind, m.x, m.y, a, SHOT_SPEED[kind]);
   }
 
   /**
@@ -643,4 +646,14 @@ export function clearHeading(t: Terrain | null, c: Creature, desired: number): n
     if (free(desired - side * off)) return desired - side * off;
   }
   return desired;
+}
+
+/**
+ * Where a spitter's shots leave it: the mouth as drawn, for a sprite that marks one
+ * (`SpriteArt.mouth`), or the body's mouth, a little inside its radius. On the triggerfish
+ * drawn twice its size that was halfway up its head, and its spit came out of its cheek.
+ */
+function spitFrom(c: Creature) {
+  const at = SPRITES[c.species.id]?.mouth;
+  return (at && spriteAt(c, at)) ?? { x: c.mouthX, y: c.mouthY };
 }

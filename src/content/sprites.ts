@@ -27,6 +27,8 @@ export interface SpriteArt {
   tail: number;
   axis: number;
   bulb?: Pt;
+  /** Where a spitter's shots leave the picture: its mouth (`Roles`' `spitFrom`). */
+  mouth?: Pt;
   lights?: SpriteLight[];
   /**
    * The hitbox, measured off the silhouette by the import: nine samples snout to tail, each
@@ -107,6 +109,13 @@ export const SPRITES: Record<string, SpriteArt> = {
   ribbon: { w: 244, h: 53, snout: 236, tail: 12, axis: 25,
             hull: [[228.5, 22, 4], [202.5, 26, 5.5], [176.5, 26, 7.2], [150.5, 24, 7.2], [124.5, 24.5, 6.8],
                    [97.5, 26, 6.4], [71.5, 25.5, 5.1], [45.5, 24.5, 3.4], [19.5, 25, 2]] },
+  // `npm run sprite -- triggerfish-sprite.png --id triggerfish --key green --fringe`. Its
+  // strike is the mouth pursed to blow, and nothing else moved; `mouth` is where it blows from. The hull is the body alone,
+  // read off the outline the trigger spines and the tall second dorsal and anal fins stand
+  // behind: counted, they made the middle half again as deep as the body. No lights
+  triggerfish: { w: 174, h: 93, snout: 173, tail: 38, axis: 52, mouth: [171, 61],
+                 hull: [[168.5, 61, 6.8], [152.5, 55.5, 12.3], [136.5, 56, 17], [121.5, 52.5, 22.5], [105.5, 53, 22.5],
+                        [89.5, 52.5, 21.7], [74.5, 52, 18.7], [58.5, 52, 11.9], [42.5, 52.5, 5.5]] },
 };
 
 /**
@@ -125,7 +134,7 @@ export const REWORKED_ONLY = true;
  * read as two versions of it, and the rest of a room was more to watch than the one thing
  * being tested. Null deals it as any other.
  */
-export const NEWEST: string | null = 'ribbon';
+export const NEWEST: string | null = 'triggerfish';
 
 /**
  * A tank's hostile table as it is dealt: the reworked enemies only, while `REWORKED_ONLY`,

@@ -210,7 +210,9 @@ export const SPECIES: Species[] = [
   // a triggerfish blows jets of water at the sand to turn up what is under it
   { id: 'triggerfish', name: 'Triggerfish', behavior: 'hunter', plan: 'darter',
     role: 'spitter', shot: 'spit',
-    zone: 'sunlit', band: 'reef',
+    // drawn twice its size: at its own it was 39 texels long in the reef, its eye and the
+    // gold lines of its face, which are what make it a triggerfish, gone
+    zone: 'sunlit', band: 'reef', drawn: 2,
     size: [24, 38], hue: [196, 220], accent: 52, speed: 150, bite: 9,
     nutrition: 2.0, weight: 6, jaw: 0.6, armor: 1, bulk: 0.4, finSize: 1.2 },
 
