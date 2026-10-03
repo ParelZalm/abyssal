@@ -14,17 +14,10 @@ import { Patterns } from './patterns';
 import { Roles } from './roles';
 import { Spawner } from './spawn';
 import type { Terrain } from './terrain';
-import { collideHull, surfaceGap } from './hull';
+import { collideHull, surfaceGap, WALL_R, wallR } from './hull';
 
 /** Seconds a body takes to resolve out of the water. */
 const FADE_IN = 0.9;
-/**
- * The share of a body's radius that meets a wall. The radius is half the body's length, and
- * side-on a fish is long and thin: a circle that wide holds it a head's length off every
- * floor. This keeps the belly on the sand and lets the nose go just into the rock, which the
- * room draws over it.
- */
-const WALL_R = 0.5;
 /**
  * A boss meets the rock with its whole hull (`collideHull`), and comes off it: `BOUNCE` of the
  * speed it arrived at is given back, away from the rock, when that was over `THUD` tiles a
@@ -719,7 +712,7 @@ export class World {
     c.x += c.vx * dt;
     c.y = clamp(c.y + c.vy * dt, 30, DEPTH_MAX);
     if (c.species.boss && this.terrain) this.meetRock(c, this.terrain, dt);
-    else this.terrain?.collide(c, c.radius * WALL_R);
+    else this.terrain?.collide(c, wallR(c));
     c.biteCd = Math.max(0, c.biteCd - dt);
     c.invuln = Math.max(0, c.invuln - dt);
     c.boosting = Math.max(0, c.boosting - dt);

@@ -314,7 +314,10 @@ through, and `bakeFish` takes the sprite path for any species with frames loaded
 `Species.drawn` (the anglerfish's is 2) draws an animal that many times bigger than its
 genome's size, and **only what is seen or touched** takes it: the picture, the hitbox, the
 radius, a lure's trap and its reach, where a turret's shots leave the skin, the clearance it
-is spawned with, the board's framing (`Creature.drawnSize`). Health, bite, senses, turning,
+is spawned with, the board's framing (`Creature.drawnSize`). The rock meets a sprite at its
+drawn half-depth, read off its hull and blown up by its swell (`wallR` in `sim/hull.ts`),
+where a painted body meets it with a circle a third of its length across: a deep sprite sank
+into the floor through that, and the pufferfish's ball by a tile. Health, bite, senses, turning,
 swallowing and what it is worth eaten keep the genome's size (`maxHp` grows as size^1.35), so
 the fight stays the one it was, against a bigger target. Doubling the genome's size instead
 would have retuned every one of those.

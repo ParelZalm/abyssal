@@ -272,6 +272,13 @@ export class Creature {
   stun = 0;
   /** Seconds left inflated (the Inflation organ): too big to swallow, slow, prickly. */
   puffT = 0;
+  /**
+   * How far past its size the body is blown up: 1, except through a turret's tell, a puff and
+   * a bounce. State of the animal rather than a different animal to bake, so the view scales
+   * its strip by it (`syncView`), and the rock meets the body as big as it is drawn — kept on
+   * the view alone, a pufferfish bouncing as a ball sank a tile into the floor.
+   */
+  swell = 1;
   /** Seconds a schooling body is scattered from its ball and can be picked off. */
   scatter = 0;
   /**
@@ -436,6 +443,7 @@ export class Creature {
     return this.drawnSize * 0.62;
   }
   syncView() {
+    this.view.swell = this.swell;
     this.view.place(this.x, this.y, this.angle, this.face, this.upright);
   }
 

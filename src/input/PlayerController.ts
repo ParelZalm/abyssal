@@ -400,7 +400,7 @@ export class PlayerController {
     }
     this.input.wantActive = false;
     // the swell eases in fast and out slow, so the body pops up and then sags
-    p.view.swell = p.puffT > 0
+    p.swell = p.puffT > 0
       ? 1 + 0.4 * Math.min(1, (PUFF_TIME - p.puffT) / 0.15, p.puffT / 0.5) : 1;
   }
 }

@@ -3,7 +3,7 @@ import type { Moveset, Role } from '../content/species';
 import { angleDelta, clamp, dist2, TAU } from '../core/util';
 import type { Creature } from './creature';
 import { Flow } from './flow';
-import { noseReach, spriteAt } from './hull';
+import { noseReach, spriteAt, wallR } from './hull';
 import { SPRITES } from '../content/sprites';
 import { stealthOf } from './organs';
 import type { Terrain } from './terrain';
@@ -227,7 +227,7 @@ export class Roles {
     const inked = this.world.inks.some(k => dist2(k.x, k.y, p.x, p.y) < k.r * k.r);
     if (inked && c.attack !== 'strike') {
       if (c.attack === 'windup') c.attack = 'none';
-      c.view.swell = 1;
+      c.swell = 1;
       c.drive(dt, clearHeading(t, c, c.angle + Math.sin(c.wander * 0.8) * 0.8), 0.25);
       return;
     }
@@ -380,7 +380,7 @@ export class Roles {
       // braced: blown up at once and held, then let go over its last moment — the puff is
       // the body's whole answer to a player too close, and it fires nothing through it
       if (c.puffT > 0) {
-        c.view.swell = 1 + SWELL * clamp(Math.min((PUFF_HOLD - c.puffT) / 0.12, c.puffT / 0.3), 0, 1);
+        c.swell = 1 + SWELL * clamp(Math.min((PUFF_HOLD - c.puffT) / 0.12, c.puffT / 0.3), 0, 1);
         return;
       }
       if (c.guardCd <= 0 && dist2(c.x, c.y, p.x, p.y) < (PUFF_NEAR * this.world.terrain!.tile) ** 2) {
@@ -390,7 +390,7 @@ export class Roles {
         return;
       }
     }
-    c.view.swell = 1 + SWELL * (c.attack === 'windup' ? 1 - c.attackT / c.attackLen
+    c.swell = 1 + SWELL * (c.attack === 'windup' ? 1 - c.attackT / c.attackLen
       : c.attack === 'strike' ? 1 : c.attack === 'recover' ? c.attackT / c.attackLen : 0);
     if (!busy && c.roleCd <= 0 && this.free(c)) this.begin(c, 'windup', TURRET_WIND);
   }
@@ -402,9 +402,10 @@ export class Roles {
    */
   private bounce(c: Creature) {
     const t = this.world.terrain!;
-    c.view.swell = 1 + SWELL * TAUT;
+    c.swell = 1 + SWELL * TAUT;
     let ux = Math.cos(c.aimA), uy = Math.sin(c.aimA);
-    const r = c.radius * 0.6 * (1 + SWELL * TAUT);
+    // a cell past the circle it meets the rock with, or the rock stops it before it is felt
+    const r = wallR(c) + t.cell;
     let nx = 0, ny = 0;
     if (t.solidAt(c.x + Math.sign(ux) * r, c.y)) { ux = -ux; nx = Math.sign(ux); }
     if (t.solidAt(c.x, c.y + Math.sign(uy) * r)) { uy = -uy; ny = Math.sign(uy); }

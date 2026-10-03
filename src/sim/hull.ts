@@ -61,6 +61,28 @@ function hullOf(c: Creature): Hull {
 }
 
 /**
+ * The share of a body's radius that meets a wall. The radius is half the body's length, and
+ * side-on a fish is long and thin: a circle that wide holds it a head's length off every
+ * floor. This keeps the belly on the sand and lets the nose go just into the rock, which the
+ * room draws over it. A body deeper than that circle (`wallR`) is met at its depth instead.
+ */
+export const WALL_R = 0.5;
+
+/**
+ * The circle a body meets the rock with: `WALL_R` of its radius, or, for a body drawn from a
+ * sprite, its drawn half-depth as blown up, whichever is more. A deep body sank into the floor
+ * up to its middle: the pufferfish turned is a ball as deep as it is long, swelled taut, and
+ * the circle a third of its length across let it bounce along a tile into the rock. Only a
+ * sprite's hull is measured off what is drawn; a painted body's runs two to four times its
+ * circle, and the larva's would have shut it out of the clefts it is meant to fit. Anything
+ * that feels for the rock ahead has to reach past this, or the body stops on the rock first.
+ */
+export function wallR(c: Creature) {
+  const r = c.radius * WALL_R;
+  return SPRITES[c.species.id]?.hull ? Math.max(r, depthOf(c) * c.swell) : r;
+}
+
+/**
  * How far (`px`, `py`) is from the body's surface, in world units; negative inside it. What a
  * shot, a bite and a hostile's touch all measure, so what can be hit is what is drawn.
  *
