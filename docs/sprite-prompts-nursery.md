@@ -1,9 +1,9 @@
 # Sprite prompts: the nursery
 
 The two prompts for each nursery enemy, filled in from
-[sprites.md](sprites.md#the-art-side), the one in hand first. The archerfish is done. The
-mackerel, the pufferfish and the sea nettle each change their look when they turn at half
-health, and are drawn with a wounded pair beside the rest
+[sprites.md](sprites.md#the-art-side), the one in hand first. The archerfish and the mackerel
+are done. The pufferfish and the sea nettle, like the mackerel, change their look when they
+turn at half health, and are drawn with a wounded pair beside the rest
 ([Frames by role](sprites.md#frames-by-role)); their prompts come here as each is picked.
 
 **Attach every time:** `docs/media/reference/cave-room.webp` and `tank-room.webp` for the world,
@@ -14,7 +14,168 @@ Stage A sheet as well.
 
 ---
 
-## Mackerel — charger, pack: rest, strike (jaw), wounded, wounded strike
+## Pufferfish — turret, balloon: rest, strike (mouth), wounded, wounded strike
+
+It holds its spot and fires a ring of spines on the beat; up close it puffs and is braced
+against every blow, then goes slack, which is the opening. At half health it turns: it blows
+up for good with its spines raised, leaves its spot and bounces round the room on a diagonal,
+throwing a fan of spines off every wall, and dead it pops into a ring (`balloon` in
+`sim/roles.ts`).
+
+**The game does the puffing.** A puff is a swell of the whole picture (`FishView.swell`, up to
+half again its size), so the rest and the strike are drawn deflated, and the strike is only
+the beak opening for the ring. The turned look is drawn blown up, round with every spine
+standing: the game swells that too while it bounces, and a slim fish with spines out, scaled
+up, did not read as a puffed one.
+
+**The animal is a porcupinefish**, Diodon holocanthus: a spiny pufferfish, whose long spines
+lie flat until it inflates, which is the turn exactly. A true puffer has only prickles.
+
+**This one goes on magenta.** It is ochre and brown with nothing violet, pink or red in it, and
+green bled into ochre would turn it olive.
+
+**Stage A has a fifth image**, the turned look, blown up. It keeps the animal's colours, so
+the palette is one row.
+
+### Stage A
+
+```text
+STYLE (shared by every image)
+Reference sheet for a game creature: a long-spine porcupinefish, Diodon holocanthus, a
+spiny pufferfish. Match the attached sheets: dark navy water, side-on, the look of dark
+underwater pixel art. Exactly one creature, nothing else in the frame: no rock, no
+plants, no bubbles, no particles, no text except where asked. Strict lateral profile,
+facing RIGHT, body straight and horizontal, not curved or swimming. Every fin spread
+open so its outline reads. The whole animal fits in the frame with a margin around it.
+Output as a large lossless PNG, at least 2048 px wide.
+
+ANATOMY (must be accurate)
+Deflated: a blunt, heavy, slightly boxy body about two fifths as deep as it is long,
+widest at the head and tapering to a short tail stalk.
+- Head: big and rounded, a short blunt snout ending in a small mouth with a fused,
+  parrot-like beak, two pale tooth plates showing as a line. A very large round eye set
+  high and forward, bulging out of the head's outline.
+- Long sharp spines all over the head and body, lying flat against the skin, pointing
+  back, each a thin pale line; longest on the forehead and the flanks.
+- No fins on the back but a single small rounded dorsal fin set far back, mirrored by a
+  small rounded anal fin under it; a broad rounded pectoral fin behind the gill opening;
+  no pelvic fins.
+- A rounded fan-shaped tail fin.
+Colours: the back and flanks warm ochre to tan, the belly cream-white; dark brown blotches
+across the back and a band through the eye, and small round brown spots over the flanks
+and fins; the spines pale cream with darker tips; the fins translucent amber with brown
+spots; the eye a golden ring round a dark pupil.
+
+IMAGE 1 — "in game"
+The animal fully rendered in the attached sheets' style, on a flat solid background of
+the nursery's water (#071731). Any light on it is small and tight, no halo.
+
+IMAGE 2 — "flat"
+The same animal, same pose, same outline, flat colour only: no shading, no highlights,
+no glow, no outline stroke, no texture. Each region one solid colour. Flat white
+background.
+
+IMAGE 3 — "parts"
+The same animal taken apart, like a technical exploded diagram: each part drawn
+separately with a clear gap, in its original position and orientation, pulled slightly
+outward, each with a small plain label (head and beak, eye, body, spines, blotches,
+dorsal fin, anal fin, pectoral fin, tail fin). Flat white background.
+
+IMAGE 4 — "turned"
+The same animal fully inflated, on the same water: the body blown up into a near-perfect
+ball, the skin stretched so the blotches and spots are spread apart and paler and the
+cream belly fills the lower half; every spine standing straight out from the ball,
+evenly all round like a burr; the head, eye, beak, fins and tail fin the same size and
+in the same places as in image 1, the beak still at the front and the tail fin still
+behind, the tail stalk short between the ball and the fan.
+
+IMAGE 5 — "palette"
+A single row of 6–8 large square colour swatches taken from image 1, each with its hex
+code under it: outline, deep shadow, ochre, ochre highlight, blotch, belly, spine, eye.
+
+AVOID
+Three-quarter or front views, curved or bent bodies, a dynamic swimming pose, several
+animals, a scene, smooth gradients, big soft bloom or halos, depth of field, watermarks,
+frames, borders, a smooth spineless puffer, a boxfish, a cartoon face.
+```
+
+### Stage B
+
+```text
+GOAL
+True pixel-art sprite of the porcupinefish in the attached reference sheet, for a game.
+Same design as the reference (shape, spines, beak, eye, blotches, fins, colours),
+redrawn as clean pixel art on a strict grid. 4 frames of the same animal, side by side,
+left to right: "rest", "strike", "wounded", "wounded strike".
+
+THE GRID (most important)
+- Each frame is exactly 144 × 112 art pixels.
+- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
+  square block.
+- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
+  than one block. No dithering noise. Every block is one flat colour.
+- 1-block dark outline («outline hex») round the whole silhouette, never thicker.
+
+COMPOSITION
+- Strict side view, facing RIGHT, body straight and horizontal. Fins spread.
+- From the tail tip to the snout the animal is 112 art pixels long, in every frame: the
+  inflated frames grow up and down, not longer.
+- The body is centred vertically: its midline, tail stalk to snout, lies along the
+  frame's horizontal centre line, in every frame, the ball of frames 3 and 4 included.
+- Spines are at least 2 art pixels thick where they stand out from the body.
+- Everything fits inside the frame with at least 4 art pixels of margin, in all four
+  frames, the standing spines of frames 3 and 4 included.
+- Background: flat pure magenta #FF00FF, one colour, nothing else. Do not use magenta
+  anywhere on the animal, and do not let the outline pick up a magenta or violet tint
+  where it meets the background.
+
+PALETTE
+Use these colours, plus at most 8 in-between shades of them, in every frame: «the Stage A
+palette». Light comes from above and slightly in front: lit top, darker belly. Each part
+shaded as its own rounded form; the ball of frames 3 and 4 as one sphere.
+
+LIGHTS
+None: the eye is flat pixels, with no glow, bloom or light spill.
+
+FRAME 1 — "rest"
+The fish deflated, as in the reference, the beak closed, the spines lying flat.
+
+FRAME 2 — "strike"
+Identical to frame 1 in every pixel except the beak: the mouth open in a small round O,
+the two tooth plates parted, about to spit. Same frame size, same position, same
+everything else, so the two can be swapped without the animal moving.
+
+FRAME 3 — "wounded"
+The same fish fully inflated, as in the reference's "turned" image: a ball with every
+spine standing straight out, the skin stretched paler, the beak closed. The snout, the
+eye, the tail fin and the fins in the same places as in frame 1, so the two can be
+swapped without the animal moving; only the body between them is blown up.
+
+FRAME 4 — "wounded strike"
+Identical to frame 3 in every pixel except the beak, opened exactly as in frame 2.
+
+AVOID
+Three-quarter or front views, any background other than flat #FF00FF, soft glows,
+painterly texture, noise, sub-pixel detail, text, labels, borders, shadows, a second
+animal, the animal longer in the inflated frames, spines drawn as 1-pixel hairs.
+```
+
+### Import
+
+```bash
+npm run sprite -- docs/media/reference/pufferfish-sprite.png --id pufferfish --fringe
+```
+
+The four frames are found in order. The wounded frame is lined up on the rest by its outline,
+which a ball shares less of than a flushed body does: check in the preview that the snout and
+the tail fin of the two sit in the same places, and that each strike took the beak and nothing
+behind the eye; if not, `--keep` the head's box, which holds for both strikes. The hull is the
+deflated body, read off the rest: it is one for every frame, and the swell does not move it,
+so a bounce is hit on the body inside the ball, as the painted pufferfish was.
+
+---
+
+## Mackerel — charger, pack: rest, strike (jaw), wounded, wounded strike — done
 
 They come in pairs, circle the player, and dash at it one at a time; the strike frame is the
 jaw open, shown from a third into the wind-up, so it is the dash's tell. At half health the
