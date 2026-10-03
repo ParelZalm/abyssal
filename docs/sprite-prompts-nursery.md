@@ -2,15 +2,168 @@
 
 The two prompts for each nursery enemy, filled in from
 [sprites.md](sprites.md#the-art-side), the one in hand first. The archerfish, the mackerel and
-the pufferfish are done. The sea nettle, like the last two, changes its look when it turns at
-half health, and is drawn with a wounded frame beside the rest
-([Frames by role](sprites.md#frames-by-role)); its prompts come here when it is picked.
+the pufferfish are done; the sea nettle is the last of the nursery. Like the last two it
+changes its look when it turns at half health, and is drawn with a wounded frame beside the
+rest ([Frames by role](sprites.md#frames-by-role)).
 
 **Attach every time:** `docs/media/reference/cave-room.webp` and `tank-room.webp` for the world,
 and `barracuda.webp` and `triggerfish.webp` for finished animals. For Stage B, attach the chosen
 Stage A sheet as well.
 
 **Fill in the palette** in Stage B from the swatches of the Stage A sheet you choose.
+
+---
+
+## Sea Nettle — drifter, bloom: rest, wounded
+
+It swims in pulses, a surge at the player and a coast, and wherever it goes it leaves its
+tentacles in the water: a sting every fifth of a second that hangs and sinks. At half health it
+glows hotter and pulses faster, and dead it buds into two ephyrae, half its size, which the room
+waits on (`bloom` in `sim/roles.ts`). A drifter has no strike, so it is two frames: the rest and
+the wounded, the bell lit hot.
+
+**The game moves the parts** as it does the moon jelly's: the bell alone squeezes on the pulse
+(`bells`) and a wave runs down what trails behind it (`trail`), each a box across the picture.
+So the bell and the tentacles are asked for side by side, the bell's rim a clean line with
+everything that hangs from it behind, and the tentacles long and loose rather than tangled. The
+glow round it is the game's (`lights`, set on the import); the frames are flat colour.
+
+**This one goes on green** (`--key green`). It is orange, red and maroon, which magenta bleed
+cannot be told from.
+
+**Stage A has a fifth image**, the turned bell lit from within, and a second row of swatches
+for it, since every colour on it warms.
+
+### Stage A
+
+```text
+STYLE (shared by every image)
+Reference sheet for a game creature: a Pacific sea nettle, Chrysaora fuscescens. Match
+the attached sheets: dark navy water, side-on, the look of dark underwater pixel art.
+Exactly one creature, nothing else in the frame: no rock, no plants, no bubbles, no
+particles, no text except where asked. Strict side view, the bell turned to swim RIGHT:
+its dome points to the right, its rim and opening face left, and everything that hangs
+from it trails out to the left, long and loose and nearly level. The whole animal fits
+in the frame with a margin around it. Output as a large lossless PNG, at least 2048 px
+wide.
+
+ANATOMY (must be accurate)
+- The bell: a rounded dome, a little deeper than a moon jelly's, about as deep as it is
+  wide, translucent: the water shows dimly through it, its outer surface and its
+  scalloped rim edged in light. Sixteen narrow stripes run from the top of the dome down
+  to the rim, ending in the rim's scallops.
+- From the rim, a fringe of twenty-four long, thin tentacles, trailing back to the left
+  two to three times the bell's length, each a separate loose line, gently waving, not
+  tangled or knotted.
+- From the middle of the bell's underside, four long oral arms, broad ruffled ribbons
+  that spiral loosely, trailing back between the tentacles, a little shorter than them.
+Colours: the bell glass a warm golden amber over the dark water, its stripes a deep
+rust red; the rim's edge pale gold; the tentacles dark maroon; the oral arms a pale
+cream-white, the brightest thing on it after the rim.
+
+IMAGE 1 — "in game"
+The animal fully rendered in the attached sheets' style, on a flat solid background of
+the nursery's water (#071731). Any light on it is small and tight, no halo.
+
+IMAGE 2 — "flat"
+The same animal, same pose, same outline, flat colour only: no shading, no highlights,
+no glow, no outline stroke, no texture. Each region one solid colour. Flat white
+background.
+
+IMAGE 3 — "parts"
+The same animal taken apart, like a technical exploded diagram: each part drawn
+separately with a clear gap, in its original position and orientation, pulled slightly
+outward, each with a small plain label (bell, stripes, rim, tentacles, oral arms). Flat
+white background.
+
+IMAGE 4 — "turned"
+The same animal, same pose and same outline as image 1, on the same water, glowing hot
+from within: the bell's glass a bright fiery orange-gold lit through, the stripes vivid
+scarlet, the rim's edge near white-gold; the tentacles a hot red; the oral arms a warm
+glowing peach. Lit from inside, not with a halo round it: the water around it stays
+dark.
+
+IMAGE 5 — "palette"
+Two rows of 6–8 large square colour swatches, each with its hex code under it. The top
+row from image 1: outline, deep shadow, bell glass, rim light, stripe, tentacle, oral
+arm, oral arm highlight. The bottom row from image 4: the same roles in the hot colours.
+
+AVOID
+Three-quarter, top or bottom views, a bell seen from below as a circle, a tilted or
+bobbing pose, tentacles curling forward past the bell or tangled into a knot, several
+animals, a scene, smooth gradients, big soft bloom or halos, depth of field, watermarks,
+frames, borders, a moon jelly's flat saucer, a lion's mane jelly's mass of hair.
+```
+
+### Stage B
+
+```text
+GOAL
+True pixel-art sprite of the sea nettle in the attached reference sheet, for a game.
+Same design as the reference (bell, stripes, rim, tentacles, oral arms, colours),
+redrawn as clean pixel art on a strict grid. 2 frames of the same animal, side by side,
+left to right: "rest", "wounded".
+
+THE GRID (most important)
+- Each frame is exactly 176 × 104 art pixels.
+- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
+  square block.
+- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
+  than one block. No dithering noise. Every block is one flat colour.
+- 1-block dark outline («outline hex») round the whole silhouette, never thicker.
+
+COMPOSITION
+- Strict side view: the dome points RIGHT, the rim and opening face left, the tentacles
+  and oral arms trail back to the left, long and nearly level.
+- From the top of the dome to the tips of the tentacles the animal is 152 art pixels
+  long; the bell is the right-hand quarter of it.
+- The jelly is centred vertically: the line from the top of the dome back through the
+  middle of the oral arms lies along the frame's horizontal centre line.
+- The bell's rim is a clean line, and nothing that hangs from it reaches forward past
+  it: the bell on the right, everything that trails on the left.
+- Tentacles are at least 2 art pixels thick along their whole length, each its own line
+  with water between them; the oral arms broader.
+- Everything fits inside the frame with at least 4 art pixels of margin, in both frames.
+- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
+  anywhere on the animal, and do not let the outline pick up a green tint where it
+  meets the background.
+
+PALETTE
+Frame 1: these colours, plus at most 8 in-between shades of them: «the top row of the
+Stage A palette». Frame 2: «the bottom row», plus at most 8 in-between shades. The bell
+is clear: in frame 1 draw its inside close to the dark navy water (#071731) with only its
+surface, stripes and rim bright, so it reads as glass on a dark background; in frame 2 it
+is lit through. Light comes from above and slightly in front.
+
+LIGHTS
+NO glow halo, bloom or light spill, on the animal or on the background, in either
+frame. The game adds the glow itself.
+
+FRAME 1 — "rest"
+The jelly at rest, as in the reference.
+
+FRAME 2 — "wounded"
+The same jelly glowing hot, as in the reference's "turned" image, in the hot palette.
+Identical to frame 1 in outline and in every part's place, the tentacles and oral arms
+exactly where they are in frame 1: only the colours change. Same frame size, same
+position, so the two can be swapped without the animal moving.
+
+AVOID
+Three-quarter, top or bottom views, any background other than flat #00FF00, soft
+glows, painterly texture, noise, sub-pixel detail, text, labels, borders, shadows, a
+second animal, a tilted bell, tentacles that differ between the frames.
+```
+
+### Import
+
+```bash
+npm run sprite -- docs/media/reference/nettle-sprite.png --id nettle --key green --fringe --frames rest,wounded
+```
+
+The two frames are a drifter's, named, since two frames would otherwise be read as a rest and a
+strike. Then set by hand, as the moon jelly's were: `bells` across the bell with no jets (a
+nettle rows), `trail` from the rim back to the tentacles' tips, `lights` on the bell, and a
+hull of the bell and the top of the trail, since the tentacles are what stings.
 
 ---
 

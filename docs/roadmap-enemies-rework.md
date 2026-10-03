@@ -63,7 +63,7 @@ needs the code named in *Blocked on* first.
 | Archerfish | darter · spitter, `volley` | rest, strike (mouth) | **done** | drawn 1.6; its strike taken from the head only (`--keep`); its volley leaves its drawn mouth (`mouth`); `archerfish.webp`, `archerfish-sprite.webp` |
 | Mackerel | darter · charger, `pack` | rest, strike, wounded, wounded strike | **done** | drawn 1, as big as the archerfish already; the first through with a wounded pair, the frenzy flushed red with its first dorsal up; on green, its back steel blue; drawn at 3.5 image pixels to the art pixel (`--pitch 3.46`), and the green bled into the red outline as a brown (`--fringe 30`); hull the body without its fins; `mackerel.webp`, `mackerel-sprite.webp` |
 | Pufferfish | darter · turret, `balloon` | rest, strike, wounded, wounded strike | **done** | drawn 1.6; a porcupinefish, deflated at rest with its puff the mesh's swell, turned drawn blown up with its spines standing; drawn at 3.2 image pixels to the art pixel (`--pitch 3.2`); the ball drawn shorter, so its strike takes the beak alone (`--keep-wounded`); hit on its body, and turned on the ball (`woundedHull`); `pufferfish.webp`, `pufferfish-sprite.webp` |
-| Sea Nettle | jelly · drifter, `bloom` | rest, wounded | ready | turned, it glows hotter; `--frames rest,wounded` |
+| Sea Nettle | jelly · drifter, `bloom` | rest, wounded | prompted | a Pacific sea nettle; turned, it glows hotter, lit from within; on green; `--frames rest,wounded`; [prompts](sprite-prompts-nursery.md#sea-nettle--drifter-bloom-rest-wounded) |
 
 ### Bosses — later
 
