@@ -33,6 +33,8 @@ import triggerStrike from './sprites/triggerfish-strike.png';
 import lionRest from './sprites/lionfish.png';
 import lionStrike from './sprites/lionfish-strike.png';
 import moonRest from './sprites/moonjelly.png';
+import archerRest from './sprites/archerfish.png';
+import archerStrike from './sprites/archerfish-strike.png';
 
 /** Each species' frames. A drifter has no strike, and shows its rest for one (`Baked.open`). */
 const SOURCES: Record<string, [rest: string, strike?: string]> = {
@@ -45,6 +47,7 @@ const SOURCES: Record<string, [rest: string, strike?: string]> = {
   triggerfish: [triggerRest, triggerStrike],
   lionfish: [lionRest, lionStrike],
   moonjelly: [moonRest],
+  archerfish: [archerRest, archerStrike],
 };
 
 interface Frames { rest: ImageData; strike: ImageData; palette: number[][] }

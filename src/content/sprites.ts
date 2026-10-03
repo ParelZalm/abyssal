@@ -143,6 +143,14 @@ export const SPRITES: Record<string, SpriteArt> = {
                lights: [{ at: [181, 43], color: 0xd4a6fd, strength: 0.45 }, { at: [180, 71], color: 0xd4a6fd, strength: 0.45 }],
                hull: [[198, 59, 11], [188, 58, 30], [172, 57.5, 42], [152, 57.5, 47], [132, 60, 16],
                       [112, 60, 13], [88, 66, 18], [62, 70, 16], [34, 63, 14]] },
+  // `npm run sprite -- archerfish-sprite.png --id archerfish --fringe --keep 140,8,179,62`:
+  // its strike was redrawn whole a cell off the rest, so only the head is taken from it, the
+  // seam behind the gill cover where the two agree. `mouth` is the barrel its volley leaves
+  // from, high on the head where the straight back meets the upturned jaw. The hull is the
+  // body without the fins, read off their blue edges. No lights
+  archerfish: { w: 179, h: 81, snout: 168, tail: 29, axis: 41, mouth: [174, 31],
+                hull: [[164, 33, 10.2], [148, 37, 16], [132, 39.5, 20], [116, 40.5, 21], [100, 40, 21],
+                       [84, 42, 22], [68, 40, 18.5], [52, 41, 13], [38, 41, 8]] },
 };
 
 /**
@@ -161,7 +169,7 @@ export const REWORKED_ONLY = true;
  * read as two versions of it, and the rest of a room was more to watch than the one thing
  * being tested. Null deals it as any other.
  */
-export const NEWEST: string | null = 'moonjelly';
+export const NEWEST: string | null = 'archerfish';
 
 /**
  * A tank's hostile table as it is dealt: the reworked enemies only, while `REWORKED_ONLY`,

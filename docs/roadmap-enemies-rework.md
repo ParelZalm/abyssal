@@ -59,7 +59,7 @@ needs the code named in *Blocked on* first.
 
 | Enemy | Plan · role | Frames | Status | Notes |
 | --- | --- | --- | --- | --- |
-| Archerfish | darter · spitter, `volley` | rest, strike (mouth) | ready | `volley` has no wounded look, so nothing blocks it; prompts in [sprite-prompts-nursery.md](sprite-prompts-nursery.md) |
+| Archerfish | darter · spitter, `volley` | rest, strike (mouth) | **done** | drawn 1.6; its strike taken from the head only (`--keep`); its volley leaves its drawn mouth (`mouth`); `archerfish.webp`, `archerfish-sprite.webp` |
 | Mackerel | darter · charger, `pack` | rest, strike, wounded | blocked | wounded frame (the pack flushes red) |
 | Pufferfish | darter · turret, `balloon` | rest, strike, wounded | blocked | wounded frame (grows spikes); its puff is a swell of the mesh and should carry over |
 | Sea Nettle | jelly · drifter, `bloom` | rest, wounded | blocked | wounded frame (glows) |
@@ -91,7 +91,7 @@ name it.
    art direction's lights best, and the two done already set the style to match.
 2. **The reef** next, whole (done): its four enemies, from the prompts in
    [sprite-prompts-reef.md](sprite-prompts-reef.md).
-3. **The nursery's archerfish**, so the first tank has a fight again. Its prompts are in
+3. **The nursery's archerfish** (done), so the first tank has a fight again, from
    [sprite-prompts-nursery.md](sprite-prompts-nursery.md).
 4. **A wounded frame**, then the mackerel, pufferfish and sea nettle.
 5. **Rigged arms**, then the vampire squid.

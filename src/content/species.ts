@@ -175,7 +175,9 @@ export const SPECIES: Species[] = [
   // brushed against
   { id: 'archerfish', name: 'Archerfish', behavior: 'hunter', plan: 'darter',
     role: 'spitter', shot: 'spit', moves: 'volley',
-    zone: 'sunlit', band: 'reef',
+    // drawn bigger than its size, as the triggerfish is, so its eye and bars read: at its own
+    // it was some forty texels long in the nursery
+    zone: 'sunlit', band: 'reef', drawn: 1.6,
     size: [12, 18], hue: [46, 58], accent: 220, speed: 150, bite: 3,
     nutrition: 1.7, weight: 6, jaw: 0.5, finSize: 1.1 },
 
