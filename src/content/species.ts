@@ -183,7 +183,11 @@ export const SPECIES: Species[] = [
 
   { id: 'pufferfish', name: 'Pufferfish', behavior: 'ambush', plan: 'darter',
     role: 'turret', shot: 'spine', moves: 'balloon',
-    zone: 'sunlit', band: 'reef',
+    // drawn bigger than its size, as the archerfish is: a stubby body whose spots, spines and
+    // eye are fine for it, some twenty-five texels long on the board at its own. Not twice, as
+    // the lionfish is: turned it is a ball as deep as it is long, swelled taut on top, and at
+    // two that was five tiles of spines bouncing round a nursery room
+    zone: 'sunlit', band: 'reef', drawn: 1.6,
     size: [14, 20], hue: [34, 48], accent: 28, speed: 70, bite: 4,
     nutrition: 1.8, weight: 5, armor: 1, spikes: 1, bulk: 0.8, finSize: 0.9 },
 

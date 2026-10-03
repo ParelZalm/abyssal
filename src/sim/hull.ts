@@ -27,7 +27,7 @@ const hulls = new WeakMap<Creature, Hull>();
 
 function hullOf(c: Creature): Hull {
   const g = c.genome;
-  const key = `${c.species.plan}|${c.drawnSize}|${g.segments}|${g.eel}|${g.armor}|${g.coral}|${g.jaw}`;
+  const key = `${c.species.plan}|${c.drawnSize}|${g.segments}|${g.eel}|${g.armor}|${g.coral}|${g.jaw}|${c.wounded}`;
   const had = hulls.get(c);
   if (had?.key === key) return had;
   const f = formFor(g, c.species.plan);
@@ -35,9 +35,10 @@ function hullOf(c: Creature): Hull {
   // a body drawn from a sprite is hit where the sprite is, measured off its silhouette when it
   // was imported: the form under it is only the plan's, and a gulper's pouch hung outside it
   const sprite = SPRITES[c.species.id];
-  if (sprite?.hull) {
+  const drawn = (c.wounded && sprite?.woundedHull) || sprite?.hull;
+  if (sprite && drawn) {
     const per = spriteScale(sprite, f);
-    sprite.hull.forEach(([sx, sy, sr], i) => {
+    drawn.forEach(([sx, sy, sr], i) => {
       x[i] = spritePoint(sprite, f, [sx, sy]).x;
       y[i] = (sy - sprite.axis) / per;
       r[i] = sr / per;

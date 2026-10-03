@@ -1,10 +1,10 @@
 # Sprite prompts: the nursery
 
 The two prompts for each nursery enemy, filled in from
-[sprites.md](sprites.md#the-art-side), the one in hand first. The archerfish and the mackerel
-are done. The pufferfish and the sea nettle, like the mackerel, change their look when they
-turn at half health, and are drawn with a wounded pair beside the rest
-([Frames by role](sprites.md#frames-by-role)); their prompts come here as each is picked.
+[sprites.md](sprites.md#the-art-side), the one in hand first. The archerfish, the mackerel and
+the pufferfish are done. The sea nettle, like the last two, changes its look when it turns at
+half health, and is drawn with a wounded frame beside the rest
+([Frames by role](sprites.md#frames-by-role)); its prompts come here when it is picked.
 
 **Attach every time:** `docs/media/reference/cave-room.webp` and `tank-room.webp` for the world,
 and `barracuda.webp` and `triggerfish.webp` for finished animals. For Stage B, attach the chosen
@@ -14,7 +14,7 @@ Stage A sheet as well.
 
 ---
 
-## Pufferfish — turret, balloon: rest, strike (mouth), wounded, wounded strike
+## Pufferfish — turret, balloon: rest, strike (mouth), wounded, wounded strike — done
 
 It holds its spot and fires a ring of spines on the beat; up close it puffs and is braced
 against every blow, then goes slack, which is the opening. At half health it turns: it blows
@@ -170,8 +170,12 @@ The four frames are found in order. The wounded frame is lined up on the rest by
 which a ball shares less of than a flushed body does: check in the preview that the snout and
 the tail fin of the two sit in the same places, and that each strike took the beak and nothing
 behind the eye; if not, `--keep` the head's box, which holds for both strikes. The hull is the
-deflated body, read off the rest: it is one for every frame, and the swell does not move it,
-so a bounce is hit on the body inside the ball, as the painted pufferfish was.
+deflated body, read off the rest, and the swell does not move it; the ball has a hull of its
+own (`woundedHull`), set by hand off its skin, or a bounce is hit on the body inside it.
+
+As it went: the sheet was drawn at 3.2 image pixels to the art pixel (`--pitch 3.2`), and the
+ball shorter than the fish with its eye further back, so the wounded strike took its beak alone
+(`--keep-wounded`).
 
 ---
 

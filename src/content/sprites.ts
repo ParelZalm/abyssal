@@ -39,6 +39,13 @@ export interface SpriteArt {
    */
   hull?: [x: number, y: number, r: number][];
   /**
+   * The hitbox once the hostile has turned and shows its wounded pair, set by hand, for a turned
+   * look that is not the same body: the pufferfish blown up into a ball, which the deflated
+   * hull ran through the middle of, so shots that met the ball's top went through it. Unset,
+   * the turned body is hit as the whole one.
+   */
+  woundedHull?: [x: number, y: number, r: number][];
+  /**
    * Where a many-legged animal's legs hang: `x0` to `x1` across, from `root` (the belly line
    * they leave) down to `tip`, which the skin walks in a wave (`render/creature/living.ts`).
    * Nothing else may be in the box, or it walks too.
@@ -161,6 +168,19 @@ export const SPRITES: Record<string, SpriteArt> = {
   mackerel: { w: 137, h: 58, snout: 135, tail: 20, axis: 32,
               hull: [[131.5, 32.5, 3.8], [117.5, 32.5, 7.2], [104.5, 33, 9.3], [90.5, 33, 10.2], [77.5, 32.5, 10.6],
                      [64.5, 32.5, 9.8], [50.5, 32.5, 8.9], [37.5, 32.5, 7], [23.5, 32, 4.7]] },
+  // `npm run sprite -- pufferfish-sprite.png --id pufferfish --fringe --pitch 3.2
+  // --keep-wounded 120,14,140,42`: a porcupinefish, drawn deflated, since the game swells the
+  // picture for a puff, and turned drawn blown up with its spines standing. Its sheet was drawn
+  // at three and a fifth image pixels to the art pixel, which the pitch search missed. The ball
+  // was drawn a little shorter than the fish, its eye further back, so the wounded strike takes
+  // its beak alone: a box round the rest's took its eye too, redrawn and smeared. The hull is
+  // the deflated body without its spines and fins, and the turned one the ball, set by hand
+  // off its skin: the deflated hull ran through its middle. No lights
+  pufferfish: { w: 140, h: 112, snout: 138, tail: 28, axis: 56,
+                hull: [[134.5, 56, 6], [121.5, 55.5, 16.6], [108.5, 57.5, 19.1], [95.5, 56, 18.3], [83.5, 56.5, 17.4],
+                       [70.5, 57, 16.2], [57.5, 56.5, 14], [44.5, 57, 11.9], [31.5, 57.5, 6.4]],
+                woundedHull: [[127, 55, 5.5], [117, 58, 11], [109, 58, 19.5], [98, 58, 30], [86, 58, 33.9],
+                              [76, 58, 33.7], [66, 58, 31.9], [56, 58, 28], [48, 58, 19]] },
 };
 
 /**
@@ -179,7 +199,7 @@ export const REWORKED_ONLY = true;
  * read as two versions of it, and the rest of a room was more to watch than the one thing
  * being tested. Null deals it as any other.
  */
-export const NEWEST: string | null = 'mackerel';
+export const NEWEST: string | null = 'pufferfish';
 
 /**
  * A tank's hostile table as it is dealt: the reworked enemies only, while `REWORKED_ONLY`,

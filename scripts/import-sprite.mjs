@@ -4,7 +4,7 @@
  *
  *   npm run sprite -- <sheet.png> --id <species> [--pitch 6.54] [--colours 22]
  *                     [--keep x0,y0,x1,y1] [--key green] [--fringe [hue]]
- *                     [--frames rest,strike,wounded,wounded-strike]
+ *                     [--frames rest,strike,wounded,wounded-strike] [--keep-wounded x0,y0,x1,y1]
  *                     [--out src/render/creature/sprites]
  *
  * The sheet is one to four frames side by side on flat #FF00FF, or #00FF00 with `--key green`
@@ -45,7 +45,7 @@ const opt = (name, fallback) => {
 const sheet = argv.find((a, i) => !a.startsWith('--') && !(i > 0 && argv[i - 1].startsWith('--')));
 const id = opt('id');
 if (!sheet || !id) {
-  console.error('usage: npm run sprite -- <sheet.png> --id <species> [--pitch n] [--colours n] [--keep x0,y0,x1,y1] [--key green] [--fringe [hue]] [--frames names] [--out dir]');
+  console.error('usage: npm run sprite -- <sheet.png> --id <species> [--pitch n] [--colours n] [--keep x0,y0,x1,y1] [--key green] [--fringe [hue]] [--frames names] [--keep-wounded x0,y0,x1,y1] [--out dir]');
   process.exit(1);
 }
 const out = opt('out', 'src/render/creature/sprites');
@@ -329,8 +329,11 @@ const whole = f => { const o = []; for (let j = 0; j < frameH; j++) for (let i =
 
 // only the part of a strike that moved is taken from it: a generator redraws the whole animal
 // for a second frame, and swapping all of it in made the body shimmer on every bite
-const given = opt('keep');
+// `--keep-wounded` for the wounded strike alone, when its head is not where the rest's is: the
+// pufferfish's ball was drawn shorter than the fish, its eye further back, and a box round the
+// rest's beak took the wounded strike's eye with it, drawn differently and smeared
 function moved(base, f) {
+  const given = (f === WS && opt('keep-wounded')) || opt('keep');
   if (given) {
     // in the rest frame's cells, so a box written for an unpadded frame still holds
     const [x0, y0, x1, y1] = given.split(',').map(Number);

@@ -274,6 +274,8 @@ Open the preview. When something is off:
 | --- | --- |
 | doubled or missing rows or columns, a smeared grid | `--pitch` with the right period, measured off the sheet: the outline climbs a gentle slope in steps one art pixel high |
 | the strike's seam cuts through something, or misses part of what moved | `--keep x0,y0,x1,y1`, the box in the rest frame's cells |
+| the wounded strike's head is not where the rest's is, and one box takes the wrong part of it | `--keep-wounded x0,y0,x1,y1` for the wounded strike alone (the pufferfish's ball was drawn shorter than the fish) |
+| a sheet drawn much finer than asked, which the pitch search misses (a grid a dozen cells long) | `--pitch`, found by sweeping it: the grid holds still across a range of pitches round the true one (the mackerel's 3.46, the pufferfish's 3.2) |
 | banding, colours merged that should not be | `--colours 28` |
 | magenta or dark-violet specks round the outline: the background bled into the rim cells, too dark to key out | `--fringe`, unless the animal is magenta itself (it goes by hue; the gulper and the mantis shrimp would lose their outlines) |
 | thin parts tinted violet whole, on an animal with no violet in it | `--fringe 240`, which takes bleed from 240° up: bleed into blue lands at 245–270°, under the default's 272° (the siphonophore's tentacles) |
@@ -290,7 +292,8 @@ Open the preview. When something is off:
   the line the swim bends about; `hull` is the hitbox (`sim/hull.ts`); `bulb` is where a
   lure's trap fires; `mouth`, set by hand, is where a spitter's shots leave it, which at the
   body's radius was inside a drawn-bigger head; `lights` are where the view hangs a bloom, in each organ's own colour;
-  `legs`, set by hand, is the box a row of legs hangs in, which the skin walks in a wave from
+  `woundedHull`, set by hand, is the hitbox once the hostile has turned, for a turned look that is
+  not the same body (the pufferfish's ball); `legs`, set by hand, is the box a row of legs hangs in, which the skin walks in a wave from
   the tail to the head (the mantis shrimp's; keep the arms and fins out of it); `bells`, set
   by hand, is a jet-swimmer's swimming bells and their mouths: only they squeeze on the pulse,
   and each squeeze squirts water from the mouths (the siphonophore's); `trail`, set by hand,
