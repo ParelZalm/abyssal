@@ -27,13 +27,16 @@ Check the animal against this before asking for art; each is code to write first
 
 | Gap | Who has it | What it would take |
 | --- | --- | --- |
-| Rigged grasping arms | the `squid`, `longsquid` and `broadsquid` plans (`PlanArt.grasp`): the vampire squid, the Giant Squid | the arm as its own strip image, rigged as `armRig` does |
 | A boss's set-piece parts | the mantis shrimp's club, the Giant Squid's arms torn one at a time | per-part images; not planned |
 
 A moveset's turned look at half health (`woundedGenome` in `sim/roles.ts`: the mackerel
 flushed red, the pufferfish's spines up, the nettle glowing, the triggerfish red, the lionfish
 flared, the moon jelly flushed) is a pair of frames of its own, *wounded* and *wounded strike*
 (*Frames by role*, below).
+
+A squid's arms are not in its picture: they are one image of one arm, imported from a sheet
+of its own and rigged as the painted arms are, eight times over (`SpriteArt.arm`; the vampire
+squid's, [sprite-prompts-deep.md](sprite-prompts-deep.md)).
 
 Everything else — the swim, the flip, a hit's whitening and knockback, the belly-up death, the
 glow and bloom, the facing mirror — works on a sprite as it does on a painted body, because
@@ -192,7 +195,8 @@ body carries (`Baked.open`), shown through a bite or a strike.
 | Role (`Species.role`) | Frames | What moves in `strike` |
 | --- | --- | --- |
 | charger (mackerel, ribbon eel, barracuda, gulper) | rest, strike | the jaw opens for the hit |
-| spitter (archerfish, triggerfish, vampire squid) | rest, strike | the mouth opens to fire |
+| spitter (archerfish, triggerfish) | rest, strike | the mouth opens to fire |
+| a squid (vampire squid) | rest, strike; and one arm, on a sheet of its own | the tell: the vampire squid's light organs open. The arm is laid out straight, root left, tip right |
 | turret (pufferfish, lionfish, anglerfish) | rest, strike | the jaw; a spined turret can raise its spines instead |
 | drifter (jellies, siphonophore) | rest | — (the pulse is the mesh's) |
 | a wounded moveset (`pack`, `balloon`, `jet`, `herd`) | rest, strike, wounded, wounded strike | the wounded frame is the turned look whole; its strike moves as the strike does |
@@ -274,7 +278,7 @@ Open the preview. When something is off:
 | Looks like | Fix |
 | --- | --- |
 | doubled or missing rows or columns, a smeared grid | `--pitch` with the right period, measured off the sheet: the outline climbs a gentle slope in steps one art pixel high |
-| the strike's seam cuts through something, or misses part of what moved | `--keep x0,y0,x1,y1`, the box in the rest frame's cells |
+| the strike's seam cuts through something, or misses part of what moved | `--keep x0,y0,x1,y1`, the box in the rest frame's cells; several split by `;` for parts apart (the vampire squid's two light organs) |
 | the wounded strike's head is not where the rest's is, and one box takes the wrong part of it | `--keep-wounded x0,y0,x1,y1` for the wounded strike alone (the pufferfish's ball was drawn shorter than the fish) |
 | a sheet drawn much finer than asked, which the pitch search misses (a grid a dozen cells long) | `--pitch`, found by sweeping it: the grid holds still across a range of pitches round the true one (the mackerel's 3.46, the pufferfish's 3.2) |
 | banding, colours merged that should not be | `--colours 28` |

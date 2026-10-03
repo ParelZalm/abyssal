@@ -322,7 +322,9 @@ export const SPECIES: Species[] = [
   // it really does throw glowing mucus at what threatens it
   { id: 'vampiresquid', name: 'Vampire Squid', behavior: 'ambush', plan: 'squid',
     role: 'spitter', shot: 'bolt',
-    zone: 'midnight',
+    // drawn twice its size, as the anglerfish is: its picture is the body alone, some
+    // twenty-six texels long in the deep at its own, and its arms reach as far again
+    zone: 'midnight', drawn: 2,
     size: [28, 48], hue: [330, 352], accent: 22, speed: 160, bite: 18,
     nutrition: 2.4, weight: 8, finSize: 1.6, translucent: 0.2, glow: 0.4,
     photophores: 0.7, eyeAdapt: 0.9, veil: 0.8, segments: 2, stealth: 0.5 },

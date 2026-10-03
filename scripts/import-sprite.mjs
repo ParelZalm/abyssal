@@ -3,7 +3,7 @@
  * Import a generated sprite sheet as an enemy's frames — the code side of `docs/sprites.md`.
  *
  *   npm run sprite -- <sheet.png> --id <species> [--pitch 6.54] [--colours 22]
- *                     [--keep x0,y0,x1,y1] [--key green] [--fringe [hue]]
+ *                     [--keep x0,y0,x1,y1[;x0,y0,x1,y1…]] [--key green] [--fringe [hue]]
  *                     [--frames rest,strike,wounded,wounded-strike] [--keep-wounded x0,y0,x1,y1]
  *                     [--wounded-palette #a1,#b1,…/#a2,#b2,…]
  *                     [--out src/render/creature/sprites]
@@ -336,9 +336,13 @@ const whole = f => { const o = []; for (let j = 0; j < frameH; j++) for (let i =
 function moved(base, f) {
   const given = (f === WS && opt('keep-wounded')) || opt('keep');
   if (given) {
-    // in the rest frame's cells, so a box written for an unpadded frame still holds
-    const [x0, y0, x1, y1] = given.split(',').map(Number);
-    return { x0: x0 + lft, y0: y0 + top, x1: x1 + lft, y1: y1 + top };
+    // in the rest frame's cells, so a box written for an unpadded frame still holds; several
+    // split by `;`, for parts that move apart — the vampire squid's two light organs open
+    // above and below its body, and one box round both swapped the body between them too
+    return given.split(';').map(b => {
+      const [x0, y0, x1, y1] = b.split(',').map(Number);
+      return { x0: x0 + lft, y0: y0 + top, x1: x1 + lft, y1: y1 + top };
+    });
   }
   // where one silhouette has the animal and the other does not — but a redrawn outline
   // disagrees by a cell all the way round, so only the cells whose whole neighbourhood
@@ -350,12 +354,12 @@ function moved(base, f) {
     for (let dj = -1; dj <= 1 && all; dj++) for (let di = -1; di <= 1 && all; di++) all = xor(i + di, j + dj);
     if (all) { k.x0 = Math.min(k.x0, i); k.y0 = Math.min(k.y0, j); k.x1 = Math.max(k.x1, i); k.y1 = Math.max(k.y1, j); }
   }
-  return k.x1 < 0 ? { x0: 0, y0: 0, x1: -1, y1: -1 } : { x0: k.x0 - 4, y0: k.y0 - 4, x1: k.x1 + 4, y1: k.y1 + 4 };
+  return [k.x1 < 0 ? { x0: 0, y0: 0, x1: -1, y1: -1 } : { x0: k.x0 - 4, y0: k.y0 - 4, x1: k.x1 + 4, y1: k.y1 + 4 }];
 }
 function struck(base, f) {
   const keep = moved(base, f), idx = [];
   for (let j = 0; j < frameH; j++) for (let i = 0; i < fw; i++) {
-    const inside = i >= keep.x0 && i <= keep.x1 && j >= keep.y0 && j <= keep.y1;
+    const inside = keep.some(k => i >= k.x0 && i <= k.x1 && j >= k.y0 && j <= k.y1);
     idx.push(cellOf(inside ? f : base, i, j));
   }
   return { idx, keep };
@@ -487,7 +491,7 @@ out4.forEach((f, k) => {
   if (!k) return;
   if (!names.includes(f.name)) { console.log(`${f.name} recoloured from the ${f.name === 'wounded' ? 'rest' : 'strike'} (--wounded-palette)`); return; }
   const o = off[names.indexOf(f.name)];
-  const kept = f.keep ? `; taken from it: x ${f.keep.x0 - lft}..${f.keep.x1 - lft}, y ${f.keep.y0 - top}..${f.keep.y1 - top} (--keep to override)` : ', taken whole';
+  const kept = f.keep ? `; taken from it: ${f.keep.map(k => `x ${k.x0 - lft}..${k.x1 - lft}, y ${k.y0 - top}..${k.y1 - top}`).join('; ')} (--keep to override)` : ', taken whole';
   console.log(`${f.name} lined up at (${o.join(', ')})${kept}`);
 });
 if (lft || top || rgt || bot) console.log(`every frame padded for the others: ${top} cells at the top, ${bot} at the bottom, ${lft} at the back, ${rgt} at the front`);

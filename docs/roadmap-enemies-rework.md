@@ -45,7 +45,7 @@ needs the code named in *Blocked on* first.
 | Gulper Eel | eel · charger | rest, strike (jaw and pouch) | **done** | drawn 1, already 3.7 tiles long; `gulper.webp`, `gulper-sprite.webp` |
 | Barracuda | eel · charger | rest, strike (jaw) | **done** | drawn 1.6; dashes from 10 tiles (`reach`) and leaves a streak of light (`streak`); its sheet bled magenta round the outline (`--fringe`); `barracuda.webp`, `barracuda-sprite.webp` |
 | Siphonophore | jelly · drifter | rest | **done** | drawn 4; one frame; its bells alone squeeze on the pulse and squirt from their mouths (`bells`); its tentacles are in its hull; `siphon.webp`, `siphon-sprite.webp` |
-| Vampire Squid | squid · spitter | rest, strike (mouth) | blocked | rigged arms |
+| Vampire Squid | squid · spitter | rest, strike (light organs), one arm | **done** | drawn 2; its picture the body alone, its arms one image rigged eight times (`arm`); its strike the light organs behind its fins opened, each kept in a box of its own (`--keep` with two); shots leave its crown (`mouth`); [prompts](sprite-prompts-deep.md); `vampiresquid.webp`, `vampiresquid-sprite.webp`, `vampiresquid-arm-sprite.webp` |
 
 ### Reef tank
 
@@ -83,9 +83,10 @@ name it.
   when the hostile turns at half health (`Roles.turn`, `bakeSprite`). The wounded strike keeps
   the tell on a turned animal. The board's turned cells show the pair. Unblocked the mackerel,
   pufferfish and sea nettle.
-- **Rigged arms.** A squid plan's arms are strips of their own (`armRig` in
-  `render/creature/fishbake.ts`) that reach and grab. A sprite needs the arm as its own image
-  and the rig to use it. Unblocks the vampire squid, and later the Giant Squid.
+- ~~**Rigged arms.**~~ Done: a squid's picture is its body alone, and its arms one image of one
+  arm, on a sheet of its own, rigged as the painted arms are (`SpriteArt.arm`, `armRig` in
+  `render/creature/sprite.ts`). Unblocked the vampire squid, and the Giant Squid's arms when its
+  turn comes.
 
 ## Order
 
@@ -97,6 +98,6 @@ name it.
    [sprite-prompts-nursery.md](sprite-prompts-nursery.md).
 4. **A wounded frame**, then the mackerel, pufferfish and sea nettle (all done): the nursery is
    through.
-5. **Rigged arms**, then the vampire squid.
+5. **Rigged arms**, then the vampire squid (both done): the deep's roster is through.
 6. **Bosses**, each a question of its own.
 7. **`REWORKED_ONLY` comes out** once no fight room is short of enemies.

@@ -12,11 +12,11 @@
  * Loaded before the game or the board starts (`loadSprites`), since a bake is synchronous.
  */
 import { Texture } from 'pixi.js';
-import { formFor, halfWidth, type Plan } from '../../content/form';
+import { formFor, halfWidth, type Form, type Plan } from '../../content/form';
 import type { Genome } from '../../content/genome';
 import { SPRITES, spritePoint, spriteScale, type SpriteArt } from '../../content/sprites';
 import type { Emitter } from './bake/sheet';
-import type { Baked } from './fishbake';
+import type { Baked, Rig } from './fishbake';
 import anglerRest from './sprites/anglerfish.png';
 import anglerStrike from './sprites/anglerfish-strike.png';
 import gulperRest from './sprites/gulper.png';
@@ -50,6 +50,9 @@ import pufferWounded from './sprites/pufferfish-wounded.png';
 import pufferWoundedStrike from './sprites/pufferfish-wounded-strike.png';
 import nettleRest from './sprites/nettle.png';
 import nettleWounded from './sprites/nettle-wounded.png';
+import vampireRest from './sprites/vampiresquid.png';
+import vampireStrike from './sprites/vampiresquid-strike.png';
+import vampireArm from './sprites/vampiresquid-arm.png';
 
 /**
  * Each species' frames. A drifter has no strike, and shows its rest for one (`Baked.open`). A
@@ -58,7 +61,7 @@ import nettleWounded from './sprites/nettle-wounded.png';
  * without the second the wounded frame is shown for both, and the turned animal's tell is its
  * light alone.
  */
-interface Sources { rest: string; strike?: string; wounded?: string; woundedStrike?: string }
+interface Sources { rest: string; strike?: string; wounded?: string; woundedStrike?: string; arm?: string }
 const SOURCES: Record<string, Sources> = {
   anglerfish: { rest: anglerRest, strike: anglerStrike },
   gulper: { rest: gulperRest, strike: gulperStrike },
@@ -73,11 +76,14 @@ const SOURCES: Record<string, Sources> = {
   mackerel: { rest: mackerelRest, strike: mackerelStrike, wounded: mackerelWounded, woundedStrike: mackerelWoundedStrike },
   pufferfish: { rest: pufferRest, strike: pufferStrike, wounded: pufferWounded, woundedStrike: pufferWoundedStrike },
   nettle: { rest: nettleRest, wounded: nettleWounded },
+  vampiresquid: { rest: vampireRest, strike: vampireStrike, arm: vampireArm },
 };
 
 /** A frame shut and open, and the colours both may snap to. */
 interface Pair { rest: ImageData; strike: ImageData; palette: number[][] }
-interface Frames extends Pair { wounded?: Pair }
+/** An arm's picture and its own colours (`SpriteArt.arm`). */
+interface Arm { image: ImageData; palette: number[][] }
+interface Frames extends Pair { wounded?: Pair; arm?: Arm }
 const frames = new Map<string, Frames>();
 
 function pixels(url: string) {
@@ -112,9 +118,10 @@ async function pair(rest: string, strike?: string): Promise<Pair> {
 
 export async function loadSprites() {
   await Promise.all(Object.entries(SOURCES).map(async ([id, src]) => {
-    const [whole, wounded] = await Promise.all([
-      pair(src.rest, src.strike), src.wounded ? pair(src.wounded, src.woundedStrike) : undefined]);
-    frames.set(id, { ...whole, wounded });
+    const [whole, wounded, arm] = await Promise.all([
+      pair(src.rest, src.strike), src.wounded ? pair(src.wounded, src.woundedStrike) : undefined,
+      src.arm ? pair(src.arm) : undefined]);
+    frames.set(id, { ...whole, wounded, arm: arm && { image: arm.rest, palette: arm.palette } });
   }));
 }
 
@@ -129,9 +136,10 @@ function darkest(palette: number[][]) {
 
 /**
  * One frame resampled to `k` texels per sprite pixel, onto a canvas `w` × `h` whose row
- * `oy` (in sprite pixels from the top of the strip) is the sprite's top.
+ * `oy` (in sprite pixels from the top of the strip) is the sprite's top, and whose first
+ * column is the sprite's column `ox`.
  */
-function resample(d: ImageData, palette: number[][], k: number, w: number, h: number, oy: number) {
+function resample(d: ImageData, palette: number[][], k: number, w: number, h: number, oy: number, ox = 0) {
   const cv = document.createElement('canvas');
   cv.width = w; cv.height = h;
   const ctx = cv.getContext('2d')!;
@@ -140,7 +148,7 @@ function resample(d: ImageData, palette: number[][], k: number, w: number, h: nu
   const step = 1 / k;
   for (let iy = 0; iy < h; iy++) for (let ix = 0; ix < w; ix++) {
     // the texel's footprint on the sprite, and how much of each pixel it covers
-    const x0 = ix * step, x1 = x0 + step, y0 = iy * step - oy, y1 = y0 + step;
+    const x0 = ix * step + ox, x1 = x0 + step, y0 = iy * step - oy, y1 = y0 + step;
     let r = 0, g = 0, b = 0, a = 0;
     for (let y = Math.floor(y0); y < y1; y++) {
       if (y < 0 || y >= d.height) continue;
@@ -211,7 +219,25 @@ export function bakeSprite(id: string, g: Genome, plan: Plan, res: number, wound
     ? [s.legs.x0 / s.w, s.legs.x1 / s.w, (s.legs.root + oy) / (halfPx * 2), (s.legs.tip + oy) / (halfPx * 2)]
     : null;
   const trail: Baked['trail'] = s.trail ? [s.trail.x0 / s.w, s.trail.x1 / s.w] : null;
-  return { texture: texture(shut), open: texture(open), canvas: shut, lights, depth, arm: null, legs, trail,
+  const arm = all.arm && s.arm ? armRig(all.arm, s, f, per, res) : null;
+  return { texture: texture(shut), open: texture(open), canvas: shut, lights, depth, arm, legs, trail,
            back, front, halfH: halfPx / per };
+}
+
+/**
+ * A sprite's arm as the rig the painted arms use (`FishView.poseArms`): one strip from root to
+ * tip, held symmetric about the row its flesh runs along, as the body is about its axis.
+ */
+function armRig(a: Arm, s: SpriteArt, f: Form, per: number, res: number): Rig {
+  const m = s.arm!;
+  const reach = m.reach / per;
+  const px = (m.tip - m.root) / reach;
+  const half = Math.max(m.axis, a.image.height - m.axis);
+  const k = res / px;
+  const cv = resample(a.image, a.palette, k, Math.ceil((m.tip - m.root) * k), Math.ceil(half * 2 * k), half - m.axis, m.root);
+  // the view draws a feeding arm at half `len` and the rest at 0.78 / `armPair` of it, about
+  // the same: `reach` is the arm as drawn, so `len` is twice it
+  return { texture: texture(cv), len: reach * 2, halfH: half / px,
+           rootX: spritePoint(s, f, m.at).x, spread: m.spread / per };
 }
 

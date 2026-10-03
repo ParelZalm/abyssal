@@ -65,6 +65,15 @@ export interface SpriteArt {
    * as if painted on.
    */
   trail?: { x0: number; x1: number };
+  /**
+   * A squid's arms, drawn from an image of one arm (`SOURCES.arm`) and rigged as the painted
+   * arms are (`Rig`): every arm is that picture, walked out from the crown in a curl, and the
+   * outer pair lash at what the body grips. In the arm's own pixels, `root` and `tip` across and
+   * `axis` the row its flesh runs along; in the body's, `at` the crown the arms leave from,
+   * `spread` how far apart across it their roots sit, and `reach` how long an arm is drawn. A
+   * squid's picture is its body alone: arms painted onto it could not reach or grab.
+   */
+  arm?: { root: number; tip: number; axis: number; at: Pt; spread: number; reach: number };
 }
 
 export const SPRITES: Record<string, SpriteArt> = {
@@ -201,6 +210,21 @@ export const SPRITES: Record<string, SpriteArt> = {
             lights: [{ at: [190, 51], color: 0xf59722, strength: 0.5 }],
             hull: [[220, 51, 3], [213, 51, 10], [204, 51, 19], [193, 51, 29], [180, 51, 38],
                    [168, 51, 41], [148, 55, 20], [124, 55, 17], [100, 52, 13]] },
+  // `npm run sprite -- vampiresquid-sprite.png --id vampiresquid --key green --fringe
+  // --keep '47,17,73,39;47,55,73,79'`, and its arm `npm run sprite -- vampiresquid-arm-sprite.png
+  // --id vampiresquid-arm --key green --fringe --pitch 8.6`. The body without its arms, which are
+  // one picture rigged eight times (`arm`). Its strike is the two light organs behind its fins
+  // opened, inside the silhouette, so the outline found nothing that moved and each is kept in a
+  // box of its own: one box round both took the body between them too. The axis is the mantle's
+  // midline, not the tip spike the import took for a tail stalk; the hull is the mantle without
+  // its fins. The arm's flesh runs along row 20, its web above and its cirri below, and it is
+  // drawn as long as the body. The lights are the two organs; shots leave the crown, between the
+  // arms, where the real animal squirts its glowing mucus
+  vampiresquid: { w: 155, h: 94, snout: 151, tail: 5, axis: 48, mouth: [152, 48],
+                  lights: [{ at: [59, 28], color: 0xd7f0ff, strength: 0.55 }, { at: [59, 67], color: 0xd7f0ff, strength: 0.55 }],
+                  arm: { root: 1, tip: 232, axis: 20, at: [148, 48], spread: 15, reach: 140 },
+                  hull: [[147, 47.5, 6], [134, 47.5, 17.5], [118, 47, 20.5], [102, 47, 22], [86, 47, 22.5],
+                         [70, 47, 21.5], [55, 47, 17], [38, 47, 13], [22, 47, 9]] },
 };
 
 /**
@@ -219,7 +243,7 @@ export const REWORKED_ONLY = true;
  * read as two versions of it, and the rest of a room was more to watch than the one thing
  * being tested. Null deals it as any other.
  */
-export const NEWEST: string | null = 'nettle';
+export const NEWEST: string | null = 'vampiresquid';
 
 /**
  * A tank's hostile table as it is dealt: the reworked enemies only, while `REWORKED_ONLY`,
