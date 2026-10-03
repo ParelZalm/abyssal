@@ -62,8 +62,8 @@ consistency across panels. Fill in the `«…»` slots.
 ```text
 STYLE (shared by every image)
 Reference sheet for a game creature: «animal, with its Latin name if real».
-Match the attached sheets: dark navy and blue-violet palette, side-on, the look of
-dark deep-sea pixel art. Exactly one creature, nothing else in the frame: no rock,
+Match the attached sheets: dark navy water, side-on, the look of dark underwater pixel
+art. Exactly one creature, nothing else in the frame: no rock,
 no plants, no bubbles, no particles, no text except where asked. Strict lateral
 profile, facing RIGHT, body straight and horizontal, not curved or swimming. Every
 fin spread open so its outline reads. The whole animal fits in the frame with a
@@ -74,8 +74,9 @@ ANATOMY (must be accurate)
 lures, feelers or tentacles. Colours of body, fins, lights.»
 
 IMAGE 1 — "in game"
-The animal fully rendered in the attached sheets' style, on a flat solid dark navy
-background (#0b1530). Lights glow with only a small, tight halo.
+The animal fully rendered in the attached sheets' style, on a flat solid background of
+«the tank's water: nursery #071731, reef #082039, deep #0b1530». Lights glow with only
+a small, tight halo.
 
 IMAGE 2 — "flat"
 The same animal, same pose, same outline, flat colour only: no shading, no highlights,
@@ -99,8 +100,11 @@ watermarks, frames, borders.
 
 ### Stage B — the sprite sheet (production)
 
-The frames themselves, as true pixel art on flat magenta. Attach the animal's Stage A sheet as
-well as the style sheets. Fill in the `«…»` slots; *Frames by role* below says which frames.
+The frames themselves, as true pixel art on a flat key colour. Attach the animal's Stage A
+sheet as well as the style sheets. Fill in the `«…»` slots; *Frames by role* below says which
+frames. **The key colour** is magenta, or green for an animal that is violet, pink or red:
+magenta bled into those cannot be told from paint (the reef's ribbon eel, lionfish and moon
+jelly went on green and imported with `--key green`).
 
 ```text
 GOAL
@@ -122,14 +126,18 @@ COMPOSITION
 - From the tail tip to the snout the animal is «L» art pixels long.
 - The body is centred vertically: its midline, tail stalk to snout, lies along the
   frame's horizontal centre line.
-- Everything fits inside the frame with at least 4 art pixels of margin.
-- Background: flat pure magenta #FF00FF, one colour, nothing else. Do not use magenta
-  anywhere on the animal.
+- Thin parts (tentacles, spines, feelers, fin rays) are at least 2 art pixels thick: the
+  game shrinks the sprite, and a 1-pixel line is the first thing to go.
+- Everything fits inside the frame with at least 4 art pixels of margin, in every frame.
+- Background: flat pure «magenta #FF00FF / green #00FF00», one colour, nothing else. Do not
+  use «magenta / green» anywhere on the animal, and do not let the outline pick up a tint of
+  it where it meets the background.
 
 PALETTE
 Use these colours, plus at most 8 in-between shades of them: «the Stage A palette».
 Light comes from above and slightly in front: lit top, darker belly. Each part shaded
-as its own rounded form.
+as its own rounded form. «For a clear body (a bell, a jelly): draw its inside close to
+the dark water with only its rims bright, so it reads as glass.»
 
 LIGHTS
 Eyes, lures and photophores are flat bright pixels. NO glow halo, bloom or light
@@ -144,7 +152,7 @@ size, same position, same everything else, so the two can be swapped without the
 animal moving.»
 
 AVOID
-Three-quarter or front views, any background other than flat #FF00FF, soft glows,
+Three-quarter or front views, any background other than the flat key colour, soft glows,
 painterly texture, noise, sub-pixel detail, text, labels, borders, shadows, a second
 animal.
 ```
