@@ -53,7 +53,7 @@ needs the code named in *Blocked on* first.
 | Ribbon Eel | eel · charger | rest, strike (jaw) | **done** | drawn 1, already 3.8 tiles; on green (`--key green`); hull the body without its fins; `ribbon.webp`, `ribbon-sprite.webp` |
 | Triggerfish | darter · spitter | rest, strike (mouth) | **done** | drawn 2; spits from its drawn mouth (`mouth`); hull the body without its fins; `triggerfish.webp`, `triggerfish-sprite.webp` |
 | Lionfish | darter · turret | rest, strike (spines up) | **done** | drawn 2; its spines rise as its tell, the frames padded 38 cells for them; hull the body under the spines and fans; `lionfish.webp`, `lionfish-sprite.webp` |
-| Moon Jelly | jelly · drifter | rest | ready | |
+| Moon Jelly | jelly · drifter | rest | **done** | drawn 3; one frame; its bell alone squeezes (`bells` with no jets); its gonads are its lights; `moonjelly.webp`, `moonjelly-sprite.webp` |
 
 ### Nursery tank
 
@@ -89,8 +89,8 @@ name it.
 
 1. **Deep tank first:** the barracuda, then the siphonophore (both done). The darkest water carries the
    art direction's lights best, and the two done already set the style to match.
-2. **The reef** next, whole: four *ready* enemies, and its fights come back when the first one
-   is in. The prompts for all four are in [sprite-prompts-reef.md](sprite-prompts-reef.md).
+2. **The reef** next, whole (done): its four enemies, from the prompts in
+   [sprite-prompts-reef.md](sprite-prompts-reef.md).
 3. **The nursery's archerfish**, so the first tank has a fight again.
 4. **A wounded frame**, then the mackerel, pufferfish and sea nettle.
 5. **Rigged arms**, then the vampire squid.

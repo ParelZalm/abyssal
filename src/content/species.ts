@@ -197,7 +197,9 @@ export const SPECIES: Species[] = [
     nutrition: 1.8, weight: 12, finSize: 1.3 },
 
   { id: 'moonjelly', name: 'Moon Jelly', behavior: 'drift', plan: 'jelly', role: 'drifter',
-    zone: 'sunlit', band: 'reef', bleed: 900,
+    // drawn three times its size: a jelly's form is a bell and a half long, and at its own
+    // the moon jelly was a tile in the reef, its gonads and arms gone
+    zone: 'sunlit', band: 'reef', bleed: 900, drawn: 3,
     size: [12, 26], hue: [280, 310], accent: 295, speed: 26, bite: 7,
     nutrition: 1.4, weight: 10, translucent: 0.72, glow: 0.3, veil: 0.4,
     stealth: 0.4, heal: 0.3 },

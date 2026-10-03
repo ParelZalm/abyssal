@@ -47,7 +47,7 @@ export interface SpriteArt {
   /**
    * A jet-swimmer's bells, `x0` to `x1` across, and the mouth of each, `jets`: the bells alone
    * squeeze on the pulse (`FishView.pose`), and each squeeze squirts water out of the mouths
-   * (`Impacts.trail`). A jelly plan's pulse is otherwise the whole strip's, which on a long
+   * (`Impacts.trail`); a jelly that rows rather than jets has a bell and no mouths. A jelly plan's pulse is otherwise the whole strip's, which on a long
    * colony stretched its stem with its bells.
    */
   bells?: { x0: number; x1: number; jets: Pt[] };
@@ -125,6 +125,16 @@ export const SPRITES: Record<string, SpriteArt> = {
   lionfish: { w: 218, h: 183, snout: 216, tail: 41, axis: 100,
               hull: [[210, 108, 8], [192, 100, 17], [172, 98, 18], [152, 96, 18], [134, 96, 16],
                      [116, 96, 14], [98, 97, 11], [78, 97, 8], [56, 98, 5.5]] },
+  // `npm run sprite -- moonjelly-sprite.png --id moonjelly --key green --fringe`: one frame.
+  // The bell alone squeezes on the pulse, as the siphonophore's bells do, but squirts nothing:
+  // a moon jelly rows. The hull is the bell and the two oral arms behind it; the fine rim
+  // tentacles that fan round them are a near miss. The lights are the two gonads, which the
+  // prompt left flat for the game to light
+  moonjelly: { w: 201, h: 116, snout: 200, tail: 19, axis: 63,
+               bells: { x0: 135, x1: 200, jets: [] },
+               lights: [{ at: [181, 43], color: 0xd4a6fd, strength: 0.45 }, { at: [180, 71], color: 0xd4a6fd, strength: 0.45 }],
+               hull: [[198, 59, 11], [188, 58, 30], [172, 57.5, 42], [152, 57.5, 47], [132, 60, 16],
+                      [112, 60, 13], [88, 66, 18], [62, 70, 16], [34, 63, 14]] },
 };
 
 /**
@@ -143,7 +153,7 @@ export const REWORKED_ONLY = true;
  * read as two versions of it, and the rest of a room was more to watch than the one thing
  * being tested. Null deals it as any other.
  */
-export const NEWEST: string | null = 'lionfish';
+export const NEWEST: string | null = 'moonjelly';
 
 /**
  * A tank's hostile table as it is dealt: the reworked enemies only, while `REWORKED_ONLY`,
