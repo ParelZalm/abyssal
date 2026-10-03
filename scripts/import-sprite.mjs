@@ -4,22 +4,29 @@
  *
  *   npm run sprite -- <sheet.png> --id <species> [--pitch 6.54] [--colours 22]
  *                     [--keep x0,y0,x1,y1] [--key green] [--fringe [hue]]
+ *                     [--frames rest,strike,wounded,wounded-strike]
  *                     [--out src/render/creature/sprites]
  *
- * The sheet is one or two frames side by side on flat #FF00FF, or #00FF00 with `--key green`
+ * The sheet is one to four frames side by side on flat #FF00FF, or #00FF00 with `--key green`
  * for an animal that is violet, pink or red, into which magenta's bleed cannot be told from
- * paint: the rest, and optionally the strike. A generator's "8× pixel art" is never on a clean grid — the anglerfish's was 6.5
+ * paint. Left to right they are the rest, the strike, the wounded and the wounded strike, as
+ * many as there are; `--frames` names them otherwise (a drifter's `rest,wounded`). A
+ * generator's "8× pixel art" is never on a clean grid — the anglerfish's was 6.5
  * image pixels to the art pixel, and its columns drifted by three art pixels across a frame —
  * so the grid is found, not assumed: each cell boundary is the strongest colour edge a pitch on
  * from the last, which follows a drifting grid where a fixed pitch would double or drop
- * columns. Each cell takes its median colour, and both frames are clustered to one palette.
+ * columns. Each cell takes its median colour, and each pair of frames is clustered to one palette.
  *
  * The strike is lined up on the rest by the back half of the body, which should not move, and
  * then only the part that differs is taken from it: a generator redraws the whole fish for a
  * second frame, and swapping the whole of it in made the body shimmer on every bite. That part
- * is the box round where the two silhouettes disagree, grown by a few cells, or `--keep`.
+ * is the box round where the two silhouettes disagree, grown by a few cells, or `--keep`. The
+ * wounded frame is the animal turned at half health (`woundedGenome` in `sim/roles.ts`): lined
+ * up on the rest by its outline and taken whole, since all of it changes; the wounded strike
+ * is to it what the strike is to the rest.
  *
- * Writes `<id>.png` (and `<id>-strike.png`) at one pixel per art pixel, a preview at six, and
+ * Writes `<id>.png` (and `<id>-strike.png`, `<id>-wounded.png`, `<id>-wounded-strike.png`) at
+ * one pixel per art pixel, a preview at six, and
  * prints the landmarks for `content/sprites.ts` — check them on the board before trusting them.
  * Reads PNG only (8-bit RGB or RGBA); `sips -s format png in.webp --out in.png` converts.
  */
@@ -38,7 +45,7 @@ const opt = (name, fallback) => {
 const sheet = argv.find((a, i) => !a.startsWith('--') && !(i > 0 && argv[i - 1].startsWith('--')));
 const id = opt('id');
 if (!sheet || !id) {
-  console.error('usage: npm run sprite -- <sheet.png> --id <species> [--pitch n] [--colours n] [--keep x0,y0,x1,y1] [--key green] [--fringe [hue]] [--out dir]');
+  console.error('usage: npm run sprite -- <sheet.png> --id <species> [--pitch n] [--colours n] [--keep x0,y0,x1,y1] [--key green] [--fringe [hue]] [--frames names] [--out dir]');
   process.exit(1);
 }
 const out = opt('out', 'src/render/creature/sprites');
@@ -119,7 +126,12 @@ for (let x = 0, s = -1; x <= W; x++) {
   if (on && s < 0) s = x;
   if (!on && s >= 0) { if (x - s > W * 0.05) runs.push([s, x - 1]); s = -1; }
 }
-if (runs.length < 1 || runs.length > 2) throw new Error(`expected one or two frames, found ${runs.length}`);
+const FRAMES = ['rest', 'strike', 'wounded', 'wounded-strike'];
+const names = opt('frames')?.split(',') ?? FRAMES.slice(0, runs.length);
+if (runs.length < 1 || runs.length > 4) throw new Error(`expected one to four frames, found ${runs.length}`);
+if (names.length !== runs.length) throw new Error(`--frames names ${names.length} frames, the sheet has ${runs.length}`);
+if (names[0] !== 'rest' || names.some(n => !FRAMES.includes(n)) || new Set(names).size !== names.length) throw new Error(`--frames: rest first, then any of ${FRAMES.slice(1).join(', ')}`);
+if (names.includes('wounded-strike') && !names.includes('wounded')) throw new Error('a wounded strike needs its wounded frame');
 const boxes = runs.map(([x0, x1]) => {
   let y0 = H, y1 = 0;
   for (let x = x0; x <= x1; x++) for (let y = 0; y < H; y++) if (!isBg(y * W + x)) { y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
@@ -223,81 +235,133 @@ if (fringeAt >= 0) for (const g of grids) {
   g.cells = next;
 }
 
-// one palette for both frames: k-means from colours spread far apart
-const all = grids.flatMap(g => g.cells.filter(Boolean));
-const cent = [all[0].slice()];
-while (cent.length < Math.min(K, all.length)) {
-  let best = null, bd = -1;
-  for (let i = 0; i < all.length; i += 3) {
-    const p = all[i], d = Math.min(...cent.map(c => (c[0] - p[0]) ** 2 + (c[1] - p[1]) ** 2 + (c[2] - p[2]) ** 2));
-    if (d > bd) { bd = d; best = p; }
-  }
-  cent.push(best.slice());
-}
-const near = p => { let b = 0, bd = Infinity; cent.forEach((c, i) => { const d = (c[0] - p[0]) ** 2 * 0.3 + (c[1] - p[1]) ** 2 * 0.59 + (c[2] - p[2]) ** 2 * 0.11; if (d < bd) { bd = d; b = i; } }); return b; };
-for (let it = 0; it < 16; it++) {
-  const s = cent.map(() => [0, 0, 0, 0]);
-  for (const p of all) { const k = near(p); s[k][0] += p[0]; s[k][1] += p[1]; s[k][2] += p[2]; s[k][3]++; }
-  s.forEach((v, k) => { if (v[3]) cent[k] = [v[0] / v[3], v[1] / v[3], v[2] / v[3]]; });
-}
-const pal = cent.map(c => c.map(Math.round));
-const snapped = grids.map(g => g.cells.map(c => c ? near(c) : -1));
-
-// ------------------------------------------------------------------ the strike, reduced to what moves
-
-const rest = grids[0], R = snapped[0];
-// `top`: rows the strike reaches above the rest's first, which both frames are padded down by —
-// the lionfish's raised spines stand seventy cells over its resting back
-let frameH = rest.h, strikeIdx = null, keep = null, off = [0, 0], top = 0;
-const at = (g, idx, i, j) => (i < 0 || j < 0 || i >= g.w || j >= g.h) ? -1 : idx[j * g.w + i];
-if (grids[1]) {
-  const S = grids[1], s = snapped[1];
-  let best = -1;
-  // each frame is cut to its own box, so a strike that grows taller than the rest (spines
-  // raised) starts that much higher: search as far down as it is taller, not a few cells
-  const reach = Math.max(0, S.h - rest.h);
-  for (let dx = -6; dx <= 6; dx++) for (let dy = -6; dy <= 6 + reach; dy++) {
-    let same = 0, n = 0;
-    for (let j = 0; j < rest.h; j++) for (let i = 0; i < Math.floor(rest.w * 0.55); i++) {
-      const a = at(rest, R, i, j), b = at(S, s, i + dx, j + dy);
-      if (a < 0 && b < 0) continue;
-      n++; if (a === b) same++;
+// a palette for each pair, k-means from colours spread far apart: the rest and the strike
+// share one, and the wounded pair has its own, since a body flushed red or glowing hotter
+// shares few colours with the whole animal and would have taken the rest's slots
+function cluster(cells) {
+  const all = cells.filter(Boolean);
+  const cent = [all[0].slice()];
+  while (cent.length < Math.min(K, all.length)) {
+    let best = null, bd = -1;
+    for (let i = 0; i < all.length; i += 3) {
+      const p = all[i], d = Math.min(...cent.map(c => (c[0] - p[0]) ** 2 + (c[1] - p[1]) ** 2 + (c[2] - p[2]) ** 2));
+      if (d > bd) { bd = d; best = p; }
     }
-    if (same / n > best) { best = same / n; off = [dx, dy]; }
+    cent.push(best.slice());
   }
-  top = Math.max(0, off[1]);
-  frameH = Math.max(rest.h, S.h - off[1]) + top;
-  const given = opt('keep');
+  const near = p => { let b = 0, bd = Infinity; cent.forEach((c, i) => { const d = (c[0] - p[0]) ** 2 * 0.3 + (c[1] - p[1]) ** 2 * 0.59 + (c[2] - p[2]) ** 2 * 0.11; if (d < bd) { bd = d; b = i; } }); return b; };
+  for (let it = 0; it < 16; it++) {
+    const s = cent.map(() => [0, 0, 0, 0]);
+    for (const p of all) { const k = near(p); s[k][0] += p[0]; s[k][1] += p[1]; s[k][2] += p[2]; s[k][3]++; }
+    s.forEach((v, k) => { if (v[3]) cent[k] = [v[0] / v[3], v[1] / v[3], v[2] / v[3]]; });
+  }
+  return { colours: cent.map(c => c.map(Math.round)), near };
+}
+const pal = [], snapped = [];
+for (const pair of [['rest', 'strike'], ['wounded', 'wounded-strike']]) {
+  const fs = pair.map(n => names.indexOf(n)).filter(f => f >= 0);
+  if (!fs.length) continue;
+  const { colours, near } = cluster(fs.flatMap(f => grids[f].cells));
+  const base = pal.length;
+  pal.push(...colours);
+  for (const f of fs) snapped[f] = grids[f].cells.map(c => c ? base + near(c) : -1);
+}
+
+// ------------------------------------------------------------------ the frames, lined up on the rest
+
+const rest = grids[0];
+const at = (f, i, j) => { const g = grids[f]; return i < 0 || j < 0 || i >= g.w || j >= g.h ? -1 : snapped[f][j * g.w + i]; };
+const same = (p, q) => p === q, shape = (p, q) => (p < 0) === (q < 0);
+
+/**
+ * How frame `b` sits on frame `a`: the shift that puts b's cell (i + dx, j + dy) on a's (i, j),
+ * by the best agreement over a's first `part` of columns from the tail. A frame bigger than the
+ * other (spines raised) is searched for as far as it is bigger: each frame is cut to its own
+ * box, and a few cells' search cut off the lionfish's spines, seventy cells over its back.
+ */
+function lineUp(a, b, part, agree) {
+  const A = grids[a], B = grids[b];
+  const rx = Math.max(0, B.w - A.w), ry = Math.max(0, B.h - A.h), cols = Math.floor(A.w * part);
+  let best = -1, off = [0, 0];
+  for (let dx = -6; dx <= 6 + rx; dx++) for (let dy = -6; dy <= 6 + ry; dy++) {
+    let hit = 0, n = 0;
+    for (let j = 0; j < A.h; j++) for (let i = 0; i < cols; i++) {
+      const p = at(a, i, j), q = at(b, i + dx, j + dy);
+      if (p < 0 && q < 0) continue;
+      n++; if (agree(p, q)) hit++;
+    }
+    if (hit / n > best) { best = hit / n; off = [dx, dy]; }
+  }
+  return off;
+}
+// a strike by the back half of the body, which should not move; the wounded by its whole
+// outline, since all of its colours change; the wounded strike on the wounded, as the strike
+// is on the rest
+const S = names.indexOf('strike'), Wd = names.indexOf('wounded'), WS = names.indexOf('wounded-strike');
+const off = names.map(() => [0, 0]);
+if (S > 0) off[S] = lineUp(0, S, 0.55, same);
+if (Wd > 0) off[Wd] = lineUp(0, Wd, 1, shape);
+if (WS > 0) { const o = lineUp(Wd, WS, 0.55, same); off[WS] = [off[Wd][0] + o[0], off[Wd][1] + o[1]]; }
+
+// the frames share one size: the rest's box, grown to hold every other frame's rows — the
+// lionfish's raised spines padded both frames 38 cells at the top — and its columns wherever
+// the wounded frame's art reaches past it, with the box's own margin of water round that. The
+// wounded is the only frame taken whole: of a strike only the part that moved is used, and the
+// archerfish's, redrawn a cell along, would have widened every frame and moved its landmarks.
+let lft = 0, top = 0, rgt = 0, bot = 0;
+grids.forEach((g, f) => {
+  if (!f) return;
+  top = Math.max(top, off[f][1]);
+  bot = Math.max(bot, g.h - off[f][1] - rest.h);
+  if (f !== Wd) return;
+  for (let j = 0; j < g.h; j++) for (let i = 0; i < g.w; i++) {
+    if (snapped[f][j * g.w + i] < 0) continue;
+    const x = i - off[f][0];
+    if (x < 0) lft = Math.max(lft, 2 - x);
+    if (x >= rest.w) rgt = Math.max(rgt, x - rest.w + 3);
+  }
+});
+const fw = rest.w + lft + rgt, frameH = rest.h + top + bot;
+const cellOf = (f, i, j) => at(f, i - lft + off[f][0], j - top + off[f][1]);
+const whole = f => { const o = []; for (let j = 0; j < frameH; j++) for (let i = 0; i < fw; i++) o.push(cellOf(f, i, j)); return o; };
+
+// only the part of a strike that moved is taken from it: a generator redraws the whole animal
+// for a second frame, and swapping all of it in made the body shimmer on every bite
+const given = opt('keep');
+function moved(base, f) {
   if (given) {
     // in the rest frame's cells, so a box written for an unpadded frame still holds
     const [x0, y0, x1, y1] = given.split(',').map(Number);
-    keep = { x0, y0: y0 + top, x1, y1: y1 + top };
-  } else {
-    // where one silhouette has the animal and the other does not — but a redrawn outline
-    // disagrees by a cell all the way round, so only the cells whose whole neighbourhood
-    // disagrees count: what is left is a part that moved. Its box, grown by four cells.
-    const xor = (i, j) => (at(rest, R, i, j - top) < 0) !== (at(S, s, i + off[0], j - top + off[1]) < 0);
-    keep = { x0: Infinity, y0: Infinity, x1: -1, y1: -1 };
-    for (let j = 0; j < frameH; j++) for (let i = 0; i < rest.w; i++) {
-      let all = true;
-      for (let dj = -1; dj <= 1 && all; dj++) for (let di = -1; di <= 1 && all; di++) all = xor(i + di, j + dj);
-      if (all) { keep.x0 = Math.min(keep.x0, i); keep.y0 = Math.min(keep.y0, j); keep.x1 = Math.max(keep.x1, i); keep.y1 = Math.max(keep.y1, j); }
-    }
-    keep = keep.x1 < 0 ? { x0: 0, y0: 0, x1: -1, y1: -1 }
-      : { x0: keep.x0 - 4, y0: keep.y0 - 4, x1: keep.x1 + 4, y1: keep.y1 + 4 };
+    return { x0: x0 + lft, y0: y0 + top, x1: x1 + lft, y1: y1 + top };
   }
-  strikeIdx = [];
-  for (let j = 0; j < frameH; j++) for (let i = 0; i < rest.w; i++) {
-    const inside = i >= keep.x0 && i <= keep.x1 && j >= keep.y0 && j <= keep.y1;
-    strikeIdx.push(inside ? at(S, s, i + off[0], j - top + off[1]) : at(rest, R, i, j - top));
+  // where one silhouette has the animal and the other does not — but a redrawn outline
+  // disagrees by a cell all the way round, so only the cells whose whole neighbourhood
+  // disagrees count: what is left is a part that moved. Its box, grown by four cells.
+  const xor = (i, j) => (cellOf(base, i, j) < 0) !== (cellOf(f, i, j) < 0);
+  const k = { x0: Infinity, y0: Infinity, x1: -1, y1: -1 };
+  for (let j = 0; j < frameH; j++) for (let i = 0; i < fw; i++) {
+    let all = true;
+    for (let dj = -1; dj <= 1 && all; dj++) for (let di = -1; di <= 1 && all; di++) all = xor(i + di, j + dj);
+    if (all) { k.x0 = Math.min(k.x0, i); k.y0 = Math.min(k.y0, j); k.x1 = Math.max(k.x1, i); k.y1 = Math.max(k.y1, j); }
   }
+  return k.x1 < 0 ? { x0: 0, y0: 0, x1: -1, y1: -1 } : { x0: k.x0 - 4, y0: k.y0 - 4, x1: k.x1 + 4, y1: k.y1 + 4 };
 }
-const restIdx = [];
-for (let j = 0; j < frameH; j++) for (let i = 0; i < rest.w; i++) restIdx.push(at(rest, R, i, j - top));
+function struck(base, f) {
+  const keep = moved(base, f), idx = [];
+  for (let j = 0; j < frameH; j++) for (let i = 0; i < fw; i++) {
+    const inside = i >= keep.x0 && i <= keep.x1 && j >= keep.y0 && j <= keep.y1;
+    idx.push(cellOf(inside ? f : base, i, j));
+  }
+  return { idx, keep };
+}
+const restIdx = whole(0);
+const out4 = [{ name: 'rest', idx: restIdx }];
+if (S > 0) out4.push({ name: 'strike', ...struck(0, S) });
+if (Wd > 0) out4.push({ name: 'wounded', idx: whole(Wd) });
+if (WS > 0) out4.push({ name: 'wounded-strike', ...struck(Wd, WS) });
 
 // ------------------------------------------------------------------ landmarks
 
-const fw = rest.w;
 const solid = (i, j) => i >= 0 && j >= 0 && i < fw && j < frameH && restIdx[j * fw + i] >= 0;
 const col = [];
 for (let i = 0; i < fw; i++) { let t = -1, b = -1, n = 0; for (let j = 0; j < frameH; j++) if (solid(i, j)) { if (t < 0) t = j; b = j; n++; } col.push({ t, b, n }); }
@@ -363,16 +427,16 @@ const toPx = idx => {
   idx.forEach((k, i) => { if (k < 0) return; o[i * 4] = pal[k][0]; o[i * 4 + 1] = pal[k][1]; o[i * 4 + 2] = pal[k][2]; o[i * 4 + 3] = 255; });
   return o;
 };
+const fileOf = name => name === 'rest' ? `${id}.png` : `${id}-${name}.png`;
 mkdirSync(out, { recursive: true });
-writeFileSync(join(out, `${id}.png`), encodePng(fw, frameH, toPx(restIdx)));
-if (strikeIdx) writeFileSync(join(out, `${id}-strike.png`), encodePng(fw, frameH, toPx(strikeIdx)));
+for (const f of out4) writeFileSync(join(out, fileOf(f.name)), encodePng(fw, frameH, toPx(f.idx)));
 
-// a preview at six times, both frames on the deep water
-const S6 = 6, frames = strikeIdx ? [restIdx, strikeIdx] : [restIdx];
-const pw = (fw * S6 + 12) * frames.length + 12, ph = frameH * S6 + 24;
+// a preview at six times, every frame on the deep water
+const S6 = 6;
+const pw = (fw * S6 + 12) * out4.length + 12, ph = frameH * S6 + 24;
 const prev = new Uint8Array(pw * ph * 4);
 for (let i = 0; i < pw * ph; i++) { prev[i * 4] = 11; prev[i * 4 + 1] = 21; prev[i * 4 + 2] = 48; prev[i * 4 + 3] = 255; }
-frames.forEach((idx, f) => idx.forEach((k, i) => {
+out4.forEach(({ idx }, f) => idx.forEach((k, i) => {
   if (k < 0) return;
   const x0 = 12 + f * (fw * S6 + 12) + (i % fw) * S6, y0 = 12 + Math.floor(i / fw) * S6;
   for (let y = y0; y < y0 + S6; y++) for (let x = x0; x < x0 + S6; x++) { const o = (y * pw + x) * 4; prev[o] = pal[k][0]; prev[o + 1] = pal[k][1]; prev[o + 2] = pal[k][2]; }
@@ -384,8 +448,14 @@ const lm = [`w: ${fw}`, `h: ${frameH}`, `snout: ${snout}`, `tail: ${tail}`, `axi
 if (bulb) lm.push(`bulb: [${bulb.join(', ')}] /* a lure's, or delete */`);
 lm.push(`hull: [${hull.map(h => `[${h.join(', ')}]`).join(', ')}]`);
 if (blobs.length) lm.push(`lights: [${blobs.map(b => `{ at: [${b.at.join(', ')}], color: ${b.color}, strength: 0.5 }`).join(', ')}] /* candidates: keep the real ones */`);
-console.log(`pitch ${P.toFixed(3)} px · grid ${grids.map(g => `${g.w}×${g.h}`).join(' and ')} · ${pal.length} colours${fringe ? ` · ${fringe} fringe cells cleaned` : ''}`);
-if (strikeIdx) console.log(`strike lined up at (${off.join(', ')}); taken from it: x ${keep.x0}..${keep.x1}, y ${keep.y0 - top}..${keep.y1 - top} (--keep to override)${top ? `; both frames padded ${top} cells at the top for it` : ''}`);
-console.log(`wrote ${join(out, `${id}.png`)}${strikeIdx ? ` and ${id}-strike.png` : ''}`);
+console.log(`pitch ${P.toFixed(3)} px · grid ${grids.map(g => `${g.w}×${g.h}`).join(', ')} · frames ${names.join(', ')} · ${pal.length} colours${fringe ? ` · ${fringe} fringe cells cleaned` : ''}`);
+out4.forEach((f, k) => {
+  if (!k) return;
+  const o = off[names.indexOf(f.name)];
+  const kept = f.keep ? `; taken from it: x ${f.keep.x0 - lft}..${f.keep.x1 - lft}, y ${f.keep.y0 - top}..${f.keep.y1 - top} (--keep to override)` : ', taken whole';
+  console.log(`${f.name} lined up at (${o.join(', ')})${kept}`);
+});
+if (lft || top || rgt || bot) console.log(`every frame padded for the others: ${top} cells at the top, ${bot} at the bottom, ${lft} at the back, ${rgt} at the front`);
+console.log(`wrote ${out4.map(f => join(out, fileOf(f.name))).join(', ')}`);
 console.log(`preview ${previewPath}`);
 console.log(`\ncontent/sprites.ts — check on the board before trusting it:\n  ${id}: { ${lm.join(', ')} },`);

@@ -1,10 +1,10 @@
 # Sprite prompts: the nursery
 
 The two prompts for the nursery's next enemy, filled in from
-[sprites.md](sprites.md#the-art-side). The archerfish is the only nursery enemy ready: the
-mackerel, the pufferfish and the sea nettle each change their look when wounded, and wait on
-a third frame the code does not take yet ([roadmap](roadmap-enemies-rework.md#blocked-on)).
-Their prompts come here once it does.
+[sprites.md](sprites.md#the-art-side). The archerfish is done. The mackerel, the pufferfish
+and the sea nettle each change their look when they turn at half health, and are drawn with a
+wounded pair beside the rest ([Frames by role](sprites.md#frames-by-role)); their prompts come
+here as each is picked.
 
 **Attach every time:** `docs/media/reference/cave-room.webp` and `tank-room.webp` for the world,
 and `barracuda.webp` and `triggerfish.webp` for finished animals. For Stage B, attach the chosen

@@ -27,9 +27,12 @@ Check the animal against this before asking for art; each is code to write first
 
 | Gap | Who has it | What it would take |
 | --- | --- | --- |
-| A wounded look | the nursery's movesets: `pack` (mackerel flush red), `balloon` (pufferfish grows spikes), `bloom` (nettle glows) — `woundedGenome` in `sim/roles.ts` | a third frame, *wounded*, and `bakeSprite` choosing it |
 | Rigged grasping arms | the `squid`, `longsquid` and `broadsquid` plans (`PlanArt.grasp`): the vampire squid, the Giant Squid | the arm as its own strip image, rigged as `armRig` does |
 | A boss's set-piece parts | the mantis shrimp's club, the Giant Squid's arms torn one at a time | per-part images; not planned |
+
+A moveset's turned look at half health (`woundedGenome` in `sim/roles.ts`: the mackerel
+flushed red, the pufferfish's spines up, the nettle glowing) is a pair of frames of its own,
+*wounded* and *wounded strike* (*Frames by role*, below).
 
 Everything else — the swim, the flip, a hit's whitening and knockback, the belly-up death, the
 glow and bloom, the facing mirror — works on a sprite as it does on a painted body, because
@@ -151,6 +154,14 @@ Identical to frame 1 in every pixel except «what moves»: «how it moves». Sam
 size, same position, same everything else, so the two can be swapped without the
 animal moving.»
 
+«FRAME 3 — "wounded"
+The same animal turned at half health: «how it looks turned». Same frame size, same
+position, same outline and pose as frame 1 except where the change itself needs
+more room, so the two can be swapped without the animal moving.»
+
+«FRAME 4 — "wounded strike"
+Identical to frame 3 in every pixel except «what moves», moved exactly as in frame 2.»
+
 AVOID
 Three-quarter or front views, any background other than the flat key colour, soft glows,
 painterly texture, noise, sub-pixel detail, text, labels, borders, shadows, a second
@@ -174,7 +185,12 @@ body carries (`Baked.open`), shown through a bite or a strike.
 | spitter (archerfish, triggerfish, vampire squid) | rest, strike | the mouth opens to fire |
 | turret (pufferfish, lionfish, anglerfish) | rest, strike | the jaw; a spined turret can raise its spines instead |
 | drifter (jellies, siphonophore) | rest | — (the pulse is the mesh's) |
-| a wounded moveset (`pack`, `balloon`, `bloom`) | rest, strike, wounded | blocked on code: see the gaps |
+| a wounded moveset (`pack`, `balloon`) | rest, strike, wounded, wounded strike | the wounded frame is the turned look whole; its strike moves as the strike does |
+| a wounded drifter (`bloom`) | rest, wounded | — |
+
+The wounded pair is swapped in for good when the hostile turns at half health (`Roles.turn`),
+so a turned animal still shows its tell. Without a wounded strike the wounded frame stands
+for both, and the turned animal's tell is its light alone; ask for the fourth frame.
 
 ### Before sending it back
 
@@ -208,8 +224,9 @@ npm run sprite -- /tmp/gulper-sprite.png --id gulper
 `«id»-strike.png`) at one pixel per art pixel, a preview at six times into the system's temp
 folder, and prints the landmarks. What it does, and why:
 
-- **Frames** are the wide runs of columns with anything on them, left to right: rest, then
-  strike.
+- **Frames** are the wide runs of columns with anything on them, left to right: rest,
+  strike, wounded, wounded strike, as many as the sheet has. `--frames` names them when they
+  are some other set: a wounded drifter's sheet is `--frames rest,wounded`.
 - **The grid is found, not assumed.** The pitch is the period the row edges agree on (the
   anglerfish's was 6.545 image pixels and the gulper's 3.955, not the 8 asked for — a sheet
   drawn finer than asked is fine, since the game shrinks it anyway), and each cell boundary is the
@@ -226,6 +243,11 @@ folder, and prints the landmarks. What it does, and why:
   (the lionfish's spines raised) is searched for as far as it is taller, and both frames are
   padded at the top for it; before, the import looked six cells either way and cut off
   whatever stood above the rest frame.
+- **The wounded frame is lined up on the rest by its outline and taken whole,** since all of
+  its colours change; the wounded strike is lined up on it and reduced to what moved, as the
+  strike is on the rest (`--keep` holds for both). The rest and strike share one palette and
+  the wounded pair has its own, so a flush red does not take the whole animal's colours, and
+  the game snaps each pair to its own. Every frame is padded to hold the others.
 - **Landmarks** are guessed from the picture: the tail root is the narrowest column of the
   back third, the axis the middle of it, the snout the last column with body just under the
   axis. A lit blob past the snout is offered as a lure's bulb (delete it if the animal has
@@ -250,8 +272,8 @@ Open the preview. When something is off:
 
 ### 3. Wire it
 
-- **`render/creature/sprite.ts`**: import the two PNGs and add them to `SOURCES` under the
-  species id.
+- **`render/creature/sprite.ts`**: import the PNGs and add them to `SOURCES` under the
+  species id: `rest` and `strike`, and `wounded` and `woundedStrike` for a moveset that turns.
 - **`content/sprites.ts`**: add the printed landmarks to `SPRITES`, and look at each on the
   board before trusting it. They are what ties the picture to the simulation: `snout` to
   `tail` spans the plan's form, so the length the simulation uses is the picture's; `axis` is
@@ -295,6 +317,9 @@ they read.
   group if the animal is in it, and *Hostile roles* for its role.
 - **A tank:** `/?tank=«tank»&room=fight&god=1` and swim up to it: the strike frame on a bite,
   shots leaving its skin, a lure's trap firing at the bulb you see.
+- **The turn,** for a wounded pair: the board's *Hostile roles* group has the animal turned
+  beside it whole (`role-«id»-turned`); in a tank, take it under half health from the console
+  (`game.world.creatures.find(c => c.hostile).hp = 1`) and step a few frames.
 - **The hitbox:** shots should stop on the drawn body, not in the water beside it. If they do
   not, `hull` or `snout`/`tail` is wrong.
 

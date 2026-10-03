@@ -7,8 +7,8 @@ each step is in [sprites.md](sprites.md); this page is the order and the record.
 
 **While the rework is under way, only reworked enemies are dealt into fights**
 (`REWORKED_ONLY` in `content/sprites.ts`), so no room mixes the two styles. A tank with no
-reworked enemy yet has its fight rooms open as soon as they are entered: today the nursery
-and the reef. Bosses are dealt whatever they are drawn with, since a tank cannot lose its way
+reworked enemy yet has its fight rooms open as soon as they are entered; since the archerfish
+every tank has one. Bosses are dealt whatever they are drawn with, since a tank cannot lose its way
 down. Set `REWORKED_ONLY` false to see the whole roster again.
 
 **The enemy last reworked is tested on its own** (`NEWEST` in `content/sprites.ts`): the first
@@ -60,9 +60,9 @@ needs the code named in *Blocked on* first.
 | Enemy | Plan · role | Frames | Status | Notes |
 | --- | --- | --- | --- | --- |
 | Archerfish | darter · spitter, `volley` | rest, strike (mouth) | **done** | drawn 1.6; its strike taken from the head only (`--keep`); its volley leaves its drawn mouth (`mouth`); `archerfish.webp`, `archerfish-sprite.webp` |
-| Mackerel | darter · charger, `pack` | rest, strike, wounded | blocked | wounded frame (the pack flushes red) |
-| Pufferfish | darter · turret, `balloon` | rest, strike, wounded | blocked | wounded frame (grows spikes); its puff is a swell of the mesh and should carry over |
-| Sea Nettle | jelly · drifter, `bloom` | rest, wounded | blocked | wounded frame (glows) |
+| Mackerel | darter · charger, `pack` | rest, strike, wounded, wounded strike | ready | the pack flushes red, jaw and fins up |
+| Pufferfish | darter · turret, `balloon` | rest, strike, wounded, wounded strike | ready | turned, its spines stand up; its puff is a swell of the mesh and should carry over |
+| Sea Nettle | jelly · drifter, `bloom` | rest, wounded | ready | turned, it glows hotter; `--frames rest,wounded` |
 
 ### Bosses — later
 
@@ -77,10 +77,11 @@ needs the code named in *Blocked on* first.
 Code to write before a blocked enemy can go through the flow. Each unblocks the rows that
 name it.
 
-- **A wounded frame.** The nursery's movesets change a hostile's look when it is hurt
-  (`woundedGenome` in `sim/roles.ts` repaints it). A sprite needs a third frame, *wounded*,
-  imported beside the other two and swapped in by `bakeSprite` when the view rebuilds a
-  wounded hostile. Unblocks the mackerel, pufferfish and sea nettle.
+- ~~**A wounded frame.**~~ Done: a sprite takes a wounded pair, *wounded* and *wounded
+  strike* (a drifter the first alone), imported from the same sheet and swapped in for good
+  when the hostile turns at half health (`Roles.turn`, `bakeSprite`). The wounded strike keeps
+  the tell on a turned animal. The board's turned cells show the pair. Unblocked the mackerel,
+  pufferfish and sea nettle.
 - **Rigged arms.** A squid plan's arms are strips of their own (`armRig` in
   `render/creature/fishbake.ts`) that reach and grab. A sprite needs the arm as its own image
   and the rig to use it. Unblocks the vampire squid, and later the Giant Squid.
@@ -93,7 +94,7 @@ name it.
    [sprite-prompts-reef.md](sprite-prompts-reef.md).
 3. **The nursery's archerfish** (done), so the first tank has a fight again, from
    [sprite-prompts-nursery.md](sprite-prompts-nursery.md).
-4. **A wounded frame**, then the mackerel, pufferfish and sea nettle.
+4. **A wounded frame** (done), then the mackerel, pufferfish and sea nettle.
 5. **Rigged arms**, then the vampire squid.
 6. **Bosses**, each a question of its own.
 7. **`REWORKED_ONLY` comes out** once no fight room is short of enemies.

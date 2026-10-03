@@ -106,22 +106,23 @@ export interface DesignGroup {
  */
 class BoardFish extends Container {
   fish: FishView;
-  constructor(private readonly g: Genome, private readonly plan: Plan, private readonly sp?: Species) {
+  constructor(private readonly g: Genome, private readonly plan: Plan, private readonly sp?: Species,
+              private readonly wounded = false) {
     super();
-    this.fish = new FishView(g, plan, sp);
+    this.fish = new FishView(g, plan, sp, wounded);
     this.addChild(this.fish.fog, this.fish.glow, this.fish);
   }
   /** A fresh animal in place of this one — how a death cell loops. */
   respawn() {
     this.fish.destroy({ children: true });
-    this.fish = new FishView(this.g, this.plan, this.sp);
+    this.fish = new FishView(this.g, this.plan, this.sp, this.wounded);
     this.addChild(this.fish.fog, this.fish.glow, this.fish);
   }
 }
 
-/** `sp`, for an animal of the roster: its sprite and drawn size come with it. */
-function boardFish(g: Genome, plan: Plan, sp?: Species): BoardFish {
-  return new BoardFish(g, plan, sp);
+/** `sp`, for an animal of the roster: its sprite and drawn size come with it; `wounded`, turned. */
+function boardFish(g: Genome, plan: Plan, sp?: Species, wounded = false): BoardFish {
+  return new BoardFish(g, plan, sp, wounded);
 }
 
 /** How a game creature swims on the board: the same calls `world.ts` makes each frame. */
@@ -1132,9 +1133,9 @@ class RoleCell extends Container {
   readonly blooms = new Container();
   /** The charge bar, for a charger's cell. */
   readonly bar = new ChargeBar();
-  constructor(g: Genome, plan: Plan, private readonly hostile = true, sp?: Species) {
+  constructor(g: Genome, plan: Plan, private readonly hostile = true, sp?: Species, wounded = false) {
     super();
-    this.fish = boardFish(g, plan, sp);
+    this.fish = boardFish(g, plan, sp, wounded);
     this.bar.root.visible = false;
     this.addChild(this.blooms, this.fish, this.shots, this.bar.root);
   }
@@ -1322,7 +1323,7 @@ function roleGroup(): DesignGroup {
       id: `role-${sp.id}-turned`, name: `${sp.name} · turned`, note: notes.turned,
       source: 'src/sim/roles.ts', span: whole.span, depth: tank.depth, genome: g,
       facts: { moveset: sp.moves!, ...whole.facts },
-      make: () => new RoleCell(g, sp.plan, true, sp),
+      make: () => new RoleCell(g, sp.plan, true, sp, true),
       animate: turnedAnimate(sp, g, tank.tile),
     });
     whole.facts = { moveset: sp.moves!, ...whole.facts };

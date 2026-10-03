@@ -515,9 +515,11 @@ export class Roles {
     const g = woundedGenome(c.species.moves!, c.genome);
     if (g) {
       c.genome = g;
-      c.view.rebuild(g);
       c.refreshOrgans();
     }
+    // a painted body is turned by the genome above; a sprite cannot read one, and has its
+    // turned look drawn as frames of its own, which the flag picks
+    c.view.rebuild(c.genome, true);
     if (c.species.moves === 'balloon') {
       c.anchor = null;
       c.aimA = Math.atan2(p.y >= c.y ? 1 : -1, p.x >= c.x ? 1 : -1);

@@ -254,12 +254,15 @@ export class FishView extends Container {
   private readonly drawn: number;
   /** The genome as given, before the drawn size: what a re-bake starts from. */
   private source!: Genome;
+  /** Turned at half health (`Roles`): a sprite shows its wounded pair, and keeps it on a re-bake. */
+  private wounded = false;
 
   /**
    * `species`, for an animal of the roster: whether it has a sprite and how big it is drawn.
    * Only an animal that never changes has either, so a transformation never meets them.
+   * `wounded` starts it turned, as the board's turned cells show it.
    */
-  constructor(private g: Genome, private plan: Plan = 'darter', species?: Species) {
+  constructor(private g: Genome, private plan: Plan = 'darter', species?: Species, wounded = false) {
     super();
     this.art = species && SPRITES[species.id] ? species.id : undefined;
     this.drawn = species?.drawn ?? 1;
@@ -272,7 +275,7 @@ export class FishView extends Container {
     this.glow.addChild(this.aura, this.halo, this.core, this.ember);
     this.murk.anchor.set(0.5);
     this.fog.addChild(this.murk);
-    this.rebuild(g);
+    this.rebuild(g, wounded);
   }
 
   /**
@@ -401,8 +404,9 @@ export class FishView extends Container {
     this.rebuild(g);
   }
 
-  rebuild(g: Genome) {
+  rebuild(g: Genome, wounded = this.wounded) {
     this.source = g;
+    this.wounded = wounded;
     // everything the view draws reads the size off the genome it holds, so a species drawn
     // bigger holds a copy at the size it is drawn
     if (this.drawn !== 1) g = { ...g, size: g.size * this.drawn };
@@ -417,7 +421,7 @@ export class FishView extends Container {
     // take the new texture before letting go of the old one, so a rebuild onto the same
     // genome never leaves the entry at zero users for an eviction to catch
     const old = this.baked;
-    this.baked = bakeFish(g, this.plan, this.art);
+    this.baked = bakeFish(g, this.plan, this.art, wounded);
     this.hangLamps(this.baked.lights);
     if (old) releaseFish(old);
     const { front, back } = this.baked;

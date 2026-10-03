@@ -36,21 +36,30 @@ import moonRest from './sprites/moonjelly.png';
 import archerRest from './sprites/archerfish.png';
 import archerStrike from './sprites/archerfish-strike.png';
 
-/** Each species' frames. A drifter has no strike, and shows its rest for one (`Baked.open`). */
-const SOURCES: Record<string, [rest: string, strike?: string]> = {
-  anglerfish: [anglerRest, anglerStrike],
-  gulper: [gulperRest, gulperStrike],
-  mantisshrimp: [mantisRest, mantisStrike],
-  barracuda: [barracudaRest, barracudaStrike],
-  siphon: [siphonRest],
-  ribbon: [ribbonRest, ribbonStrike],
-  triggerfish: [triggerRest, triggerStrike],
-  lionfish: [lionRest, lionStrike],
-  moonjelly: [moonRest],
-  archerfish: [archerRest, archerStrike],
+/**
+ * Each species' frames. A drifter has no strike, and shows its rest for one (`Baked.open`). A
+ * moveset that changes the body when it turns at half health (`woundedGenome` in
+ * `sim/roles.ts`) draws the turned animal as a pair of its own, `wounded` and `woundedStrike`;
+ * without the second the wounded frame is shown for both, and the turned animal's tell is its
+ * light alone.
+ */
+interface Sources { rest: string; strike?: string; wounded?: string; woundedStrike?: string }
+const SOURCES: Record<string, Sources> = {
+  anglerfish: { rest: anglerRest, strike: anglerStrike },
+  gulper: { rest: gulperRest, strike: gulperStrike },
+  mantisshrimp: { rest: mantisRest, strike: mantisStrike },
+  barracuda: { rest: barracudaRest, strike: barracudaStrike },
+  siphon: { rest: siphonRest },
+  ribbon: { rest: ribbonRest, strike: ribbonStrike },
+  triggerfish: { rest: triggerRest, strike: triggerStrike },
+  lionfish: { rest: lionRest, strike: lionStrike },
+  moonjelly: { rest: moonRest },
+  archerfish: { rest: archerRest, strike: archerStrike },
 };
 
-interface Frames { rest: ImageData; strike: ImageData; palette: number[][] }
+/** A frame shut and open, and the colours both may snap to. */
+interface Pair { rest: ImageData; strike: ImageData; palette: number[][] }
+interface Frames extends Pair { wounded?: Pair }
 const frames = new Map<string, Frames>();
 
 function pixels(url: string) {
@@ -68,20 +77,32 @@ function pixels(url: string) {
   });
 }
 
-export async function loadSprites() {
-  await Promise.all(Object.entries(SOURCES).map(async ([id, [a, b]]) => {
-    const [rest, strike] = await Promise.all([pixels(a), b ? pixels(b) : null]).then(([r, k]) => [r, k ?? r]);
-    const seen = new Set<number>();
-    for (const d of [rest, strike]) {
-      for (let i = 0; i < d.data.length; i += 4) {
-        if (d.data[i + 3] > 0) seen.add((d.data[i] << 16) | (d.data[i + 1] << 8) | d.data[i + 2]);
-      }
+/**
+ * Each pair keeps its own palette: a texel of the whole animal snapped to the wounded's flush
+ * red, or the other way round, would be a colour that frame was never drawn in.
+ */
+async function pair(rest: string, strike?: string): Promise<Pair> {
+  const [r, k] = await Promise.all([pixels(rest), strike ? pixels(strike) : null]);
+  const seen = new Set<number>();
+  for (const d of [r, k ?? r]) {
+    for (let i = 0; i < d.data.length; i += 4) {
+      if (d.data[i + 3] > 0) seen.add((d.data[i] << 16) | (d.data[i + 1] << 8) | d.data[i + 2]);
     }
-    frames.set(id, { rest, strike, palette: [...seen].map(c => [c >> 16, (c >> 8) & 255, c & 255]) });
+  }
+  return { rest: r, strike: k ?? r, palette: [...seen].map(c => [c >> 16, (c >> 8) & 255, c & 255]) };
+}
+
+export async function loadSprites() {
+  await Promise.all(Object.entries(SOURCES).map(async ([id, src]) => {
+    const [whole, wounded] = await Promise.all([
+      pair(src.rest, src.strike), src.wounded ? pair(src.wounded, src.woundedStrike) : undefined]);
+    frames.set(id, { ...whole, wounded });
   }));
 }
 
 export const hasSprite = (id: string) => frames.has(id);
+/** Whether species `id` has its turned look drawn (`SOURCES`). */
+export const hasWounded = (id: string) => !!frames.get(id)?.wounded;
 
 /** The darkest of the sprite's colours: the outline it is ringed with at any size. */
 function darkest(palette: number[][]) {
@@ -146,11 +167,13 @@ function texture(c: HTMLCanvasElement) {
 
 /**
  * The sprite of species `id` as a body of genome `g` on `plan`, at `res` texels per R unit —
- * the bake's own density for that genome. The strip is held symmetric about the swim's axis,
- * as the painted ones are, so the art does not slide off the line it bends about.
+ * the bake's own density for that genome, `wounded` for the pair drawn turned at half health
+ * where it has one. The strip is held symmetric about the swim's axis, as the painted ones
+ * are, so the art does not slide off the line it bends about.
  */
-export function bakeSprite(id: string, g: Genome, plan: Plan, res: number): Omit<Baked, 'users'> {
-  const fr = frames.get(id)!;
+export function bakeSprite(id: string, g: Genome, plan: Plan, res: number, wounded = false): Omit<Baked, 'users'> {
+  const all = frames.get(id)!;
+  const fr = (wounded && all.wounded) || all;
   const s: SpriteArt = SPRITES[id];
   const f = formFor(g, plan);
   const per = spriteScale(s, f);
