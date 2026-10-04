@@ -1,4 +1,4 @@
-import { ColorMatrixFilter, Container } from 'pixi.js';
+import { ColorMatrixFilter, Container, Rectangle } from 'pixi.js';
 import type { Creature } from '../sim/creature';
 import type { Ghost } from '../sim/events';
 import { FishView } from './creature/fishview';
@@ -36,43 +36,66 @@ const COIL = 0.6;
  * deep the dark would take a ghost before the player found it. Each fades in through the tell
  * and follows the player with its heading; on the lock the real one resolves into the squid,
  * spread to lunge, and the rest stay ghosts until they go.
+ *
+ * The ghosts share one container under one filter, its area set by hand round all of them. A
+ * filter on each view went by each view's own bounds and cut the arms off at them in a square,
+ * and the one filter on several views washed out only the first.
  */
 export class GhostView {
   readonly root = new Container();
+  private readonly paled = new Container();
+  private readonly clear = new Container();
   private readonly views: FishView[] = [];
   private of: Creature | null = null;
-  private readonly pale = ghostly();
+
+  constructor() {
+    this.paled.filters = [ghostly()];
+    this.paled.boundsArea = new Rectangle();
+    this.root.addChild(this.paled, this.clear);
+  }
 
   update(ghosts: readonly Ghost[], creatures: readonly Creature[], dt: number, t: number) {
     const boss = ghosts.length ? creatures.find(c => c.ghosts.length) ?? null : null;
-    if (boss && boss !== this.of) this.clear();
+    if (boss && boss !== this.of) this.drop();
     this.of = boss;
     ghosts.forEach((g, i) => {
       if (!boss) return;
       let v = this.views[i];
       if (!v) {
         v = this.views[i] = new FishView(boss.genome, boss.species.plan, boss.species);
-        this.root.addChild(v, v.glow);
       }
       const resolved = g.real && g.locked;
       v.animate(dt, 0.3, t * 5 + i, 0, resolved ? { windup: 1, strike: 0, open: true }
         : { windup: g.k * COIL, strike: 0, open: false });
       v.place(g.x, g.y, g.a, g.face);
       const ease = g.k * g.k * (3 - 2 * g.k);
-      v.filters = resolved ? [] : [this.pale];
+      const into = resolved ? this.clear : this.paled;
+      if (v.parent !== into) into.addChild(v, v.glow);
       v.show(true, resolved ? 0.95 : FAINT + (SHOWN - FAINT) * ease, 0xffffff);
     });
     for (let i = boss ? ghosts.length : 0; i < this.views.length; i++) this.views[i].show(false, 0, 0xffffff);
+    // the filter's area: every ghost, and as far round each as the squid reaches, arms and all
+    if (boss && ghosts.length) {
+      const reach = boss.radius * 4;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const g of ghosts) {
+        x0 = Math.min(x0, g.x); y0 = Math.min(y0, g.y); x1 = Math.max(x1, g.x); y1 = Math.max(y1, g.y);
+      }
+      this.paled.boundsArea.x = x0 - reach;
+      this.paled.boundsArea.y = y0 - reach;
+      this.paled.boundsArea.width = x1 - x0 + reach * 2;
+      this.paled.boundsArea.height = y1 - y0 + reach * 2;
+    }
   }
 
   /** Let go of the views, for a boss of another genome or a new run. */
-  private clear() {
+  private drop() {
     for (const v of this.views) v.destroy({ children: true });
     this.views.length = 0;
   }
 
   destroy() {
-    this.clear();
+    this.drop();
     this.root.destroy({ children: true });
   }
 }

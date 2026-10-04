@@ -403,6 +403,15 @@ What it found, and what it leaves:
 - **Ghosts alternated sides by how many had been found**, so a side walled off by a pillar
   was tried for good and a room showed one. By the try now: three whole, three or four hurt.
 - Five ghosts rarely fit the pillar room round a larva near a wall; it shows what fits.
+- **A filter on each ghost cut its arms off at the view's own bounds**, in a square, and the
+  one filter shared by several views washed out only the first. The ghosts share one
+  container under one filter, its area set by hand round all of them (`GhostView`).
+- **The boss intro showed the squid's mantle alone**: its portrait was the bake, which is the
+  body without the rigged arms. A rigged body's portrait lays them out from the crown, fanned
+  a little (`FishView.portrait`), and a portrait taller than the intro's slot is shown at a
+  whole divisor rather than overflowing it.
+- **The board's boss cells drew every boss painted**, never having been handed the species
+  since the sprites went in; they draw the sprites now.
 
 ## Hostile movesets: the deep
 

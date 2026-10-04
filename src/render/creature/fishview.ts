@@ -240,9 +240,41 @@ export class FishView extends Container {
   /** Set once the animal is dead and this view is playing its death. */
   private deathT = -1;
   private fall = { vx: 0, vy: 0, whole: false };
-  /** The body as baked, mouth shut — what a screen shows of it (the boss intro). */
+  /**
+   * The body as baked, mouth shut — what a screen shows of it (the boss intro). A body with
+   * rigged arms has them laid out from its crown, straight and fanned a little, under the body:
+   * the bake is the body alone, and the Giant Squid's intro showed a mantle and nothing else.
+   */
   get portrait(): HTMLCanvasElement | null {
-    return this.baked?.canvas ?? null;
+    const b = this.baked;
+    if (!b) return null;
+    if (!this.arms.length) return b.canvas;
+    const k = b.canvas.width / (b.front - b.back);
+    const A = PLAN_ART[this.plan];
+    const arms = this.arms.map(a => {
+      const len = a.rig.len * (a.feeding ? 0.5 : 0.78 / A.armPair);
+      return { a, len, heading: a.v * 0.32, rx: a.rig.rootX, ry: a.v * a.rig.spread };
+    });
+    // the picture's box, in R units: the body's, and every arm's tip and root either side
+    let x0 = b.back, x1 = b.front, y0 = -b.halfH, y1 = b.halfH;
+    for (const { a, len, heading, rx, ry } of arms) {
+      const tx = rx + Math.cos(heading) * len, ty = ry + Math.sin(heading) * len, h = a.rig.halfH;
+      x1 = Math.max(x1, tx + h); y0 = Math.min(y0, ty - h, ry - h); y1 = Math.max(y1, ty + h, ry + h);
+    }
+    const out = document.createElement('canvas');
+    out.width = Math.ceil((x1 - x0) * k);
+    out.height = Math.ceil((y1 - y0) * k);
+    const ctx = out.getContext('2d')!;
+    ctx.imageSmoothingEnabled = false;
+    for (const { a, len, heading, rx, ry } of arms) {
+      const src = a.rig.texture.source.resource as CanvasImageSource;
+      ctx.setTransform(1, 0, 0, 1, (rx - x0) * k, (ry - y0) * k);
+      ctx.rotate(heading);
+      ctx.drawImage(src, 0, -a.rig.halfH * k, len * k, a.rig.halfH * 2 * k);
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(b.canvas, Math.round((b.back - x0) * k), Math.round((-b.halfH - y0) * k));
+    return out;
   }
 
   /** The art density this view was baked at; a new tier means a re-bake. */

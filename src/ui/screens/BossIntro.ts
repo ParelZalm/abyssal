@@ -60,7 +60,9 @@ export class BossIntro implements Component {
 
 /**
  * A body's bake as a picture `height` CSS pixels tall at most, by a whole multiple, so each
- * texel stays a square. A copy: the bake is shared and may be evicted while the intro shows.
+ * texel stays a square — or by a whole divisor, for one baked taller than that: the Giant
+ * Squid with its arms fanned out was over four hundred. A copy: the bake is shared and may be
+ * evicted while the intro shows.
  */
 function portrait(src: HTMLCanvasElement | null, kind: string, height: number) {
   const box = div(`who ${kind}`);
@@ -69,7 +71,7 @@ function portrait(src: HTMLCanvasElement | null, kind: string, height: number) {
   c.width = src.width;
   c.height = src.height;
   c.getContext('2d')!.drawImage(src, 0, 0);
-  const k = Math.max(1, Math.floor(height / src.height));
+  const k = src.height <= height ? Math.floor(height / src.height) : 1 / Math.ceil(src.height / height);
   c.style.width = `${src.width * k}px`;
   c.style.height = `${src.height * k}px`;
   box.append(c);

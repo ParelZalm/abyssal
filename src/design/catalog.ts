@@ -6,7 +6,7 @@
  * draws today. The `source` field is the file to open when you want to change one —
  * that is the whole point of the page, so keep it accurate when things move.
  */
-import { Container, Graphics, Sprite } from 'pixi.js';
+import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
 import { formFor, PLAN_FORMS, R, type Plan } from '../content/form';
 import { FishView, REST, type Pose } from '../render/creature/fishview';
 import { ghostly } from '../render/ghosts';
@@ -1756,8 +1756,8 @@ const BOSS_NOTES: Record<Fight, string> = {
 class MoveCell extends BoardFish {
   readonly rock = new Graphics();
   readonly props = new Container();
-  constructor(g: Genome, plan: Plan) {
-    super(g, plan);
+  constructor(g: Genome, plan: Plan, sp: Species) {
+    super(g, plan, sp);
     this.addChild(this.props, this.rock);
   }
 }
@@ -1793,14 +1793,15 @@ function bossMoves(): DesignItem[] {
   };
   const cell = (id: string, move: string, note: string, facts: Record<string, string | number>,
                 build: (c: MoveCell, g: Genome) => void,
-                step: (c: MoveCell, g: Genome, t: number, dt: number, beat: number) => { alpha: number; tint: number } | void): DesignItem => {
+                step: (c: MoveCell, g: Genome, t: number, dt: number, beat: number) => { alpha: number; tint: number } | void,
+                span = 5): DesignItem => {
     const { sp, g } = genome(id);
     const tank = TANKS.find(k => k.boss === id)!;
     let t = 0;
     return {
       id: `boss-${id}-${move}`, name: `${sp.name} · ${move}`, note,
-      source: 'src/sim/bosses.ts', span: g.size * 5, depth: tank.depth, genome: g, facts,
-      make: () => { const c = new MoveCell(g, sp.plan); build(c, g); return c; },
+      source: 'src/sim/bosses.ts', span: g.size * span, depth: tank.depth, genome: g, facts,
+      make: () => { const c = new MoveCell(g, sp.plan, sp); build(c, g); return c; },
       animate: (view: Container, dt: number, beat: number) => {
         t += dt;
         const look = step(view as MoveCell, g, t, dt, beat);
@@ -1898,16 +1899,20 @@ function bossMoves(): DesignItem[] {
       `Squirts a cloud and is gone, untouchable, then shows as ${GHOSTS} ghosts round the player (${GHOSTS_HURT} under half its health), each square on to it. On the lock the real one resolves, with the tell's ring, and lunges down its line; the rest go.`,
       { fade: `${INK_FADE} s`, tell: `${GHOST_TELL} s`, lock: `${GHOST_LOCK} s`, ghosts: `${GHOSTS}, ${GHOSTS_HURT} hurt` },
       (c, g) => {
-        for (let i = 1; i < GHOSTS; i++) {
+        // every ghost, the real one first, in the one container under the one filter, its area
+        // the whole cell: a filter on each view cut the arms off at the view's own bounds
+        for (let i = 0; i < GHOSTS; i++) {
           const v = new FishView(g, 'longsquid', speciesById('giantsquid'));
           c.props.addChild(v.glow, v);
         }
+        c.props.filters = [PALE];
+        c.props.boundsArea = new Rectangle(-g.size * 6, -g.size * 6, g.size * 12, g.size * 12);
       },
       (c, g, t, dt, beat) => {
         // the player's spot is the middle; the real one is on the right, the decoys left
-        const spots = [[2.2, -0.4], [-2.2, -0.5], [-2, 0.7]].map(([x, y]) => ({ x: x * g.size, y: y * g.size }));
+        const spots = [[3.4, -0.6], [-3.4, -0.7], [-3.1, 1.1]].map(([x, y]) => ({ x: x * g.size, y: y * g.size }));
         const lunge = 0.5, rest = 0.8, cycle = INK_FADE + GHOST_TELL + lunge + rest, k = t % cycle;
-        const decoys = c.props.children.filter((v): v is FishView => v instanceof FishView);
+        const ghosts = c.props.children.filter((v): v is FishView => v instanceof FishView);
         const tell = k - INK_FADE, locked = tell > GHOST_TELL - GHOST_LOCK && tell < GHOST_TELL;
         const e = Math.min(1, Math.max(0, tell / GHOST_TELL)), faint = 0.2 + 0.3 * e * e * (3 - 2 * e);
         const at = (v: FishView, s: { x: number; y: number }, pose: Pose) => {
@@ -1915,29 +1920,27 @@ function bossMoves(): DesignItem[] {
           v.animate(dt, 0.3, beat, 0, pose);
           v.place(s.x, s.y, a, Math.cos(a) >= 0 ? 1 : -1);
         };
-        decoys.forEach((v, i) => {
-          const shown = tell >= 0 && tell < GHOST_TELL;
-          if (shown) at(v, spots[i + 1], { windup: e * 0.6, strike: 0, open: false });
-          v.filters = [PALE];
+        // the ghosts, and the real one among them until it resolves into the squid itself
+        ghosts.forEach((v, i) => {
+          const shown = tell >= 0 && tell < GHOST_TELL && !(i === 0 && locked);
+          if (shown) at(v, spots[i], { windup: e * 0.6, strike: 0, open: false });
           v.show(shown, faint, 0xffffff);
         });
-        const ghost = tell >= 0 && tell < GHOST_TELL && !locked;
-        c.fish.filters = ghost ? [PALE] : [];
         if (k < INK_FADE) {
           // going: where it last came to rest, fading into its cloud
           at(c.fish, { x: -spots[0].x * 0.6, y: -spots[0].y * 0.6 }, REST);
           return { alpha: 1 - k / INK_FADE, tint: 0xffffff };
         }
         if (tell < GHOST_TELL) {
-          at(c.fish, spots[0], locked ? { windup: 1, strike: 0, open: true } : { windup: e * 0.6, strike: 0, open: false });
-          return { alpha: locked ? 1 : faint, tint: 0xffffff };
+          at(c.fish, spots[0], { windup: 1, strike: 0, open: true });
+          return { alpha: locked ? 1 : 0, tint: 0xffffff };
         }
         // the lunge, through the player's spot and past it, and spent where it ends
         const u = Math.min(1, (tell - GHOST_TELL) / lunge) * 1.6;
         const s = spots[0], a = Math.atan2(-s.y, -s.x);
         c.fish.animate(dt, u < 1.6 ? 1.6 : 0.2, beat, 0, u < 1.6 ? { windup: 0, strike: 1, open: true } : REST);
         c.fish.place(s.x - s.x * u, s.y - s.y * u, a, Math.cos(a) >= 0 ? 1 : -1);
-      }),
+      }, 9),
   ];
 }
 
@@ -1958,7 +1961,7 @@ function bossGroup(): DesignGroup {
       id: `boss-${sp.id}`, name: `${sp.name} · ${tank.name}`, note: BOSS_NOTES[fight],
       source: 'src/sim/bosses.ts', span: g.size * 5, depth: tank.depth, genome: g,
       facts: { fight, health: sp.bossHp ?? 0, size: Math.round(g.size), tank: tank.name },
-      make: () => boardFish(g, sp.plan),
+      make: () => boardFish(g, sp.plan, sp),
       animate: (view: Container, dt: number, beat: number) => {
         const fish = (view as BoardFish).fish;
         t += dt;
