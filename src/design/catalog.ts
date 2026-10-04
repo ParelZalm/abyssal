@@ -9,6 +9,7 @@
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { formFor, PLAN_FORMS, R, type Plan } from '../content/form';
 import { FishView, REST, type Pose } from '../render/creature/fishview';
+import { ghostly } from '../render/ghosts';
 import { FAMILY_NAMES, TRANSFORMS, type Family } from '../content/forms';
 import { baseGenome, type Genome } from '../content/genome';
 import { PROP_SIZE, propTexture, type PropKind } from '../render/props';
@@ -1742,6 +1743,9 @@ class DropInCell extends Container {
   }
 }
 
+/** The board's ghosts, washed out as the game's are. */
+const PALE = ghostly();
+
 const BOSS_NOTES: Record<Fight, string> = {
   punch: 'Cocks its club — the tell, the spot locked as the bar flashes — then a punch down that line; the water boils where it lands. Three, and it rests. Fought in its den, whose clefts it jams itself in.',
   charge: 'Turns square on and holds — the tell — then rushes the line; a miss leaves it spent, and rock leaves it dazed.',
@@ -1914,13 +1918,11 @@ function bossMoves(): DesignItem[] {
         decoys.forEach((v, i) => {
           const shown = tell >= 0 && tell < GHOST_TELL;
           if (shown) at(v, spots[i + 1], { windup: e * 0.6, strike: 0, open: false });
-          v.pale = 0.75;
-          v.showArms(false);
-          v.show(shown, faint, 0xa8ccff);
+          v.filters = [PALE];
+          v.show(shown, faint, 0xffffff);
         });
         const ghost = tell >= 0 && tell < GHOST_TELL && !locked;
-        c.fish.pale = ghost ? 0.75 : 0;
-        c.fish.showArms(!ghost);
+        c.fish.filters = ghost ? [PALE] : [];
         if (k < INK_FADE) {
           // going: where it last came to rest, fading into its cloud
           at(c.fish, { x: -spots[0].x * 0.6, y: -spots[0].y * 0.6 }, REST);
@@ -1928,7 +1930,7 @@ function bossMoves(): DesignItem[] {
         }
         if (tell < GHOST_TELL) {
           at(c.fish, spots[0], locked ? { windup: 1, strike: 0, open: true } : { windup: e * 0.6, strike: 0, open: false });
-          return locked ? { alpha: 1, tint: 0xffffff } : { alpha: faint, tint: 0xa8ccff };
+          return { alpha: locked ? 1 : faint, tint: 0xffffff };
         }
         // the lunge, through the player's spot and past it, and spent where it ends
         const u = Math.min(1, (tell - GHOST_TELL) / lunge) * 1.6;

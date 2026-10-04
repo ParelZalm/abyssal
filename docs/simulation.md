@@ -521,9 +521,9 @@ take it. The first tell of each names its answer (`World.tellBy`).
   then squirts a cloud and is gone (`Creature.gone`, half a second going): gone it can be
   neither hit nor hurt (`ghostly`), and its light goes with it. Its ghosts show round the
   player (`World.ghosts`, drawn by `render/ghosts.ts` over the lighting): three, five under
-  half health, their noses three to five tiles off, to the player's sides within 0.95 rad of
+  half health, their noses four to six tiles off, to the player's sides within 0.95 rad of
   level, each in water the body fits with an open line to the player. One is the squid. They
-  are its body washed pale (`FishView.pale`) without its arms, and follow the player for
+  are the squid, arms and all, washed out to a cold pale by a colour filter (`ghostly`), and follow the player for
   1.5 s; for the last 0.45 the lines are locked and the real one resolves — its colours, its
   arms, the tell's ring. Then it lunges from there down its line at sixteen tiles a second,
   as far as the player was and three tiles beyond, and the decoys go. A room fits fewer

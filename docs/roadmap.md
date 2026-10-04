@@ -393,9 +393,13 @@ descent* has the ink.
 
 What it found, and what it leaves:
 
-- **A tint cannot make a red animal pale.** The ghosts are its body washed out through the
-  skin's flash (`FishView.pale`), without its arms: the arms are plain meshes the flash does
-  not reach, and three ghosts' arms all reaching for the player met over it in a knot.
+- **A tint cannot make a red animal pale.** It only multiplies, and a red squid tinted pale is
+  a darker red. The ghosts went out first as the body washed out through the skin's flash,
+  which left them without arms — the arms are plain meshes the flash does not reach — and they
+  read as missing their tentacles. They are washed out by a colour filter over the whole view
+  now, arms and all (`ghostly` in `render/ghosts.ts`), its pale weighted by alpha: added flat,
+  it filled the filter's bounds round the body with a pale block. Their noses are four to six
+  tiles off, so their arms reach for the player without meeting over it.
 - **Ghosts alternated sides by how many had been found**, so a side walled off by a pillar
   was tried for good and a room showed one. By the try now: three whole, three or four hurt.
 - Five ghosts rarely fit the pillar room round a larva near a wall; it shows what fits.

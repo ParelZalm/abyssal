@@ -676,18 +676,6 @@ export class FishView extends Container {
     return this.fall.whole ? t >= 0.2 : t >= 1.3;
   }
 
-  /**
-   * How far the body is washed out toward white, 0 to 1, through the skin's flash: a tint only
-   * multiplies, and a red animal tinted pale is a darker red. The Giant Squid's ghosts
-   * (`render/ghosts.ts`).
-   */
-  pale = 0;
-
-  /** Draw the rigged arms or not: a ghost is the body alone, and grows its arms as it resolves. */
-  showArms(on: boolean) {
-    for (const a of this.arms) a.mesh.visible = on;
-  }
-
   /** Fasten the feeding tentacles on something in the world, followed live; null lets go. */
   grab(target: { x: number; y: number } | null) {
     this.grip = target;
@@ -921,8 +909,7 @@ export class FishView extends Container {
       u.uBeat = beat;
       u.uClock = this.clock;
       u.uFlip = this.flipT;
-      u.uFlash = Math.max(this.pale,
-        this.hurtT > HURT_WHITE ? 0.9 * ((this.hurtT - HURT_WHITE) / (1 - HURT_WHITE)) ** 0.5 : 0);
+      u.uFlash = this.hurtT > HURT_WHITE ? 0.9 * ((this.hurtT - HURT_WHITE) / (1 - HURT_WHITE)) ** 0.5 : 0;
       this.skin.uniforms.update();
     }
     // a strike is thrown straight: the charge drove the wave to its widest, so a gulper's
