@@ -351,8 +351,6 @@ export class Combat {
     if (pull > hold) att.strain += ((pull - hold) / hold) * dt * 1.4;
     else att.strain = Math.max(0, att.strain - dt * 0.5);
     if (att.strain >= 1) {
-      // a boss loses the arm that held on (`Bosses.torn`)
-      if (att.species.guardian) att.tornArms++;
       // torn free: throw the escapee clear so the next frame does not re-grab it
       def.vx += ox * def.genome.speed * 0.6;
       def.vy += oy * def.genome.speed * 0.6;

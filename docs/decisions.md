@@ -224,6 +224,16 @@ Rejected along the way:
 is close long before its centre is, and that gap is exactly when it should be
 frightening. Any new "how near is it" term should do the same.
 
+## A boss does not hold the player
+
+The Giant Squid's fight was a grab: the feeding pair lashed out and held the player, who had
+to swim hard away to tear free, and each escape cost the squid an arm. Played, nobody could
+tell which way to pull — the body faces the way it is drawn, not the way it is held, and the
+turn is a flip — and at full size, arms out, the squid filled the room. It is the ink now: a
+cloud, decoy ghosts round the player, the real one resolving on the lock and lunging down its
+line (`Bosses.ink`), drawn at six tenths. A move the player answers by moving is read off a
+line and a light; one answered by struggling has to say which way, and side-on art cannot.
+
 ## Reference material
 
 The visual language of the creature pass — heavy outline, lit inner rim, segment volume,

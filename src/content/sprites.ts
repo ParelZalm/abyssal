@@ -76,7 +76,7 @@ export interface SpriteArt {
   arm?: { root: number; tip: number; axis: number; at: Pt; spread: number; reach: number };
   /**
    * A squid's feeding pair, where it is not its arms: the giant squid's two tentacles, twice
-   * as long, bare, with a club at the tip — and the two that tear off, one at a time. Drawn
+   * as long, bare, with a club at the tip. Drawn
    * from an image of one tentacle (`SOURCES.tentacle`) and rigged as the arms are, from the
    * same crown (`arm.at`, `arm.spread`): `root`, `tip` and `axis` in its own pixels, and `reach`
    * how long it is drawn in the body's. Without it the feeding pair is the arm's picture.

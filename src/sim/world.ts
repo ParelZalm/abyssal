@@ -7,7 +7,7 @@ import { angleDelta, clamp, dist2, type Rng, TAU } from '../core/util';
 import { Behaviour } from './behaviour';
 import { Combat } from './combat';
 import { Creature, DRAG_FWD, type Hurt } from './creature';
-import type { Bite, Blood, BossCue, Pulse } from './events';
+import type { Bite, Blood, BossCue, Ghost, Pulse } from './events';
 import { primaryOf, shotHit, shotModsOf, shotSpent, tick as tickOrgans, type Organ,
          type ShotMark } from './organs';
 import { Patterns } from './patterns';
@@ -193,6 +193,8 @@ export class World {
    * so each is published as a place, a reach and a kind. Cleared every `update`.
    */
   readonly pulses: Pulse[] = [];
+  /** The Giant Squid's ghosts this frame, for the view to draw. A level, rebuilt every `update`. */
+  readonly ghosts: Ghost[] = [];
   /** Ink clouds still hanging where they were thrown: the player cannot be found inside one. */
   readonly inks: { x: number; y: number; r: number; t: number }[] = [];
   /**
@@ -358,6 +360,7 @@ export class World {
 
   update(dt: number) {
     Creature.clock += dt;
+    this.ghosts.length = 0;
     for (let i = this.inks.length - 1; i >= 0; i--) {
       if ((this.inks[i].t -= dt) <= 0) this.inks.splice(i, 1);
     }
@@ -595,6 +598,7 @@ export class World {
     this.blood.length = 0;
     this.inks.length = 0;
     this.shots.length = 0;
+    this.ghosts.length = 0;
     return this.pickups.splice(0);
   }
 

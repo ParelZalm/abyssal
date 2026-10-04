@@ -40,7 +40,8 @@ import { HATCHED } from '../run/starts';
 import { shotGlow, shotRound, shotTexture } from '../render/shots';
 import { glowTexture } from '../render/textures';
 import { BAR_OVER, ChargeBar } from '../render/tells';
-import { BREACH_LOCK, DRAW_TIME, LOB_WIND, LURK, PUNCH_WIND, SNAGGED, RING_SPOKES, RING_WIND, SPACING, WEDGED } from '../sim/bosses';
+import { BREACH_LOCK, GHOST_LOCK, GHOST_TELL, GHOSTS, GHOSTS_HURT, INK_FADE, LOB_WIND, LURK, PUNCH_WIND, SNAGGED, RING_SPOKES,
+         RING_WIND, SPACING, WEDGED } from '../sim/bosses';
 import { PickupView } from '../render/pickups';
 import type { Pickup } from '../sim/world';
 import {
@@ -49,7 +50,7 @@ import {
   TURRET_WIND, WANE_FADE, WANE_GONE, WANE_SHOWN, woundedGenome,
 } from '../sim/roles';
 import { SPRITES, spritePoint } from '../content/sprites';
-import type { FiredKind, Moveset, Role, ShotKind, Species } from '../content/species';
+import type { Fight, FiredKind, Moveset, Role, ShotKind, Species } from '../content/species';
 import { Texture } from 'pixi.js';
 import { speciesById } from '../content/species';
 import type { IconName } from '../ui/icons';
@@ -1741,10 +1742,10 @@ class DropInCell extends Container {
   }
 }
 
-const BOSS_NOTES: Record<'punch' | 'charge' | 'grab', string> = {
+const BOSS_NOTES: Record<Fight, string> = {
   punch: 'Cocks its club — the tell, the spot locked as the bar flashes — then a punch down that line; the water boils where it lands. Three, and it rests. Fought in its den, whose clefts it jams itself in.',
   charge: 'Turns square on and holds — the tell — then rushes the line; a miss leaves it spent, and rock leaves it dazed.',
-  grab: 'Spreads its arms — the tell — then lashes the feeding pair; torn free, it loses one, and a lash into rock snags.',
+  ink: 'Inks and is gone, then shows as ghosts round the player; on the lock the real one resolves and lunges down its line. A lunge into rock snags.',
 };
 
 /** A boss's set piece on the board: the boss, and what else the cell draws beside it. */
@@ -1788,7 +1789,7 @@ function bossMoves(): DesignItem[] {
   };
   const cell = (id: string, move: string, note: string, facts: Record<string, string | number>,
                 build: (c: MoveCell, g: Genome) => void,
-                step: (c: MoveCell, g: Genome, t: number, dt: number, beat: number) => void): DesignItem => {
+                step: (c: MoveCell, g: Genome, t: number, dt: number, beat: number) => { alpha: number; tint: number } | void): DesignItem => {
     const { sp, g } = genome(id);
     const tank = TANKS.find(k => k.boss === id)!;
     let t = 0;
@@ -1798,8 +1799,8 @@ function bossMoves(): DesignItem[] {
       make: () => { const c = new MoveCell(g, sp.plan); build(c, g); return c; },
       animate: (view: Container, dt: number, beat: number) => {
         t += dt;
-        step(view as MoveCell, g, t, dt, beat);
-        (view as MoveCell).fish.show(true, 1, 0xffffff);
+        const look = step(view as MoveCell, g, t, dt, beat);
+        (view as MoveCell).fish.show(true, look?.alpha ?? 1, look?.tint ?? 0xffffff);
       },
     };
   };
@@ -1881,7 +1882,7 @@ function bossMoves(): DesignItem[] {
         c.fish.place(lurk ? Math.sin(k * 1.6) * g.size * 0.3 : 0, g.size * 1.1 - up * g.size * 2.2, a, 1);
       }),
     cell('giantsquid', 'snagged',
-      'A lash that meets rock before the player — a pillar ducked behind through the tell — wraps the rock and holds the squid to it.',
+      'A lunge that meets rock — a pillar stood behind through the tell — wraps its arms round the rock and holds the squid to it.',
       { held: `${SNAGGED} s` },
       (c, g) => { c.rock.rect(g.size * 1.2, -g.size * 1.2, g.size * 0.6, g.size * 2.4).fill(CELL_ROCK); },
       (c, g, t, dt, beat) => {
@@ -1889,17 +1890,51 @@ function bossMoves(): DesignItem[] {
         c.fish.animate(dt, 1.2, beat, 0, REST);
         c.fish.place(-g.size * 1.2, 0, Math.sin(t * 23) * 0.05, 1);
       }),
-    cell('giantsquid', 'draw',
-      'Arms spread, drawing the water in along the open line to the player — rock between them cuts it — then the lash.',
-      { draw: `${DRAW_TIME} s`, pull: '0.6 of a cruise at the arms' },
-      () => {},
+    cell('giantsquid', 'ink',
+      `Squirts a cloud and is gone, untouchable, then shows as ${GHOSTS} ghosts round the player (${GHOSTS_HURT} under half its health), each square on to it. On the lock the real one resolves, with the tell's ring, and lunges down its line; the rest go.`,
+      { fade: `${INK_FADE} s`, tell: `${GHOST_TELL} s`, lock: `${GHOST_LOCK} s`, ghosts: `${GHOSTS}, ${GHOSTS_HURT} hurt` },
+      (c, g) => {
+        for (let i = 1; i < GHOSTS; i++) {
+          const v = new FishView(g, 'longsquid', speciesById('giantsquid'));
+          c.props.addChild(v.glow, v);
+        }
+      },
       (c, g, t, dt, beat) => {
-        const cycle = DRAW_TIME + 0.5 + 1.2, k = t % cycle;
-        const drawing = k < DRAW_TIME, lash = !drawing && k < DRAW_TIME + 0.5;
-        c.fish.grab(lash ? { x: g.size * 1.6, y: 0 } : null);
-        c.fish.animate(dt, drawing ? 0.1 : 0.3, beat, 0,
-          drawing ? { windup: Math.min(1, k / 0.5), strike: 0, open: true } : REST);
-        c.fish.place(-g.size * 0.6, 0, 0, 1);
+        // the player's spot is the middle; the real one is on the right, the decoys left
+        const spots = [[2.2, -0.4], [-2.2, -0.5], [-2, 0.7]].map(([x, y]) => ({ x: x * g.size, y: y * g.size }));
+        const lunge = 0.5, rest = 0.8, cycle = INK_FADE + GHOST_TELL + lunge + rest, k = t % cycle;
+        const decoys = c.props.children.filter((v): v is FishView => v instanceof FishView);
+        const tell = k - INK_FADE, locked = tell > GHOST_TELL - GHOST_LOCK && tell < GHOST_TELL;
+        const e = Math.min(1, Math.max(0, tell / GHOST_TELL)), faint = 0.2 + 0.3 * e * e * (3 - 2 * e);
+        const at = (v: FishView, s: { x: number; y: number }, pose: Pose) => {
+          const a = Math.atan2(-s.y, -s.x);
+          v.animate(dt, 0.3, beat, 0, pose);
+          v.place(s.x, s.y, a, Math.cos(a) >= 0 ? 1 : -1);
+        };
+        decoys.forEach((v, i) => {
+          const shown = tell >= 0 && tell < GHOST_TELL;
+          if (shown) at(v, spots[i + 1], { windup: e * 0.6, strike: 0, open: false });
+          v.pale = 0.75;
+          v.showArms(false);
+          v.show(shown, faint, 0xa8ccff);
+        });
+        const ghost = tell >= 0 && tell < GHOST_TELL && !locked;
+        c.fish.pale = ghost ? 0.75 : 0;
+        c.fish.showArms(!ghost);
+        if (k < INK_FADE) {
+          // going: where it last came to rest, fading into its cloud
+          at(c.fish, { x: -spots[0].x * 0.6, y: -spots[0].y * 0.6 }, REST);
+          return { alpha: 1 - k / INK_FADE, tint: 0xffffff };
+        }
+        if (tell < GHOST_TELL) {
+          at(c.fish, spots[0], locked ? { windup: 1, strike: 0, open: true } : { windup: e * 0.6, strike: 0, open: false });
+          return locked ? { alpha: 1, tint: 0xffffff } : { alpha: faint, tint: 0xa8ccff };
+        }
+        // the lunge, through the player's spot and past it, and spent where it ends
+        const u = Math.min(1, (tell - GHOST_TELL) / lunge) * 1.6;
+        const s = spots[0], a = Math.atan2(-s.y, -s.x);
+        c.fish.animate(dt, u < 1.6 ? 1.6 : 0.2, beat, 0, u < 1.6 ? { windup: 0, strike: 1, open: true } : REST);
+        c.fish.place(s.x - s.x * u, s.y - s.y * u, a, Math.cos(a) >= 0 ? 1 : -1);
       }),
   ];
 }
@@ -1914,7 +1949,7 @@ function bossGroup(): DesignGroup {
     const i = SPECIES.indexOf(sp);
     const g = genomeFor(sp, new Rng(1000 + i * 77));
     const fight = sp.boss!;
-    const tell = fight === 'punch' ? PUNCH_WIND : fight === 'charge' ? 1.0 : 0.9;
+    const tell = fight === 'punch' ? PUNCH_WIND : fight === 'charge' ? 1.0 : GHOST_TELL;
     const strike = fight === 'punch' ? 0.16 : fight === 'charge' ? 0.6 : 0.5;
     let t = 0;
     return {
@@ -1934,12 +1969,10 @@ function bossGroup(): DesignGroup {
         } else if (t < tell + strike) {
           pose = { windup: 0, strike: 1 - (t - tell) / strike, open: true };
           thrust = 1.6;
-          if (fight !== 'grab') x = g.size * 1.2 * ((t - tell) / strike);
-        } else if (fight !== 'grab') {
+          x = g.size * 1.2 * ((t - tell) / strike);
+        } else {
           x = g.size * 1.2 * Math.max(0, 1 - (t - tell - strike) / 1.4);
         }
-        // the lash: the feeding pair thrown at a point ahead through the strike, and let go
-        fish.grab(fight === 'grab' && t >= tell && t < tell + strike ? { x: g.size * 2.2, y: 0 } : null);
         fish.animate(dt, thrust, beat, 0, pose);
         fish.place(x - g.size * 0.6, 0, 0, 1);
         fish.show(true, 1, 0xffffff);

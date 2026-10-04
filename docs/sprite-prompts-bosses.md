@@ -174,8 +174,8 @@ jammed in the reef's arch room until the shark went by water it fits (`Bosses.fl
 As the vampire squid, its arms are not in its picture: the body is one sheet and each arm is
 drawn by the rig (`armRig`, `FishView.poseArms`). But a giant squid has two kinds: eight
 arms, and two feeding tentacles far longer than them with a club at the tip. The tentacles
-are its whole silhouette and its whole fight — they lash out and hold the player, and they are
-what is **torn off, one at a time**, when the player pulls free (`Bosses.torn`, `FishView.tear`).
+are its whole silhouette. (When this was written they were its whole fight too — they lashed
+out, held the player, and were torn off one at a time; the fight is its ink now.)
 So there are **three Stage B sheets**: the body, one arm (drawn eight times), and one tentacle
 (drawn twice).
 
@@ -186,7 +186,7 @@ out of it too; the feeding pair now takes a picture of its own where there is on
 **Facing:** as every squid plan in the game, the arms point forward (RIGHT) and the mantle and
 fins trail behind (left).
 
-**The strike** is shown through the grab's tell and the siphon draw, when it draws the water
+**The strike** was shown through the grab's tell and the siphon draw, when it drew the water
 in: the collar of the mantle gapes open behind the head and the funnel flares. The rig's own
 spread of the arms is the rest of the tell.
 

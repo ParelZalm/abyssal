@@ -258,9 +258,9 @@ export function roleOf(c: Creature): Role | undefined {
   return c.wounded && c.species.moves === 'jet' ? 'charger' : c.species.role;
 }
 
-/** Whether a body has faded too far out of the room to be hit or to hurt: a waning moon jelly. */
+/** Whether a body has faded too far out of the room to be hit or to hurt: a waning moon jelly, the Giant Squid in its ink. */
 export function ghostly(c: Creature) {
-  return c.wane > GHOST;
+  return c.wane > GHOST || c.gone > GHOST;
 }
 
 /** Whether an eel is in the rock, held where its brain puts it rather than swimming. */

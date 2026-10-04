@@ -95,12 +95,6 @@ export class Creature {
   aimA = 0;
   /** How far down its locked line a boss's punch is thrown, world units: to where the player was. */
   aimD = 0;
-  /**
-   * A boss squid's arms torn free by what it held, and how many of those its brain has
-   * answered (`Bosses.torn`). Counted by `Combat.grasp`, which is where a catch breaks loose.
-   */
-  tornArms = 0;
-  tornSeen = 0;
   anchor: { x: number; y: number } | null = null;
   volley = 0;
   /**
@@ -137,6 +131,14 @@ export class Creature {
   wane = 0;
   waneT = Math.random() * 2;
   /**
+   * How far the Giant Squid is gone into its ink, 0 there and 1 gone (`Bosses.vanish`): like a
+   * waned jelly past `GHOST` it can neither be hit nor hurt, but its light goes with it, or the
+   * light would say which of its ghosts it is. And the ghosts it shows, the first of them the
+   * squid, each at its spot with the heading it lunges along.
+   */
+  gone = 0;
+  ghosts: { x: number; y: number; a: number }[] = [];
+  /**
    * A boss's fight beyond its main move (`sim/bosses.ts`). `move` is the set piece in hand —
    * '' for the main one — and `rounds` how many of the main one since the last. `stuck` is
    * seconds held fast by the room, at `pinX`, `pinY`: a mantis shrimp wedged in a cleft, a
@@ -146,7 +148,7 @@ export class Creature {
    * how long the player has kept out of its reach; and `lull` seconds since it last began a
    * move of any kind.
    */
-  move: '' | 'lob' | 'breach' | 'draw' | 'butt' | 'home' | 'spit' = '';
+  move: '' | 'lob' | 'breach' | 'ink' | 'butt' | 'home' | 'spit' = '';
   rounds = 0;
   stuck = 0;
   pinX = 0;

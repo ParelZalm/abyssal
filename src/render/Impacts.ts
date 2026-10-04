@@ -24,7 +24,6 @@ const CUES: Record<BossCue, string> = {
   spit: 'Swelling to spit a ring — slip between its spokes, or keep rock between you',
   dazed: 'It rammed the rock and is dazed — strike now; lure its rush into rock',
   breach: 'Lurking under you — get out of the line of its bubbles',
-  draw: 'Drawing you in — swim hard away, or put rock between you',
   snagged: 'Its arms caught the rock — it is snagged; strike it',
 };
 
@@ -190,8 +189,8 @@ export class Impacts {
       const who = speciesById(tell);
       this.ui.toast(who.boss === 'punch'
         ? `The ${who.name} is cocking its club — when the bar flashes, get off the spot; after three it tires`
-        : who.boss === 'grab'
-          ? `The ${who.name} is spreading its arms — keep out of reach, or swim hard to tear free`
+        : who.boss === 'ink'
+          ? `The ${who.name} is in its ink — the ghost that lights up is real: get off its line, and lure it into rock`
           : who.pattern === 'click'
             ? `The ${who.name} is clicking — get out from in front of it`
             : who.pattern === 'suck'

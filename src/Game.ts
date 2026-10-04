@@ -17,6 +17,7 @@ import { Ocean } from './render/ocean';
 import { followZoom, FramePass, PIXEL } from './render/pixel';
 import { PickupView, SPRITES } from './render/pickups';
 import { TellView } from './render/tells';
+import { GhostView } from './render/ghosts';
 import { PotView } from './render/pots';
 import { PromptView } from './render/prompt';
 import { ShotView } from './render/shots';
@@ -105,6 +106,7 @@ export class Game {
   tank!: TankMap;
   private pickups!: PickupView;
   private tells!: TellView;
+  private ghosts!: GhostView;
   private pots!: PotView;
   private shots!: ShotView;
   private pedestals!: PedestalsView;
@@ -253,6 +255,7 @@ export class Game {
     this.tank?.destroy();
     this.pickups?.destroy();
     this.tells?.destroy();
+    this.ghosts?.destroy();
     this.pots?.destroy();
     this.shots?.destroy();
     this.pedestals?.destroy();
@@ -265,6 +268,7 @@ export class Game {
     this.ocean = new Ocean(this.rng);
     this.pickups = new PickupView();
     this.tells = new TellView();
+    this.ghosts = new GhostView();
     this.pots = new PotView();
     this.shots = new ShotView();
     this.pedestals = new PedestalsView();
@@ -297,7 +301,7 @@ export class Game {
     // one draw: they are the light, and the dark must not fall on them. The E prompt goes
     // last, over them all, since the dark must not swallow it either
     this.camera.over.addChild(layers.glow, this.drain.glow, this.pedestals.glow, this.pickups.glow,
-      this.shots.glow, world.glow, this.fx.glow, this.tells.root, this.prompt.root);
+      this.shots.glow, world.glow, this.fx.glow, this.ghosts.root, this.tells.root, this.prompt.root);
     this.app.stage.addChild(this.water.layer, this.camera.root, this.lighting.sprite,
       this.camera.over, this.dropIn.root);
 
@@ -573,6 +577,7 @@ export class Game {
     this.tank.draw(view.t, this.phase !== 'dropin' && this.phase !== 'title');
     this.pickups.update(this.world.pickups, view.zoom, view.t);
     this.tells.update(this.world.creatures, view.zoom, view.t);
+    this.ghosts.update(this.world.ghosts, this.world.creatures, dt, view.t);
     this.pots.update(this.world.pots, view.zoom);
     this.shots.update(this.world.shots, view.zoom);
     this.pedestals.update(this.tank.pedestals, this.tank.room.tile * HOVER, view.zoom, view.t);

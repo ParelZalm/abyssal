@@ -1,8 +1,9 @@
-import { MAX_PITCH, PLAN_ART } from '../content/form';
+import { MAX_PITCH } from '../content/form';
+import type { Fight } from '../content/species';
 import { angleDelta, clamp, dist2, TAU } from '../core/util';
-import { Creature, DRAG_FWD } from './creature';
+import { Creature } from './creature';
 import { Flow } from './flow';
-import { depthOf, noseOf, noseReach, tailReach } from './hull';
+import { depthOf, noseOf, noseReach, tailReach, wallR } from './hull';
 import { clearHeading } from './roles';
 import type { Terrain } from './terrain';
 import type { World } from './world';
@@ -115,15 +116,13 @@ const LOB_CD = 2.5;
 /**
  * The Great White's charge. It circles `CIRCLE` tiles off, then turns square on and holds —
  * the tell, `CHARGE_TELL` — and rushes the line it held at `RUSH` times its speed for up to
- * `RUSH_TIME`, which it cannot steer and which rock ends. A miss leaves it spent for
- * `SPENT`. Under half its health it charges twice, the second on a shorter tell.
+ * `RUSH_TIME`, which it cannot steer and which rock ends. A miss leaves it spent. Under half its health it charges twice, the second on a shorter tell.
  */
 const CIRCLE = 6;
 const CHARGE_TELL = 1.0;
 const SECOND_TELL = 0.55;
 const RUSH = 2.4;
 const RUSH_TIME = 1.0;
-const SPENT = 2.0;
 const CHARGE_CD: [number, number] = [1.6, 2.6];
 /**
  * The reef turns on it. A rush that ends on rock — a coral head, the arch, the wall — leaves
@@ -152,38 +151,37 @@ const BREACH_TIME = 1.4;
 const BUBBLES = 30;
 
 /**
- * The Giant Squid's grab. It drifts in to `HOVER_AT` tiles, spreads its arms — the tell,
- * `GRAB_TELL` — and lashes the feeding pair for `LASH`: anything in reach is held
- * (`Combat.grasp` reels it in, bites it, and lets it pull). Torn free, it loses an arm:
- * the reach falls by `ARM_LOSS` of itself, it takes `TORN` of its health, jets away and is
- * spent a moment. Two arms, and then it grabs with what is left.
+ * The Giant Squid's ink. It keeps `HOVER_AT` tiles off the player, crossing its line, and
+ * when it is ready squirts a cloud and is gone (`Creature.gone`): `INK_FADE` going, and gone
+ * it can be neither hit nor hurt. Then its ghosts show round the player, `GHOST_AT` tiles off,
+ * each square on to it — `GHOSTS` of them, `GHOSTS_HURT` under half its health — and one is
+ * the squid, its nose that far off. Through `GHOST_TELL` they all follow the player; for the last `GHOST_LOCK` the
+ * lines are fixed and the real one resolves into its own colours with the tell's ring, which
+ * is the moment to move. It lunges from there down its line at `LUNGE` tiles a second, for as
+ * far as the player was and `PAST` beyond, and the decoys go.
+ *
+ * The ghosts stand to the player's sides, within `SIDE` of level: a side-on body is drawn at
+ * most 55° off level (`MAX_PITCH`, 0.96), and a lunge straight down from a ghost drawn slanted was a
+ * line nobody could read off it. The grab it had before — arms round the player, a struggle,
+ * an arm torn off at each escape — could not be read for which way to pull, and is gone.
  */
-const HOVER_AT = 3;
-const GRAB_TELL = 0.9;
-const LASH = 0.5;
-const ARM_LOSS = 0.3;
-const TORN = 0.1;
-const GRAB_CD: [number, number] = [1.4, 2.2];
+const HOVER_AT = 5;
+const INK_CD: [number, number] = [1.4, 2.4];
+export const INK_FADE = 0.5;
+export const GHOST_TELL = 1.5;
+export const GHOST_LOCK = 0.45;
+const GHOST_AT: [number, number] = [3, 5];
+export const GHOSTS = 3;
+export const GHOSTS_HURT = 5;
+const SIDE = 0.95;
+const LUNGE = 16;
+const PAST = 3;
 /**
- * The deep turns on it. A lash that meets rock before the player — a pillar ducked behind
- * through the tell — wraps the rock instead: `SNAGGED` seconds held fast to it by the
- * feeding pair, and open to blows.
+ * The deep turns on it. A lunge that meets rock — a pillar stood behind through the tell —
+ * wraps its arms round the rock: `SNAGGED` seconds held fast to it, and open to blows. A miss
+ * in open water leaves it `MISSED` spent.
  */
 export const SNAGGED = 3;
-/**
- * The siphon draw, its own attack: after every `DRAW_EVERY` grabs, or when the player has
- * kept out of reach for `AWAY`, from up to `DRAW_RANGE` tiles, it spreads its arms and draws
- * the water in for `DRAW_TIME`, and then lashes at what came. The pull holds a drift of
- * `VORTEX` of the player's cruise at the squid, falling to half that at the range, so a
- * larva swimming straight out still gets away and one that stops is taken in; and it runs
- * only down open water, so rock between them cuts it off — and a lash after it may snag.
- */
-const DRAW_EVERY = 2;
-const DRAW_RANGE = 8;
-export const DRAW_TIME = 1.8;
-const VORTEX = 0.6;
-/** Streaks of water drawn in a second, the tell that it is happening. */
-const STREAKS = 40;
 
 /** Taken blows while spent, as the column's guardians took them (`Combat.damage`). */
 const SPENT_PULSE = 'exposed';
@@ -200,7 +198,7 @@ export class Bosses {
 
   constructor(private readonly world: World) {}
 
-  step(c: Creature, dt: number, p: Creature, fight: 'punch' | 'charge' | 'grab') {
+  step(c: Creature, dt: number, p: Creature, fight: Fight) {
     const t = this.world.terrain;
     if (!t) return;
     if (this.flowOf !== t) { this.flowOf = t; this.flow = this.flowFor(c, t, fight); }
@@ -208,8 +206,6 @@ export class Bosses {
     // held fast by the room: nothing else it does matters until it is free
     if (c.stuck > 0) { this.held(c, dt); return; }
     if (c.fade < 1 || !p.alive) { c.drive(dt, c.angle, 0); return; }
-    // the arms that tore free since last frame (`Combat.grasp` counts them)
-    while (c.tornSeen < c.tornArms) { c.tornSeen++; this.torn(c); }
     if (c.exposed > 0) {
       // spent: slow, turning lazily, open to a blow from any side
       c.exposed = Math.max(0, c.exposed - dt);
@@ -222,13 +218,13 @@ export class Bosses {
       if ((c.attackT -= dt) <= 0) {
         c.attack = 'none';
         c.move = '';
-        c.roleCd = this.cd(fight === 'charge' ? CHARGE_CD : GRAB_CD);
+        c.roleCd = this.cd(fight === 'charge' ? CHARGE_CD : INK_CD);
       }
       return;
     }
     if (fight === 'punch') this.punch(c, dt, p, t);
     else if (fight === 'charge') this.charge(c, dt, p, t);
-    else this.grab(c, dt, p, t);
+    else this.ink(c, dt, p, t);
   }
 
   // ------------------------------------------------------------------ punch
@@ -703,91 +699,133 @@ export class Bosses {
     }
   }
 
-  // ------------------------------------------------------------------ grab
+  // ------------------------------------------------------------------ ink
 
-  private grab(c: Creature, dt: number, p: Creature, t: Terrain) {
+  private ink(c: Creature, dt: number, p: Creature, t: Terrain) {
     const aim = Math.atan2(p.y - c.y, p.x - c.x);
-    // holding: the arms have it, and `Combat.grasp` reels, bites and feels it pull
-    if (c.holding) { c.attack = 'none'; c.move = ''; return; }
-    if (c.move === 'draw') { this.draw(c, dt, p, t); return; }
-    if (c.attack === 'windup') {
-      c.drive(dt, aim, 0.2, 1);
-      if ((c.attackT -= dt) <= 0) this.begin(c, 'strike', LASH);
+    if (c.move === 'ink' && c.attack === 'windup') { this.vanish(c, dt, p, t); return; }
+    if (c.move === 'ink' && c.attack === 'strike') { this.lunge(c, dt, t); return; }
+    c.gone = Math.max(0, c.gone - dt / INK_FADE);
+    if (c.roleCd <= 0) {
+      c.move = 'ink';
+      c.ghosts.length = 0;
+      c.volley = 0;
+      this.begin(c, 'windup', INK_FADE + GHOST_TELL);
+      this.world.pulses.push({ x: c.x, y: c.y, r: c.radius * 1.6, kind: 'ink' });
+      // named as it goes, so the first time is read before the ghosts and not over the lunge
+      this.world.tellBy = c.species.id;
       return;
     }
-    if (c.attack === 'strike') {
-      c.drive(dt, aim, 0.4, 1);
-      const reach = c.radius * 1.1 + p.radius +
-        c.genome.size * PLAN_ART[c.species.plan].grasp * (1 - ARM_LOSS * c.tornArms);
-      const ahead = Math.abs(angleDelta(c.angle, aim)) < 1.2;
-      // rock in the way within reach: the arms find it before they find the player
-      const rock = ahead ? rockOn(t, c.mouthX, c.mouthY, p.x, p.y, reach) : null;
-      if (rock) { this.snag(c, rock); return; }
-      if (ahead && !p.heldBy && dist2(c.mouthX, c.mouthY, p.x, p.y) < reach * reach) {
-        c.holding = p; p.heldBy = c; c.strain = 0; c.holdT = 0;
-        c.view.grab(p);
-        c.attack = 'none';
-        return;
-      }
-      if ((c.attackT -= dt) <= 0) { c.attack = 'none'; c.roleCd = this.cd(GRAB_CD); }
-      return;
-    }
+    // keeping off: in toward the player from further out, across its line once there
     const d = Math.sqrt(dist2(c.x, c.y, p.x, p.y)) / t.tile;
     const sees = t.clearLine(c.x, c.y, p.x, p.y);
-    const near = sees && d < HOVER_AT * 1.6;
-    c.unseen = near ? 0 : c.unseen + dt;
-    if (c.roleCd <= 0 && sees && d < DRAW_RANGE && (c.rounds >= DRAW_EVERY || c.unseen > AWAY)) {
-      c.rounds = 0;
-      c.unseen = 0;
-      c.move = 'draw';
-      this.begin(c, 'windup', DRAW_TIME);
-      this.tell(c, false);
-      this.world.cue = 'draw';
-      return;
-    }
-    if (c.roleCd <= 0 && near) {
-      c.rounds++;
-      this.begin(c, 'windup', GRAB_TELL);
-      this.tell(c);
-      return;
-    }
-    const a = d > HOVER_AT || !sees ? this.way(c, p, t, sees) : aim + Math.PI * 0.5;
-    c.drive(dt, clearHeading(t, c, a), d > HOVER_AT ? 0.7 : 0.25);
+    const a = d > HOVER_AT * 1.3 || !sees ? this.way(c, p, t, sees)
+      : d < HOVER_AT * 0.7 ? aim + Math.PI : aim + Math.PI * 0.5 * (Math.sin(c.wander * 0.3) >= 0 ? 1 : -1);
+    c.drive(dt, clearHeading(t, c, a), 0.45);
   }
 
   /**
-   * The draw: still, arms spread, facing the player, and the water down the open line between
-   * them pouring into its arms. Then the lash, at whatever the water brought.
+   * Gone into its ink and back as its ghosts: fading out where it was, then, once gone, put
+   * at one of the ghosts, which follow the player until the lock and show until the lunge.
    */
-  private draw(c: Creature, dt: number, p: Creature, t: Terrain) {
-    const w = this.world;
-    const aim = Math.atan2(p.y - c.y, p.x - c.x);
-    c.vx *= Math.exp(-3 * dt);
-    c.vy *= Math.exp(-3 * dt);
-    c.drive(dt, aim, 0.05, 1);
-    const mx = c.mouthX, my = c.mouthY;
-    const dx = mx - p.x, dy = my - p.y;
-    const d = Math.hypot(dx, dy) || 1;
-    const range = DRAW_RANGE * t.tile;
-    if (p.alive && !p.heldBy && d < range && t.clearLine(mx, my, p.x, p.y)) {
-      // along a body the forward drag is DRAG_FWD, so this holds a drift of VORTEX × cruise
-      const a = DRAG_FWD * Math.max(1, p.genome.speed) * VORTEX * (1 - 0.5 * d / range);
-      p.vx += (dx / d) * a * dt;
-      p.vy += (dy / d) * a * dt;
-    }
-    // streaks down the line to it, each fast enough to reach the arms as it fades
-    for (let n = Math.floor(STREAKS * dt + Math.random()); n > 0; n--) {
-      const k = 0.2 + Math.random() * 0.8, side = (Math.random() - 0.5) * t.tile * 2 * k;
-      const x = mx - dx * k - (dy / d) * side, y = my - dy * k + (dx / d) * side;
-      if (t.solidAt(x, y)) continue;
-      w.pulses.push({ x, y, r: c.genome.size * 0.04, kind: 'draw', vx: (mx - x) * 2.4, vy: (my - y) * 2.4 });
+  private vanish(c: Creature, dt: number, p: Creature, t: Terrain) {
+    c.vx *= Math.exp(-4 * dt);
+    c.vy *= Math.exp(-4 * dt);
+    c.thrust = 0.2;
+    const done = c.attackLen - c.attackT;
+    if (done < INK_FADE) {
+      c.gone = Math.min(1, done / INK_FADE);
+    } else {
+      c.gone = 1;
+      if (!c.ghosts.length) this.haunt(c, p, t);
+      const locked = c.attackT <= GHOST_LOCK;
+      // the real one resolves on the lock: its ring, once
+      if (locked && !c.volley) {
+        c.volley = 1;
+        const real = c.ghosts[0];
+        this.world.pulses.push({ x: real.x, y: real.y, r: c.radius * 1.4, kind: 'tell' });
+      }
+      const w = this.world, k = Math.min(1, (done - INK_FADE) / GHOST_TELL);
+      c.ghosts.forEach((g, i) => {
+        if (!locked) g.a = Math.atan2(p.y - g.y, p.x - g.x);
+        w.ghosts.push({ x: g.x, y: g.y, a: g.a, face: Math.cos(g.a) >= 0 ? 1 : -1, real: i === 0, k, locked });
+      });
+      // the squid is the first of them, there already and facing as it does
+      const real = c.ghosts[0];
+      c.x = real.x; c.y = real.y; c.vx = c.vy = 0;
+      c.angle = real.a;
+      c.face = Math.cos(real.a) >= 0 ? 1 : -1;
     }
     if ((c.attackT -= dt) > 0) return;
-    c.move = '';
-    this.begin(c, 'strike', LASH);
+    // out of the ink: there, and down the line it locked
+    const real = c.ghosts[0];
+    c.gone = 0;
+    c.aimA = real ? real.a : c.angle;
+    c.aimD = (real ? Math.sqrt(dist2(real.x, real.y, p.x, p.y)) : 0) + PAST * t.tile;
+    c.landed = false;
+    this.begin(c, 'strike', c.aimD / (LUNGE * t.tile));
+    this.world.pulses.push({ x: c.x, y: c.y, r: c.radius * 1.2, kind: 'ink' });
   }
 
-  /** The lash found rock: the arms wrapped round it, and the squid held fast to it. */
+  /**
+   * Where the ghosts show: round the player with their noses `GHOST_AT` tiles off, to either
+   * side of it within `SIDE` of level, in turn left and right, each in water the body fits with
+   * an open line to the player and two tiles from the next. The first is the squid. Fewer when
+   * the room has not the water for them, and where there is none at all the squid comes out
+   * where it went in. Measured from the middle, a ghost's head was two tiles off the larva, and
+   * its arms over it.
+   */
+  private haunt(c: Creature, p: Creature, t: Terrain) {
+    const n = c.hp < c.hpMax * 0.5 ? GHOSTS_HURT : GHOSTS;
+    const side = Math.random() < 0.5 ? 0 : Math.PI;
+    const nose = noseReach(c), body = nose + tailReach(c), r = wallR(c);
+    for (let i = 0; i < n * 16 && c.ghosts.length < n; i++) {
+      // alternate sides by the try, not by what was found, or a side walled off by a pillar is
+      // tried for good; and spread up and down each one
+      const a = side + (i % 2) * Math.PI + (Math.random() * 2 - 1) * SIDE;
+      const d = (GHOST_AT[0] + Math.random() * (GHOST_AT[1] - GHOST_AT[0])) * t.tile + nose;
+      const x = p.x + Math.cos(a) * d, y = p.y + Math.sin(a) * d;
+      if (!t.clearAt(x, y, r) || !t.clearLine(x, y, p.x, p.y)) continue;
+      // the body lies back along the line from the ghost to the player
+      const bx = x + Math.cos(a) * body * 0.5, by = y + Math.sin(a) * body * 0.5;
+      if (!t.clearAt(bx, by, r) || !t.clearLine(x, y, bx, by)) continue;
+      if (c.ghosts.some(g => dist2(g.x, g.y, x, y) < (t.tile * 2) ** 2)) continue;
+      c.ghosts.push({ x, y, a: a + Math.PI });
+    }
+    if (!c.ghosts.length) c.ghosts.push({ x: c.x, y: c.y, a: Math.atan2(p.y - c.y, p.x - c.x) });
+    // which of them is the squid is not the order they were found in
+    const k = Math.floor(Math.random() * c.ghosts.length);
+    [c.ghosts[0], c.ghosts[k]] = [c.ghosts[k], c.ghosts[0]];
+  }
+
+  /**
+   * The lunge: committed, the heading the one it locked, as far as `aimD`. Rock ahead wraps its
+   * arms round it; the end of the line in open water leaves it spent. A lunge that found the
+   * player ends in a recovery (`Combat.touch`).
+   */
+  private lunge(c: Creature, dt: number, t: Terrain) {
+    const v = LUNGE * t.tile;
+    c.angle = c.aimA;
+    c.face = Math.cos(c.aimA) >= 0 ? 1 : -1;
+    c.vx = Math.cos(c.aimA) * v;
+    c.vy = Math.sin(c.aimA) * v;
+    c.thrust = 1.6;
+    const wall = this.rockAhead(c, c.aimA, t);
+    if ((c.attackT -= dt) > 0 && !wall) return;
+    c.move = '';
+    c.ghosts.length = 0;
+    c.roleCd = this.cd(INK_CD);
+    if (wall) {
+      const nose = noseOf(c);
+      this.snag(c, { x: nose.x, y: nose.y });
+    } else {
+      c.vx *= 0.3;
+      c.vy *= 0.3;
+      this.spent(c, MISSED);
+    }
+  }
+
+  /** The lunge found rock: the arms wrapped round it, and the squid held fast to it. */
   private snag(c: Creature, at: { x: number; y: number }) {
     const w = this.world;
     c.aimA = Math.atan2(at.y - c.y, at.x - c.x);
@@ -798,24 +836,6 @@ export class Bosses {
     w.cue = 'snagged';
   }
 
-  /**
-   * The catch tore free (`Combat.grasp` counts it): an arm is gone with it. The squid takes
-   * the wound, jets away in a cloud of its ink, and is spent a moment.
-   */
-  torn(c: Creature) {
-    const w = this.world;
-    c.hp = Math.max(1, c.hp - c.hpMax * TORN);
-    c.view.tear();
-    c.view.hurt();
-    const away = Math.atan2(c.y - w.player.y, c.x - w.player.x);
-    c.vx += Math.cos(away) * c.genome.speed * 2;
-    c.vy += Math.sin(away) * c.genome.speed * 2;
-    w.pulses.push({ x: c.x, y: c.y, r: c.radius * 2, kind: 'ink' });
-    w.bites.push({ x: c.mouthX, y: c.mouthY, amount: c.hpMax * TORN, fatal: false, onPlayer: false,
-      byPlayer: true, size: c.genome.size });
-    this.spent(c, SPENT);
-    c.roleCd = this.cd(GRAB_CD);
-  }
 
   // ------------------------------------------------------------------ shared
 
@@ -888,7 +908,7 @@ export class Bosses {
    * the mouths of clefts and the gaps between pillars on purpose, which water that wide calls
    * shut, so theirs is a fish's.
    */
-  private flowFor(c: Creature, t: Terrain, fight: 'punch' | 'charge' | 'grab') {
+  private flowFor(c: Creature, t: Terrain, fight: Fight) {
     if (fight !== 'charge') return new Flow(t);
     const d = depthOf(c), reach = Math.max(noseReach(c), tailReach(c));
     const wide = reach * Math.cos(MAX_PITCH) + d * Math.sin(MAX_PITCH);
@@ -942,18 +962,4 @@ export function lockOf(c: Creature): { fill: number; locked: boolean } | null {
   if (!lock) return null;
   const done = c.attackLen - c.attackT;
   return { fill: Math.min(1, done / Math.max(0.01, c.attackLen - lock)), locked: c.attackT <= lock };
-}
-
-/**
- * The first rock on the line from (`x0`, `y0`) toward (`x1`, `y1`) within `reach`, a step
- * short of it so what holds it is in the water; null when the line is clear that far.
- */
-function rockOn(t: Terrain, x0: number, y0: number, x1: number, y1: number, reach: number) {
-  const d = Math.hypot(x1 - x0, y1 - y0) || 1;
-  const ux = (x1 - x0) / d, uy = (y1 - y0) / d;
-  const end = Math.min(d, reach), step = t.cell * 0.5;
-  for (let s = step; s <= end; s += step) {
-    if (t.solidAt(x0 + ux * s, y0 + uy * s)) return { x: x0 + ux * (s - step), y: y0 + uy * (s - step) };
-  }
-  return null;
 }

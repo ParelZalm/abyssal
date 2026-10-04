@@ -128,7 +128,7 @@ export class Scene {
       // then snaps across the screen — worst along a seal, where band-holding bodies bob
       // across the frame edge all the time
       if (seen && !c.view.visible) c.syncView();
-      c.view.show(seen, alpha * c.emergence * (1 - c.wane * WANED), tint);
+      c.view.show(seen, alpha * c.emergence * (1 - c.wane * WANED) * (1 - c.gone), tint);
     }
 
     const level = dread.level(danger);
@@ -156,7 +156,7 @@ export class Scene {
       // an eel in the rock lights the water at its head, not the rock round its middle
       const at = c.burrow ? noseOf(c) : c;
       lit.add({ x: at.x, y: at.y, r: c.radius * (PRESENCE.r + TELL.r * k), color: (r << 16) | (g << 8) | b,
-        a: (PRESENCE.a + TELL.a * k) * c.emergence * (1 - c.wane * WANED_LIGHT) });
+        a: (PRESENCE.a + TELL.a * k) * c.emergence * (1 - c.wane * WANED_LIGHT) * (1 - c.gone) });
     }
     for (const l of lights) lit.add(l);
     // a tank has no thermocline: the shader's seal is put below the floor of the world, open.

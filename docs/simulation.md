@@ -517,12 +517,20 @@ take it. The first tell of each names its answer (`World.tellBy`).
   for a second, and rushes the line at 2.4× its speed for up to a second — rock ends it, the
   snout meeting the wall. A miss in open water leaves it spent for 1.2 s. Under half health
   such a miss is followed by a second rush on a shorter tell.
-- **The Giant Squid's grab** (deep). It drifts in to three tiles, spreads its arms for 0.9 s
-  and lashes the feeding pair for half a second: anything in reach is held, and
-  `Combat.grasp` reels it in, bites it and lets it pull, as the column's squids did. Torn
-  free (`Creature.tornArms`, counted where the grip breaks), it loses an arm — drawn gone,
-  `FishView.tear` — its reach falls by three tenths, it takes a tenth of its health, jets away
-  in ink and is spent. Swimming hard away tears free in about a second.
+- **The Giant Squid's ink** (deep). It keeps five tiles off the player, crossing its line,
+  then squirts a cloud and is gone (`Creature.gone`, half a second going): gone it can be
+  neither hit nor hurt (`ghostly`), and its light goes with it. Its ghosts show round the
+  player (`World.ghosts`, drawn by `render/ghosts.ts` over the lighting): three, five under
+  half health, their noses three to five tiles off, to the player's sides within 0.95 rad of
+  level, each in water the body fits with an open line to the player. One is the squid. They
+  are its body washed pale (`FishView.pale`) without its arms, and follow the player for
+  1.5 s; for the last 0.45 the lines are locked and the real one resolves — its colours, its
+  arms, the tell's ring. Then it lunges from there down its line at sixteen tiles a second,
+  as far as the player was and three tiles beyond, and the decoys go. A room fits fewer
+  ghosts than that where the pillars cut the lines; never none, since the squid comes out
+  where it went in. It had a grab before: arms round the player, a struggle, an arm torn off
+  at each escape. Nobody could tell which way to pull, and at its full size it filled the
+  room; it is drawn at six tenths now (`Species.drawn`).
 
 **Each boss has a set piece of its own, and a way the room turns on it.** The move is
 `Creature.move`; the room's answer is `Creature.stuck` — held fast where it is (`pinX`,
@@ -563,13 +571,9 @@ first-time toast that names the answer (`Impacts`).
   lurks there for 1.5 s tracking the player's x with bubbles streaming off its back, turns
   nose-up for the last 0.5 s under the charge bar (`lockOf`), and rushes straight up. The
   roof, an arch or a coral head dazes it.
-- **Giant Squid: snagged, and the draw.** A lash that meets rock before the player within
-  reach (`rockOn`) — a pillar ducked behind through the tell — wraps the feeding pair round
-  the rock (`FishView.grab` on the point) and holds it 3 s. After every second grab, or at a
-  player out of reach for five seconds, it draws the water in for 1.8 s from up to eight
-  tiles: a pull on the player of 0.6 of its cruise at the arms, half that at the range, down
-  the open line only, and then the lash. Swimming straight out escapes from two and a half
-  tiles; stopping is being taken; rock between them cuts the pull.
+- **Giant Squid: snagged.** A lunge that meets rock — a pillar stood behind through the
+  tell — wraps its arms round the rock (`FishView.grab` on the point) and holds it 3 s; a miss
+  in open water leaves it spent 1.2 s. Its set piece is the ink itself.
 
 `Flow` walks the target's own pocket of narrow water out to the open (up to 20 cells), so a
 larva in a cleft draws its hunters to the cleft's mouth rather than the rock nearest it.

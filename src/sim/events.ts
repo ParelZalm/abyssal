@@ -35,7 +35,14 @@ export interface Blood {
  * its moves, and the room turning on it — the mantis shrimp wedged in a cleft, the Great
  * White dazed on rock, the Giant Squid's arms wrapped round it.
  */
-export type BossCue = 'lob' | 'wedged' | 'spit' | 'breach' | 'dazed' | 'draw' | 'snagged';
+export type BossCue = 'lob' | 'wedged' | 'spit' | 'breach' | 'dazed' | 'snagged';
+
+/**
+ * One of the Giant Squid's ghosts this frame (`Bosses.vanish`): where it shows and the heading
+ * it lunges along, its facing, whether it is the squid, how far through the tell, 0 to 1, and
+ * whether the lines are locked — when the real one resolves.
+ */
+export interface Ghost { x: number; y: number; a: number; face: 1 | -1; real: boolean; k: number; locked: boolean }
 
 export interface Pulse {
   x: number; y: number; r: number;

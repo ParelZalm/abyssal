@@ -439,7 +439,7 @@ boss's armour is kept to two or three, since it comes off every shot flat.
 Squid snagged on a pillar — held for three to three and a half seconds at half again the
 damage, where the openings a fight gives by itself are one to two. So the shot counts above
 are the ceiling, and a player who reads the room pays well under them. Each boss's set piece
-(the urchin's rain, the breach, the draw) is what a player who only kites has to answer
+(the urchin's rain, the breach, the ink's ghosts) is what a player who only kites has to answer
 (`docs/simulation.md`, *Bosses*).
 
 **The descent** (`Game.descend`). The boss room's clear opens a drain in its floor

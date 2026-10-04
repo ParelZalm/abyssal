@@ -297,7 +297,8 @@ for the larva and not for it — jam its head in a punch thrown after the larva,
 urchins that burst under the roof into a sinking fan of spines, which a ledge keeps off. The
 Great White is dazed long by rock and briefly by a miss, and breaches from the floor under
 the player after its bubbles and the charge bar. The Giant Squid snags its arms on a pillar
-ducked behind through its tell, and draws the player in down an open line before it lashes.
+ducked behind through its tell, and draws the player in down an open line before it lashes
+(since replaced by its ink, below).
 The board has each move in *Bosses & the descent*.
 
 What it found, and what it leaves:
@@ -379,6 +380,25 @@ What it found, and what it leaves:
   holds its jet until it is behind the player from the others, for a second and a half at most.
 - Ephyrae and their mother converge on the player by the same water and stack on it; nothing
   keeps hostiles apart. The deep's movesets are next.
+
+## ~~The Giant Squid's ink~~
+
+Done next, from playing it: the squid's grab could not be read — which way to pull to tear
+free — and at full size, arms out, it took the room. It inks now and is gone, shows as
+ghosts round the player (three, five under half health), and on the lock the real one
+resolves, colours, arms and the tell's ring, and lunges down its line; the rest go. A lunge
+into rock snags it on the pillars. Drawn at six tenths; the grab, the draw and the torn arms
+are gone (*A boss does not hold the player* in `decisions.md`). The board's *Bosses & the
+descent* has the ink.
+
+What it found, and what it leaves:
+
+- **A tint cannot make a red animal pale.** The ghosts are its body washed out through the
+  skin's flash (`FishView.pale`), without its arms: the arms are plain meshes the flash does
+  not reach, and three ghosts' arms all reaching for the player met over it in a knot.
+- **Ghosts alternated sides by how many had been found**, so a side walled off by a pillar
+  was tried for good and a room showed one. By the try now: three whole, three or four hurt.
+- Five ghosts rarely fit the pillar room round a larva near a wall; it shows what fits.
 
 ## Hostile movesets: the deep
 

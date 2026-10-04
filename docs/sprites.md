@@ -38,8 +38,7 @@ A squid's arms are not in its picture: they are one image of one arm, imported f
 of its own and rigged as the painted arms are, eight times over (`SpriteArt.arm`; the vampire
 squid's, [sprite-prompts-deep.md](sprite-prompts-deep.md)). A squid whose feeding pair is not
 its arms has a tentacle on a third sheet, rigged twice from the same crown
-(`SpriteArt.tentacle`; the Giant Squid's, [sprite-prompts-bosses.md](sprite-prompts-bosses.md)),
-and those two are what tear off.
+(`SpriteArt.tentacle`; the Giant Squid's, [sprite-prompts-bosses.md](sprite-prompts-bosses.md)).
 
 Everything else — the swim, the flip, a hit's whitening and knockback, the belly-up death, the
 glow and bloom, the facing mirror — works on a sprite as it does on a painted body, because

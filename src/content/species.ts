@@ -23,6 +23,8 @@ export type Moveset = 'pack' | 'volley' | 'balloon' | 'bloom' | 'burrow' | 'jet'
 export type ShotKind = 'spit' | 'spine' | 'bolt' | 'urchin' | 'sting';
 /** What a role fires, and a primary: every kind but the thrown and the left. */
 export type FiredKind = Exclude<ShotKind, 'urchin' | 'sting'>;
+/** A boss's fight (`Species.boss`, `sim/bosses.ts`). */
+export type Fight = 'punch' | 'charge' | 'ink';
 
 export interface Species {
   id: string;
@@ -69,7 +71,7 @@ export interface Species {
   shot?: FiredKind;
   /**
    * A boss's fight, when a tank is built around this animal (`sim/bosses.ts`): the mantis
-   * shrimp's punch, the Great White's charge, the Giant Squid's grab. And its health, set
+   * shrimp's punch, the Great White's charge, the Giant Squid's ink. And its health, set
    * outright: a boss is fought in hearts and strikes, not on its body's scale. Its armour is
    * flat off every shot, so a boss's is kept to two or three: at the Great White's old five a
    * larva's spit did a fifth of itself, and the fight was over three hundred shots. Tuned to
@@ -77,7 +79,7 @@ export interface Species {
    * that doubled it, since the armour comes off a bigger shot too. The mantis shrimp's was 40,
    * and its fight was over before the den had been round once: two clefts jammed and a rain.
    */
-  boss?: 'punch' | 'charge' | 'grab';
+  boss?: Fight;
   bossHp?: number;
 
   size: [number, number];
@@ -301,8 +303,10 @@ export const SPECIES: Species[] = [
     nutrition: 2.2, weight: 8, jaw: 0.7, finSize: 0.7, sense: 560 },
 
   { id: 'giantsquid', name: 'Giant Squid', behavior: 'apex', plan: 'longsquid',
-    boss: 'grab', bossHp: 700,
-    zone: 'twilight', guardian: true, bleed: 300,
+    boss: 'ink', bossHp: 700,
+    // drawn at six tenths: at its size, its arms out, it was most of the room, and there was
+    // no water left to dodge its lunge into
+    zone: 'twilight', guardian: true, bleed: 300, drawn: 0.6,
     size: [160, 210], hue: [340, 356], accent: 20, speed: 200, bite: 58,
     nutrition: 4.5, weight: 1.4, jaw: 1.0, armor: 3, segments: 3, finSize: 1.5,
     sense: 1100, eyeAdapt: 1.1, veil: 0.5, glow: 0.3 },

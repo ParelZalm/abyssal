@@ -199,7 +199,7 @@ export class FishView extends Container {
   /** Counts down from 1 through a bite, driving the squash-and-snap. */
   private chompT = 0;
   /** Rigged arms, one strip each, under the body. Empty for anything without `grasp`. */
-  private arms: { mesh: MeshSimple; verts: Float32Array; feeding: boolean; rig: Rig; v: number; torn?: boolean }[] = [];
+  private arms: { mesh: MeshSimple; verts: Float32Array; feeding: boolean; rig: Rig; v: number }[] = [];
   /** The arms' own clock: `beat` jumps on a boost, and a jump reads as a twitch in an arm. */
   private armT = Math.random() * 10;
   /** How far the feeding pair is out toward `grip`, 0 coiled to 1 fastened. */
@@ -676,18 +676,19 @@ export class FishView extends Container {
     return this.fall.whole ? t >= 0.2 : t >= 1.3;
   }
 
-  /** Fasten the feeding tentacles on something in the world, followed live; null lets go. */
   /**
-   * One of the feeding arms is gone: torn free by what it held. It stops being drawn, and a
-   * rebuild — a new plan, a new genome — grows it back, which only the player's body does.
+   * How far the body is washed out toward white, 0 to 1, through the skin's flash: a tint only
+   * multiplies, and a red animal tinted pale is a darker red. The Giant Squid's ghosts
+   * (`render/ghosts.ts`).
    */
-  tear() {
-    const arm = this.arms.find(a => a.feeding && !a.torn);
-    if (!arm) return;
-    arm.torn = true;
-    arm.mesh.visible = false;
+  pale = 0;
+
+  /** Draw the rigged arms or not: a ghost is the body alone, and grows its arms as it resolves. */
+  showArms(on: boolean) {
+    for (const a of this.arms) a.mesh.visible = on;
   }
 
+  /** Fasten the feeding tentacles on something in the world, followed live; null lets go. */
   grab(target: { x: number; y: number } | null) {
     this.grip = target;
   }
@@ -920,7 +921,8 @@ export class FishView extends Container {
       u.uBeat = beat;
       u.uClock = this.clock;
       u.uFlip = this.flipT;
-      u.uFlash = this.hurtT > HURT_WHITE ? 0.9 * ((this.hurtT - HURT_WHITE) / (1 - HURT_WHITE)) ** 0.5 : 0;
+      u.uFlash = Math.max(this.pale,
+        this.hurtT > HURT_WHITE ? 0.9 * ((this.hurtT - HURT_WHITE) / (1 - HURT_WHITE)) ** 0.5 : 0);
       this.skin.uniforms.update();
     }
     // a strike is thrown straight: the charge drove the wave to its widest, so a gulper's
