@@ -70,8 +70,8 @@ needs the code named in *Blocked on* first.
 | Boss | Tank | Why later |
 | --- | --- | --- |
 | Mantis Shrimp | nursery | **done**: the fight reads the club only as the hull's nose, set on the folded heel by hand; the strike frame is the club cocked, its tell; the legs walk in the skin (`SpriteArt.legs`); `mantisshrimp.webp`, `mantisshrimp-sprite.webp` |
-| Great White | reef | its fight reads its snout and its tells off the plan |
-| Giant Squid | deep | its arms are rigged and torn off one at a time |
+| Great White | reef | **prompted**: rest, and the jaws open as the strike, which is the tell the fight shows; on green for its gums; [prompts](sprite-prompts-bosses.md) |
+| Giant Squid | deep | **prompted**: the body (its strike the collar and funnel open, for the draw), one arm and one tentacle, each a sheet; the tentacles are what tear off, so they are a picture of their own, which waits on *A tentacle* below; on green; [prompts](sprite-prompts-bosses.md) |
 
 ## Blocked on
 
@@ -87,6 +87,10 @@ name it.
   arm, on a sheet of its own, rigged as the painted arms are (`SpriteArt.arm`, `armRig` in
   `render/creature/sprite.ts`). Unblocked the vampire squid, and the Giant Squid's arms when its
   turn comes.
+- **A tentacle.** A giant squid's feeding pair is not its arms: twice as long, bare, with a club
+  at the tip, and the two that tear off one at a time. The rig lays them out of the one arm
+  picture today; it needs a second (`SOURCES.tentacle`, a `SpriteArt.tentacle` beside `arm`) for
+  the feeding pair. Blocks the Giant Squid's wiring, not its art.
 
 ## Order
 
@@ -99,5 +103,6 @@ name it.
 4. **A wounded frame**, then the mackerel, pufferfish and sea nettle (all done): the nursery is
    through.
 5. **Rigged arms**, then the vampire squid (both done): the deep's roster is through.
-6. **Bosses**, each a question of its own.
+6. **Bosses**, each a question of its own: the Great White and the Giant Squid are prompted
+   ([sprite-prompts-bosses.md](sprite-prompts-bosses.md)).
 7. **`REWORKED_ONLY` comes out** once no fight room is short of enemies.
