@@ -74,6 +74,14 @@ export interface SpriteArt {
    * squid's picture is its body alone: arms painted onto it could not reach or grab.
    */
   arm?: { root: number; tip: number; axis: number; at: Pt; spread: number; reach: number };
+  /**
+   * A squid's feeding pair, where it is not its arms: the giant squid's two tentacles, twice
+   * as long, bare, with a club at the tip — and the two that tear off, one at a time. Drawn
+   * from an image of one tentacle (`SOURCES.tentacle`) and rigged as the arms are, from the
+   * same crown (`arm.at`, `arm.spread`): `root`, `tip` and `axis` in its own pixels, and `reach`
+   * how long it is drawn in the body's. Without it the feeding pair is the arm's picture.
+   */
+  tentacle?: { root: number; tip: number; axis: number; reach: number };
 }
 
 export const SPRITES: Record<string, SpriteArt> = {
@@ -236,6 +244,23 @@ export const SPRITES: Record<string, SpriteArt> = {
                   arm: { root: 1, tip: 232, axis: 20, at: [148, 48], spread: 15, reach: 140 },
                   hull: [[147, 47.5, 6], [134, 47.5, 17.5], [118, 47, 20.5], [102, 47, 22], [86, 47, 22.5],
                          [70, 47, 21.5], [55, 47, 17], [38, 47, 13], [22, 47, 9]] },
+  // `npm run sprite -- giantsquid-sprite.png --id giantsquid --key green --fringe --keep
+  // 136,0,205,52`, its arm `npm run sprite -- giantsquid-arm-sprite.png --id giantsquid-arm
+  // --key green --fringe`, and its tentacle `npm run sprite -- giantsquid-tentacle-sprite.png
+  // --id giantsquid-tentacle --key green --fringe`. The body without its arms or tentacles, which
+  // are rigged from the crown's stump (`arm`, `tentacle`). Its strike is the collar gaping and
+  // the funnel flared, for the grab's tell and the draw; the sheet drew its head a few cells
+  // further forward for it, so the box starts on the mantle, or the rest's eye showed at its
+  // edge. Drawn as the painted squid was: the tentacles as long as the body, the arms 0.82 of
+  // it (the view draws the arms at 0.78 / `armPair` of twice `reach`). The arm is held about
+  // row 18, its flesh and its suckers together, so the crown is in the middle of it. The hull is the body
+  // without the funnel; the light is the eye, which the painted squid's glowed
+  giantsquid: { w: 200, h: 50, snout: 199, tail: 10, axis: 18,
+                lights: [{ at: [171, 18], color: 0x9fb7c9, strength: 0.35 }],
+                arm: { root: 2, tip: 327, axis: 18, at: [196, 17], spread: 6, reach: 190 },
+                tentacle: { root: 4, tip: 419, axis: 20, reach: 190 },
+                hull: [[192.5, 17, 7], [170.5, 16.5, 9], [148.5, 18.5, 14], [126.5, 19, 15.3], [104.5, 19, 14.4],
+                       [82.5, 19, 12.8], [60.5, 18.5, 10.6], [38.5, 18.5, 6.4], [16.5, 18, 7.6]] },
 };
 
 /**

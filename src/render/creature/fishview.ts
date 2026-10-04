@@ -199,7 +199,7 @@ export class FishView extends Container {
   /** Counts down from 1 through a bite, driving the squash-and-snap. */
   private chompT = 0;
   /** Rigged arms, one strip each, under the body. Empty for anything without `grasp`. */
-  private arms: { mesh: MeshSimple; verts: Float32Array; feeding: boolean; torn?: boolean }[] = [];
+  private arms: { mesh: MeshSimple; verts: Float32Array; feeding: boolean; rig: Rig; v: number; torn?: boolean }[] = [];
   /** The arms' own clock: `beat` jumps on a boost, and a jump reads as a twitch in an arm. */
   private armT = Math.random() * 10;
   /** How far the feeding pair is out toward `grip`, 0 coiled to 1 fastened. */
@@ -455,8 +455,8 @@ export class FishView extends Container {
       this.squeeze = this.colX.map(x => clamp(Math.min(x - a, b - x) / ease + 1, 0, 1));
     } else this.squeeze = null;
     // arms first, so they sit under the body: the crown is tucked beneath the head
-    const rig = this.baked.arm;
-    if (rig) {
+    const rig = this.baked.arm, tentacle = this.baked.tentacle;
+    if (rig || tentacle) {
       const A = PLAN_ART[this.plan];
       const auv = new Float32Array(ARM_COLS * 4);
       const aidx = new Uint32Array((ARM_COLS - 1) * 6);
@@ -469,13 +469,16 @@ export class FishView extends Container {
         }
       }
       for (let i = 0; i < A.armCount; i++) {
+        // the outermost pair are the feeding tentacles, as they were in the painted crown, and
+        // drawn from a picture of their own where the sprite has one
+        const feeding = i === 0 || i === A.armCount - 1;
+        const own = (feeding && tentacle) || rig;
+        if (!own) continue;
         const averts = new Float32Array(ARM_COLS * 4);
-        const mesh = new MeshSimple({ texture: rig.texture, vertices: averts, uvs: auv,
+        const mesh = new MeshSimple({ texture: own.texture, vertices: averts, uvs: auv,
                                       indices: aidx });
         this.addChild(mesh);
-        // the outermost pair are the feeding tentacles, as they were in the painted crown
-        this.arms.push({ mesh, verts: averts,
-                         feeding: i === 0 || i === A.armCount - 1 });
+        this.arms.push({ mesh, verts: averts, feeding, rig: own, v: (i / (A.armCount - 1)) * 2 - 1 });
       }
     }
     this.skin?.shader.destroy();
@@ -746,7 +749,7 @@ export class FishView extends Container {
       this.verts[j * 4 + 3] = y - ny * hw;
     }
     this.mesh.vertices = this.verts;
-    if (this.baked.arm) this.poseArms(this.baked.arm, spineY[0], pulse, thrust, dt);
+    if (this.arms.length) this.poseArms(spineY[0], pulse, thrust, dt);
   }
 
   /**
@@ -755,7 +758,7 @@ export class FishView extends Container {
    * windscreen wiper. The feeding pair is blended from that coil toward a straight line
    * onto `grip`, so a strike is the same arm uncurling rather than a second arm appearing.
    */
-  private poseArms(rig: Rig, headY: number, pulse: number, thrust: number, dt: number) {
+  private poseArms(headY: number, pulse: number, thrust: number, dt: number) {
     const n = this.arms.length;
     const A = PLAN_ART[this.plan];
     this.armT += dt * (1.4 + thrust * 1.6);
@@ -773,8 +776,7 @@ export class FishView extends Container {
     }
     const pts: number[] = new Array(ARM_COLS * 2);
     for (let i = 0; i < n; i++) {
-      const arm = this.arms[i];
-      const v = (i / (n - 1)) * 2 - 1;
+      const arm = this.arms[i], rig = arm.rig, v = arm.v;
       const ry = headY + v * rig.spread;
       let rx = rig.rootX * pulse;
       // swimming bundles the crown into a point; holding something flares it open

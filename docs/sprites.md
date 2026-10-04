@@ -27,7 +27,7 @@ Check the animal against this before asking for art; each is code to write first
 
 | Gap | Who has it | What it would take |
 | --- | --- | --- |
-| A boss's set-piece parts | the mantis shrimp's club, the Giant Squid's arms torn one at a time | per-part images; not planned |
+| A boss's set-piece parts | the mantis shrimp's club | per-part images; not planned |
 
 A moveset's turned look at half health (`woundedGenome` in `sim/roles.ts`: the mackerel
 flushed red, the pufferfish's spines up, the nettle glowing, the triggerfish red, the lionfish
@@ -36,7 +36,10 @@ flared, the moon jelly flushed) is a pair of frames of its own, *wounded* and *w
 
 A squid's arms are not in its picture: they are one image of one arm, imported from a sheet
 of its own and rigged as the painted arms are, eight times over (`SpriteArt.arm`; the vampire
-squid's, [sprite-prompts-deep.md](sprite-prompts-deep.md)).
+squid's, [sprite-prompts-deep.md](sprite-prompts-deep.md)). A squid whose feeding pair is not
+its arms has a tentacle on a third sheet, rigged twice from the same crown
+(`SpriteArt.tentacle`; the Giant Squid's, [sprite-prompts-bosses.md](sprite-prompts-bosses.md)),
+and those two are what tear off.
 
 Everything else — the swim, the flip, a hit's whitening and knockback, the belly-up death, the
 glow and bloom, the facing mirror — works on a sprite as it does on a painted body, because
@@ -196,7 +199,7 @@ body carries (`Baked.open`), shown through a bite or a strike.
 | --- | --- | --- |
 | charger (mackerel, ribbon eel, barracuda, gulper) | rest, strike | the jaw opens for the hit |
 | spitter (archerfish, triggerfish) | rest, strike | the mouth opens to fire |
-| a squid (vampire squid) | rest, strike; and one arm, on a sheet of its own | the tell: the vampire squid's light organs open. The arm is laid out straight, root left, tip right |
+| a squid (vampire squid, Giant Squid) | rest, strike; and one arm, on a sheet of its own; and one tentacle, for a squid whose feeding pair is not its arms | the tell: the vampire squid's light organs open, the Giant Squid's collar and funnel. The arm and the tentacle are laid out straight, root left, tip right |
 | turret (pufferfish, lionfish, anglerfish) | rest, strike | the jaw; a spined turret can raise its spines instead |
 | drifter (jellies, siphonophore) | rest | — (the pulse is the mesh's) |
 | a wounded moveset (`pack`, `balloon`, `jet`, `herd`) | rest, strike, wounded, wounded strike | the wounded frame is the turned look whole; its strike moves as the strike does |

@@ -169,7 +169,7 @@ jammed in the reef's arch room until the shark went by water it fits (`Bosses.fl
 
 ---
 
-## 2. Giant Squid — boss (the deep): rest, strike (the siphon); one arm; one tentacle
+## 2. Giant Squid — boss (the deep): rest, strike (the siphon); one arm; one tentacle — done
 
 As the vampire squid, its arms are not in its picture: the body is one sheet and each arm is
 drawn by the rig (`armRig`, `FishView.poseArms`). But a giant squid has two kinds: eight
@@ -179,9 +179,9 @@ what is **torn off, one at a time**, when the player pulls free (`Bosses.torn`, 
 So there are **three Stage B sheets**: the body, one arm (drawn eight times), and one tentacle
 (drawn twice).
 
-**Code before it is wired:** the rig takes one arm picture today (`SpriteArt.arm`), and lays
-the feeding pair out of the same one. A second picture for the feeding pair (`SOURCES.tentacle`)
-is the one thing to write before the import.
+**The tentacle's rig:** the rig took one arm picture (`SpriteArt.arm`) and laid the feeding pair
+out of it too; the feeding pair now takes a picture of its own where there is one
+(`SpriteArt.tentacle`), from the same crown.
 
 **Facing:** as every squid plan in the game, the arms point forward (RIGHT) and the mantle and
 fins trail behind (left).
@@ -403,10 +403,14 @@ sub-pixel detail, text, labels, borders, shadows.
 ### Import
 
 ```bash
-npm run sprite -- docs/media/reference/giantsquid-sprite.png --id giantsquid --key green --fringe
+npm run sprite -- docs/media/reference/giantsquid-sprite.png --id giantsquid --key green --fringe --keep 136,0,205,52
 npm run sprite -- docs/media/reference/giantsquid-arm-sprite.png --id giantsquid-arm --key green --fringe
 npm run sprite -- docs/media/reference/giantsquid-tentacle-sprite.png --id giantsquid-tentacle --key green --fringe
 ```
 
-The collar and the funnel open inside the silhouette, as the vampire squid's light organs did,
-so expect to box them with `--keep`. The arm's and the tentacle's landmarks are set by hand.
+As it went: the strike drew the head a few cells further forward than the rest, so the box
+starts on the mantle, behind the gaping collar; from the collar, the rest's eye showed at its
+edge. The arm sheet was drawn at 5.7 image pixels to the art pixel and the tentacle's at 5.2,
+which the pitch search found. The arm's and the tentacle's landmarks are set by hand: root and
+tip across, the row each runs along, and how long each is drawn — the tentacles as long as the
+body and the arms 0.82 of it, as the painted squid's were.

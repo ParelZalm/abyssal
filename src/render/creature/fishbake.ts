@@ -52,6 +52,8 @@ export interface Baked {
   users: number;
   /** One rigged arm, root at u=0 and tip at u=1, for plans with `grasp`. Null otherwise. */
   arm: Rig | null;
+  /** The feeding pair, where it is drawn apart from the arms (`SpriteArt.tentacle`). Null otherwise, and the pair is the arm. */
+  tentacle: Rig | null;
   /** The light organs, in R units, for the view to hang blooms on. */
   lights: Emitter[];
   /** A sprite's legs, as the strip's u across and v down (`SpriteArt.legs`). Null when painted. */
@@ -154,6 +156,7 @@ function evict() {
     b.texture.destroy(true);
     if (b.open !== b.texture) b.open.destroy(true);
     b.arm?.texture.destroy(true);
+    b.tentacle?.texture.destroy(true);
     cache.delete(k);
     if (cache.size < CACHE_MAX) return;
   }
@@ -210,7 +213,7 @@ function paint(g: Genome, plan: Plan): Baked {
   return { texture, open: gaping ? pixelTexture(cut(shade(gaping, pal), crop)) : texture,
            canvas, users: 0, lights: shut.lights, depth,
            back: back + crop.x / res, front: back + (crop.x + crop.w) / res, halfH: crop.h / 2 / res,
-           arm: rigged ? armRig(f, pal, A, g, res) : null, legs: null, trail: null };
+           arm: rigged ? armRig(f, pal, A, g, res) : null, tentacle: null, legs: null, trail: null };
 }
 
 interface Painting {
