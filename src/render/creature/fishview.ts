@@ -18,7 +18,7 @@
  * geometry either, but it carried five `Graphics` objects per creature; this carries one
  * mesh and a shared texture, so a school is cheap in memory as well as in draw calls.
  */
-import { Container, MeshSimple, Sprite } from 'pixi.js';
+import { Container, MeshSimple, Sprite, Texture } from 'pixi.js';
 import { bakeFish, releaseFish, type Baked, type Rig } from './fishbake';
 import { SPRITES, spritePoint } from '../../content/sprites';
 import type { Species } from '../../content/species';
@@ -450,6 +450,7 @@ export class FishView extends Container {
     this.mesh?.destroy();
     for (const a of this.arms) a.mesh.destroy();
     this.arms = [];
+    this.ghosted = false;
     // take the new texture before letting go of the old one, so a rebuild onto the same
     // genome never leaves the entry at zero users for an eviction to catch
     const old = this.baked;
@@ -708,6 +709,27 @@ export class FishView extends Container {
     return this.fall.whole ? t >= 0.2 : t >= 1.3;
   }
 
+  /** Whether the body is drawn as a ghost (`ghost`). */
+  private ghosted = false;
+
+  /**
+   * Draw the body as a ghost, washed out to a cold pale: the Giant Squid's (`render/ghosts.ts`).
+   * The body through the skin's flash and each arm from a pale copy of its picture (`paled`): a
+   * tint only multiplies, so a red animal tinted pale is a darker red, and the flash is the
+   * skin's alone. A filter over the view did both at once and cut the arms off in a box, since
+   * a filter is drawn only inside the bounds Pixi finds for what it covers.
+   */
+  ghost(on: boolean) {
+    if (this.ghosted === on) return;
+    this.ghosted = on;
+    // and each arm at half the body's alpha: eight of them lap over each other at the crown, and
+    // a ghost's arms stacked brighter than its body
+    for (const a of this.arms) {
+      a.mesh.texture = on ? paled(a.rig.texture) : a.rig.texture;
+      a.mesh.alpha = on ? 0.5 : 1;
+    }
+  }
+
   /** Fasten the feeding tentacles on something in the world, followed live; null lets go. */
   grab(target: { x: number; y: number } | null) {
     this.grip = target;
@@ -941,7 +963,8 @@ export class FishView extends Container {
       u.uBeat = beat;
       u.uClock = this.clock;
       u.uFlip = this.flipT;
-      u.uFlash = this.hurtT > HURT_WHITE ? 0.9 * ((this.hurtT - HURT_WHITE) / (1 - HURT_WHITE)) ** 0.5 : 0;
+      u.uFlash = Math.max(this.ghosted ? GHOST_PALE : 0,
+        this.hurtT > HURT_WHITE ? 0.9 * ((this.hurtT - HURT_WHITE) / (1 - HURT_WHITE)) ** 0.5 : 0);
       this.skin.uniforms.update();
     }
     // a strike is thrown straight: the charge drove the wave to its widest, so a gulper's
@@ -982,4 +1005,36 @@ function mixed(lights: Emitter[]) {
     w += e.strength;
   }
   return (Math.round(r / w) << 16) | (Math.round(g / w) << 8) | Math.round(b / w);
+}
+
+/** How far a ghost's body is washed toward white through the skin's flash (`FishView.ghost`). */
+const GHOST_PALE = 0.88;
+const pale = new WeakMap<Texture, Texture>();
+
+/**
+ * A rigged arm's picture washed out as a ghost's body is: each texel its brightness, lifted into
+ * a cold pale, its alpha kept. Made once per picture, and kept as long as the picture is.
+ */
+function paled(t: Texture): Texture {
+  const had = pale.get(t);
+  if (had) return had;
+  const src = t.source.resource as HTMLCanvasElement;
+  const c = document.createElement('canvas');
+  c.width = src.width;
+  c.height = src.height;
+  const ctx = c.getContext('2d')!;
+  ctx.drawImage(src, 0, 0);
+  const img = ctx.getImageData(0, 0, c.width, c.height), d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const l = (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11) / 255;
+    // the body's own wash: its colour taken 0.88 of the way to white (`GHOST_PALE`)
+    d[i] = 255 * Math.min(1, 0.8 + l * 0.2);
+    d[i + 1] = 255 * Math.min(1, 0.82 + l * 0.18);
+    d[i + 2] = 255 * Math.min(1, 0.86 + l * 0.14);
+  }
+  ctx.putImageData(img, 0, 0);
+  const out = Texture.from(c);
+  out.source.scaleMode = 'nearest';
+  pale.set(t, out);
+  return out;
 }

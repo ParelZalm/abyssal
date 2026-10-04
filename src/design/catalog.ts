@@ -6,10 +6,10 @@
  * draws today. The `source` field is the file to open when you want to change one —
  * that is the whole point of the page, so keep it accurate when things move.
  */
-import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
+import { Container, Graphics, Sprite } from 'pixi.js';
 import { formFor, PLAN_FORMS, R, type Plan } from '../content/form';
 import { FishView, REST, type Pose } from '../render/creature/fishview';
-import { ghostly } from '../render/ghosts';
+import { GHOST_TINT } from '../render/ghosts';
 import { FAMILY_NAMES, TRANSFORMS, type Family } from '../content/forms';
 import { baseGenome, type Genome } from '../content/genome';
 import { PROP_SIZE, propTexture, type PropKind } from '../render/props';
@@ -1743,9 +1743,6 @@ class DropInCell extends Container {
   }
 }
 
-/** The board's ghosts, washed out as the game's are. */
-const PALE = ghostly();
-
 const BOSS_NOTES: Record<Fight, string> = {
   punch: 'Cocks its club — the tell, the spot locked as the bar flashes — then a punch down that line; the water boils where it lands. Three, and it rests. Fought in its den, whose clefts it jams itself in.',
   charge: 'Turns square on and holds — the tell — then rushes the line; a miss leaves it spent, and rock leaves it dazed.',
@@ -1899,14 +1896,11 @@ function bossMoves(): DesignItem[] {
       `Squirts a cloud and is gone, untouchable, then shows as ${GHOSTS} ghosts round the player (${GHOSTS_HURT} under half its health), each square on to it. On the lock the real one resolves, with the tell's ring, and lunges down its line; the rest go.`,
       { fade: `${INK_FADE} s`, tell: `${GHOST_TELL} s`, lock: `${GHOST_LOCK} s`, ghosts: `${GHOSTS}, ${GHOSTS_HURT} hurt` },
       (c, g) => {
-        // every ghost, the real one first, in the one container under the one filter, its area
-        // the whole cell: a filter on each view cut the arms off at the view's own bounds
+        // every ghost, the real one first, washed out as the game's are
         for (let i = 0; i < GHOSTS; i++) {
           const v = new FishView(g, 'longsquid', speciesById('giantsquid'));
           c.props.addChild(v.glow, v);
         }
-        c.props.filters = [PALE];
-        c.props.boundsArea = new Rectangle(-g.size * 6, -g.size * 6, g.size * 12, g.size * 12);
       },
       (c, g, t, dt, beat) => {
         // the player's spot is the middle; the real one is on the right, the decoys left
@@ -1924,7 +1918,9 @@ function bossMoves(): DesignItem[] {
         ghosts.forEach((v, i) => {
           const shown = tell >= 0 && tell < GHOST_TELL && !(i === 0 && locked);
           if (shown) at(v, spots[i], { windup: e * 0.6, strike: 0, open: false });
-          v.show(shown, faint, 0xffffff);
+          // after the animate: a new art density rebuilds the view, and its arms with it
+          v.ghost(true);
+          v.show(shown, faint, GHOST_TINT);
         });
         if (k < INK_FADE) {
           // going: where it last came to rest, fading into its cloud

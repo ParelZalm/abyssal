@@ -396,16 +396,17 @@ What it found, and what it leaves:
 - **A tint cannot make a red animal pale.** It only multiplies, and a red squid tinted pale is
   a darker red. The ghosts went out first as the body washed out through the skin's flash,
   which left them without arms — the arms are plain meshes the flash does not reach — and they
-  read as missing their tentacles. They are washed out by a colour filter over the whole view
-  now, arms and all (`ghostly` in `render/ghosts.ts`), its pale weighted by alpha: added flat,
-  it filled the filter's bounds round the body with a pale block. Their noses are four to six
-  tiles off, so their arms reach for the player without meeting over it.
+  read as missing their tentacles. Their noses are four to six tiles off, so their arms reach
+  for the player without meeting over it.
 - **Ghosts alternated sides by how many had been found**, so a side walled off by a pillar
   was tried for good and a room showed one. By the try now: three whole, three or four hurt.
 - Five ghosts rarely fit the pillar room round a larva near a wall; it shows what fits.
-- **A filter on each ghost cut its arms off at the view's own bounds**, in a square, and the
-  one filter shared by several views washed out only the first. The ghosts share one
-  container under one filter, its area set by hand round all of them (`GhostView`).
+- **A filter cut the ghosts' arms off in a box.** Pixi draws a filter only inside the bounds it
+  finds for what the filter covers, and takes them from the meshes rather than from any area
+  set by hand, so neither a filter per view nor one over all of them with `boundsArea` held
+  the arms. There is no filter now: a ghost's body is washed out through the skin's flash and
+  each arm drawn from a pale copy of its picture, at half alpha, since eight of them lap over
+  each other (`FishView.ghost`).
 - **The boss intro showed the squid's mantle alone**: its portrait was the bake, which is the
   body without the rigged arms. A rigged body's portrait lays them out from the crown, fanned
   a little (`FishView.portrait`), and a portrait taller than the intro's slot is shown at a
