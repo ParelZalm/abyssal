@@ -90,11 +90,16 @@ export class Spawner {
     const sp = speciesById(tank.boss);
     let best: { x: number; y: number } | null = null, bd = -1;
     // water round it for its whole hull where the room has it, which it does not always for a
-    // body a third of the room long; otherwise the middle's, and the hull is pushed clear
-    for (const clear of [sp.size[1] * PLAN_FORMS[sp.plan].len * 0.55, sp.size[1] * 0.5]) {
+    // body a third of the room long; then water as long as it is and as deep, which is what a
+    // body lying level needs; and last the middle's, and the hull is pushed clear. Without the
+    // second the Great White was put in the channel over the reef's arch, the farthest water
+    // its middle fitted, and was held there by the rock on every heading out of it
+    const size = sp.size[1] * (sp.drawn ?? 1), len = size * PLAN_FORMS[sp.plan].len * 0.55;
+    const tries: [number, number][] = [[len, len], [size * 0.5, size * 0.4 + room.tile * 0.5], [size * 0.5, 0]];
+    for (const [clear, deep] of tries) {
       for (let k = 0; k < 40; k++) {
         const at = room.openSpot(this.rng, clear);
-        if (!at) continue;
+        if (!at || (deep && !this.level(room, at, len, deep))) continue;
         const d = Math.hypot(at.x - player.x, at.y - player.y);
         if (d > bd) { bd = d; best = at; }
       }
@@ -110,6 +115,11 @@ export class Spawner {
     c.face = player.x < c.x ? -1 : 1;
     c.roleCd = 1.5;
     return c;
+  }
+
+  /** Whether a body lying level at `at` has water `len` to either side and `deep` above and below. */
+  private level(room: Terrain, at: { x: number; y: number }, len: number, deep: number) {
+    return [-deep, 0, deep].every(dy => room.clearLine(at.x - len, at.y + dy, at.x + len, at.y + dy));
   }
 
   private weighted(table: Record<string, number>) {

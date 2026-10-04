@@ -23,6 +23,8 @@ import gulperRest from './sprites/gulper.png';
 import gulperStrike from './sprites/gulper-strike.png';
 import mantisRest from './sprites/mantisshrimp.png';
 import mantisStrike from './sprites/mantisshrimp-strike.png';
+import greatwhiteRest from './sprites/greatwhite.png';
+import greatwhiteStrike from './sprites/greatwhite-strike.png';
 import barracudaRest from './sprites/barracuda.png';
 import barracudaStrike from './sprites/barracuda-strike.png';
 import siphonRest from './sprites/siphon.png';
@@ -66,6 +68,7 @@ const SOURCES: Record<string, Sources> = {
   anglerfish: { rest: anglerRest, strike: anglerStrike },
   gulper: { rest: gulperRest, strike: gulperStrike },
   mantisshrimp: { rest: mantisRest, strike: mantisStrike },
+  greatwhite: { rest: greatwhiteRest, strike: greatwhiteStrike },
   barracuda: { rest: barracudaRest, strike: barracudaStrike },
   siphon: { rest: siphonRest },
   ribbon: { rest: ribbonRest, strike: ribbonStrike },

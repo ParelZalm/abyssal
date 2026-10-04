@@ -21,7 +21,7 @@ const POCKET = 20;
  * nosing into the rock between. Built for the player's position and rebuilt as it moves.
  *
  * A cell is open when it and its eight neighbours are all water — a body's width of
- * clearance — so the path keeps off the rock instead of scraping it. The target's own cell is
+ * clearance, or a boss's (`wide`, `high`) — so the path keeps off the rock instead of scraping it. The target's own cell is
  * seeded whatever it is, since the player lies against walls all the time, and the narrow
  * water round it is walked out of to the open, since the player hides in clefts.
  */
@@ -34,7 +34,15 @@ export class Flow {
   /** The doors the open cells were worked out for: the fight's lock, and how many are shut on their own. */
   private doors = '';
 
-  constructor(private readonly t: Terrain) {
+  /**
+   * `wide` and `high` are the cells of water a cell needs to either side of it and above and
+   * below to be open: one each is a fish's width, and the default. A boss is tiles long and
+   * deep, and led down water a fish fits it jammed there for good — the Great White drawn from
+   * its sprite, a fuller head than the painted cone, in the channel over the reef's arch where
+   * it narrows, and nose down in the gap between the arch and the wall, which a side-on body
+   * held to its steepest pitch is too long to go down.
+   */
+  constructor(private readonly t: Terrain, private readonly wide = 1, private readonly high = wide) {
     const n = t.fineCols * t.fineRows;
     this.dist = new Int32Array(n);
     this.open = new Uint8Array(n);
@@ -111,7 +119,7 @@ export class Flow {
     return `${this.t.locked}|${[...this.t.shut.keys()].join()}`;
   }
 
-  /** Which cells are open: water, with water all round them. */
+  /** Which cells are open: water, with `wide` cells of water to either side and `high` above and below. */
   private clearance() {
     const t = this.t;
     const W = t.fineCols, H = t.fineRows;
@@ -119,8 +127,9 @@ export class Flow {
     for (let j = 0; j < H; j++) {
       for (let i = 0; i < W; i++) {
         let clear = 1;
-        for (let dj = -1; dj <= 1 && clear; dj++) {
-          for (let di = -1; di <= 1; di++) if (t.solid(i + di, j + dj)) { clear = 0; break; }
+        const kx = this.wide, ky = this.high;
+        for (let dj = -ky; dj <= ky && clear; dj++) {
+          for (let di = -kx; di <= kx; di++) if (t.solid(i + di, j + dj)) { clear = 0; break; }
         }
         this.open[j * W + i] = clear;
       }

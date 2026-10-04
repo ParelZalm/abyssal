@@ -70,7 +70,7 @@ needs the code named in *Blocked on* first.
 | Boss | Tank | Why later |
 | --- | --- | --- |
 | Mantis Shrimp | nursery | **done**: the fight reads the club only as the hull's nose, set on the folded heel by hand; the strike frame is the club cocked, its tell; the legs walk in the skin (`SpriteArt.legs`); `mantisshrimp.webp`, `mantisshrimp-sprite.webp` |
-| Great White | reef | **prompted**: rest, and the jaws open as the strike, which is the tell the fight shows; on green for its gums; [prompts](sprite-prompts-bosses.md) |
+| Great White | reef | **done**: drawn 1; its strike the jaws open, the tell its charge shows, taken from behind the gills (`--keep`), where the two backs meet; on green; hull the body without its dorsal and pectoral; it goes by water it fits and is placed where it lies level (`Bosses.flowFor`, `Spawner.boss`), or the sprite's fuller head jammed in the channel over the arch; [prompts](sprite-prompts-bosses.md); `greatwhite.webp`, `greatwhite-sprite.webp` |
 | Giant Squid | deep | **prompted**: the body (its strike the collar and funnel open, for the draw), one arm and one tentacle, each a sheet; the tentacles are what tear off, so they are a picture of their own, which waits on *A tentacle* below; on green; [prompts](sprite-prompts-bosses.md) |
 
 ## Blocked on
@@ -103,6 +103,6 @@ name it.
 4. **A wounded frame**, then the mackerel, pufferfish and sea nettle (all done): the nursery is
    through.
 5. **Rigged arms**, then the vampire squid (both done): the deep's roster is through.
-6. **Bosses**, each a question of its own: the Great White and the Giant Squid are prompted
+6. **Bosses**, each a question of its own: the Great White (done), and the Giant Squid, prompted
    ([sprite-prompts-bosses.md](sprite-prompts-bosses.md)).
 7. **`REWORKED_ONLY` comes out** once no fight room is short of enemies.

@@ -1,8 +1,8 @@
-import { PLAN_ART } from '../content/form';
+import { MAX_PITCH, PLAN_ART } from '../content/form';
 import { angleDelta, clamp, dist2, TAU } from '../core/util';
 import { Creature, DRAG_FWD } from './creature';
 import { Flow } from './flow';
-import { depthOf, noseOf, noseReach } from './hull';
+import { depthOf, noseOf, noseReach, tailReach } from './hull';
 import { clearHeading } from './roles';
 import type { Terrain } from './terrain';
 import type { World } from './world';
@@ -203,7 +203,7 @@ export class Bosses {
   step(c: Creature, dt: number, p: Creature, fight: 'punch' | 'charge' | 'grab') {
     const t = this.world.terrain;
     if (!t) return;
-    if (this.flowOf !== t) { this.flowOf = t; this.flow = new Flow(t); }
+    if (this.flowOf !== t) { this.flowOf = t; this.flow = this.flowFor(c, t, fight); }
     c.roleCd = Math.max(0, c.roleCd - dt);
     // held fast by the room: nothing else it does matters until it is free
     if (c.stuck > 0) { this.held(c, dt); return; }
@@ -881,6 +881,20 @@ export class Bosses {
   }
 
   /** Straight at the player with a clear line; otherwise down the room's water. */
+  /**
+   * The room's water as this boss can swim it. The shark goes round by water it fits: as deep
+   * as it is up and down, and to either side as far as it reaches at its steepest pitch, which
+   * is what it needs to go down a shaft. The den's and the deep's fights send their bosses to
+   * the mouths of clefts and the gaps between pillars on purpose, which water that wide calls
+   * shut, so theirs is a fish's.
+   */
+  private flowFor(c: Creature, t: Terrain, fight: 'punch' | 'charge' | 'grab') {
+    if (fight !== 'charge') return new Flow(t);
+    const d = depthOf(c), reach = Math.max(noseReach(c), tailReach(c));
+    const wide = reach * Math.cos(MAX_PITCH) + d * Math.sin(MAX_PITCH);
+    return new Flow(t, Math.ceil(wide / t.cell), Math.ceil(d / t.cell));
+  }
+
   private way(c: Creature, p: Creature, t: Terrain, sees: boolean) {
     const direct = Math.atan2(p.y - c.y, p.x - c.x);
     return sees ? direct : this.flow!.toward(c.x, c.y, p.x, p.y) ?? direct;

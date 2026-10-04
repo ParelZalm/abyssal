@@ -102,6 +102,17 @@ export const SPRITES: Record<string, SpriteArt> = {
   mantisshrimp: { w: 164, h: 72, snout: 134, tail: 28, axis: 33, legs: { x0: 30, x1: 112, root: 44, tip: 69 },
                   hull: [[126.5, 55, 5], [115.5, 31, 13], [102.5, 29, 13], [88.5, 31, 11], [75.5, 32, 10.2],
                          [62.5, 32, 10.2], [49.5, 33, 9.8], [39.5, 34, 8.5], [29.5, 37, 7]] },
+  // `npm run sprite -- greatwhite-sprite.png --id greatwhite --key green --fringe --keep
+  // 124,4,200,84`: on green for its gums. The strike is the jaws open, which the charge's tell
+  // shows from a third of the way in; the sheet redrew the whole shark for it, a little longer
+  // in the head, so only the head is taken, from behind the gills, where the two backs meet —
+  // cut in front of them, the raised snout stood up off the back in a step. The hull is set by
+  // hand to the body alone: the import counted the first dorsal and the pectoral where they
+  // cross a sample, and the hull is what meets the rock (`collideHull`) and what a rush is
+  // dazed by. Its first sample is the snout, which the fight reads. No lights: it has none
+  greatwhite: { w: 200, h: 87, snout: 195, tail: 33, axis: 42,
+                hull: [[189.5, 41, 6], [170.5, 43, 10.5], [151.5, 43.5, 13.5], [132.5, 44, 15.5], [114.5, 44, 16.5],
+                       [95.5, 44, 15], [76.5, 43.5, 12.5], [57.5, 43, 8.5], [38.5, 43, 4]] },
   // `npm run sprite -- barracuda-sprite.png --id barracuda --fringe`: its sheet bled magenta
   // into a cell round the outline. The hull is the body alone: the import counted the
   // pectoral, the dorsals and the anal fin where they cross a sample, which made a long thin

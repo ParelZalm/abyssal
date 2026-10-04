@@ -22,7 +22,7 @@ each is rest and strike only.
 
 ---
 
-## 1. Great White — boss (the reef): rest, strike (the jaws)
+## 1. Great White — boss (the reef): rest, strike (the jaws) — done
 
 Its fight reads the snout and the tells off the body (`sim/bosses.ts`): it circles, turns square
 on and holds through the tell with its jaws coming open, rushes the line, and dazes itself on
@@ -158,11 +158,14 @@ second animal.
 ### Import
 
 ```bash
-npm run sprite -- docs/media/reference/greatwhite-sprite.png --id greatwhite --key green --fringe
+npm run sprite -- docs/media/reference/greatwhite-sprite.png --id greatwhite --key green --fringe --keep 124,4,200,84
 ```
 
-The jaws open inside the head and in front of it, so expect to box the head with `--keep` if
-the import takes too little or too much of the strike.
+As it went: the sheet redrew the whole shark for the strike, a little longer in the head, and
+the import took nearly all of it. The head is boxed from behind the gills, where the two backs
+meet: boxed from in front of them, the raised snout stood up off the back in a step. The hull
+is set by hand to the body without its first dorsal and pectoral. In the game, its fuller head
+jammed in the reef's arch room until the shark went by water it fits (`Bosses.flowFor`).
 
 ---
 

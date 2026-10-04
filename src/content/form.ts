@@ -511,7 +511,7 @@ export function faceFor(prev: 1 | -1, angle: number): 1 | -1 {
  * and facing right are the same animal mirrored about its spine, and a fish drawn standing on
  * its tail has no profile left to read.
  */
-const MAX_PITCH = 0.96;
+export const MAX_PITCH = 0.96;
 /**
  * A body tucked in a crack stands on its tail after all (`Creature.upright`): in a cleft
  * there is no open water to read a climb against, and a larva held at the cap lay across the

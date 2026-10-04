@@ -574,6 +574,18 @@ first-time toast that names the answer (`Impacts`).
 `Flow` walks the target's own pocket of narrow water out to the open (up to 20 cells), so a
 larva in a cleft draws its hunters to the cleft's mouth rather than the rock nearest it.
 
+**The Great White goes by water it fits.** Its `Flow` counts a cell open only with water as
+deep as the shark either way up and down, and as wide either side as it reaches at its
+steepest drawn pitch (`MAX_PITCH`), which is what going down a shaft takes (`Bosses.flowFor`).
+On a fish's flow it was led into the channel over the reef's arch and nose down into the gap
+between the arch and the wall, and held there by the rock on every heading for good; the
+painted cone of a head had slid through, the sprite's fuller head did not. The other two
+keep a fish's: their fights send them to the mouths of clefts and between pillars on
+purpose. **A boss is placed** where its whole hull has water round it, else where it has
+water as long as it is and as deep, lying level, else where its middle fits
+(`Spawner.boss`): without the middle test the shark was put in that same channel, the
+farthest water its middle fitted.
+
 **Culling is round the room.** `World.cull` drops anything more than twice the room's half
 diagonal from its middle. It was the camera's centre, and just after a slide the camera is
 still panning off the last room: a boss put at the far side of its room was culled, alive,
