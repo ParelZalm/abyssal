@@ -58,9 +58,10 @@ const bled = c => green ? c[1] > c[0] + 6 && c[1] > c[2] - 4 : c[0] > c[1] + 30 
 const median = a => a.sort((x, y) => x - y)[a.length >> 1];
 const cells = [];
 for (let j = 0; j < ch; j++) for (let i = 0; i < cw; i++) {
-  // the middle of the cell, a pixel in from each edge, so the seam's blur does not count
-  const r = [], g = [], b = [];
-  for (let y = j * P + 1; y < (j + 1) * P - 1; y++) for (let x = i * P + 1; x < (i + 1) * P - 1; x++) {
+  // the middle of the cell, a pixel in from each edge, so the seam's blur does not count; a
+  // sheet at one image pixel to the art pixel, as the redrawn larva's came, has no seam
+  const r = [], g = [], b = [], m = P >= 3 ? 1 : 0;
+  for (let y = j * P + m; y < (j + 1) * P - m; y++) for (let x = i * P + m; x < (i + 1) * P - m; x++) {
     const o = (y * W + x) * 4;
     r.push(D[o]); g.push(D[o + 1]); b.push(D[o + 2]);
   }

@@ -105,8 +105,8 @@ export interface SpriteArt {
    * whole animal by `scripts/import-parts.mjs`: `at` is each part's top-left in this picture's
    * pixels, and `scale` how many of them one of a part's pixels is, since the whole on the parts
    * sheet was not drawn quite the bare body's length. `size` draws a part smaller or bigger than
-   * the sheet has it, about the same anchor it grows from (`drawnBody`): the larva's eye as drawn
-   * covered the front of the head and the mouth with it.
+   * the sheet has it, about the same anchor it grows from (`drawnBody`): the first larva's eye, as
+   * drawn, covered the front of the head and the mouth with it.
    */
   parts?: { scale: number; at: Partial<Record<PartName, Pt>>; size?: Partial<Record<PartName, number>> };
 }
@@ -291,13 +291,13 @@ export const SPRITES: Record<string, SpriteArt> = {
   // The player's bodies (`BODIES`), keyed by the body's name rather than a species'. The larva's
   // frames are its bare body, and its parts are drawn apart (`docs/sprite-prompts-player.md`):
   // `npm run sprite -- larva-sprite.png --id larva --key green --fringe`, then
-  // `node scripts/import-parts.mjs docs/media/reference/larva-parts-sprite.png --body larva --snout 90 --tail 4 --axis 17`
-  larva: { w: 92, h: 34, snout: 90, tail: 4, axis: 17,
-           parts: { scale: 0.935, at: { eye: [64.8, 5.3], tail: [-13.8, 6.3], pectoral: [47, 21.2], back: [4.9, -5],
-                                       belly: [4.9, 20.3] }, size: { eye: 0.72 } },
+  // `node scripts/import-parts.mjs docs/media/reference/larva-parts-sprite.png --body larva --snout 87 --tail 4 --axis 15 --pitch 1`
+  larva: { w: 88, h: 30, snout: 87, tail: 4, axis: 15,
+           parts: { scale: 0.943, at: { eye: [64.4, 4.2], tail: [-17.7, 4.2], pectoral: [51.2, 20.2], back: [4.9, -4.3],
+                                       belly: [4.9, 19.2] } },
            ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
-           hull: [[86.5, 17, 9.3], [76.5, 17, 13.6], [66.5, 17, 12.8], [56.5, 17, 11], [47.5, 17, 10.2],
-                  [37.5, 17, 7.6], [27.5, 17, 6], [17.5, 17.5, 5.5], [7.5, 17.5, 3.8]] },
+           hull: [[84.5, 16, 6], [74.5, 14.5, 11.5], [64.5, 14.5, 11.5], [55.5, 15.5, 11.5], [45.5, 15, 11.9],
+                  [35.5, 15, 11], [26.5, 15, 9.3], [16.5, 15.5, 6.4], [6.5, 16, 6]] },
 };
 
 /**
