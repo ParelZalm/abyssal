@@ -8,6 +8,8 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-10-05
+
 - **The larva is drawn.** It is a hand-drawn picture now, like the enemies': a pale,
   see-through fry with its spine and gut showing, a deep round head and a big eye, a back fold
   arching over its trunk and a fan of a tail. The mutations on its head and tail are drawn on
@@ -65,6 +67,7 @@ The column game: one open water column nine kilometres deep, five zones sealed b
 that open to a body big enough, a draft of three mutations at every growth, guardians, the
 Leviathan at the bottom, and the codex. Kept as the tag `v0.1.0`.
 
-[Unreleased]: https://github.com/ParelZalm/abyssal/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/ParelZalm/abyssal/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/ParelZalm/abyssal/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/ParelZalm/abyssal/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/ParelZalm/abyssal/releases/tag/v0.1.0
