@@ -8,6 +8,9 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+- Release notes link into the repo at the release's tag, where they were relative and broke on
+  the release page (`npm run release:notes`).
+
 ## [0.2.0] — 2026-10-05
 
 ### The tank game
