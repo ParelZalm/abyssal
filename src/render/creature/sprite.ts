@@ -134,9 +134,11 @@ export async function loadSprites() {
   }));
 }
 
-export const hasSprite = (id: string) => frames.has(id);
+/** The frames art `id` is drawn from: its own, or for a stretch of another's (`SpriteArt.cut`), that one's. */
+const framesOf = (id: string) => frames.get(SPRITES[id]?.cut?.of ?? id);
+export const hasSprite = (id: string) => !!framesOf(id);
 /** Whether species `id` has its turned look drawn (`SOURCES`). */
-export const hasWounded = (id: string) => !!frames.get(id)?.wounded;
+export const hasWounded = (id: string) => !!framesOf(id)?.wounded;
 
 /** The darkest of the sprite's colours: the outline it is ringed with at any size. */
 function darkest(palette: number[][]) {
@@ -207,9 +209,11 @@ function texture(c: HTMLCanvasElement) {
  * are, so the art does not slide off the line it bends about.
  */
 export function bakeSprite(id: string, g: Genome, plan: Plan, res: number, wounded = false): Omit<Baked, 'users'> {
-  const all = frames.get(id)!;
+  const all = framesOf(id)!;
   const fr = (wounded && all.wounded) || all;
   const s: SpriteArt = SPRITES[id];
+  // a stretch of a picture is read from where it starts in the whole one
+  const ox = s.cut?.x0 ?? 0;
   const f = formFor(g, plan);
   const per = spriteScale(s, f);
   const k = res / per;
@@ -218,8 +222,8 @@ export function bakeSprite(id: string, g: Genome, plan: Plan, res: number, wound
   const halfPx = Math.max(s.axis, s.h - s.axis) + 1 / k;
   const w = Math.ceil(s.w * k), h = Math.ceil(halfPx * 2 * k);
   const oy = halfPx - s.axis;
-  const shut = resample(fr.rest, fr.palette, k, w, h, oy);
-  const open = resample(fr.strike, fr.palette, k, w, h, oy);
+  const shut = resample(fr.rest, fr.palette, k, w, h, oy, ox);
+  const open = resample(fr.strike, fr.palette, k, w, h, oy, ox);
 
   const lights: Emitter[] = (s.lights ?? []).map(l => ({ ...spritePoint(s, f, l.at), color: l.color, strength: l.strength }));
   let depth = 0;

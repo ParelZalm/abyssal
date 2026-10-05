@@ -26,7 +26,7 @@ import { drawnAngle, formFor, PLAN_ART, quintic, R, type Plan } from '../../cont
 import { menace, type Genome } from '../../content/genome';
 import { glowTexture } from '../textures';
 import type { Light } from '../lighting';
-import { clamp, hsl, lerp } from '../../core/util';
+import { angleDelta, clamp, hsl, lerp } from '../../core/util';
 import { artDensity, artVersion } from '../pixel';
 import { livingSkin, type LivingSkin } from './living';
 import type { Emitter } from './bake/sheet';
@@ -179,7 +179,13 @@ export class FishView extends Container {
    * eye. The organ itself is a single hot pixel, and a lamp one texel across is only a lamp
    * if light comes off it. In `glow` with the rest, so every lamp on screen is one batch.
    */
-  private lamps: { s: Sprite; e: Emitter; phase: number }[] = [];
+  private lamps: { s: Sprite; e: Emitter; phase: number; w: number; lure: boolean }[] = [];
+  /**
+   * How far past itself the brightest lamp burns, 0 to 1, set from outside each frame: an
+   * anglerfish's lure flaring as it lets its sparks out (`Creature.lit`). It swells, goes white
+   * hot at its heart and throws its light further, and flickers while it does.
+   */
+  flare = 0;
   /** A tight, hot centre inside the halo — the halo alone reads as fog, not as a light. */
   private core = new Sprite(glowTexture());
   /** A carcass's red bloom (`EMBER`); hidden while the body lives. */
@@ -202,6 +208,14 @@ export class FishView extends Container {
   private arms: { mesh: MeshSimple; verts: Float32Array; feeding: boolean; rig: Rig; v: number }[] = [];
   /** The arms' own clock: `beat` jumps on a boost, and a jump reads as a twitch in an arm. */
   private armT = Math.random() * 10;
+  /**
+   * Turned inside out, as a vampire squid does (`Creature.trick` 'ball'): set from outside each
+   * frame, and eased here, 0 to 1, from the crown flared ahead to every arm swept back over the
+   * mantle, its webbing out and the cirri standing — the spiked ball the real animal makes of
+   * itself. The arms are under the body, so what shows is them standing off it on every side.
+   */
+  cloak = false;
+  private cloaked = 0;
   /** How far the feeding pair is out toward `grip`, 0 coiled to 1 fastened. */
   private strike = 0;
   /** What the feeding pair is holding, read for its live world position; null when nothing. */
@@ -395,9 +409,9 @@ export class FishView extends Container {
     const own = Math.max(this.g.glow, this.g.pale * 0.6);
     if (own > 0.05) out.push({ x: this.glow.x, y: this.glow.y, r: R * (3 + own * 5),
       color: this.halo.tint as number, a: Math.min(1, own) * a });
-    for (const { s, e } of this.lamps) {
-      out.push({ x: this.glow.x + s.x, y: this.glow.y + s.y, r: R * (1.4 + e.strength * 2.2),
-        color: e.color, a: s.alpha * a });
+    for (const { s, e, lure } of this.lamps) {
+      out.push({ x: this.glow.x + s.x, y: this.glow.y + s.y,
+        r: R * (1.4 + e.strength * 2.2) * (lure ? 1 + this.flare * 1.2 : 1), color: e.color, a: s.alpha * a });
     }
   }
 
@@ -408,14 +422,17 @@ export class FishView extends Container {
     // a lamp's reach is a few pixels of the frame whatever the animal's size: sized off the
     // body, a leviathan's photophores would be searchlights and a lanternfish's invisible
     const px = 1 / artDensity();
+    // the brightest is the one that flares: the lure, on an anglerfish
+    const top = Math.max(0, ...lights.map(e => e.strength));
     for (const e of lights) {
       const s = new Sprite(glowTexture());
       s.anchor.set(0.5);
       s.blendMode = 'add';
       s.tint = e.color;
-      s.width = s.height = px * (5 + e.strength * 9);
+      const w = px * (5 + e.strength * 9);
+      s.width = s.height = w;
       this.glow.addChild(s);
-      this.lamps.push({ s, e, phase: Math.random() * 6.28 });
+      this.lamps.push({ s, e, phase: Math.random() * 6.28, w, lure: e.strength === top });
     }
   }
 
@@ -486,7 +503,11 @@ export class FishView extends Container {
       const a = spritePoint(s, f, [bells.x0, s.axis]).x, b = spritePoint(s, f, [bells.x1, s.axis]).x;
       const ease = (b - a) * 0.25;
       this.squeeze = this.colX.map(x => clamp(Math.min(x - a, b - x) / ease + 1, 0, 1));
-    } else this.squeeze = null;
+    } else {
+      // a stretch cut from a colony with no bells in it is stem: nothing on it squeezes, where
+      // a whole jelly with none pulses as one strip
+      this.squeeze = this.art && SPRITES[this.art]?.cut ? this.colX.map(() => 0) : null;
+    }
     // arms first, so they sit under the body: the crown is tucked beneath the head
     const rig = this.baked.arm, tentacle = this.baked.tentacle;
     if (rig || tentacle) {
@@ -809,6 +830,8 @@ export class FishView extends Container {
     // out fast, back slow: the lash is the event, the recoil is just the arm coming home
     this.strike += (want - this.strike) * Math.min(1, dt * (want ? 16 : 4));
     const e = this.strike;
+    this.cloaked += ((this.cloak ? 1 : 0) - this.cloaked) * Math.min(1, dt * (this.cloak ? 9 : 4));
+    const w = this.cloaked;
     let tx = 0, ty = 0;
     if (this.grip) {
       // into the view's own frame: the mesh lives in R units, rotated with the body
@@ -824,6 +847,8 @@ export class FishView extends Container {
       let rx = rig.rootX * pulse;
       // swimming bundles the crown into a point; holding something flares it open
       let heading = v * 0.5 * (1 - Math.min(1, thrust) * 0.4) * (1 + e * 0.7);
+      // inside out: back over the mantle and fanned off it, the top arms up and the bottom down
+      let back = Math.PI - v * 0.8;
       const len = rig.len * (arm.feeding ? 0.5 : 0.78 / A.armPair) * (1 + e * 0.12);
       const step = len / (ARM_COLS - 1);
       let x = rx, y = ry;
@@ -831,10 +856,13 @@ export class FishView extends Container {
         const s = j / (ARM_COLS - 1);
         pts[j * 2] = x; pts[j * 2 + 1] = y;
         // tips curl in toward the midline, and more so around a catch — the arms wrap it
-        heading += Math.sin(this.armT + i * 1.9 - s * 4.5) * 0.2 * (0.3 + s)
-                 - v * (0.05 + e * 0.1);
-        x += Math.cos(heading) * step;
-        y += Math.sin(heading) * step;
+        const sway = Math.sin(this.armT + i * 1.9 - s * 4.5) * 0.2 * (0.3 + s);
+        heading += sway - v * (0.05 + e * 0.1);
+        // and swept back they hug the body, curling in over it toward their tips
+        back += sway * 0.3 + v * 0.09;
+        const a = w > 0 ? heading + angleDelta(heading, back) * w : heading;
+        x += Math.cos(a) * step;
+        y += Math.sin(a) * step;
       }
       // the coil is walked out on the body before it is mirrored, then mirrored with it; the
       // lash is aimed afterwards, since what it is aimed at is where it is on screen
@@ -887,6 +915,12 @@ export class FishView extends Container {
     for (const l of this.lamps) {
       l.phase += dt * 1.6;
       l.s.alpha = Math.min(0.95, 0.3 + l.e.strength * 0.4) * (0.78 + Math.sin(l.phase) * 0.22);
+      if (!l.lure) continue;
+      // flared, it flickers fast and burns whole, and swells to over twice its size
+      const f = this.flare * (0.85 + Math.sin(this.clock * 31) * 0.15);
+      l.s.alpha += (1 - l.s.alpha) * f;
+      l.s.width = l.s.height = l.w * (1 + f * 1.6);
+      l.s.tint = f > 0.01 ? lerpColor(l.e.color, 0xffffff, f * 0.45) : l.e.color;
     }
     let sx = 1;
     let sy = 1 - Math.abs(bank) * 0.16;

@@ -12,16 +12,19 @@ export type Role = 'charger' | 'spitter' | 'turret' | 'drifter';
  * move that makes it this animal and not another of its role, what it turns into below half
  * its health, and what its death leaves. The nursery's: a mackerel's pack, an archerfish's
  * volley, a pufferfish's balloon, a sea nettle's bloom. The reef's: a ribbon eel's burrow, a
- * triggerfish's jet, a lionfish's herd, a moon jelly's wane.
+ * triggerfish's jet, a lionfish's herd, a moon jelly's wane. The deep's: a barracuda's line, a
+ * gulper eel's gulp, a vampire squid's cloak, an anglerfish's lure, a siphonophore's chain.
  */
-export type Moveset = 'pack' | 'volley' | 'balloon' | 'bloom' | 'burrow' | 'jet' | 'herd' | 'wane';
+export type Moveset = 'pack' | 'volley' | 'balloon' | 'bloom' | 'burrow' | 'jet' | 'herd' | 'wane'
+  | 'line' | 'gulp' | 'cloak' | 'lure' | 'chain';
 /**
  * What a body fires: a jet of water, a spine, a blob of light — and the mantis shrimp's
  * urchin, which is thrown rather than fired, and a sea nettle's sting, which is left hanging
  * in the water. Neither of those last two is ever the player's — and the fry, the
- * Mouthbrooder's, which only the player lets out.
+ * Mouthbrooder's, which only the player lets out; and the lumen, a spark of an anglerfish's
+ * lure, which only it does.
  */
-export type ShotKind = 'spit' | 'spine' | 'bolt' | 'urchin' | 'sting' | 'fry';
+export type ShotKind = 'spit' | 'spine' | 'bolt' | 'urchin' | 'sting' | 'fry' | 'lumen';
 /** What a role fires: every kind but the thrown, the left and the player's fry. */
 export type FiredKind = Exclude<ShotKind, 'urchin' | 'sting' | 'fry'>;
 /** A boss's fight (`Species.boss`, `sim/bosses.ts`). */
@@ -68,6 +71,11 @@ export interface Species {
   streak?: number;
   /** Its moveset, for a hostile that plays its role its own way. */
   moves?: Moveset;
+  /**
+   * The species this is a piece of: a siphonophore's colony cut in two (`chainPiece`), drawn
+   * from a stretch of the whole one's sprite. The codex books it as the whole animal.
+   */
+  of?: string;
   /** What it fires, for the roles that fire. */
   shot?: FiredKind;
   /**
@@ -286,7 +294,7 @@ export const SPECIES: Species[] = [
     nutrition: 2.1, weight: 9, translucent: 0.7, glow: 0.3, photophores: 0.5,
     stealth: 0.9, segments: 1 },
 
-  { id: 'siphon', name: 'Siphonophore', behavior: 'drift', plan: 'jelly', role: 'drifter',
+  { id: 'siphon', name: 'Siphonophore', behavior: 'drift', plan: 'jelly', role: 'drifter', moves: 'chain',
     // drawn four times its size: a jelly's form is a bell and a half long, and the colony at
     // that was under a tile in the deep, a smudge where it should be a chain of lights
     zone: 'twilight', bleed: 1400, drawn: 4,
@@ -294,7 +302,7 @@ export const SPECIES: Species[] = [
     nutrition: 2.2, weight: 7, translucent: 0.6, glow: 0.85, veil: 0.9,
     photophores: 0.6, segments: 2, heal: 0.45 },
 
-  { id: 'barracuda', name: 'Barracuda', behavior: 'hunter', plan: 'eel', role: 'charger',
+  { id: 'barracuda', name: 'Barracuda', behavior: 'hunter', plan: 'eel', role: 'charger', moves: 'line',
     // drawn bigger than its size: at its own it was 40 texels long in the deep tank, a sliver
     // under the anglerfish with no teeth left to it, and at twice it was the gulper's length.
     // It is the ambush from across the room: its dash, at its speed, covers eleven tiles in
@@ -326,7 +334,7 @@ export const SPECIES: Species[] = [
 
   // it really does throw glowing mucus at what threatens it
   { id: 'vampiresquid', name: 'Vampire Squid', behavior: 'ambush', plan: 'squid',
-    role: 'spitter', shot: 'bolt',
+    role: 'spitter', shot: 'bolt', moves: 'cloak',
     // drawn twice its size, as the anglerfish is: its picture is the body alone, some
     // twenty-six texels long in the deep at its own, and its arms reach as far again
     zone: 'midnight', drawn: 2,
@@ -343,7 +351,7 @@ export const SPECIES: Species[] = [
   // its lure throws light in a ring, which is the one thing about it that is not waiting.
   // Navy under cyan lights, after `docs/media/reference/angler.webp`
   { id: 'anglerfish', name: 'Anglerfish', behavior: 'ambush', plan: 'angler',
-    role: 'turret', shot: 'bolt',
+    role: 'turret', shot: 'lumen', moves: 'lure',
     // drawn twice its size: at its own it was 20 to 30 texels long in the deep tank, and its
     // sprite's fangs and comb were gone
     zone: 'midnight', bleed: 800, drawn: 2,
@@ -351,7 +359,7 @@ export const SPECIES: Species[] = [
     nutrition: 2.6, weight: 7, jaw: 1.1, glow: 0.9, armor: 2, spikes: 1, lure: 1,
     gape: 0.7, eyeAdapt: 0.3, photophores: 0.3, sense: 520, lurk: 1 },
 
-  { id: 'gulper', name: 'Gulper Eel', behavior: 'hunter', plan: 'eel', role: 'charger',
+  { id: 'gulper', name: 'Gulper Eel', behavior: 'hunter', plan: 'eel', role: 'charger', moves: 'gulp',
     zone: 'midnight', bleed: 900,
     size: [46, 78], hue: [262, 298], accent: 328, speed: 140, bite: 24,
     nutrition: 2.8, weight: 6, jaw: 1.3, segments: 3, finSize: 0.6,

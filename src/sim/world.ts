@@ -11,7 +11,7 @@ import type { Bite, Blood, BossCue, Ghost, Pulse } from './events';
 import { primaryOf, shotHit, shotModsOf, shotSpent, tick as tickOrgans, type Organ,
          type ShotMark } from './organs';
 import { Patterns } from './patterns';
-import { ghostly, Roles } from './roles';
+import { ghostly, lureOf, Roles } from './roles';
 import { Spawner } from './spawn';
 import type { Terrain } from './terrain';
 import { collideHull, surfaceGap, WALL_R, wallR } from './hull';
@@ -104,6 +104,19 @@ export interface Shot {
    * a triggerfish's jet (`Roles`' `JET_KNOCK`) is water, and moves what it meets.
    */
   knock?: number;
+  /**
+   * Radians a second a hostile's shot bends toward the player, for its first `HOME_FOR`
+   * seconds: a vampire squid's bolts, which curve after the larva and then fly on straight, so
+   * a swim across their line still loses them.
+   */
+  home?: number;
+  /**
+   * A shot let out of a body's lure to hang beside it before it goes (`Roles`' anglerfish):
+   * thrown out to (`ox`, `oy`) off the lure over `SET`, held there as the lure bobs, and at
+   * `hold` seconds fired at the player as it is then, at `speed` world units a second. Fired at
+   * once if `by` dies.
+   */
+  hang?: { by: Creature; ox: number; oy: number; hold: number; speed: number };
   /** The bodies it has already landed on, which it passes without landing again. */
   hit?: Creature[];
   /**
@@ -144,6 +157,10 @@ const CHILL_DRAG = DRAG_FWD;
  * leaving; anything nearer than it reaches is the body's own touch to hurt.
  */
 const SHOT_ARM = 0.1;
+/** Seconds a homing hostile shot (`Shot.home`) bends for before it flies on straight. */
+const HOME_FOR = 1.1;
+/** Seconds a hanging shot takes to reach its spot from the lure it left (`Shot.hang`). */
+const SET = 0.3;
 
 /**
  * Something loose in a room that the player collects by swimming into it: a half heart, a
@@ -303,7 +320,18 @@ export class World {
     }
   }
 
-  /** Development: a living body out of the room at once, leaving nothing behind (the lab's targets). */
+  /**
+   * A hostile's blow on the player that is neither a touch nor a shot — a gulper's jaw shutting
+   * on what its draw brought in. Returns what landed (`Combat.hitPlayer`).
+   */
+  hurtPlayer(by: Creature, how: Hurt) {
+    return this.combat.hitPlayer(by, this.player, how);
+  }
+
+  /**
+   * A living body out of the room at once, leaving nothing behind: the lab's targets, and a
+   * siphonophore gone into the pieces it broke into (`Roles.split`).
+   */
   release(c: Creature) {
     const i = this.creatures.indexOf(c);
     if (i >= 0) this.remove(i);
@@ -567,13 +595,17 @@ export class World {
         // still holding on; a fry let go by a kill flies on from here
         if (s.fry.on) continue;
       }
-      if (s.seek) this.bend(s, dt);
-      if (s.heavy) {
-        s.vx *= Math.exp(-s.heavy.drag * dt);
-        s.vy = Math.min(s.heavy.sink, s.vy + s.heavy.g * dt);
+      // hanging by its lure it is put where it is, and can still meet rock and the player
+      if (!(s.hang && this.hangs(s))) {
+        if (s.seek) this.bend(s, dt);
+        if (s.home && s.t < HOME_FOR && p.alive) this.homeIn(s, dt);
+        if (s.heavy) {
+          s.vx *= Math.exp(-s.heavy.drag * dt);
+          s.vy = Math.min(s.heavy.sink, s.vy + s.heavy.g * dt);
+        }
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
       }
-      s.x += s.vx * dt;
-      s.y += s.vy * dt;
       let spent = s.t > s.life || !t || t.solidAt(s.x, s.y) || (!!s.apex && s.vy >= 0);
       let struck = false;
       if (!spent && s.by.isPlayer) {
@@ -584,6 +616,7 @@ export class World {
         for (const c of this.creatures) {
           if (!this.canHit(c) || s.hit?.includes(c)) continue;
           if (surfaceGap(c, s.x, s.y) > s.r) continue;
+          c.struck = { x: s.x, y: s.y };
           this.combat.hit(p, c, s.mult, true);
           // a shot carries its way on into what it hit, a little, so a hit is felt
           c.vx += s.vx * 0.15;
@@ -625,6 +658,39 @@ export class World {
       this.shots.splice(i, 1);
       this.spend(s, struck, dt);
     }
+  }
+
+  /**
+   * A hanging shot's step beside its body's lure (`Shot.hang`): out to its spot, eased, and held
+   * there. Whether it is still held; on the step it goes it is aimed at the player and fired,
+   * with the flash a shot leaves.
+   */
+  private hangs(s: Shot) {
+    const h = s.hang!, p = this.player;
+    const at = lureOf(h.by);
+    if (s.t >= h.hold || !h.by.alive) {
+      const a = Math.atan2(p.y - s.y, p.x - s.x);
+      s.vx = Math.cos(a) * h.speed;
+      s.vy = Math.sin(a) * h.speed;
+      s.hang = undefined;
+      this.pulses.push({ x: s.x, y: s.y, r: h.by.radius * 0.4, kind: 'shot', shot: s.kind, hostile: true });
+      return false;
+    }
+    const k = 1 - (1 - Math.min(1, s.t / SET)) ** 2;
+    s.x = at.x + h.ox * k;
+    s.y = at.y + h.oy * k;
+    s.vx = s.vy = 0;
+    return true;
+  }
+
+  /** A homing hostile shot turned toward the player by at most its rate, keeping its speed. */
+  private homeIn(s: Shot, dt: number) {
+    const p = this.player;
+    const a = Math.atan2(s.vy, s.vx);
+    const turn = clamp(angleDelta(a, Math.atan2(p.y - s.y, p.x - s.x)), -s.home! * dt, s.home! * dt);
+    const v = Math.hypot(s.vx, s.vy);
+    s.vx = Math.cos(a + turn) * v;
+    s.vy = Math.sin(a + turn) * v;
   }
 
   /**

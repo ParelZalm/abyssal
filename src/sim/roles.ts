@@ -1,10 +1,11 @@
+import { formFor, spineAt } from '../content/form';
 import type { Genome } from '../content/genome';
-import type { Moveset, Role } from '../content/species';
+import { speciesById, type Moveset, type Role } from '../content/species';
 import { angleDelta, clamp, dist2, TAU } from '../core/util';
-import { Creature } from './creature';
+import { Creature, DRAG_FWD } from './creature';
 import { Flow } from './flow';
-import { depthOf, noseOf, noseReach, spriteAt, tailReach, wallR } from './hull';
-import { SPRITES } from '../content/sprites';
+import { depthOf, noseOf, noseReach, spriteAt, spriteColumn, tailReach, wallR } from './hull';
+import { chainPiece, SPRITES, spriteScale } from '../content/sprites';
 import { stealthOf } from './organs';
 import type { Terrain } from './terrain';
 import type { World } from './world';
@@ -242,6 +243,104 @@ const SPAWN_EVERY = 3.5;
 const SPAWN_MAX = 3;
 
 /**
+ * The line (the barracuda). It hangs `LINE_OFF` tiles across from the player and slides into the
+ * player's row at `LINE_CREEP` of its cruise, and the moment the player is on its line — within
+ * `LINE_BAND` tiles of its row, inside its reach, nothing between — it gives the shortest tell in
+ * the deep, `LINE_WIND` and the lock, and crosses the room along that row at a charger's dash —
+ * which at its speed is the room in a second — until rock stops it, stunned for `LINE_STUN`
+ * (Isaac's charger, which goes when it is lined up). Below half health a dash that meets rock
+ * ricochets off it, turned up to `RICOCHET_AIM` toward the player, `RICOCHET` dashes to a run.
+ */
+const LINE_BAND = 0.8;
+export const LINE_WIND = 0.2;
+const LINE_OFF = 6;
+const LINE_CREEP = 0.35;
+/** The longest a line dash goes, seconds, if rock does not end it first. */
+export const LINE_DASH = 1.2;
+export const LINE_STUN = 1.1;
+export const RICOCHET = 3;
+const RICOCHET_AIM = 0.6;
+
+/**
+ * The gulp (the gulper eel). A charger that does not dash: inside `GULP_REACH` tiles of its mouth
+ * and `GULP_CONE` of its line it opens its jaw through `GULP_WIND`, and then draws the water in for
+ * `GULP_DRAW` — the player pulled toward the mouth at up to `GULP_PULL` of its cruise, so close
+ * to the lips the way out is across the cone and not away down it, and the player's shots bent
+ * into it and swallowed whole. The jaw shuts on whatever the draw delivered.
+ * A gulp that took nothing leaves the jaw hanging for `GULP_GAPE`, the body `exposed`: the
+ * opening, Isaac's Maw. Below half health it spits what it swallowed back out, a fan of `SPRAY`
+ * and one more for each shot, `SPRAY_MORE` at most.
+ */
+const GULP_REACH = 4.5;
+const GULP_CONE = 0.9;
+export const GULP_WIND = 0.6;
+export const GULP_DRAW = 1.1;
+const GULP_PULL = 1.1;
+export const GULP_GAPE = 1.6;
+const GULP_CD: [number, number] = [1.2, 2.0];
+export const SPRAY = 3;
+const SPRAY_MORE = 6;
+export const SPRAY_GAP = 0.2;
+/**
+ * How far the jaw takes in from the mouth, in tiles: what it bites and what it swallows. Its
+ * pouch opens far past the head's own depth, which at half a tile let a player drawn to
+ * a tile off the lips go free.
+ */
+const MAW = 1.1;
+/** Draw streaks a second across the cone, as a guardian's suck draws them (`Patterns.draw`). */
+const STREAKS = 30;
+
+/**
+ * The cloak (the vampire squid). A spitter whose bolts bend after the player at `CURVE` radians a
+ * second for their first second (`Shot.home`), and then fly on. Below half health a player closer
+ * than `BALL_NEAR` tiles turns it inside out, as the real animal does: `BALL_HOLD` seconds a spiked
+ * ball, its arms swept back over the mantle, taking `BALL_TAKEN` of every blow, still; and then it
+ * bursts, leaving a cloud of `CLOUD` glowing motes that sting and thin over `CLOUD_LIFE`, and jets
+ * away from the player at `JET_AWAY` times its cruise for `JET_T`. `BALL_CD` before the next.
+ */
+export const CURVE = 0.9;
+const BALL_NEAR = 3.5;
+export const BALL_HOLD = 1.4;
+export const BALL_TAKEN = 0.25;
+const BALL_CD = 4;
+export const CLOUD = 10;
+export const CLOUD_LIFE = 2.6;
+const JET_AWAY = 1.8;
+const JET_T = 0.5;
+
+/**
+ * The lure (the anglerfish). A turret whose beat is not a ring but `LURE_MIN` to `LURE_MAX`
+ * sparks of its lure's light (`lumen`) let out of it, the lure flaring as it does
+ * (`Creature.lit`), each set at a spot `LURE_R` tiles off it on a fan toward the player,
+ * `LURE_FAN` radians apart; they hang there taking aim for `LURE_HOLD`, and then fire at
+ * the player one after another, `LURE_GAP` apart, each at where the player is as it goes. Still
+ * is hit; the hang is the time to move, and the rattle is the time to keep moving. Turned, it
+ * always lets out the most, and it also lunges at a player inside `LUNGE_NEAR` tiles: a
+ * charger's wind-up, lock and dash, which at its speed carries it some six tiles — the
+ * turret's bite — every `LUNGE_CD` at most.
+ */
+export const LURE_MIN = 3;
+export const LURE_MAX = 5;
+export const LURE_R = 1.4;
+export const LURE_FAN = 0.5;
+export const LURE_HOLD = 0.9;
+export const LURE_GAP = 0.16;
+/** How fast the lure dims once its last spark has gone, a second. */
+const LIT_FADE = 2.5;
+const LUNGE_NEAR = 4;
+const LUNGE_CD = 3.5;
+
+/**
+ * The chain (the siphonophore). It is a colony, and below half health it breaks in two where the
+ * blow that turned it landed, each piece a colony of its own on its stretch of the picture, with
+ * its share of the health left by length. A piece breaks again at half of its own, while it is
+ * `LINK` columns of the picture long either side of a cut; a piece of stem without bells drifts at
+ * `STEM` of the pace.
+ */
+const LINK = 110;
+const STEM = 0.6;
+
+/**
  * What a moveset looks like turned: the mackerel flushed red with its jaw and fins up, the
  * pufferfish's spines raised, the nettle's bell hotter, the triggerfish flushed red, the
  * lionfish flared, the moon jelly's gonads hot. A turn is a rebuild of the bake with this, once,
@@ -260,16 +359,26 @@ export function woundedGenome(moves: Moveset, g: Genome): Genome | null {
     case 'jet': return { ...g, hue: 4, accentHue: 48 };
     case 'herd': return { ...g, hue: 22, accentHue: 44 };
     case 'wane': return { ...g, glow: Math.min(1, g.glow + 0.3) };
-    case 'volley': case 'burrow': return null;
+    // the deep's are all sprites with no turned pair, and turn in what they do: the ricochet,
+    // the spray, the ball, the lunge, the break
+    case 'volley': case 'burrow': case 'line': case 'gulp': case 'cloak': case 'lure': case 'chain':
+      return null;
   }
 }
 
 /**
- * The role a hostile plays now, which is its species' but for a turned triggerfish: it stops
- * blowing and charges.
+ * The role a hostile plays now, which is its species' but for a turned triggerfish, which stops
+ * blowing and charges, and a turned anglerfish through a lunge.
  */
 export function roleOf(c: Creature): Role | undefined {
+  if (c.trick === 'lunge') return 'charger';
   return c.wounded && c.species.moves === 'jet' ? 'charger' : c.species.role;
+}
+
+/** Where a body's lure hangs: the sprite's bulb, or the mouth for one that has none drawn. */
+export function lureOf(c: Creature): { x: number; y: number } {
+  const b = SPRITES[c.species.id]?.bulb;
+  return (b && spriteAt(c, b)) ?? { x: c.mouthX, y: c.mouthY };
 }
 
 /** Whether a body has faded too far out of the room to be hit or to hurt: a waning moon jelly, the Giant Squid in its ink. */
@@ -282,9 +391,11 @@ function inRock(c: Creature) {
   return c.burrow === 'home' || c.burrow === 'back';
 }
 
-/** The share of a blow a hostile takes: a puffed pufferfish is braced against it. */
+/** The share of a blow a hostile takes: a puffed pufferfish and a balled vampire squid are braced against it. */
 export function bracedOf(c: Creature) {
-  return c.hostile && c.species.moves === 'balloon' && c.puffT > 0 ? PUFF_TAKEN : 1;
+  if (!c.hostile) return 1;
+  if (c.trick === 'ball') return BALL_TAKEN;
+  return c.species.moves === 'balloon' && c.puffT > 0 ? PUFF_TAKEN : 1;
 }
 
 /**
@@ -292,7 +403,8 @@ export function bracedOf(c: Creature) {
  * tracking part, and `locked` once the line is fixed. Null for anything not winding up a charge.
  */
 export function chargeOf(c: Creature): { fill: number; locked: boolean } | null {
-  if (roleOf(c) !== 'charger' || c.attack !== 'windup') return null;
+  // a gulp is not a dash: its tell is the jaw, and a bar that locked would promise a line
+  if (roleOf(c) !== 'charger' || c.attack !== 'windup' || c.species.moves === 'gulp') return null;
   const done = c.attackLen - c.attackT;
   return { fill: Math.min(1, done / Math.max(0.01, c.attackLen - CHARGE_LOCK)), locked: c.attackT <= CHARGE_LOCK };
 }
@@ -301,7 +413,7 @@ export function chargeOf(c: Creature): { fill: number; locked: boolean } | null 
  * Shot speeds, in tiles a second. The player cruises about six at the game's tempo, so a spit
  * is just outswum and a bolt easily: a shot is dodged across its line, not fled down it.
  */
-export const SHOT_SPEED = { spit: 7, spine: 5.25, bolt: 4.5 } as const;
+export const SHOT_SPEED = { spit: 7, spine: 5.25, bolt: 4.5, lumen: 4.5 } as const;
 
 /**
  * The hostiles' brains. A hostile does not live in the room the way its fauna does — it has
@@ -338,7 +450,12 @@ export class Roles {
     if (c.fade < 1) { if (!rock) c.drive(dt, c.angle, 0); return; }
     if (!p.alive) { if (!rock) c.drive(dt, c.angle, 0.2); return; }
     c.guardCd = Math.max(0, c.guardCd - dt);
-    if (!c.wounded && !c.brood && c.species.moves && c.hp < c.hpMax * WOUNDED) this.turn(c, p);
+    c.exposed = Math.max(0, c.exposed - dt);
+    if (!c.wounded && !c.brood && c.species.moves && c.hp < c.hpMax * WOUNDED) {
+      // a colony breaks where it was cut, and is gone into its pieces
+      if (c.species.moves === 'chain' && this.split(c)) return;
+      this.turn(c, p);
+    }
     if (c.turnT > 0) {
       c.turnT -= dt;
       if (!rock) c.drive(dt, c.angle, 0);
@@ -355,9 +472,10 @@ export class Roles {
       c.drive(dt, this.steer(c, dt, clearHeading(t, c, c.angle + Math.sin(c.wander * 0.8) * 0.8)), 0.25);
       return;
     }
-    switch (c.wounded && c.species.moves === 'jet' ? 'charger' : role) {
+    switch (roleOf(c) ?? role) {
       case 'charger':
         if (c.species.moves === 'burrow') this.lurk(c, dt, p, t);
+        else if (c.species.moves === 'gulp') this.gulp(c, dt, p, t);
         else this.charger(c, dt, p, t);
         break;
       case 'spitter': this.spitter(c, dt, p, t); break;
@@ -373,19 +491,23 @@ export class Roles {
 
   private charger(c: Creature, dt: number, p: Creature, t: Terrain) {
     const d = Math.sqrt(dist2(c.x, c.y, p.x, p.y));
+    const line = c.species.moves === 'line';
     if (this.tick(c, dt)) {
       if (c.attack === 'windup') {
-        // square on to the player through the wind-up, and held on the line for its last beat
-        if (c.attackT > CHARGE_LOCK) c.aimA = Math.atan2(p.y - c.y, p.x - c.x);
+        // square on to the player through the wind-up, and held on the line for its last beat;
+        // a barracuda's line is its row, so it only ever chooses which way along it
+        if (c.attackT > CHARGE_LOCK) c.aimA = line ? (p.x >= c.x ? 0 : Math.PI) : Math.atan2(p.y - c.y, p.x - c.x);
         c.drive(dt, c.aimA, c.attackT > CHARGE_LOCK ? 0.15 : 0, 1);
       } else if (c.attack === 'strike') {
         this.dash(c);
+        if (line) this.wall(c, p, t);
       } else {
         c.drive(dt, c.angle, 0.1);
       }
       return;
     }
     const sees = t.clearLine(c.x, c.y, p.x, p.y);
+    if (line) { this.hang(c, dt, p, t, d, sees); return; }
     if (sees && d < (c.species.reach ?? DASH_RANGE) * t.tile && c.roleCd <= 0 && this.free(c)) {
       c.volley = 0;
       this.begin(c, 'windup', CHARGE_WIND(c.genome.size) + CHARGE_LOCK);
@@ -394,6 +516,60 @@ export class Roles {
     }
     if (c.species.moves === 'pack' && sees && d < (ORBIT + 2) * t.tile) { this.circle(c, dt, p, t); return; }
     c.drive(dt, this.steer(c, dt, this.way(c, p, t)), CHARGE_CLOSE);
+  }
+
+  /**
+   * A barracuda between dashes: across from the player and sliding into its row, and the moment
+   * the player is on its line, the tell.
+   */
+  private hang(c: Creature, dt: number, p: Creature, t: Terrain, d: number, sees: boolean) {
+    const lined = Math.abs(p.y - c.y) < LINE_BAND * t.tile && d < (c.species.reach ?? DASH_RANGE) * t.tile;
+    if (sees && lined && c.roleCd <= 0 && this.free(c)) {
+      c.volley = 0;
+      this.begin(c, 'windup', LINE_WIND + CHARGE_LOCK);
+      c.aimA = p.x >= c.x ? 0 : Math.PI;
+      return;
+    }
+    // out of sight, it comes round by the water; in it, it keeps its side and creeps level
+    if (!sees) { c.drive(dt, this.steer(c, dt, this.way(c, p, t)), CHARGE_CLOSE); return; }
+    const side = c.x <= p.x ? -1 : 1;
+    const gx = p.x + side * LINE_OFF * t.tile, gy = p.y;
+    if (dist2(c.x, c.y, gx, gy) < (t.tile * 0.6) ** 2) {
+      c.drive(dt, c.angle, 0);
+      c.faceToward(p.x, FACE_SLACK * t.tile);
+      return;
+    }
+    c.drive(dt, this.steer(c, dt, clearHeading(t, c, Math.atan2(gy - c.y, gx - c.x))), LINE_CREEP);
+  }
+
+  /**
+   * A line dash meeting rock, felt at the nose a step ahead: it ends there, stunned — or, turned
+   * and with dashes left in the run, it comes off the wall square, turned toward the player.
+   */
+  private wall(c: Creature, p: Creature, t: Terrain) {
+    const n = noseOf(c);
+    const ux = Math.cos(c.aimA), uy = Math.sin(c.aimA);
+    const ahead = t.cell + Math.hypot(c.vx, c.vy) * (1 / 60);
+    // the room's edge is rock to a dash: an open door on its row let it out of the room
+    const rock = (x: number, y: number) => t.solidAt(x, y) || x < t.x0 || x > t.x0 + t.width || y < t.y0 || y > t.y0 + t.height;
+    const hitX = rock(n.x + Math.sign(ux) * ahead, n.y) && Math.abs(ux) > 0.1;
+    const hitY = rock(n.x, n.y + Math.sign(uy) * ahead) && Math.abs(uy) > 0.1;
+    if (!hitX && !hitY && !rock(n.x + ux * ahead, n.y + uy * ahead)) return;
+    this.world.pulses.push({ x: n.x, y: n.y, r: depthOf(c) * 2.5, kind: 'dust' });
+    c.view.bump(0.8, 0, 0);
+    if (c.wounded && c.volley < RICOCHET - 1) {
+      c.volley++;
+      // square off whatever it met; a nose into a corner comes back the way it went
+      const rx = hitX || !hitY ? -ux : ux, ry = hitY || !hitX ? -uy : uy;
+      const off = Math.atan2(ry, rx);
+      c.aimA = off + clamp(angleDelta(off, Math.atan2(p.y - c.y, p.x - c.x)), -RICOCHET_AIM, RICOCHET_AIM);
+      c.attackT = c.attackLen = LINE_DASH;
+      this.dash(c);
+      return;
+    }
+    c.vx *= 0.1;
+    c.vy *= 0.1;
+    this.begin(c, 'recover', LINE_STUN);
   }
 
   /** A charger's dash: committed, the heading the one it wound up on, and the speed held. */
@@ -405,6 +581,109 @@ export class Roles {
     c.vx = Math.cos(c.aimA) * v;
     c.vy = Math.sin(c.aimA) * v;
     c.thrust = 1.6;
+  }
+
+  /**
+   * The gulper eel: closes as a charger does, and with the player in front of its mouth opens
+   * it, draws, and shuts it; a gulp that took nothing hangs open (`tick`, `snap`).
+   */
+  private gulp(c: Creature, dt: number, p: Creature, t: Terrain) {
+    if (this.tick(c, dt)) {
+      if (c.attack === 'windup') {
+        // square on to the player while the jaw opens; the draw itself does not track, or the
+        // way out across the cone would close with it
+        c.aimA = Math.atan2(p.y - c.y, p.x - c.x);
+        c.drive(dt, c.aimA, 0.1, 1);
+      } else if (c.attack === 'strike') {
+        this.draw(c, dt, p, t);
+      } else {
+        c.drive(dt, c.angle, 0.05);
+      }
+      return;
+    }
+    const m = noseOf(c);
+    const d = Math.sqrt(dist2(m.x, m.y, p.x, p.y));
+    const ahead = Math.abs(angleDelta(c.angle, Math.atan2(p.y - m.y, p.x - m.x))) < GULP_CONE;
+    if (ahead && d < GULP_REACH * t.tile && c.roleCd <= 0 && t.clearLine(m.x, m.y, p.x, p.y) && this.free(c)) {
+      c.salvo = 0;
+      this.begin(c, 'windup', GULP_WIND);
+      return;
+    }
+    c.drive(dt, this.steer(c, dt, this.way(c, p, t)), CHARGE_CLOSE);
+  }
+
+  /**
+   * The gulp's draw: the body hangs, and in front of the mouth the water pours in, the player
+   * with it, and any of the player's shots in the cone are bent into the jaw and swallowed.
+   */
+  private draw(c: Creature, dt: number, p: Creature, t: Terrain) {
+    c.drive(dt, c.angle, 0);
+    const w = this.world;
+    // a shot goes in nearer the lips than a body is bitten from, or one fired past the head
+    // would be eaten out of the water beside it
+    const m = noseOf(c), range = GULP_REACH * t.tile, maw = MAW * t.tile * 0.6;
+    const into = (x: number, y: number) => {
+      const dx = m.x - x, dy = m.y - y, d = Math.hypot(dx, dy) || 1;
+      const inside = d < range && Math.abs(angleDelta(c.angle, Math.atan2(-dy, -dx))) < GULP_CONE * 1.3;
+      return { dx: dx / d, dy: dy / d, d, k: inside ? 1 - d / range : 0 };
+    };
+    if (p.alive) {
+      const q = into(p.x, p.y);
+      // along a body the forward drag is DRAG_FWD, so this holds a drift of GULP_PULL × cruise
+      const a = DRAG_FWD * Math.max(1, p.genome.speed) * GULP_PULL * q.k;
+      p.vx += q.dx * a * dt;
+      p.vy += q.dy * a * dt;
+    }
+    for (let i = w.shots.length - 1; i >= 0; i--) {
+      const s = w.shots[i];
+      if (!s.by.isPlayer || s.fry?.on) continue;
+      const q = into(s.x, s.y);
+      // a step ahead of it, and its own reach: a shot meets the head's hull a step after it
+      // is in range, and it is the hull it would have landed on
+      if (q.d < maw + s.r + Math.hypot(s.vx, s.vy) * dt) {
+        w.shots.splice(i, 1);
+        c.salvo++;
+        w.pulses.push({ x: s.x, y: s.y, r: s.r * 3, kind: 'bubbles' });
+        continue;
+      }
+      if (!q.k) continue;
+      // turned into the jaw at its own speed: a shot fired into the draw is a shot it eats
+      const v = Math.hypot(s.vx, s.vy);
+      const a = Math.atan2(s.vy, s.vx) + clamp(angleDelta(Math.atan2(s.vy, s.vx), Math.atan2(q.dy, q.dx)), -6 * dt, 6 * dt);
+      s.vx = Math.cos(a) * v;
+      s.vy = Math.sin(a) * v;
+    }
+    for (let n = Math.floor(STREAKS * dt + Math.random()); n > 0; n--) {
+      const a = c.angle + (Math.random() * 2 - 1) * GULP_CONE;
+      const d = range * (0.25 + Math.random() * 0.75);
+      const x = m.x + Math.cos(a) * d, y = m.y + Math.sin(a) * d;
+      w.pulses.push({ x, y, r: depthOf(c) * 0.3, kind: 'draw', vx: (m.x - x) * 2.4, vy: (m.y - y) * 2.4 });
+    }
+  }
+
+  /**
+   * The end of a gulp: the jaw shuts on whatever the draw brought to it. Turned, it spits back
+   * a fan for what it swallowed; a gulp that took nothing hangs its jaw open and the body is
+   * exposed. Returns the recovery's length.
+   */
+  private snap(c: Creature, p: Creature) {
+    const w = this.world;
+    const m = noseOf(c);
+    c.view.chomp();
+    w.pulses.push({ x: m.x, y: m.y, r: depthOf(c) * 2, kind: 'snap' });
+    const reach = MAW * w.terrain!.tile + p.radius * 0.5;
+    c.landed = p.alive && dist2(m.x, m.y, p.x, p.y) < reach * reach && w.hurtPlayer(c, 'bite') > 0;
+    if (c.wounded) {
+      const n = SPRAY + Math.min(c.salvo, SPRAY_MORE);
+      const at = Math.atan2(p.y - m.y, p.x - m.x);
+      for (let k = 0; k < n; k++) w.fire(c, 'spit', m.x, m.y, at + (k - (n - 1) / 2) * SPRAY_GAP, SHOT_SPEED.spit);
+    }
+    c.salvo = 0;
+    if (c.landed) return SPIT_RECOVER;
+    c.trick = 'gape';
+    c.exposed = GULP_GAPE;
+    w.pulses.push({ x: c.x, y: c.y, r: c.radius * 1.2, kind: 'exposed' });
+    return GULP_GAPE;
   }
 
   /**
@@ -640,6 +919,7 @@ export class Roles {
   private spitter(c: Creature, dt: number, p: Creature, t: Terrain) {
     const d = Math.sqrt(dist2(c.x, c.y, p.x, p.y));
     const aim = Math.atan2(p.y - c.y, p.x - c.x);
+    if (c.species.moves === 'cloak' && c.wounded && this.cloak(c, dt, p, t, d)) return;
     c.faceToward(p.x, FACE_SLACK * t.tile);
     if (this.tick(c, dt)) {
       // still, and pitched toward the player as far as a fish side-on will pitch: quickly, but
@@ -681,6 +961,49 @@ export class Roles {
     }
     a = this.steer(c, dt, a);
     c.strafe(dt, Math.cos(a), Math.sin(a), throttle);
+  }
+
+  /**
+   * A turned vampire squid's cloak: the ball, the cloud it bursts into and the jet away, or
+   * nothing, and it plays its spitter. Whether it took the step.
+   */
+  private cloak(c: Creature, dt: number, p: Creature, t: Terrain, d: number) {
+    if (c.trick === 'ball') {
+      c.strafe(dt, 0, 0, 0);
+      if ((c.trickT -= dt) > 0) return true;
+      c.trick = '';
+      this.cloud(c);
+      c.aimA = clearHeading(t, c, Math.atan2(c.y - p.y, c.x - p.x));
+      c.guardCd = BALL_CD;
+      c.roleCd = Math.max(c.roleCd, JET_T + 0.4);
+      return true;
+    }
+    // jetting away from the cloud: driven, not steered, as a squid's jet is
+    if (c.guardCd > BALL_CD - JET_T) {
+      c.angle = c.aimA;
+      c.strafe(dt, Math.cos(c.aimA), Math.sin(c.aimA), JET_AWAY, c.aimA);
+      return true;
+    }
+    if (c.attack !== 'none' || c.guardCd > 0 || d > BALL_NEAR * t.tile) return false;
+    c.trick = 'ball';
+    c.trickT = BALL_HOLD;
+    c.view.bump(0.6, 0, 0);
+    this.world.pulses.push({ x: c.x, y: c.y, r: c.radius * 1.6, kind: 'inflate' });
+    return true;
+  }
+
+  /**
+   * The cloud a vampire squid bursts into: a flash, and motes of its glowing mucus thrown out on
+   * every side to hang in the water, each a sting, thinning out through `CLOUD_LIFE`.
+   */
+  private cloud(c: Creature) {
+    const w = this.world, tile = w.terrain!.tile;
+    w.pulses.push({ x: c.x, y: c.y, r: c.radius * 2.4, kind: 'flash' });
+    for (let k = 0; k < CLOUD; k++) {
+      const a = (k / CLOUD) * TAU + Math.random() * 0.5;
+      const v = tile * (0.5 + Math.random() * 0.8);
+      w.lob(c, 'bolt', c.x, c.y, Math.cos(a) * v, Math.sin(a) * v, undefined, CLOUD_LIFE, { fades: true });
+    }
   }
 
   /** The hostile nearest the player but `c`, which a triggerfish blows the player into. */
@@ -759,6 +1082,13 @@ export class Roles {
 
   private turret(c: Creature, dt: number, p: Creature) {
     const balloon = c.species.moves === 'balloon';
+    if (c.species.moves === 'lure') {
+      // the lure flares through the wind-up and burns while its sparks hang, then dims
+      c.litT = Math.max(0, c.litT - dt);
+      c.lit = c.attack === 'windup' ? Math.max(c.lit, 1 - c.attackT / c.attackLen)
+        : c.litT > 0 ? 1 : Math.max(0, c.lit - dt * LIT_FADE);
+      if (c.wounded && this.lunge(c, p)) return;
+    }
     c.anchor ??= { x: c.x, y: c.y };
     c.faceToward(p.x, FACE_SLACK * this.world.terrain!.tile);
     // it holds its spot against anything that knocked it off, facing the player
@@ -783,6 +1113,25 @@ export class Roles {
     c.swell = 1 + SWELL * (c.attack === 'windup' ? 1 - c.attackT / c.attackLen
       : c.attack === 'strike' ? 1 : c.attack === 'recover' ? c.attackT / c.attackLen : 0);
     if (!busy && c.roleCd <= 0 && this.free(c)) this.begin(c, 'windup', TURRET_WIND);
+  }
+
+  /**
+   * A turned anglerfish with the player close and in sight: off its spot in a charger's lunge
+   * (`roleOf` is the charger's through it, so the wind-up, the bar and the lock are a charger's).
+   * It holds wherever the lunge leaves it. Whether it went.
+   */
+  private lunge(c: Creature, p: Creature) {
+    const t = this.world.terrain!;
+    if (c.attack !== 'none' || c.guardCd > 0 || !this.free(c)) return false;
+    if (dist2(c.x, c.y, p.x, p.y) > (LUNGE_NEAR * t.tile) ** 2 || !t.clearLine(c.x, c.y, p.x, p.y)) return false;
+    c.trick = 'lunge';
+    c.guardCd = LUNGE_CD;
+    c.lit = c.litT = 0;
+    c.swell = 1;
+    c.anchor = null;
+    this.begin(c, 'windup', CHARGE_WIND(c.genome.size) + CHARGE_LOCK);
+    c.aimA = Math.atan2(p.y - c.y, p.x - c.x);
+    return true;
   }
 
   /**
@@ -821,7 +1170,9 @@ export class Roles {
     const wobble = Math.sin(c.wander * 1.3) * 0.5;
     if (c.species.moves === 'bloom') { this.pulse(c, dt, p, t, wobble); return; }
     const haste = c.species.moves === 'wane' && !c.brood ? this.wane(c, dt) : 1;
-    c.drive(dt, this.steer(c, dt, this.way(c, p, t) + wobble), DRIFT_THROTTLE, 0, haste);
+    // a piece of a colony with no bells in it has nothing to swim with but its pulse
+    const stem = c.species.moves === 'chain' && !SPRITES[c.species.id]?.bells ? STEM : 1;
+    c.drive(dt, this.steer(c, dt, this.way(c, p, t) + wobble), DRIFT_THROTTLE * stem, 0, haste);
   }
 
   /**
@@ -882,9 +1233,14 @@ export class Roles {
     const moves = c.species.moves;
     if (c.attack === 'windup') {
       this.strike(c, role);
-      this.begin(c, 'strike', role === 'charger' ? DASH_TIME
+      this.begin(c, 'strike', role === 'charger'
+        ? (moves === 'line' ? LINE_DASH : moves === 'gulp' ? GULP_DRAW : DASH_TIME)
         : moves === 'volley' ? SALVO_GAP * (SALVO - 1) + 0.12 : 0.12);
     } else if (c.attack === 'strike') {
+      if (moves === 'gulp') {
+        this.begin(c, 'recover', this.snap(c, this.world.player));
+        return true;
+      }
       // a frenzied pack member that missed goes again, at once, on a fresh line
       if (moves === 'pack' && c.wounded && c.volley === 0) {
         const p = this.world.player;
@@ -897,7 +1253,10 @@ export class Roles {
         : role === 'turret' ? TURRET_RECOVER : SPIT_RECOVER);
     } else {
       c.attack = 'none';
-      const [a, b] = role === 'charger' ? CHARGE_CD : role === 'turret' ? TURRET_BEAT
+      // a lunge over, the anglerfish holds where it is and its beat comes round soon
+      if (c.trick === 'lunge') { c.trick = ''; c.roleCd = TURRET_RECOVER; return false; }
+      if (c.trick === 'gape') c.trick = '';
+      const [a, b] = moves === 'gulp' ? GULP_CD : role === 'charger' ? CHARGE_CD : role === 'turret' ? TURRET_BEAT
         : moves === 'volley' ? SALVO_CD : SPIT_CD;
       c.roleCd = (a + Math.random() * (b - a)) * (moves === 'pack' && c.wounded ? FRENZY_CD : 1);
       return false;
@@ -927,6 +1286,7 @@ export class Roles {
     c.attack = 'none';
     c.salvo = 0;
     c.puffT = 0;
+    c.trick = '';
     c.roleCd = Math.max(c.roleCd, 0.4);
     const g = woundedGenome(c.species.moves!, c.genome);
     if (g) {
@@ -965,6 +1325,59 @@ export class Roles {
     }
   }
 
+  /**
+   * A siphonophore turned: the colony broken in two where the blow that turned it landed
+   * (`Creature.struck`), each piece drawn from its stretch of the picture (`chainPiece`), as big
+   * and as healthy as its share of the length, placed where it lay in the whole and thrown a
+   * little apart. False for a piece too short to break, which turns as anything else does.
+   */
+  private split(c: Creature) {
+    const art = SPRITES[c.species.id];
+    if (!art) return false;
+    const root = speciesById(c.species.of ?? c.species.id);
+    // this body's stretch of the whole picture, and of its body, in the whole one's columns
+    const x0 = art.cut?.x0 ?? 0, x1 = x0 + art.w;
+    const lo = x0 + art.tail, hi = x0 + art.snout;
+    if (hi - lo < LINK * 2) return false;
+    const at = c.struck ? (spriteColumn(c, c.struck.x, c.struck.y) ?? (art.tail + art.snout) / 2) + x0 : (lo + hi) / 2;
+    const cut = clamp(at, lo + LINK, hi - LINK);
+    const w = this.world;
+    const len = art.snout - art.tail;
+    const nose = Math.atan2(Math.sin(c.angle), Math.cos(c.angle));
+    for (const [a, b, away] of [[x0, cut, -1], [cut, x1, 1]] as const) {
+      const sp = chainPiece(root, a, b);
+      const pa = SPRITES[sp.id];
+      const share = (pa.snout - pa.tail) / len;
+      const g = { ...c.genome, size: c.genome.size * share };
+      // the column its middle is at, where that column lies in the colony now
+      const f = formFor(g, sp.plan);
+      const mid = pa.snout - spineAt(0, f) * spriteScale(pa, f);
+      const pos = spriteAt(c, [mid + a - x0, art.axis]) ?? { x: c.x, y: c.y };
+      const o = w.add(sp, pos.x, pos.y);
+      o.genome = g;
+      o.view.rebuild(g);
+      o.refreshOrgans();
+      o.hostile = true;
+      o.hold = c.hold;
+      o.hp = o.hpMax = Math.max(1, c.hp * share);
+      o.fade = 1;
+      o.angle = c.angle;
+      o.face = c.face;
+      o.turnT = TURN;
+      o.roleCd = c.roleCd;
+      // apart along the colony's line, the way each piece lay from the cut
+      const push = Math.max(1, c.genome.speed) * 0.6 * away;
+      o.vx = c.vx + Math.cos(nose) * push;
+      o.vy = c.vy + Math.sin(nose) * push;
+      o.syncView();
+    }
+    const where = spriteAt(c, [cut - x0, art.axis]) ?? c;
+    w.pulses.push({ x: where.x, y: where.y, r: depthOf(c) * 3, kind: 'turn' });
+    c.view.hurt();
+    w.release(c);
+    return true;
+  }
+
   /** One ephyra off a dead bell, thrown along `a`: small, quick, and already pulsing. */
   private bud(c: Creature, a: number) {
     const w = this.world;
@@ -997,6 +1410,8 @@ export class Roles {
       const volley = c.species.moves === 'volley';
       if (volley) { c.salvo = SALVO - 1; c.salvoT = SALVO_GAP; }
       this.spit(c, volley ? 0 : LEAD);
+    } else if (role === 'turret' && kind && c.species.moves === 'lure') {
+      this.lure(c);
     } else if (role === 'turret' && kind) {
       c.volley++;
       const herd = c.species.moves === 'herd';
@@ -1021,6 +1436,29 @@ export class Roles {
     }
   }
 
+  /**
+   * An anglerfish's beat: sparks let out of its lure (`lumen`) to hang on a fan toward the
+   * player (`Shot.hang`), to fire at it one after another, one end of the fan first.
+   */
+  private lure(c: Creature) {
+    const w = this.world, tile = w.terrain!.tile, p = w.player;
+    const at = lureOf(c);
+    const n = c.wounded ? LURE_MAX : LURE_MIN + Math.floor(Math.random() * (LURE_MAX - LURE_MIN + 1));
+    const aim = Math.atan2(p.y - at.y, p.x - at.x);
+    for (let k = 0; k < n; k++) {
+      // a little off the fan's even spacing, or the spots read as a stamped pattern
+      const a = aim + (k - (n - 1) / 2) * LURE_FAN + (Math.random() - 0.5) * 0.15;
+      const r = LURE_R * tile * (0.85 + Math.random() * 0.3);
+      const s = w.fire(c, 'lumen', at.x, at.y, a, SHOT_SPEED.lumen);
+      if (!s) continue;
+      const hold = LURE_HOLD + k * LURE_GAP;
+      s.hang = { by: c, ox: Math.cos(a) * r, oy: Math.sin(a) * r, hold, speed: SHOT_SPEED.lumen * tile };
+      s.life += hold;
+    }
+    // the lure burns at its brightest until the last of them has gone
+    c.litT = LURE_HOLD + (n - 1) * LURE_GAP;
+  }
+
   /** One shot from the mouth at where the player will be `lead` seconds on, thrown wide by its stealth. */
   private spit(c: Creature, lead: number) {
     const w = this.world, p = w.player, kind = c.species.shot!;
@@ -1029,6 +1467,7 @@ export class Roles {
     const a = Math.atan2(p.y + p.vy * lead - m.y, p.x + p.vx * lead - m.x) + wide;
     const s = w.fire(c, kind, m.x, m.y, a, SHOT_SPEED[kind]);
     if (s && c.species.moves === 'jet') s.knock = JET_KNOCK * w.terrain!.tile;
+    if (s && c.species.moves === 'cloak') s.home = CURVE;
   }
 
   /**

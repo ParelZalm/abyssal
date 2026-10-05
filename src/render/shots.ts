@@ -11,6 +11,15 @@ import { glowTexture } from './textures';
  * a jet of water with its tail, a spine tip first, a round blob of light. About as wide as
  * the shot's reach at the nursery's zoom, so what is seen is what hits.
  */
+const BOLT = [
+  '..###..',
+  '.#hhx#.',
+  '#hhxxd#',
+  '#hxxdd#',
+  '#xxddd#',
+  '.#xdd#.',
+  '..###..',
+];
 export const SHOT_MAPS: Record<ShotKind, readonly string[]> = {
   spit: [
     '...###..',
@@ -24,15 +33,9 @@ export const SHOT_MAPS: Record<ShotKind, readonly string[]> = {
     '#hxxxxdd#',
     '.#.......',
   ],
-  bolt: [
-    '..###..',
-    '.#hhx#.',
-    '#hhxxd#',
-    '#hxxdd#',
-    '#xxddd#',
-    '.#xdd#.',
-    '..###..',
-  ],
+  bolt: BOLT,
+  // an anglerfish's spark is a bolt in a colour of its own (`HOSTILE_COLOURS`)
+  lumen: BOLT,
   // a sea urchin, test and spines: bigger than a shot, since it is thrown to be watched
   urchin: [
     '......#......',
@@ -80,6 +83,8 @@ export const SHOT_COLOURS: Record<ShotKind, Palette> = {
   sting: { x: '#f0a0b0', h: '#fff0f4', d: '#a05068', o: '#2a0a14' },
   // the larva's own glass, so its brood reads as its young and not as one more shot
   fry: { x: '#dce8ff', h: '#ffffff', d: '#8ea4d0', o: '#141e3a' },
+  // never the player's; here only because every kind has a pair
+  lumen: { x: '#b8a8ff', h: '#f4f0ff', d: '#6a58d8', o: '#140e3a' },
 };
 export const HOSTILE_COLOURS: Record<ShotKind, Palette> = {
   spit: { x: '#ff3b30', h: '#ffe0b0', d: '#b3101c', o: '#2a0206' },
@@ -91,6 +96,10 @@ export const HOSTILE_COLOURS: Record<ShotKind, Palette> = {
   // it is swum round
   sting: { x: '#ff5a48', h: '#ffd0c0', d: '#b0281c', o: '#2a0604' },
   fry: { x: '#ff6a5a', h: '#ffe0d8', d: '#b0303a', o: '#2a0608' },
+  // violet, the one hostile shot that is: the lure's own cyan is the player's colour, and a
+  // hostile's red would not say it came out of the light. Violet is hot enough to read as
+  // incoming and is nobody else's
+  lumen: { x: '#c050ff', h: '#fbeaff', d: '#7a1ad0', o: '#1c0434' },
 };
 
 /**
@@ -106,6 +115,7 @@ export const SHOT_GLOW: Record<ShotKind, { color: number; a: number }> = {
   urchin: { color: 0xd8a0ff, a: 0.6 },
   sting: { color: 0xf0a0b0, a: 0.3 },
   fry: { color: 0xdce8ff, a: 0.4 },
+  lumen: { color: 0xb0a8ff, a: 0.8 },
 };
 export const HOSTILE_GLOW: Record<ShotKind, { color: number; a: number }> = {
   spit: { color: 0xff3b30, a: 0.8 },
@@ -114,6 +124,7 @@ export const HOSTILE_GLOW: Record<ShotKind, { color: number; a: number }> = {
   urchin: { color: 0xff4aa8, a: 1 },
   sting: { color: 0xff6a50, a: 0.45 },
   fry: { color: 0xff6a5a, a: 0.6 },
+  lumen: { color: 0xc060ff, a: 1 },
 };
 
 /**
@@ -192,7 +203,7 @@ export function shotGlow(kind: ShotKind, hostile: boolean, marks?: readonly Shot
 /** Whether the shot is drawn the same way up whichever way it flies. */
 export function shotRound(kind: ShotKind, marks?: readonly ShotMark[]) {
   const shape = kind !== 'fry' && marks && SHAPE_ORDER.find(m => marks.includes(m));
-  return shape ? ROUND.has(shape) : kind === 'bolt';
+  return shape ? ROUND.has(shape) : kind === 'bolt' || kind === 'lumen';
 }
 
 const textures = new Map<string, Texture>();

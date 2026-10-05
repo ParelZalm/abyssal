@@ -307,7 +307,9 @@ Open the preview. When something is off:
   and each squeeze squirts water from the mouths (the siphonophore's); `trail`, set by hand,
   is what hangs behind a drifter's bell, root to tips, which the skin sends a wave down on
   each pulse. A drifter has one
-  frame, and `SOURCES` takes it alone.
+  frame, and `SOURCES` takes it alone. `cut` is never written by hand: `cutSprite` makes an
+  entry of a stretch of another's picture at run time, every landmark moved into it, for a
+  siphonophore broken in two (`chainPiece`, `Roles.split`).
   Write the import command into the comment above the entry, flags and all, so it can be
   run again.
 - **`content/species.ts`**: set `drawn` (*Size*, below).
