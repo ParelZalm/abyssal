@@ -13,6 +13,7 @@
  */
 import { formFor, spineAt, R, type Form, type Plan } from './form';
 import type { Genome } from './genome';
+import type { Species } from './species';
 
 export type Pt = [number, number];
 
@@ -82,6 +83,11 @@ export interface SpriteArt {
    * how long it is drawn in the body's. Without it the feeding pair is the arm's picture.
    */
   tentacle?: { root: number; tip: number; axis: number; reach: number };
+  /**
+   * A stretch of another species' picture rather than a picture of its own: columns `x0` to
+   * `x0 + w` of `of`'s frames (`cutSprite`). A siphonophore cut in two is two of these.
+   */
+  cut?: { of: string; x0: number };
 }
 
 export const SPRITES: Record<string, SpriteArt> = {
@@ -289,6 +295,64 @@ export function dealtHostiles(table: Record<string, number>): Record<string, num
   return Object.fromEntries(Object.entries(table)
     .filter(([id]) => (!REWORKED_ONLY || SPRITES[id]) && id !== NEWEST));
 }
+
+/**
+ * The art of columns `x0` to `x1` of species `id`'s picture, as a sprite of its own, under an id
+ * of its own: every landmark moved into the stretch or dropped, and the hull resampled along it
+ * from the whole one's. Made once and kept, so a stretch cut twice is one bake.
+ *
+ * The end the stretch keeps of the whole is its snout or its tail; a cut end takes the other.
+ * A tail stretch's snout is its cut, so a piece of stem comes on cut end first.
+ */
+export function cutSprite(id: string, x0: number, x1: number): string {
+  const key = `${id}@${Math.round(x0)}-${Math.round(x1)}`;
+  if (SPRITES[key]) return key;
+  const s = SPRITES[id];
+  x0 = Math.round(x0);
+  x1 = Math.round(x1);
+  const inside = ([x]: Pt) => x >= x0 && x < x1;
+  const shift = ([x, y]: Pt): Pt => [x - x0, y];
+  const snout = Math.min(s.snout, x1) - x0, tail = Math.max(s.tail, x0) - x0;
+  const hull = s.hull ? Array.from({ length: s.hull.length }, (_, i): [number, number, number] => {
+    const x = snout + (tail - snout) * (0.03 + (i / (s.hull!.length - 1)) * 0.94);
+    return [x, ...hullAt(s.hull!, x + x0)];
+  }) : undefined;
+  const bells = s.bells && Math.min(s.bells.x1, x1) - Math.max(s.bells.x0, x0) > 8
+    ? { x0: Math.max(s.bells.x0, x0) - x0, x1: Math.min(s.bells.x1, x1) - x0, jets: s.bells.jets.filter(inside).map(shift) }
+    : undefined;
+  const trail = s.trail && Math.min(s.trail.x1, x1) > Math.max(s.trail.x0, x0)
+    ? { x0: Math.max(s.trail.x0, x0) - x0, x1: Math.min(s.trail.x1, x1) - x0 } : undefined;
+  SPRITES[key] = {
+    w: x1 - x0, h: s.h, snout, tail, axis: s.axis,
+    lights: s.lights?.filter(l => inside(l.at)).map(l => ({ ...l, at: shift(l.at) })),
+    hull, bells, trail, cut: { of: s.cut?.of ?? id, x0: (s.cut?.x0 ?? 0) + x0 },
+  };
+  return key;
+}
+
+/** The hull's middle and half-depth at column `x`, between the samples either side of it. */
+function hullAt(hull: [number, number, number][], x: number): [number, number] {
+  const h = [...hull].sort((a, b) => a[0] - b[0]);
+  if (x <= h[0][0]) return [h[0][1], h[0][2]];
+  for (let i = 1; i < h.length; i++) {
+    if (x > h[i][0]) continue;
+    const k = (x - h[i - 1][0]) / (h[i][0] - h[i - 1][0]);
+    return [h[i - 1][1] + (h[i][1] - h[i - 1][1]) * k, h[i - 1][2] + (h[i][2] - h[i - 1][2]) * k];
+  }
+  const e = h[h.length - 1];
+  return [e[1], e[2]];
+}
+
+/**
+ * A piece of `sp` drawn from columns `x0` to `x1` of its picture (`cutSprite`): a siphonophore
+ * cut in two, each half a colony of its own. It is the same animal, booked as it (`of`), and it
+ * fights as the whole one does; how big it is is the caller's, from the share of the length.
+ */
+export function chainPiece(sp: Species, x0: number, x1: number): Species {
+  const id = cutSprite(sp.id, x0, x1);
+  return pieces.get(id) ?? pieces.set(id, { ...sp, id, of: sp.of ?? sp.id }).get(id)!;
+}
+const pieces = new Map<string, Species>();
 
 /** Sprite pixels per R unit, for a body of form `f`. */
 export function spriteScale(s: SpriteArt, f: Form) {

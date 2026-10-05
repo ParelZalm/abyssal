@@ -444,13 +444,41 @@ What it found, and what it leaves:
   generated sheet could replace any of them through the same `ITEM_ART` seam. Belly, sight and
   stealth cards are still in the pool as utility, each with its numbers on the card.
 
-## Hostile movesets: the deep
+## ~~Hostile movesets: the deep~~
 
-The barracuda strikes across the room the moment the player is on its line, and turned
-bounces three dashes off the walls; the gulper eel gulps, and turned spits out what it
-swallowed; the vampire squid's bolts curve, and turned it inverts into a spiked ball, clouds
-the water and jets away; the anglerfish's bolts circle its lure, and turned it lunges; the
-siphonophore is a chain that splits where it is cut.
+Done: the deep's five play their roles their own way (*Movesets* in `simulation.md`). The
+barracuda hangs across from the player, creeps into its row and crosses the room the moment
+the player is on its line, stunned against the rock it stops on, and turned ricochets three
+dashes off the walls; the gulper eel opens its jaw and draws the player and the player's shots
+in, swallowing the shots, hangs its jaw exposed after a gulp that took nothing, and turned
+spits back a fan for what it swallowed; the vampire squid's bolts bend after the player, and
+turned it balls up inside out when the player comes close — its arms swept back over the
+mantle, braced — then bursts into a cloud of stinging motes and jets away; the anglerfish hangs
+its bolts on a turning ring round its lure and lets them go along their spokes, and turned it
+lunges; the siphonophore breaks in two where the blow that turned it landed, each piece a
+stretch of its picture (`cutSprite`), and a long piece breaks again. The board's *Hostile roles*
+group has each whole and turned, the siphonophore in its two pieces.
+
+What it found, and what it leaves:
+
+- **The deep's pace is already in its speeds.** A dash multiplier for the line and the lunge
+  put the barracuda at 57 tiles a second and the anglerfish's lunge across half the room; a
+  charger's own dash at their speeds is the room in a second.
+- **A door is open water to a dash.** The barracuda's first line ran out of the room through
+  a door on its row. The room's edge is rock to it.
+- **The gulper's jaw is in tiles, not in its head's depth**, which was half a tile and let a
+  player drawn to a tile off the lips go free; and a touch ended the draw as it ends a dash,
+  so the turned gulper never spat. The draw goes on to its snap.
+- **A ring let go wherever its spin had it hit nothing.** Six spokes left a still player between
+  two nearly every time; one spoke now runs through where the player was as the ring formed,
+  turned onto it as it lets go, since the lure bobs while the ring turns and a spoke set at the
+  start passed by at a hair more than a shot's reach. Still is hit five rings in six; moving,
+  none.
+- **The vampire squid's ball is its rigged arms**, swept back over the mantle (`FishView.cloak`),
+  not a picture: a frame of the animal inside out could replace it. None of the deep's turned
+  looks are drawn; each turns in what it does.
+- An idle larva lasts 9 to 15 seconds against three of the deep's, about the nursery's; the
+  siphonophore's pieces and the gulper's draw land most of it.
 
 ## The player fish rework
 

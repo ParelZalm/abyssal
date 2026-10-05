@@ -142,6 +142,19 @@ export function spriteAt(c: Creature, at: Pt): { x: number; y: number } | null {
   return { x: c.x + o.x, y: c.y + o.y };
 }
 
+/**
+ * The column of a body's sprite under a point in the world, read along its axis: where along
+ * the picture a blow at (`x`, `y`) landed. Null for a painted body.
+ */
+export function spriteColumn(c: Creature, x: number, y: number): number | null {
+  const s = SPRITES[c.species.id];
+  if (!s) return null;
+  const f = formFor(c.genome, c.species.plan);
+  const a = drawnAngle(c.angle, c.face, c.upright);
+  const along = (((x - c.x) * Math.cos(a) + (y - c.y) * Math.sin(a)) / (c.drawnSize / R)) * c.face;
+  return (along - spineAt(0, f)) * spriteScale(s, f) + s.snout;
+}
+
 /** How far the nose runs ahead of the body's middle, world units. */
 export function noseReach(c: Creature) {
   return hullOf(c).x[0] * c.drawnSize / R;

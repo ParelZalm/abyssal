@@ -11,7 +11,7 @@ import type { Bite, Blood, BossCue, Ghost, Pulse } from './events';
 import { primaryOf, shotHit, shotModsOf, shotSpent, tick as tickOrgans, type Organ,
          type ShotMark } from './organs';
 import { Patterns } from './patterns';
-import { ghostly, Roles } from './roles';
+import { ghostly, lureOf, Roles } from './roles';
 import { Spawner } from './spawn';
 import type { Terrain } from './terrain';
 import { collideHull, surfaceGap, WALL_R, wallR } from './hull';
@@ -104,6 +104,22 @@ export interface Shot {
    * a triggerfish's jet (`Roles`' `JET_KNOCK`) is water, and moves what it meets.
    */
   knock?: number;
+  /**
+   * Radians a second a hostile's shot bends toward the player, for its first `HOME_FOR`
+   * seconds: a vampire squid's bolts, which curve after the larva and then fly on straight, so
+   * a swim across their line still loses them.
+   */
+  home?: number;
+  /**
+   * A shot held circling a point on a body before it is let go (`Roles`' anglerfish): at `r`
+   * from `by`'s lure, from angle `a`, turning `w` radians a second, for `hold` seconds, and then
+   * out along its spoke at `speed` world units a second. Let go at once if `by` dies. As it is
+   * let go the ring is turned, by under half a spoke of its `spokes`, so that one spoke runs
+   * through `aim`: the lure bobs as the ring turns, and the spoke set for the player at the
+   * start went by it at a hair more than a shot's reach.
+   */
+  orbit?: { by: Creature; a: number; r: number; w: number; hold: number; speed: number;
+            spokes: number; aim: { x: number; y: number } };
   /** The bodies it has already landed on, which it passes without landing again. */
   hit?: Creature[];
   /**
@@ -144,6 +160,10 @@ const CHILL_DRAG = DRAG_FWD;
  * leaving; anything nearer than it reaches is the body's own touch to hurt.
  */
 const SHOT_ARM = 0.1;
+/** Seconds a homing hostile shot (`Shot.home`) bends for before it flies on straight. */
+const HOME_FOR = 1.1;
+/** Seconds an orbiting shot takes to open out from its lure to its circle. */
+const ORBIT_OPEN = 0.25;
 
 /**
  * Something loose in a room that the player collects by swimming into it: a half heart, a
@@ -303,7 +323,18 @@ export class World {
     }
   }
 
-  /** Development: a living body out of the room at once, leaving nothing behind (the lab's targets). */
+  /**
+   * A hostile's blow on the player that is neither a touch nor a shot — a gulper's jaw shutting
+   * on what its draw brought in. Returns what landed (`Combat.hitPlayer`).
+   */
+  hurtPlayer(by: Creature, how: Hurt) {
+    return this.combat.hitPlayer(by, this.player, how);
+  }
+
+  /**
+   * A living body out of the room at once, leaving nothing behind: the lab's targets, and a
+   * siphonophore gone into the pieces it broke into (`Roles.split`).
+   */
   release(c: Creature) {
     const i = this.creatures.indexOf(c);
     if (i >= 0) this.remove(i);
@@ -567,13 +598,17 @@ export class World {
         // still holding on; a fry let go by a kill flies on from here
         if (s.fry.on) continue;
       }
-      if (s.seek) this.bend(s, dt);
-      if (s.heavy) {
-        s.vx *= Math.exp(-s.heavy.drag * dt);
-        s.vy = Math.min(s.heavy.sink, s.vy + s.heavy.g * dt);
+      // held on its circle it is put where it is, and can still meet rock and the player
+      if (!(s.orbit && this.circle(s))) {
+        if (s.seek) this.bend(s, dt);
+        if (s.home && s.t < HOME_FOR && p.alive) this.homeIn(s, dt);
+        if (s.heavy) {
+          s.vx *= Math.exp(-s.heavy.drag * dt);
+          s.vy = Math.min(s.heavy.sink, s.vy + s.heavy.g * dt);
+        }
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
       }
-      s.x += s.vx * dt;
-      s.y += s.vy * dt;
       let spent = s.t > s.life || !t || t.solidAt(s.x, s.y) || (!!s.apex && s.vy >= 0);
       let struck = false;
       if (!spent && s.by.isPlayer) {
@@ -584,6 +619,7 @@ export class World {
         for (const c of this.creatures) {
           if (!this.canHit(c) || s.hit?.includes(c)) continue;
           if (surfaceGap(c, s.x, s.y) > s.r) continue;
+          c.struck = { x: s.x, y: s.y };
           this.combat.hit(p, c, s.mult, true);
           // a shot carries its way on into what it hit, a little, so a hit is felt
           c.vx += s.vx * 0.15;
@@ -625,6 +661,45 @@ export class World {
       this.shots.splice(i, 1);
       this.spend(s, struck, dt);
     }
+  }
+
+  /**
+   * An orbiting shot's step round its body's lure (`Shot.orbit`). Whether it is still held;
+   * on the step it is let go it is put on its spoke, outward, and flies from there.
+   */
+  private circle(s: Shot) {
+    const o = s.orbit!;
+    let a = o.a + o.w * Math.min(s.t, o.hold);
+    const at = lureOf(o.by);
+    const r = o.r * Math.min(1, s.t / ORBIT_OPEN);
+    if (s.t >= o.hold || !o.by.alive) {
+      // every shot of the ring turns by the same amount, each finding it from its own spoke
+      const spoke = TAU / o.spokes;
+      const off = ((Math.atan2(o.aim.y - at.y, o.aim.x - at.x) - a) % spoke + spoke * 1.5) % spoke - spoke / 2;
+      a += off;
+      s.x = at.x + Math.cos(a) * r;
+      s.y = at.y + Math.sin(a) * r;
+      s.vx = Math.cos(a) * o.speed;
+      s.vy = Math.sin(a) * o.speed;
+      s.orbit = undefined;
+      return false;
+    }
+    s.x = at.x + Math.cos(a) * r;
+    s.y = at.y + Math.sin(a) * r;
+    // along the circle, for anything that reads its way: the splash, the stealth of its line
+    s.vx = -Math.sin(a) * o.w * r;
+    s.vy = Math.cos(a) * o.w * r;
+    return true;
+  }
+
+  /** A homing hostile shot turned toward the player by at most its rate, keeping its speed. */
+  private homeIn(s: Shot, dt: number) {
+    const p = this.player;
+    const a = Math.atan2(s.vy, s.vx);
+    const turn = clamp(angleDelta(a, Math.atan2(p.y - s.y, p.x - s.x)), -s.home! * dt, s.home! * dt);
+    const v = Math.hypot(s.vx, s.vy);
+    s.vx = Math.cos(a + turn) * v;
+    s.vy = Math.sin(a + turn) * v;
   }
 
   /**

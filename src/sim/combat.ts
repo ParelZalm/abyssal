@@ -176,6 +176,7 @@ export class Combat {
       att.attack = 'recover';
       att.attackT = att.attackLen = 0.4;
     }
+    def.struck = { x: att.biteX, y: att.biteY };
     this.land(att, def, whole, mult);
   }
 
@@ -282,8 +283,8 @@ export class Combat {
     const trails = att.species.role === 'drifter' && !SPRITES[att.species.id]?.hull;
     if (surfaceGap(att, p.x, p.y) > p.radius * 0.35 && (!trails || dist2(att.x, att.y, p.x, p.y) > r * r)) return;
     const got = this.hitPlayer(att, p, att.species.role === 'drifter' ? 'touch' : 'bite');
-    // a dash ends on what it found
-    if (got && att.attack === 'strike') {
+    // a dash ends on what it found; a gulper's draw goes on to its snap, which is its bite
+    if (got && att.attack === 'strike' && att.species.moves !== 'gulp') {
       att.attack = 'recover';
       att.attackT = att.attackLen = 0.7;
       att.landed = true;
@@ -395,7 +396,7 @@ export class Combat {
     // a body that dies burning lights what was close to it (Vent Gland)
     kindle(this.world, def);
     if (!byPlayer) return;
-    this.world.devoured.push(def.species.id);
+    this.world.devoured.push(def.species.of ?? def.species.id);
     if (!def.hostile) this.world.felled.push({ x: def.x, y: def.y });
     if (def.species.guardian) {
       this.world.hunted = false;

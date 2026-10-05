@@ -140,6 +140,18 @@ export class Creature {
   wane = 0;
   waneT = Math.random() * 2;
   /**
+   * A deep moveset's move in hand beyond its role's own, and the seconds left of it
+   * (`Roles`): a gulper eel's jaw left hanging after a gulp that missed (`gape`), a vampire
+   * squid turned inside out (`ball`), an anglerfish lunging off its spot (`lunge`).
+   */
+  trick: '' | 'gape' | 'ball' | 'lunge' = '';
+  trickT = 0;
+  /**
+   * Where the last blow landed on this body, in the world: a siphonophore breaks where it is
+   * cut (`Roles.split`). Null until something lands.
+   */
+  struck: { x: number; y: number } | null = null;
+  /**
    * How far the Giant Squid is gone into its ink, 0 there and 1 gone (`Bosses.vanish`): like a
    * waned jelly past `GHOST` it can neither be hit nor hurt, but its light goes with it, or the
    * light would say which of its ghosts it is. And the ghosts it shows, the first of them the
@@ -482,6 +494,7 @@ export class Creature {
   }
   syncView() {
     this.view.swell = this.swell;
+    this.view.cloak = this.trick === 'ball';
     this.view.place(this.x, this.y, this.angle, this.face, this.upright);
   }
 
@@ -497,7 +510,7 @@ export class Creature {
       : this.rushT > 0 ? 0.6 : this.boosting > 0 ? this.boosting / 0.4 * 0.7 : 0;
     // the jaw opens partway into the wind-up, not on its first frame: the coil comes first
     const open = windup > 0.35 || this.attack === 'strike' || this.rushT > 0 || this.drawT > 0 ||
-      hungry;
+      this.trick === 'gape' || hungry;
     return { windup, strike, open, burst: this.burst };
   }
 

@@ -8,6 +8,15 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+- **The deep's hostiles fight their own way**, each with a turn at half health. The barracuda
+  hangs across from you and crosses the room the moment you are in its row, stunned on the rock
+  it stops on; turned, it ricochets three dashes off the walls. The gulper eel draws you and
+  your shots into its jaw, swallowing the shots, and a gulp that misses leaves it hanging open;
+  turned, it spits back a fan for what it swallowed. The vampire squid's bolts curve after you;
+  turned, it balls up inside out when you come close, braced, then bursts into a cloud of
+  stinging motes and jets away. The anglerfish hangs its bolts on a ring round its lure and lets
+  them go along their spokes, one through where you stood; turned, it lunges. The siphonophore
+  breaks in two where it is hit, and a long piece breaks again.
 - Release notes link into the repo at the release's tag, where they were relative and broke on
   the release page (`npm run release:notes`).
 

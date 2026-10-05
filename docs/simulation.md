@@ -489,8 +489,40 @@ The reef's:
   how it is followed. Turned, it stays and buds an ephyra every `SPAWN_EVERY`, `SPAWN_MAX` at a
   time.
 
-The deep's hostiles still play their roles plain, but for the barracuda's reach; their
-movesets are the next roadmap stage.
+The deep's:
+
+- **Line** (barracuda) — hangs `LINE_OFF` tiles across from the player and creeps into its
+  row; with the player within `LINE_BAND` of its row, inside its reach and in sight, the
+  shortest tell in the deep (`LINE_WIND` and the lock) and a dash along the row until the rock
+  stops it (`Roles.wall`, felt a step ahead of the nose; the room's edge counts, or a door on its
+  row let it out), stunned for `LINE_STUN`. A charger's dash at its speed is the room in a
+  second. Turned, a dash that meets rock comes off it square, turned up to `RICOCHET_AIM`
+  toward the player, `RICOCHET` dashes to a run.
+- **Gulp** (gulper eel) — a charger that does not dash: with the player in front of its mouth
+  it opens its jaw (`GULP_WIND`, no bar: the jaw is the tell) and draws for `GULP_DRAW`, the
+  player pulled toward the lips at up to `GULP_PULL` of its cruise, so near them the way out
+  is across the cone; the player's shots in the cone are bent in and swallowed (counted on
+  `salvo`). The jaw shuts (`snap`) on what it brought, `MAW` tiles of it — a touch in the draw
+  does not end it, as it ends a dash — and a gulp that took nothing hangs open for `GULP_GAPE`,
+  `exposed`. Turned, the snap spits a fan of `SPRAY` and one more for each shot it swallowed.
+- **Cloak** (vampire squid) — its bolts bend after the player at `CURVE` for their first
+  `HOME_FOR` (`Shot.home`), then fly on. Turned, a player inside `BALL_NEAR` turns it inside out
+  (`Creature.trick` `ball`): `BALL_HOLD` still, its arms swept back over the mantle
+  (`FishView.cloak`), taking `BALL_TAKEN` of every blow (`bracedOf`); then a flash and `CLOUD`
+  motes of glowing mucus thrown out to hang and sting, thinning through `CLOUD_LIFE`, and a jet
+  away for `JET_T`.
+- **Orbit** (anglerfish) — its beat hangs `LURE_N` bolts on a circle `LURE_R` round its lure
+  (`lureOf`, the sprite's bulb), turning for `LURE_HOLD`, then lets them go along their spokes
+  (`Shot.orbit`, `World.circle`); each ring turns the other way. Turned, a player inside
+  `LUNGE_NEAR` in sight draws a lunge (`trick` `lunge`, through which `roleOf` is the
+  charger's, bar and lock included), and it holds wherever the lunge leaves it.
+- **Chain** (siphonophore) — the turn is a break (`Roles.split`): the colony is gone into two
+  pieces cut where the blow that turned it landed (`Creature.struck`, read along the picture by
+  `spriteColumn`), at least `LINK` columns either side. Each piece is drawn from its stretch of
+  the picture (`chainPiece`, `cutSprite`), as big as its share of the length and with that share
+  of the health left, so breaking adds none; a piece long enough breaks again at half of its
+  own. A piece of stem with no bells drifts at `STEM` of the pace and does not squeeze. The
+  pieces are booked as the siphonophore (`Species.of`).
 
 A role runs its own attack clock (`Roles.tick`), so `Behaviour.tickStrike` — the ecology's
 strike clock — skips a role hostile; run on both, every step went by twice as fast and the
