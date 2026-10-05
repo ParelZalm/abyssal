@@ -11,6 +11,15 @@ import { glowTexture } from './textures';
  * a jet of water with its tail, a spine tip first, a round blob of light. About as wide as
  * the shot's reach at the nursery's zoom, so what is seen is what hits.
  */
+const BOLT = [
+  '..###..',
+  '.#hhx#.',
+  '#hhxxd#',
+  '#hxxdd#',
+  '#xxddd#',
+  '.#xdd#.',
+  '..###..',
+];
 export const SHOT_MAPS: Record<ShotKind, readonly string[]> = {
   spit: [
     '...###..',
@@ -24,15 +33,9 @@ export const SHOT_MAPS: Record<ShotKind, readonly string[]> = {
     '#hxxxxdd#',
     '.#.......',
   ],
-  bolt: [
-    '..###..',
-    '.#hhx#.',
-    '#hhxxd#',
-    '#hxxdd#',
-    '#xxddd#',
-    '.#xdd#.',
-    '..###..',
-  ],
+  bolt: BOLT,
+  // an anglerfish's spark is a bolt in a colour of its own (`HOSTILE_COLOURS`)
+  lumen: BOLT,
   // a sea urchin, test and spines: bigger than a shot, since it is thrown to be watched
   urchin: [
     '......#......',
@@ -55,21 +58,6 @@ export const SHOT_MAPS: Record<ShotKind, readonly string[]> = {
     '#xh#.##.',
     '.#xd#xd#',
     '..#..#..',
-  ],
-  // a spark of an anglerfish's lure: a four-pointed star, bigger than a bolt, since it hangs
-  // to be watched before it goes
-  lumen: [
-    '.....#.....',
-    '....#h#....',
-    '....#h#....',
-    '...#hhx#...',
-    '.##hhhxx##.',
-    '#hhhhhxxxd#',
-    '.##hxxxd##.',
-    '...#xxd#...',
-    '....#d#....',
-    '....#d#....',
-    '.....#.....',
   ],
   // a Mouthbrooder's fry: a forked tail, a body the larva's own pale, and a dark eye at the nose
   fry: [
@@ -215,7 +203,7 @@ export function shotGlow(kind: ShotKind, hostile: boolean, marks?: readonly Shot
 /** Whether the shot is drawn the same way up whichever way it flies. */
 export function shotRound(kind: ShotKind, marks?: readonly ShotMark[]) {
   const shape = kind !== 'fry' && marks && SHAPE_ORDER.find(m => marks.includes(m));
-  return shape ? ROUND.has(shape) : kind === 'bolt';
+  return shape ? ROUND.has(shape) : kind === 'bolt' || kind === 'lumen';
 }
 
 const textures = new Map<string, Texture>();
@@ -251,15 +239,6 @@ const SPAWNED = 0.7;
 /** How far a fry's body wags either side of its line, and how fast: it swims, it is not thrown. */
 const FRY_WAG = 0.3;
 const FRY_WAG_RATE = 18;
-/**
- * A lure's spark: turning slowly, twinkling — its size beating `TWINKLE` either way — and
- * blurred: a bloom `LUMEN_BLOOM` of its reach across, softer and slower than a hostile's throb,
- * so it reads as light let out and not as a shot until it goes.
- */
-const LUMEN_SPIN = 2.2;
-const TWINKLE = 0.22;
-const TWINKLE_RATE = 11;
-const LUMEN_BLOOM = 20;
 /** How far a hanging sting sways either side of straight down, and how fast. */
 const STING_SWAY = 0.5;
 const STING_SWAY_RATE = 3;
@@ -302,22 +281,19 @@ export class ShotView {
       // a bolt or a bubble is round, an urchin tumbles and a sting hangs and sways; the rest
       // point along their line
       s.rotation = shotRound(k.kind, k.marks) ? 0 : k.kind === 'urchin' ? k.t * URCHIN_SPIN
-        : k.kind === 'lumen' ? k.t * LUMEN_SPIN
         : k.kind === 'sting' ? Math.PI / 2 + Math.sin(k.t * STING_SWAY_RATE + k.x) * STING_SWAY
           : Math.atan2(k.vy, k.vx) + (k.kind === 'fry' ? Math.sin(k.t * FRY_WAG_RATE + k.x) * FRY_WAG : 0);
-      s.scale.set(px * (k.spawned ? SPAWNED : 1) *
-        (k.kind === 'lumen' ? 1 + Math.sin(k.t * TWINKLE_RATE + k.x) * TWINKLE : 1));
+      s.scale.set(px * (k.spawned ? SPAWNED : 1));
       // a fry is side-on like every animal: swimming left it is mirrored, not upside down
       if (k.kind === 'fry' && k.vx < 0) s.scale.y *= -1;
       // something left in the water thins out through its life rather than breaking
       const left = k.fades ? 1 - (k.t / k.life) ** 2 : 1;
       s.alpha = left;
       b.position.set(k.x, k.y);
-      const lumen = k.kind === 'lumen';
-      b.width = b.height = k.r * (lumen ? LUMEN_BLOOM : hostile ? HOSTILE_BLOOM : PLAYER_BLOOM);
+      b.width = b.height = k.r * (hostile ? HOSTILE_BLOOM : PLAYER_BLOOM);
       b.tint = glow.color;
-      b.alpha = (lumen ? 0.55 + 0.15 * Math.sin(k.t * 5) : hostile ? 0.75 + 0.25 * Math.sin(k.t * THROB) : 0.6) * left;
-      this.lights.push({ x: k.x, y: k.y, r: k.r * (lumen ? 16 : 10), color: glow.color, a: glow.a * left });
+      b.alpha = (hostile ? 0.75 + 0.25 * Math.sin(k.t * THROB) : 0.6) * left;
+      this.lights.push({ x: k.x, y: k.y, r: k.r * 10, color: glow.color, a: glow.a * left });
     }
   }
 

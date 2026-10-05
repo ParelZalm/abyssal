@@ -1224,11 +1224,10 @@ class RoleCell extends Container {
       b.blendMode = 'add';
       b.tint = shotGlow(kind, this.hostile, marks).color;
       b.alpha = 0.6;
-      // a lure's spark is blurred wide in its own light
-      b.width = b.height = kind === 'lumen' ? 60 : this.hostile ? 36 : 26;
+      b.width = b.height = this.hostile ? 36 : 26;
       this.shots.addChild(s);
       this.blooms.addChild(b);
-      this.flights.push({ x: 0, y: 0, life: SHOT_FLIGHT, twinkle: kind === 'lumen', ...how, a, d: r, t: 0, s, b });
+      this.flights.push({ x: 0, y: 0, life: SHOT_FLIGHT, ...how, a, d: r, t: 0, s, b });
     }
   }
 
@@ -1254,10 +1253,6 @@ class RoleCell extends Container {
         f.s.position.set(f.x + Math.cos(f.a) * f.d, f.y + Math.sin(f.a) * f.d);
       }
       f.b.position.copyFrom(f.s.position);
-      if (f.twinkle) {
-        f.s.rotation += dt * 2.2;
-        f.s.scale.set(SHOT_PX * (1 + Math.sin(f.t * 11) * 0.22));
-      }
       if (f.fades) {
         const left = 1 - (f.t / f.life) ** 2;
         f.s.alpha = left;
@@ -1273,7 +1268,7 @@ class RoleCell extends Container {
 interface Flight {
   a: number; d: number; t: number; s: Sprite; b: Sprite;
   x: number; y: number; life: number;
-  v?: number; fades?: boolean; hold?: number; twinkle?: boolean;
+  v?: number; fades?: boolean; hold?: number;
   /** Where a hanging shot fires at once its hold is up, and the spot it fired from. */
   target?: { x: number; y: number }; from?: { x: number; y: number };
 }
@@ -1633,28 +1628,22 @@ function roleGroup(): DesignGroup {
       });
     }
   }
-  // the lure's spark, turning and twinkling in its blurred bloom, as `ShotView` draws it
+  // the lure's spark: a bolt in violet
   items.push({
     id: 'shot-lumen', name: 'shot · lumen',
     note: `an anglerfish's spark, let out of its lure to hang and take aim; ${SHOT_SPEED.lumen} tiles a second once it goes`,
-    source: 'src/render/shots.ts', span: 24, depth: tank.depth,
+    source: 'src/render/shots.ts', span: 16, depth: tank.depth,
     make: () => {
       const c = new Container();
       const b = new Sprite(glowTexture());
       b.anchor.set(0.5);
       b.blendMode = 'add';
       b.tint = shotGlow('lumen', true).color;
-      b.width = b.height = 34;
-      b.alpha = 0.6;
+      b.width = b.height = 20;
       const s = new Sprite(shotTexture('lumen', true));
       s.anchor.set(0.5);
       c.addChild(b, s);
       return c;
-    },
-    animate: (view, dt) => {
-      const s = view.children[1] as Sprite;
-      s.rotation += dt * 2.2;
-      s.scale.set(1 + Math.sin(performance.now() / 1000 * 11) * 0.22);
     },
   });
   // the sting is never the player's, and never flies: it hangs where a bell left it
