@@ -128,6 +128,15 @@ export function baseGenome(): Genome {
 }
 
 /**
+ * The larva the player hatches as, before its hue and its tempo (`Game`) and the mutations every
+ * body hatches with (`HATCHED` in `run/starts.ts`): see-through, spine and gut showing, near
+ * white with a lavender cast, and big-eyed (`docs/media/reference/`).
+ */
+export function larvaGenome(): Genome {
+  return { ...baseGenome(), accentHue: 196, smoke: 1, pale: 1, eyeSize: 1.5 };
+}
+
+/**
  * Flat damage reduction, plate included. `coral` is an organ, so it earns its armour here
  * rather than by quietly adding to `armor` when the mutation is taken — an organ that
  * does not appear in the rule it changes is a stat wearing a costume.

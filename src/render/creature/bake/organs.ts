@@ -10,7 +10,7 @@ import { fbm } from '../../../core/noise';
 import { lerp } from '../../../core/util';
 import { hasSynergy } from '../../../sim/organs';
 import { tAt } from './body';
-import { TOXIC } from './head';
+import { TOXIC, type DrawnEye } from './head';
 import { rgbOf, type Palette, type RGB } from './palette';
 import { M, type Pt, type Sheet } from './sheet';
 
@@ -243,14 +243,18 @@ const WATER_SHEEN: RGB = [236, 250, 255];
 /**
  * Archer Spit: the archerfish's throat — a pale sac of water held under the jaw, and the
  * groove in the roof of the mouth it is squeezed forward down, drawn as a line of the same
- * blue to the lips. Low and forward, where a shot comes from.
+ * blue to the lips. Low and forward, where a shot comes from. On a drawn body it sits in the
+ * throat behind the drawn eye (`eye`), with no groove: where the painted one goes the drawn eye
+ * is, and the larva came out with a blue tear in it, and hung under the eye it was still a tear.
  */
-export function spitSac(s: Sheet, f: Form) {
+export function spitSac(s: Sheet, f: Form, eye: DrawnEye | null = null) {
   const t = 0.17;
   const w = halfWidth(t, f);
-  const x = spineAt(t, f), y = edgeAt(t, f, 0.5);
-  s.blot(x, y, w * 0.36, WATER, 0.85, M.BODY);
-  s.dot(x + w * 0.12, y - w * 0.14, WATER_SHEEN, 0.9);
+  const r = eye ? eye.r * 0.38 : w * 0.36;
+  const x = eye ? eye.x - eye.r * 1.55 : spineAt(t, f), y = eye ? eye.y + eye.r * 0.7 : edgeAt(t, f, 0.5);
+  s.blot(x, y, r, WATER, 0.85, M.BODY);
+  s.dot(x + r * 0.33, y - r * 0.4, WATER_SHEEN, 0.9);
+  if (eye) return;
   const nose = spineAt(0.02, f), lip = edgeAt(0.04, f, 0.15);
   const n = Math.max(2, Math.round((nose - x) * s.res));
   for (let i = 1; i <= n; i++) {

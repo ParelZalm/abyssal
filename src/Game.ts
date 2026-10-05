@@ -2,7 +2,7 @@ import { Application, Container } from 'pixi.js';
 import { toggleMute } from './audio/sound';
 import { Rng } from './core/util';
 import { familyCounts } from './content/forms';
-import { baseGenome, type Genome } from './content/genome';
+import { larvaGenome, type Genome } from './content/genome';
 import { speciesById, type Species } from './content/species';
 import { TANK_ORDER, tankById, tankIndex, TEMPO, type RoomType, type TankId } from './content/tanks';
 import { TRAITS } from './content/traits';
@@ -276,15 +276,9 @@ export class Game {
     this.prompt = new PromptView();
     this.drain = new DrainView();
 
-    const g: Genome = baseGenome();
+    const g: Genome = larvaGenome();
     g.speed *= TEMPO;
-    // a larva: see-through, spine and gut showing, near white with a lavender cast, and
-    // big-eyed (`docs/media/reference/`)
     g.hue = this.rng.range(245, 265);
-    g.accentHue = 196;
-    g.smoke = 1;
-    g.pale = 1;
-    g.eyeSize = 1.5;
     // a copy, because a transformation changes the plan and the next run must not inherit it
     const p = this.player = new Creature({ ...PLAYER_SPECIES }, g);
     p.isPlayer = true;

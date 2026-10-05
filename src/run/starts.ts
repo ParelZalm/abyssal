@@ -1,4 +1,5 @@
-import type { Genome } from '../content/genome';
+import { larvaGenome, type Genome } from '../content/genome';
+import { TRAITS } from '../content/traits';
 
 /**
  * Starting forms: bodies a run can hatch as instead of the hatchling, one for each tank some
@@ -26,6 +27,13 @@ export interface Start {
  * Lunging Bite). Taken the ordinary way, so the pedestals never deal it again.
  */
 export const HATCHED = ['archerspit'];
+
+/** The larva as every run hatches it, with `HATCHED` taken: what the drawn larva is drawn as. */
+export function hatchedGenome(): Genome {
+  const g = larvaGenome();
+  for (const id of HATCHED) TRAITS.find(t => t.id === id)!.apply(g);
+  return g;
+}
 
 export const STARTS: Start[] = [
   { id: 'hatchling', name: 'Hatchling', unlock: 0, traits: [],

@@ -16,7 +16,8 @@
  * order they run in, back to front, and is the one place to read what a body is made of.
  */
 import { Texture } from 'pixi.js';
-import { baseGenome, eyeOf, fadeOf, menace, photophoreOf, type Genome } from '../../content/genome';
+import { eyeOf, fadeOf, menace, photophoreOf, type Genome } from '../../content/genome';
+import { hatchedGenome } from '../../run/starts';
 import { formFor, halfWidth, PLAN_ART, spineAt, R, type Form, type Plan, type PlanArt } from '../../content/form';
 import { fbmSigned } from '../../core/noise';
 import { lerp } from '../../core/util';
@@ -290,7 +291,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, 
   if (hasSynergy(g, 'stonefish')) stoneWarts(s, f, seed);
   if (g.discharge > 0) electroplates(s, f, g);
   if (g.ink > 0) inkSac(s, f);
-  if (g.spit > 0) spitSac(s, f);
+  if (g.spit > 0) spitSac(s, f, eye);
   if (g.twin > 0) twinSac(s, f);
   if (g.seek > 0) nares(s, f);
   if (g.arc > 0) galvanicLine(s, f);
@@ -308,7 +309,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, 
   if (A.cilia) cilia(s, f);
   // a drawn hatchling is drawn smooth-backed, so on a drawn body the spines are only what
   // menace has grown past the hatchling's, with the Spines' own
-  if (A.spines) spines(s, f, g, drawn ? Math.max(0, men - menace(baseGenome())) : men);
+  if (A.spines) spines(s, f, g, drawn ? Math.max(0, men - menace(hatchedGenome())) : men);
   if (g.inflate > 0) prickles(s, f, g, seed);
   if (g.volley > 0) volleyQuills(s, f);
   if (g.frost > 0) rime(s, f, seed);
@@ -366,14 +367,16 @@ const foldsOf = (g: Genome, A: PlanArt) => A.finRays && A.fins.length > 0 && A.t
 
 /**
  * Which of a drawn body's parts show on genome `g`, and stretched how far: each as far as its
- * painter would grow it past the hatchling's (`baseGenome`), read off the same terms, so the
+ * painter would grow it past the hatched larva's (`hatchedGenome`), which is what the drawn one
+ * is — sized against the bare base genome, the larva's own big eye came out 1.8 times the
+ * picture's. Read off the painters' own terms, so the
  * Pectorals' fins are still bigger fins and a sharp eye a bigger eye. A part is left off where
  * the painters would not draw it at all, and left to them where a mutation changes its shape
  * rather than its size — a forked tail, a blind or a tapetum-pale eye — until that look is
  * drawn too.
  */
 function posesFor(g: Genome, plan: Plan, f: Form, A: PlanArt): Poses {
-  const b = baseGenome(), f0 = formFor(b, plan);
+  const b = hatchedGenome(), f0 = formFor(b, plan);
   const poses: Poses = {};
   const fan = (x: Genome) => 0.7 + x.finSize * 0.35;
   if (A.tail === 'caudal' && A.arms === 0 && g.tailSplit <= b.tailSplit) {
