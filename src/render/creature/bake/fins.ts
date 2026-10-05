@@ -235,6 +235,8 @@ export function veil(s: Sheet, f: Form, g: Genome, seed: number) {
 export function bloomTrail(s: Sheet, f: Form, pal: Palette, g: Genome, seed: number) {
   const n = Math.round(4 + g.frill * 2);
   const len = f.len * BLOOM_TRAIL * R;
+  // drawn, hung from the rear of the belly and reaching as far as the painted trail stings
+  if (s.mark('bloom', spineAt(0.8, f), edgeAt(0.8, f, 0.4), { layer: 'under', span: len })) return;
   for (let i = 0; i < n; i++) {
     const t = 0.72 + (i / Math.max(1, n - 1)) * 0.26;
     const x0 = spineAt(t, f), y0 = edgeAt(t, f, 0.3 + (i % 3) * 0.3);

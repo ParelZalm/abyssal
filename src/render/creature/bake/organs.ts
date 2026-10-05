@@ -80,9 +80,12 @@ export function organs(s: Sheet, f: Form, pal: Palette, g: Genome, club = false)
     }
   }
 
-  // jet: a siphon under the peduncle, the only organ that points backwards
-  if (g.jet > 0) {
-    const t = 0.84;
+  // jet: a siphon under the peduncle, the only organ that points backwards. Drawn, it is rooted
+  // where the painted one is, and inked for a Smoke Screen
+  const jt = 0.84;
+  if (g.jet > 0 && !s.mark(hasSynergy(g, 'smokescreen') ? 'smoke' : 'siphon', spineAt(jt, f) + halfWidth(jt, f),
+                           edgeAt(jt, f, 0.9), { layer: 'under' })) {
+    const t = jt;
     const w = halfWidth(t, f);
     const x = spineAt(t, f), y = edgeAt(t, f, 0.9);
     s.poly([[x + w, y - w * 0.3], [x - w * 0.8, y], [x - w * 0.8, y + w * 0.6], [x + w * 0.4, y + w * 0.4]], M.FIN);
@@ -252,6 +255,7 @@ export function spitSac(s: Sheet, f: Form, eye: DrawnEye | null = null) {
   const w = halfWidth(t, f);
   const r = eye ? eye.r * 0.38 : w * 0.36;
   const x = eye ? eye.x - eye.r * 1.55 : spineAt(t, f), y = eye ? eye.y + eye.r * 0.7 : edgeAt(t, f, 0.5);
+  if (s.mark('spit', x, y, { layer: 'skin' })) return;
   s.blot(x, y, r, WATER, 0.85, M.BODY);
   s.dot(x + r * 0.33, y - r * 0.4, WATER_SHEEN, 0.9);
   if (eye) return;

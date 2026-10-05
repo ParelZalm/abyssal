@@ -24,13 +24,13 @@ import { lerp } from '../../core/util';
 import { BLOOM_TRAIL, hasSynergy, synergiesOf } from '../../sim/organs';
 import { artDensity } from '../pixel';
 import { palette, type Palette, type RGB } from './bake/palette';
-import { bakeSprite, drawnBody, drawnEye, hasParts, hasSprite, hasWounded, type Poses } from './sprite';
-import { BODIES, drawnForm, SPRITES } from '../../content/sprites';
+import { bakeSprite, drawnBody, drawnEye, drawnHinge, drawnTip, hasParts, hasSprite, hasWounded, marksOf, type Poses } from './sprite';
+import { BODIES, drawnForm, SPRITES, type MarkName } from '../../content/sprites';
 import { M, shade, Sheet, type Emitter } from './bake/sheet';
 import { flank, whaleSpots, camouflage, crazing, veins, ballast, viscera, mantle, cilia, scales } from './bake/body';
 import { caudalFin, fluke, mantleFins, dorsalRidge, medianFins, fins, ribbonFin, veil, bloomTrail,
          tentacles } from './bake/fins';
-import { bluntSnout, head, lureAt, lure, barbels, type DrawnEye } from './bake/head';
+import { bluntSnout, head, lureAt, lure, barbels, type DrawnHead } from './bake/head';
 import { spines, organs, ballisticReach, urchinReach, urchinSpines, electroplates, prickles,
          inkSac, spitSac, stoneWarts, volleyQuills, armourBands } from './bake/organs';
 import { photophores, flankLights, embers } from './bake/lights';
@@ -205,9 +205,12 @@ function paint(g: Genome, plan: Plan): Baked {
   const back = spineAt(1, f) - f.len * R * (f.fluke * 1.5 + g.veil * 0.7 + (bloom ? BLOOM_TRAIL * 1.1 : 0))
     - (rigged ? 0 : A.armLen * R * (1 + g.segments * 0.1) * 1.8) - R * 0.6;
   const halfH = Math.ceil(reachUp * res) / res;
-  const poses = drawn && hasParts(drawn) ? posesFor(g, plan, f, A) : {};
+  const marks = drawn ? marksOf(drawn) : new Set<string>();
+  const poses = drawn && hasParts(drawn) ? posesFor(g, plan, f, A, marks) : {};
   const eye = drawn && poses.eye ? drawnEye(drawn, f, poses.eye.sx) : null;
-  const at = { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn: !!drawn, poses, eye };
+  const own = drawn ? { eye, hinge: drawnHinge(drawn, f),
+                       tip: (n: MarkName, x0: number, y0: number, x1: number) => drawnTip(drawn, f, n, x0, y0, x1) } : null;
+  const at = { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn: !!drawn, poses, own, marks };
 
   // Two pictures of the same animal on identical sheets: the mouth shut, and the mouth
   // open for an attack. Cropped to their union, so the view can swap one texture for the
@@ -222,7 +225,7 @@ function paint(g: Genome, plan: Plan): Baked {
   for (let i = 0; i <= 40; i++) depth = Math.max(depth, halfWidth(i / 40, f));
   const picture = (sh: Sheet, open: boolean) => {
     const cv = shade(sh, pal);
-    if (drawn) lay(cv, sh, drawnBody(drawn, f, sh.back, sh.halfH, sh.res, sh.w, sh.h, open, poses), pal.alpha);
+    if (drawn) lay(cv, sh, drawnBody(drawn, f, sh.back, sh.halfH, sh.res, sh.w, sh.h, open, poses, sh.marks), pal.alpha);
     return cv;
   };
   const shutCv = picture(shut, false), gapingCv = gaping ? picture(gaping, true) : null;
@@ -244,8 +247,10 @@ interface Painting {
   drawn: boolean;
   /** The drawn body's parts that show, which the painters leave to it (`posesFor`). */
   poses: Poses;
-  /** The drawn eye, for what is painted round it. */
-  eye: DrawnEye | null;
+  /** The drawn eye and mouth, for what is placed round them; null on a painted body. */
+  own: DrawnHead | null;
+  /** The marks the drawn body has, which its painters place instead of painting (`Sheet.mark`). */
+  marks: ReadonlySet<string>;
 }
 
 /**
@@ -253,7 +258,9 @@ interface Painting {
  * body is made of. `gape` opens the mouth, 0 shut to 1 wide. Returns whether the body was
  * big enough to have a head worth drawing.
  */
-function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, poses, eye }: Painting, gape: number) {
+function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, poses, own, marks }: Painting, gape: number) {
+  s.drawn = marks;
+  const eye = own?.eye ?? null;
   // --- behind the body ---------------------------------------------------
   const jellyArms = A.arms > 0 && !rigged;
   if (jellyArms) tentacles(s, f, A, g);
@@ -293,7 +300,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, 
   if (g.ink > 0) inkSac(s, f);
   if (g.spit > 0) spitSac(s, f, eye);
   if (g.twin > 0) twinSac(s, f);
-  if (g.seek > 0) nares(s, f);
+  if (g.seek > 0) nares(s, f, eye);
   if (g.arc > 0) galvanicLine(s, f);
   if (g.scald > 0) ventGlands(s, f);
   if (g.blast > 0) cavityBladder(s, f);
@@ -308,8 +315,9 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, 
   // --- standing off it ---------------------------------------------------
   if (A.cilia) cilia(s, f);
   // a drawn hatchling is drawn smooth-backed, so on a drawn body the spines are only what
-  // menace has grown past the hatchling's, with the Spines' own
-  if (A.spines) spines(s, f, g, drawn ? Math.max(0, men - menace(hatchedGenome())) : men);
+  // menace has grown past the hatchling's at the same size, with the Spines' own: size alone
+  // grows menace, and the board's larva, drawn bigger to be seen, came out spined
+  if (A.spines) spines(s, f, g, drawn ? Math.max(0, men - menace({ ...hatchedGenome(), size: g.size })) : men);
   if (g.inflate > 0) prickles(s, f, g, seed);
   if (g.volley > 0) volleyQuills(s, f);
   if (g.frost > 0) rime(s, f, seed);
@@ -318,12 +326,12 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, 
   if (hasSynergy(g, 'urchin')) urchinSpines(s, f, g, seed);
   if (!poses.pectoral) fins(s, f, g, A);
   organs(s, f, pal, g, A.club);
-  head(s, f, pal, g, A, men, gape, drawn, eye);
+  head(s, f, pal, g, A, men, gape, own);
   if (g.barbels > 0) barbels(s, f, pal, g);
-  if (g.lure > 0) lure(s, f, pal, g);
+  if (g.lure > 0) lure(s, f, pal, g, own);
   if (g.pierce > 0) needleBill(s, f);
   if (g.halo > 0) halo(s, f, g);
-  if (g.parietal > 0) parietalEye(s, f);
+  if (g.parietal > 0) parietalEye(s, f, eye);
   if (A.scales) scales(s, f, pal);
   return true;
 }
@@ -372,15 +380,20 @@ const foldsOf = (g: Genome, A: PlanArt) => A.finRays && A.fins.length > 0 && A.t
  * picture's. Read off the painters' own terms, so the
  * Pectorals' fins are still bigger fins and a sharp eye a bigger eye. A part is left off where
  * the painters would not draw it at all, and left to them where a mutation changes its shape
- * rather than its size — a forked tail, a blind or a tapetum-pale eye — until that look is
- * drawn too.
+ * rather than its size, it is swapped for that look's mark where it is drawn (`Poses.as`) — the
+ * forked tail, the Tapetum's eye — and left to the painter where it is not, as a blind eye is.
  */
-function posesFor(g: Genome, plan: Plan, f: Form, A: PlanArt): Poses {
+function posesFor(g: Genome, plan: Plan, f: Form, A: PlanArt, marks: ReadonlySet<string>): Poses {
   const b = hatchedGenome(), f0 = formFor(b, plan);
   const poses: Poses = {};
   const fan = (x: Genome) => 0.7 + x.finSize * 0.35;
   if (A.tail === 'caudal' && A.arms === 0 && g.tailSplit <= b.tailSplit) {
     poses.tail = { sx: f.fluke / f0.fluke, sy: (2.4 + f.fork * 1.8) / (2.4 + f0.fork * 1.8) };
+  } else if (A.tail === 'caudal' && A.arms === 0) {
+    // the Forked Caudal Fin's tail in the round one's place, and deeper for a second; its own
+    // fork is drawn, so it grows only with the fin
+    const fork = g.tailSplit - b.tailSplit > 0.3 && marks.has('fork2') ? 'fork2' : 'fork';
+    if (marks.has(fork)) poses.tail = { sx: f.fluke / f0.fluke, sy: f.fluke / f0.fluke, as: fork };
   }
   if (A.dorsalFin === 0 && foldsOf(g, A)) {
     const k = (0.7 + g.finSize * 0.3) / (0.7 + b.finSize * 0.3);
@@ -388,8 +401,9 @@ function posesFor(g: Genome, plan: Plan, f: Form, A: PlanArt): Poses {
   }
   if (A.fins.length > 0) poses.pectoral = { sx: fan(g) / fan(b), sy: fan(g) / fan(b) };
   const sees = (x: Genome) => Math.min(0.3, 0.15 * eyeOf(x) * A.eye);
-  if (g.eyeAdapt >= -0.4 && g.eyeAdapt <= 0.45 && !A.paleEyes && !A.eyeLamp && !A.eyeGlow && !A.stalks) {
-    poses.eye = { sx: sees(g) / sees(b), sy: sees(g) / sees(b) };
+  const pale = A.paleEyes || g.eyeAdapt > 0.45;
+  if (g.eyeAdapt >= -0.4 && (!pale || marks.has('tapetum')) && !A.eyeLamp && !A.eyeGlow && !A.stalks) {
+    poses.eye = { sx: sees(g) / sees(b), sy: sees(g) / sees(b), as: pale ? 'tapetum' : undefined };
   }
   return poses;
 }

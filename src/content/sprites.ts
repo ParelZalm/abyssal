@@ -23,6 +23,16 @@ export type Pt = [number, number];
  */
 export type PartName = 'tail' | 'back' | 'belly' | 'pectoral' | 'eye';
 
+/**
+ * What a mutation adds to a player's body (`SpriteArt.marks`), drawn one to a cell and placed
+ * where its painter puts the painted one (`Sheet.mark`). A name with `-open` is the same mark
+ * with the mouth open, shown with the body's strike frame.
+ */
+export type MarkName =
+  | 'tapetum' | 'foureye' | 'parietal' | 'halo' | 'nares' | 'ampullae' | 'spit' | 'brood' | 'barbels'
+  | 'needle' | 'illicium' | 'lantern' | 'jaw' | 'jaw-open' | 'fangs' | 'fangs-open' | 'saw' | 'saw-open'
+  | 'beak' | 'beak-open' | 'fork' | 'fork2' | 'siphon' | 'smoke' | 'bloom';
+
 /** A light organ on the picture: where the view hangs a bloom, its colour and how bright. */
 export interface SpriteLight { at: Pt; color: number; strength: number }
 
@@ -109,6 +119,19 @@ export interface SpriteArt {
    * drawn, covered the front of the head and the mouth with it.
    */
   parts?: { scale: number; at: Partial<Record<PartName, Pt>>; size?: Partial<Record<PartName, number>> };
+  /**
+   * A player's body's marks (`MarkName`), cut from their sheets by `scripts/import-marks.mjs`:
+   * `at` is the point each joins the body by, in its own pixels, read off its shape (a flat cut
+   * edge, a jaw's hinge, the middle of an eye), and `tip` a lure's bulb. Drawn at the body's parts'
+   * scale (`parts.scale`).
+   */
+  marks?: Partial<Record<MarkName, { at: Pt; tip?: Pt }>>;
+  /**
+   * Where a drawn jaw hinges on a player's body: on the larva at the drawn eye's front edge, on
+   * the mouth's line, so the jaw juts from the snout. Hinged behind the mouth, as a jaw is, it ran
+   * under the eye, which fills the larva's head down to the mouth.
+   */
+  hinge?: Pt;
 }
 
 export const SPRITES: Record<string, SpriteArt> = {
@@ -292,7 +315,20 @@ export const SPRITES: Record<string, SpriteArt> = {
   // frames are its bare body, and its parts are drawn apart (`docs/sprite-prompts-player.md`):
   // `npm run sprite -- larva-sprite.png --id larva --key green --fringe`, then
   // `node scripts/import-parts.mjs docs/media/reference/larva-parts-sprite.png --body larva --snout 87 --tail 4 --axis 15 --pitch 1`
-  larva: { w: 88, h: 30, snout: 87, tail: 4, axis: 15,
+  // its marks: `node scripts/import-marks.mjs docs/media/reference/larva-head-sprite.png --body larva
+  // --cols 4 --rows 5 --flip barbels --names tapetum:mid,…` and the tail sheet's the same, with the
+  // names as below. The barbels came back trailing forward and are mirrored; the open beak's
+  // anchor is set by hand to the shut one's, since its swung lower plate moved the left edge's
+  // middle down it, and the beak jumped on every bite
+  larva: { w: 88, h: 30, snout: 87, tail: 4, axis: 15, hinge: [79, 17.5],
+           marks: { tapetum: { at: [10, 10] }, foureye: { at: [13, 23] }, parietal: { at: [5, 5] }, halo: { at: [13, 4] },
+                    nares: { at: [7, 4] }, ampullae: { at: [8, 5] }, spit: { at: [5, 5] }, brood: { at: [12, 0] },
+                    barbels: { at: [20, 0] }, needle: { at: [0, 4.5] },
+                    illicium: { at: [2, 25], tip: [26, 9.3] }, lantern: { at: [2, 33], tip: [26.3, 10.9] },
+                    jaw: { at: [0, 4] }, 'jaw-open': { at: [0, 5] }, fangs: { at: [0, 8] }, 'fangs-open': { at: [0, 5] },
+                    saw: { at: [0, 4] }, 'saw-open': { at: [0, 5] }, beak: { at: [0, 7] }, 'beak-open': { at: [0, 7] },
+                    fork: { at: [24, 15] }, fork2: { at: [30, 18] }, siphon: { at: [18, 3.5] }, smoke: { at: [18, 3.5] },
+                    bloom: { at: [60, 20] } },
            parts: { scale: 0.943, at: { eye: [64.4, 4.2], tail: [-17.7, 4.2], pectoral: [51.2, 20.2], back: [4.9, -4.3],
                                        belly: [4.9, 19.2] } },
            ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],

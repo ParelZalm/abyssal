@@ -16,7 +16,8 @@ animal, which can match its reference exactly.
 
 - **Enemies, and the player's bare bodies.** The player's bodies are drawn bare and laid under
   its painted mutations, with its own parts drawn apart on a sheet of their own and found on the
-  whole animal by `scripts/import-parts.mjs` (`BODIES`, `SpriteArt.parts`,
+  whole animal by `scripts/import-parts.mjs`, and its mutations' marks cut from grid sheets by
+  `scripts/import-marks.mjs` (`BODIES`, `SpriteArt.parts`, `SpriteArt.marks`,
   [sprite-prompts-player.md](sprite-prompts-player.md)); a plan with no drawn body is painted whole.
 - **Size decides what survives.** A sprite is resampled to the frame's pixel density
   (`render/pixel.ts`), which falls with the tank's zoom and a smaller window. At 20–30 texels
