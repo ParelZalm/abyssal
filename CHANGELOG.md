@@ -8,6 +8,8 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-10-05
+
 ### The tank game
 
 The open water column is gone: the run is a chain of aquarium tanks of one-screen rooms, played
@@ -43,5 +45,6 @@ The column game: one open water column nine kilometres deep, five zones sealed b
 that open to a body big enough, a draft of three mutations at every growth, guardians, the
 Leviathan at the bottom, and the codex. Kept as the tag `v0.1.0`.
 
-[Unreleased]: https://github.com/ParelZalm/abyssal/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/ParelZalm/abyssal/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/ParelZalm/abyssal/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/ParelZalm/abyssal/releases/tag/v0.1.0
