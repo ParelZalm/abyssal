@@ -451,6 +451,34 @@ swallowed; the vampire squid's bolts curve, and turned it inverts into a spiked 
 the water and jets away; the anglerfish's bolts circle its lure, and turned it lunges; the
 siphonophore is a chain that splits where it is cut.
 
+## The player fish rework
+
+To do, decided October 2026: the larva and every plan it can become are still painted from the
+genome (`render/creature/fishbake.ts`, the painters in `bake/`), and since the enemies went to
+authored sprites (`docs/sprites.md`) and the mutations to drawn items (`render/itemart.ts`,
+[sprite-prompts-items.md](sprite-prompts-items.md)), the player is the roughest thing on the
+screen. Its look is reworked to their standard, and it stays a body that mutations visibly change
+— the reason it was never a sprite.
+
+**Every mutation's mark on the body is in it**, the ones the items rework added with the rest,
+and each reads as the organ its item draws, so a pedestal's good and the body that took it are
+one picture:
+
+- the multishot and the brood: the Parietal Eye's lit third eye on the crown, the Twin Spout's
+  second water sac, the Four-Eyed Fish's second eye over the first, the Mouthbrooder's throat
+  pouch with the fry looking out (`bake/shotorgans.ts`, `bake/head.ts`);
+- the stat cards' morphology, which says tears, range and shot speed now: the fins of the
+  Pectorals, the tail of the Caudal Fin, the lateral line, the bladder, the barbels, the
+  pressure gland's jaw;
+- everything already painted: the primaries' sacs and quills, the shot organs, the actives,
+  the reef and deep organs, the curses, and the named synergies.
+
+Open questions for when it starts: whether the body is authored art with the organs as
+authored parts placed on it by `edgeAt` (the plans' spines and depth curves kept, the painting
+replaced), or the painters taken further; reference images first, as for the enemies. The
+board's *Mutations* and *Builds* groups are where the result is judged, every mark on the body
+beside its item.
+
 ## Later
 
 Bomb fish and secret rooms; tanks four and five (the sperm whale, the colossal squid, the
