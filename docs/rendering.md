@@ -29,7 +29,7 @@ cold colour (`heat: 0` keeps menace from warming it). At the deep tank's zoom an
 is 10 to 20 texels long, so most of that only shows on the board or on a big window.
 
 The painters could not get closer than that to the sheet (the board's comparison is on
-`prototype/angler-art`), so an enemy may instead be **drawn from a sprite**: it never
+`archive/prototype-angler-art`), so an enemy may instead be **drawn from a sprite**: it never
 mutates, and one picture of one animal can be the reference exactly. `content/sprites.ts`
 holds each sprite's landmarks in its own pixels — snout and tail root span the plan's form,
 so the hull lies inside the picture; the axis the swim bends about; the lure's bulb, which

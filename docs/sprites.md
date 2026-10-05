@@ -10,7 +10,7 @@ Every body in the game used to be painted from its genome (`render/creature/fish
 because a mutation has to show on the body. The painters top out well short of a hand-drawn
 reference: the anglerfish was taken as far as they go, and then through an angler-only
 painter that lit every part as its own form, and neither got close. The comparison is kept
-on the branch `prototype/angler-art` (the board's *PROTOTYPE · Angler art* group). Enemies
+on the tag `archive/prototype-angler-art` (the board's *PROTOTYPE · Angler art* group). Enemies
 never mutate, so an enemy can be **drawn from a sprite** instead: one authored picture of one
 animal, which can match its reference exactly.
 

@@ -11,6 +11,7 @@ npm run build    # tsc --noEmit && vite build  — this is the only gate
 npm run preview  # serve dist/
 npm run design   # vite, opened on /design.html — the design board
 npm run sprite -- <sheet.png> --id <species>   # import an enemy's sprite sheet (docs/sprites.md)
+npm run release -- <patch|minor|major>         # build, bump, stamp CHANGELOG.md, tag, push (docs/releasing.md)
 ```
 
 There is **no test suite and no linter**. `npm run build` type-checks (strict) and is
@@ -131,9 +132,12 @@ Two display roots: a static screen-sized sprite carrying the GLSL water filter, 
 The water is shaded from world coordinates passed in as uniforms, not from the scene
 graph, so anything it draws has no display object to read a position from.
 
-**The game is mid-rework** on `rework/gameloop`: the open column is becoming a chain of
-tanks made of one-screen rooms (`docs/adr/0003-*`, `docs/roadmap.md`, and the words in
-`CONTEXT.md`). Work the roadmap's stages in order.
+**The game is a chain of tanks made of one-screen rooms** (`docs/adr/0003-*`,
+`docs/roadmap.md`, and the words in `CONTEXT.md`); the open column it replaced is the tag
+`v0.1.0`. Work the roadmap's stages in order, each on a branch off `main` (`feat/<topic>`,
+`fix/…`, `art/…`), merged with `--no-ff` and deleted once done; every merge adds its lines to
+`CHANGELOG.md` under *Unreleased*, and `npm run release -- minor` cuts a version. The whole
+process is `docs/releasing.md`.
 
 `y` is depth and increases downward (0 → `DEPTH_MAX` 9000). `genome.size` is a body
 length in cm used directly as a world length. A tank's rooms are laid out at the world

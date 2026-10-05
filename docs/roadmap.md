@@ -1,6 +1,7 @@
 # Roadmap: the tank rework
 
-Decided September 2026, on `rework/gameloop`: the open water column becomes a chain of
+Decided September 2026 and worked on `rework/gameloop` until it was merged into `main` as
+0.2.0 (October 2026; stages since are branches off `main`, [releasing.md](releasing.md)): the open water column becomes a chain of
 tanks made of rooms, played like *The Binding of Isaac*. Why, and what it replaces, is in
 [adr/0003](adr/0003-tanks-of-rooms-replace-the-column.md); the words are in
 [`CONTEXT.md`](../CONTEXT.md). The fun pass that came before is finished and lives in the
