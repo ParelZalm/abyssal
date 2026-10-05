@@ -453,9 +453,9 @@ dashes off the walls; the gulper eel opens its jaw and draws the player and the 
 in, swallowing the shots, hangs its jaw exposed after a gulp that took nothing, and turned
 spits back a fan for what it swallowed; the vampire squid's bolts bend after the player, and
 turned it balls up inside out when the player comes close — its arms swept back over the
-mantle, braced — then bursts into a cloud of stinging motes and jets away; the anglerfish lets
-three to five bolts out of its lure to hang beside it on a fan, taking aim, and fire at the
-player one after another, and turned it lunges; the siphonophore breaks in two where the blow that turned it landed, each piece a
+mantle, braced — then bursts into a cloud of stinging motes and jets away; the anglerfish's lure
+flares and lets three to five violet sparks out of it (`lumen`) to hang beside it on a fan,
+taking aim, and fire at the player one after another, and turned it lunges; the siphonophore breaks in two where the blow that turned it landed, each piece a
 stretch of its picture (`cutSprite`), and a long piece breaks again. The board's *Hostile roles*
 group has each whole and turned, the siphonophore in its two pieces.
 

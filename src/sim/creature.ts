@@ -147,6 +147,12 @@ export class Creature {
   trick: '' | 'gape' | 'ball' | 'lunge' = '';
   trickT = 0;
   /**
+   * How bright an anglerfish's lure burns past its own, 0 to 1 (`Roles`' lure): up through the
+   * wind-up, full while its sparks hang (`litT` seconds of that left), and down after.
+   */
+  lit = 0;
+  litT = 0;
+  /**
    * Where the last blow landed on this body, in the world: a siphonophore breaks where it is
    * cut (`Roles.split`). Null until something lands.
    */
@@ -495,6 +501,7 @@ export class Creature {
   syncView() {
     this.view.swell = this.swell;
     this.view.cloak = this.trick === 'ball';
+    this.view.flare = this.lit;
     this.view.place(this.x, this.y, this.angle, this.face, this.upright);
   }
 

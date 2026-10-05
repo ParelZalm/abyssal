@@ -310,8 +310,9 @@ const JET_T = 0.5;
 
 /**
  * The lure (the anglerfish). A turret whose beat is not a ring but `LURE_MIN` to `LURE_MAX`
- * bolts let out of its lure, each set at a spot `LURE_R` tiles off it on a fan toward the
- * player, `LURE_FAN` radians apart; they hang there taking aim for `LURE_HOLD`, and then fire at
+ * sparks of its lure's light (`lumen`) let out of it, the lure flaring as it does
+ * (`Creature.lit`), each set at a spot `LURE_R` tiles off it on a fan toward the player,
+ * `LURE_FAN` radians apart; they hang there taking aim for `LURE_HOLD`, and then fire at
  * the player one after another, `LURE_GAP` apart, each at where the player is as it goes. Still
  * is hit; the hang is the time to move, and the rattle is the time to keep moving. Turned, it
  * always lets out the most, and it also lunges at a player inside `LUNGE_NEAR` tiles: a
@@ -324,6 +325,8 @@ export const LURE_R = 1.4;
 export const LURE_FAN = 0.5;
 export const LURE_HOLD = 0.9;
 export const LURE_GAP = 0.16;
+/** How fast the lure dims once its last spark has gone, a second. */
+const LIT_FADE = 2.5;
 const LUNGE_NEAR = 4;
 const LUNGE_CD = 3.5;
 
@@ -410,7 +413,7 @@ export function chargeOf(c: Creature): { fill: number; locked: boolean } | null 
  * Shot speeds, in tiles a second. The player cruises about six at the game's tempo, so a spit
  * is just outswum and a bolt easily: a shot is dodged across its line, not fled down it.
  */
-export const SHOT_SPEED = { spit: 7, spine: 5.25, bolt: 4.5 } as const;
+export const SHOT_SPEED = { spit: 7, spine: 5.25, bolt: 4.5, lumen: 4.5 } as const;
 
 /**
  * The hostiles' brains. A hostile does not live in the room the way its fauna does — it has
@@ -1079,7 +1082,13 @@ export class Roles {
 
   private turret(c: Creature, dt: number, p: Creature) {
     const balloon = c.species.moves === 'balloon';
-    if (c.species.moves === 'lure' && c.wounded && this.lunge(c, p)) return;
+    if (c.species.moves === 'lure') {
+      // the lure flares through the wind-up and burns while its sparks hang, then dims
+      c.litT = Math.max(0, c.litT - dt);
+      c.lit = c.attack === 'windup' ? Math.max(c.lit, 1 - c.attackT / c.attackLen)
+        : c.litT > 0 ? 1 : Math.max(0, c.lit - dt * LIT_FADE);
+      if (c.wounded && this.lunge(c, p)) return;
+    }
     c.anchor ??= { x: c.x, y: c.y };
     c.faceToward(p.x, FACE_SLACK * this.world.terrain!.tile);
     // it holds its spot against anything that knocked it off, facing the player
@@ -1117,6 +1126,7 @@ export class Roles {
     if (dist2(c.x, c.y, p.x, p.y) > (LUNGE_NEAR * t.tile) ** 2 || !t.clearLine(c.x, c.y, p.x, p.y)) return false;
     c.trick = 'lunge';
     c.guardCd = LUNGE_CD;
+    c.lit = c.litT = 0;
     c.swell = 1;
     c.anchor = null;
     this.begin(c, 'windup', CHARGE_WIND(c.genome.size) + CHARGE_LOCK);
@@ -1427,8 +1437,8 @@ export class Roles {
   }
 
   /**
-   * An anglerfish's beat: bolts let out of its lure to hang on a fan toward the player
-   * (`Shot.hang`), to fire at it one after another, the near end of the fan first.
+   * An anglerfish's beat: sparks let out of its lure (`lumen`) to hang on a fan toward the
+   * player (`Shot.hang`), to fire at it one after another, one end of the fan first.
    */
   private lure(c: Creature) {
     const w = this.world, tile = w.terrain!.tile, p = w.player;
@@ -1439,12 +1449,14 @@ export class Roles {
       // a little off the fan's even spacing, or the spots read as a stamped pattern
       const a = aim + (k - (n - 1) / 2) * LURE_FAN + (Math.random() - 0.5) * 0.15;
       const r = LURE_R * tile * (0.85 + Math.random() * 0.3);
-      const s = w.fire(c, 'bolt', at.x, at.y, a, SHOT_SPEED.bolt);
+      const s = w.fire(c, 'lumen', at.x, at.y, a, SHOT_SPEED.lumen);
       if (!s) continue;
       const hold = LURE_HOLD + k * LURE_GAP;
-      s.hang = { by: c, ox: Math.cos(a) * r, oy: Math.sin(a) * r, hold, speed: SHOT_SPEED.bolt * tile };
+      s.hang = { by: c, ox: Math.cos(a) * r, oy: Math.sin(a) * r, hold, speed: SHOT_SPEED.lumen * tile };
       s.life += hold;
     }
+    // the lure burns at its brightest until the last of them has gone
+    c.litT = LURE_HOLD + (n - 1) * LURE_GAP;
   }
 
   /** One shot from the mouth at where the player will be `lead` seconds on, thrown wide by its stealth. */

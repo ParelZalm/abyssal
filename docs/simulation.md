@@ -511,8 +511,10 @@ The deep's:
   (`FishView.cloak`), taking `BALL_TAKEN` of every blow (`bracedOf`); then a flash and `CLOUD`
   motes of glowing mucus thrown out to hang and sting, thinning through `CLOUD_LIFE`, and a jet
   away for `JET_T`.
-- **Lure** (anglerfish) — its beat lets `LURE_MIN` to `LURE_MAX` bolts out of its lure
-  (`lureOf`, the sprite's bulb) to hang at spots `LURE_R` off it on a fan toward the player
+- **Lure** (anglerfish) — its beat lets `LURE_MIN` to `LURE_MAX` sparks (`lumen`, a shot kind
+  of its own: a violet four-pointed star, turning and twinkling in a wide soft bloom) out of its
+  lure (`lureOf`, the sprite's bulb), which flares through the wind-up and burns while they hang
+  (`Creature.lit`, `FishView.flare`), to hang at spots `LURE_R` off it on a fan toward the player
   (`Shot.hang`, `World.hangs`), following the lure as it bobs; after `LURE_HOLD` they fire at
   the player one after another, `LURE_GAP` apart, each at where the player is as it goes. Still
   is hit; moving through the hang and the rattle is the dodge. Turned, it always lets out the

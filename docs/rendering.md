@@ -184,7 +184,10 @@ is smooth, and `FramePass` steps and dithers it onto the grid with everything el
   colours; a hostile's are hot red (`HOSTILE_COLOURS`), with a larger bloom that throbs and a
   stronger light, and its muzzle, splash and impact are red too (`Pulse.hostile`). One
   palette per kind made a spitter's spit the larva's own, and half the hits in a fight came
-  out of shots that read as the player's.
+  out of shots that read as the player's. The one exception is the anglerfish's spark
+  (`lumen`): violet, warm enough to read as incoming and nobody else's, since the lure's own
+  cyan is the player's colour; a star that turns and twinkles in a bloom twice a hostile's,
+  soft and slow, so it reads as light let out of the lure until it goes.
 - **A carcass glows red.** One texel of red just outside its silhouette (the skin's `uRim`),
   a red bloom and a red light, coming up once the roll is done. Tinted dim and floating among
   the rock, a kill left to be eaten was lost in the room. The bake's crop keeps a texel of

@@ -1224,10 +1224,11 @@ class RoleCell extends Container {
       b.blendMode = 'add';
       b.tint = shotGlow(kind, this.hostile, marks).color;
       b.alpha = 0.6;
-      b.width = b.height = this.hostile ? 36 : 26;
+      // a lure's spark is blurred wide in its own light
+      b.width = b.height = kind === 'lumen' ? 60 : this.hostile ? 36 : 26;
       this.shots.addChild(s);
       this.blooms.addChild(b);
-      this.flights.push({ x: 0, y: 0, life: SHOT_FLIGHT, ...how, a, d: r, t: 0, s, b });
+      this.flights.push({ x: 0, y: 0, life: SHOT_FLIGHT, twinkle: kind === 'lumen', ...how, a, d: r, t: 0, s, b });
     }
   }
 
@@ -1253,6 +1254,10 @@ class RoleCell extends Container {
         f.s.position.set(f.x + Math.cos(f.a) * f.d, f.y + Math.sin(f.a) * f.d);
       }
       f.b.position.copyFrom(f.s.position);
+      if (f.twinkle) {
+        f.s.rotation += dt * 2.2;
+        f.s.scale.set(SHOT_PX * (1 + Math.sin(f.t * 11) * 0.22));
+      }
       if (f.fades) {
         const left = 1 - (f.t / f.life) ** 2;
         f.s.alpha = left;
@@ -1268,7 +1273,7 @@ class RoleCell extends Container {
 interface Flight {
   a: number; d: number; t: number; s: Sprite; b: Sprite;
   x: number; y: number; life: number;
-  v?: number; fades?: boolean; hold?: number;
+  v?: number; fades?: boolean; hold?: number; twinkle?: boolean;
   /** Where a hanging shot fires at once its hold is up, and the spot it fired from. */
   target?: { x: number; y: number }; from?: { x: number; y: number };
 }
@@ -1285,7 +1290,7 @@ function boardLureShots(cell: RoleCell, sp: Species, g: Genome, n: number) {
   const at = boardLure(sp, g), target = { x: at.x + tile, y: at.y + tile * 3 };
   const aim = Math.atan2(target.y - at.y, target.x - at.x);
   for (let k = 0; k < n; k++) {
-    cell.fire('bolt', [aim + (k - (n - 1) / 2) * LURE_FAN], LURE_R * tile, undefined,
+    cell.fire('lumen', [aim + (k - (n - 1) / 2) * LURE_FAN], LURE_R * tile, undefined,
       { ...at, hold: LURE_HOLD + k * LURE_GAP, target });
   }
 }
@@ -1378,6 +1383,11 @@ function roleAnimate(sp: Species, g: Genome, tile: number) {
         cell.bar.set(x + head, -g.size * BAR_OVER, t / (wind - CHARGE_LOCK), t >= wind - CHARGE_LOCK, SHOT_PX, t);
       }
     }
+    if (sp.moves === 'lure') {
+      // the lure flares through the wind-up and burns while its sparks hang, as `Roles` lights it
+      const burn = wind + strike + LURE_HOLD + LURE_GAP * LURE_MAX;
+      fish.flare = t < wind ? t / wind : t < burn ? 1 : Math.max(0, 1 - (t - burn) * 2.5);
+    }
     if (role === 'turret') {
       fish.swell = 1 + SWELL * (t < wind ? t / wind : t < wind + strike ? 1
         : t < wind + strike + recover ? 1 - (t - wind - strike) / recover : 0);
@@ -1454,9 +1464,9 @@ function turnedAnimate(sp: Species, g: Genome, tile: number) {
       // a charger in the open: the eel out of the rock, the triggerfish done blowing, and the
       // anglerfish's lunge after its ring, which it keeps
       const t0 = moves === 'lure' ? LURE_HOLD + LURE_GAP * LURE_MAX : 0, u = t - t0;
-      if (moves === 'lure' && !fired) {
-        fired = 1;
-        boardLureShots(cell, sp, g, LURE_MAX);
+      if (moves === 'lure') {
+        if (!fired) { fired = 1; boardLureShots(cell, sp, g, LURE_MAX); }
+        fish.flare = u < 0 ? 1 : Math.max(0, 1 - u * 2.5);
       }
       const out = g.size * 1.6;
       const k = u < wind ? 0 : u < wind + DASH_TIME ? (u - wind) / DASH_TIME
@@ -1599,7 +1609,8 @@ function roleGroup(): DesignGroup {
     whole.facts = { moveset: sp.moves!, ...whole.facts };
   }
   // each kind twice, a hostile's beside the player's: the pair is the contrast to judge
-  for (const kind of Object.keys(SHOT_SPEED) as FiredKind[]) {
+  // a lure's spark is never the player's, and has its cell of its own below
+  for (const kind of (Object.keys(SHOT_SPEED) as FiredKind[]).filter(k => k !== 'lumen')) {
     for (const hostile of [true, false]) {
       items.push({
         id: hostile ? `shot-${kind}` : `shot-${kind}-yours`,
@@ -1622,6 +1633,30 @@ function roleGroup(): DesignGroup {
       });
     }
   }
+  // the lure's spark, turning and twinkling in its blurred bloom, as `ShotView` draws it
+  items.push({
+    id: 'shot-lumen', name: 'shot · lumen',
+    note: `an anglerfish's spark, let out of its lure to hang and take aim; ${SHOT_SPEED.lumen} tiles a second once it goes`,
+    source: 'src/render/shots.ts', span: 24, depth: tank.depth,
+    make: () => {
+      const c = new Container();
+      const b = new Sprite(glowTexture());
+      b.anchor.set(0.5);
+      b.blendMode = 'add';
+      b.tint = shotGlow('lumen', true).color;
+      b.width = b.height = 34;
+      b.alpha = 0.6;
+      const s = new Sprite(shotTexture('lumen', true));
+      s.anchor.set(0.5);
+      c.addChild(b, s);
+      return c;
+    },
+    animate: (view, dt) => {
+      const s = view.children[1] as Sprite;
+      s.rotation += dt * 2.2;
+      s.scale.set(1 + Math.sin(performance.now() / 1000 * 11) * 0.22);
+    },
+  });
   // the sting is never the player's, and never flies: it hangs where a bell left it
   items.push({
     id: 'shot-sting', name: 'shot · sting',

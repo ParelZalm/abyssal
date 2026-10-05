@@ -21,9 +21,10 @@ export type Moveset = 'pack' | 'volley' | 'balloon' | 'bloom' | 'burrow' | 'jet'
  * What a body fires: a jet of water, a spine, a blob of light — and the mantis shrimp's
  * urchin, which is thrown rather than fired, and a sea nettle's sting, which is left hanging
  * in the water. Neither of those last two is ever the player's — and the fry, the
- * Mouthbrooder's, which only the player lets out.
+ * Mouthbrooder's, which only the player lets out; and the lumen, a spark of an anglerfish's
+ * lure, which only it does.
  */
-export type ShotKind = 'spit' | 'spine' | 'bolt' | 'urchin' | 'sting' | 'fry';
+export type ShotKind = 'spit' | 'spine' | 'bolt' | 'urchin' | 'sting' | 'fry' | 'lumen';
 /** What a role fires: every kind but the thrown, the left and the player's fry. */
 export type FiredKind = Exclude<ShotKind, 'urchin' | 'sting' | 'fry'>;
 /** A boss's fight (`Species.boss`, `sim/bosses.ts`). */
@@ -350,7 +351,7 @@ export const SPECIES: Species[] = [
   // its lure throws light in a ring, which is the one thing about it that is not waiting.
   // Navy under cyan lights, after `docs/media/reference/angler.webp`
   { id: 'anglerfish', name: 'Anglerfish', behavior: 'ambush', plan: 'angler',
-    role: 'turret', shot: 'bolt', moves: 'lure',
+    role: 'turret', shot: 'lumen', moves: 'lure',
     // drawn twice its size: at its own it was 20 to 30 texels long in the deep tank, and its
     // sprite's fangs and comb were gone
     zone: 'midnight', bleed: 800, drawn: 2,

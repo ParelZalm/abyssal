@@ -179,7 +179,13 @@ export class FishView extends Container {
    * eye. The organ itself is a single hot pixel, and a lamp one texel across is only a lamp
    * if light comes off it. In `glow` with the rest, so every lamp on screen is one batch.
    */
-  private lamps: { s: Sprite; e: Emitter; phase: number }[] = [];
+  private lamps: { s: Sprite; e: Emitter; phase: number; w: number; lure: boolean }[] = [];
+  /**
+   * How far past itself the brightest lamp burns, 0 to 1, set from outside each frame: an
+   * anglerfish's lure flaring as it lets its sparks out (`Creature.lit`). It swells, goes white
+   * hot at its heart and throws its light further, and flickers while it does.
+   */
+  flare = 0;
   /** A tight, hot centre inside the halo — the halo alone reads as fog, not as a light. */
   private core = new Sprite(glowTexture());
   /** A carcass's red bloom (`EMBER`); hidden while the body lives. */
@@ -403,9 +409,9 @@ export class FishView extends Container {
     const own = Math.max(this.g.glow, this.g.pale * 0.6);
     if (own > 0.05) out.push({ x: this.glow.x, y: this.glow.y, r: R * (3 + own * 5),
       color: this.halo.tint as number, a: Math.min(1, own) * a });
-    for (const { s, e } of this.lamps) {
-      out.push({ x: this.glow.x + s.x, y: this.glow.y + s.y, r: R * (1.4 + e.strength * 2.2),
-        color: e.color, a: s.alpha * a });
+    for (const { s, e, lure } of this.lamps) {
+      out.push({ x: this.glow.x + s.x, y: this.glow.y + s.y,
+        r: R * (1.4 + e.strength * 2.2) * (lure ? 1 + this.flare * 1.2 : 1), color: e.color, a: s.alpha * a });
     }
   }
 
@@ -416,14 +422,17 @@ export class FishView extends Container {
     // a lamp's reach is a few pixels of the frame whatever the animal's size: sized off the
     // body, a leviathan's photophores would be searchlights and a lanternfish's invisible
     const px = 1 / artDensity();
+    // the brightest is the one that flares: the lure, on an anglerfish
+    const top = Math.max(0, ...lights.map(e => e.strength));
     for (const e of lights) {
       const s = new Sprite(glowTexture());
       s.anchor.set(0.5);
       s.blendMode = 'add';
       s.tint = e.color;
-      s.width = s.height = px * (5 + e.strength * 9);
+      const w = px * (5 + e.strength * 9);
+      s.width = s.height = w;
       this.glow.addChild(s);
-      this.lamps.push({ s, e, phase: Math.random() * 6.28 });
+      this.lamps.push({ s, e, phase: Math.random() * 6.28, w, lure: e.strength === top });
     }
   }
 
@@ -906,6 +915,12 @@ export class FishView extends Container {
     for (const l of this.lamps) {
       l.phase += dt * 1.6;
       l.s.alpha = Math.min(0.95, 0.3 + l.e.strength * 0.4) * (0.78 + Math.sin(l.phase) * 0.22);
+      if (!l.lure) continue;
+      // flared, it flickers fast and burns whole, and swells to over twice its size
+      const f = this.flare * (0.85 + Math.sin(this.clock * 31) * 0.15);
+      l.s.alpha += (1 - l.s.alpha) * f;
+      l.s.width = l.s.height = l.w * (1 + f * 1.6);
+      l.s.tint = f > 0.01 ? lerpColor(l.e.color, 0xffffff, f * 0.45) : l.e.color;
     }
     let sx = 1;
     let sy = 1 - Math.abs(bank) * 0.16;

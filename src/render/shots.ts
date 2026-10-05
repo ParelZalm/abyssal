@@ -56,6 +56,21 @@ export const SHOT_MAPS: Record<ShotKind, readonly string[]> = {
     '.#xd#xd#',
     '..#..#..',
   ],
+  // a spark of an anglerfish's lure: a four-pointed star, bigger than a bolt, since it hangs
+  // to be watched before it goes
+  lumen: [
+    '.....#.....',
+    '....#h#....',
+    '....#h#....',
+    '...#hhx#...',
+    '.##hhhxx##.',
+    '#hhhhhxxxd#',
+    '.##hxxxd##.',
+    '...#xxd#...',
+    '....#d#....',
+    '....#d#....',
+    '.....#.....',
+  ],
   // a Mouthbrooder's fry: a forked tail, a body the larva's own pale, and a dark eye at the nose
   fry: [
     '##...####.',
@@ -80,6 +95,8 @@ export const SHOT_COLOURS: Record<ShotKind, Palette> = {
   sting: { x: '#f0a0b0', h: '#fff0f4', d: '#a05068', o: '#2a0a14' },
   // the larva's own glass, so its brood reads as its young and not as one more shot
   fry: { x: '#dce8ff', h: '#ffffff', d: '#8ea4d0', o: '#141e3a' },
+  // never the player's; here only because every kind has a pair
+  lumen: { x: '#b8a8ff', h: '#f4f0ff', d: '#6a58d8', o: '#140e3a' },
 };
 export const HOSTILE_COLOURS: Record<ShotKind, Palette> = {
   spit: { x: '#ff3b30', h: '#ffe0b0', d: '#b3101c', o: '#2a0206' },
@@ -91,6 +108,10 @@ export const HOSTILE_COLOURS: Record<ShotKind, Palette> = {
   // it is swum round
   sting: { x: '#ff5a48', h: '#ffd0c0', d: '#b0281c', o: '#2a0604' },
   fry: { x: '#ff6a5a', h: '#ffe0d8', d: '#b0303a', o: '#2a0608' },
+  // violet, the one hostile shot that is: the lure's own cyan is the player's colour, and a
+  // hostile's red would not say it came out of the light. Violet is hot enough to read as
+  // incoming and is nobody else's
+  lumen: { x: '#c050ff', h: '#fbeaff', d: '#7a1ad0', o: '#1c0434' },
 };
 
 /**
@@ -106,6 +127,7 @@ export const SHOT_GLOW: Record<ShotKind, { color: number; a: number }> = {
   urchin: { color: 0xd8a0ff, a: 0.6 },
   sting: { color: 0xf0a0b0, a: 0.3 },
   fry: { color: 0xdce8ff, a: 0.4 },
+  lumen: { color: 0xb0a8ff, a: 0.8 },
 };
 export const HOSTILE_GLOW: Record<ShotKind, { color: number; a: number }> = {
   spit: { color: 0xff3b30, a: 0.8 },
@@ -114,6 +136,7 @@ export const HOSTILE_GLOW: Record<ShotKind, { color: number; a: number }> = {
   urchin: { color: 0xff4aa8, a: 1 },
   sting: { color: 0xff6a50, a: 0.45 },
   fry: { color: 0xff6a5a, a: 0.6 },
+  lumen: { color: 0xc060ff, a: 1 },
 };
 
 /**
@@ -228,6 +251,15 @@ const SPAWNED = 0.7;
 /** How far a fry's body wags either side of its line, and how fast: it swims, it is not thrown. */
 const FRY_WAG = 0.3;
 const FRY_WAG_RATE = 18;
+/**
+ * A lure's spark: turning slowly, twinkling — its size beating `TWINKLE` either way — and
+ * blurred: a bloom `LUMEN_BLOOM` of its reach across, softer and slower than a hostile's throb,
+ * so it reads as light let out and not as a shot until it goes.
+ */
+const LUMEN_SPIN = 2.2;
+const TWINKLE = 0.22;
+const TWINKLE_RATE = 11;
+const LUMEN_BLOOM = 20;
 /** How far a hanging sting sways either side of straight down, and how fast. */
 const STING_SWAY = 0.5;
 const STING_SWAY_RATE = 3;
@@ -270,19 +302,22 @@ export class ShotView {
       // a bolt or a bubble is round, an urchin tumbles and a sting hangs and sways; the rest
       // point along their line
       s.rotation = shotRound(k.kind, k.marks) ? 0 : k.kind === 'urchin' ? k.t * URCHIN_SPIN
+        : k.kind === 'lumen' ? k.t * LUMEN_SPIN
         : k.kind === 'sting' ? Math.PI / 2 + Math.sin(k.t * STING_SWAY_RATE + k.x) * STING_SWAY
           : Math.atan2(k.vy, k.vx) + (k.kind === 'fry' ? Math.sin(k.t * FRY_WAG_RATE + k.x) * FRY_WAG : 0);
-      s.scale.set(px * (k.spawned ? SPAWNED : 1));
+      s.scale.set(px * (k.spawned ? SPAWNED : 1) *
+        (k.kind === 'lumen' ? 1 + Math.sin(k.t * TWINKLE_RATE + k.x) * TWINKLE : 1));
       // a fry is side-on like every animal: swimming left it is mirrored, not upside down
       if (k.kind === 'fry' && k.vx < 0) s.scale.y *= -1;
       // something left in the water thins out through its life rather than breaking
       const left = k.fades ? 1 - (k.t / k.life) ** 2 : 1;
       s.alpha = left;
       b.position.set(k.x, k.y);
-      b.width = b.height = k.r * (hostile ? HOSTILE_BLOOM : PLAYER_BLOOM);
+      const lumen = k.kind === 'lumen';
+      b.width = b.height = k.r * (lumen ? LUMEN_BLOOM : hostile ? HOSTILE_BLOOM : PLAYER_BLOOM);
       b.tint = glow.color;
-      b.alpha = (hostile ? 0.75 + 0.25 * Math.sin(k.t * THROB) : 0.6) * left;
-      this.lights.push({ x: k.x, y: k.y, r: k.r * 10, color: glow.color, a: glow.a * left });
+      b.alpha = (lumen ? 0.55 + 0.15 * Math.sin(k.t * 5) : hostile ? 0.75 + 0.25 * Math.sin(k.t * THROB) : 0.6) * left;
+      this.lights.push({ x: k.x, y: k.y, r: k.r * (lumen ? 16 : 10), color: glow.color, a: glow.a * left });
     }
   }
 
