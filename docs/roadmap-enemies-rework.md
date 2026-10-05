@@ -41,7 +41,7 @@ needs the code named in *Blocked on* first.
 
 | Enemy | Plan · role | Frames | Status | Notes |
 | --- | --- | --- | --- | --- |
-| Anglerfish | angler · turret, `orbit` | rest, strike (jaw) | **done** | drawn 2; `angler.webp`, `angler-sprite.webp` |
+| Anglerfish | angler · turret, `lure` | rest, strike (jaw) | **done** | drawn 2; `angler.webp`, `angler-sprite.webp` |
 | Gulper Eel | eel · charger, `gulp` | rest, strike (jaw and pouch) | **done** | drawn 1, already 3.7 tiles long; `gulper.webp`, `gulper-sprite.webp` |
 | Barracuda | eel · charger, `line` | rest, strike (jaw) | **done** | drawn 1.6; dashes from 10 tiles (`reach`) and leaves a streak of light (`streak`); its sheet bled magenta round the outline (`--fringe`); `barracuda.webp`, `barracuda-sprite.webp` |
 | Siphonophore | jelly · drifter, `chain` | rest | **done** | drawn 4; one frame; its bells alone squeeze on the pulse and squirt from their mouths (`bells`); its tentacles are in its hull; broken in two it is two stretches of the one picture (`cutSprite`), no frames of their own; `siphon.webp`, `siphon-sprite.webp` |

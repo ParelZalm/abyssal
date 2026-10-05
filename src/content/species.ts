@@ -13,10 +13,10 @@ export type Role = 'charger' | 'spitter' | 'turret' | 'drifter';
  * its health, and what its death leaves. The nursery's: a mackerel's pack, an archerfish's
  * volley, a pufferfish's balloon, a sea nettle's bloom. The reef's: a ribbon eel's burrow, a
  * triggerfish's jet, a lionfish's herd, a moon jelly's wane. The deep's: a barracuda's line, a
- * gulper eel's gulp, a vampire squid's cloak, an anglerfish's orbit, a siphonophore's chain.
+ * gulper eel's gulp, a vampire squid's cloak, an anglerfish's lure, a siphonophore's chain.
  */
 export type Moveset = 'pack' | 'volley' | 'balloon' | 'bloom' | 'burrow' | 'jet' | 'herd' | 'wane'
-  | 'line' | 'gulp' | 'cloak' | 'orbit' | 'chain';
+  | 'line' | 'gulp' | 'cloak' | 'lure' | 'chain';
 /**
  * What a body fires: a jet of water, a spine, a blob of light — and the mantis shrimp's
  * urchin, which is thrown rather than fired, and a sea nettle's sting, which is left hanging
@@ -350,7 +350,7 @@ export const SPECIES: Species[] = [
   // its lure throws light in a ring, which is the one thing about it that is not waiting.
   // Navy under cyan lights, after `docs/media/reference/angler.webp`
   { id: 'anglerfish', name: 'Anglerfish', behavior: 'ambush', plan: 'angler',
-    role: 'turret', shot: 'bolt', moves: 'orbit',
+    role: 'turret', shot: 'bolt', moves: 'lure',
     // drawn twice its size: at its own it was 20 to 30 texels long in the deep tank, and its
     // sprite's fangs and comb were gone
     zone: 'midnight', bleed: 800, drawn: 2,

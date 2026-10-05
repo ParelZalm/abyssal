@@ -511,11 +511,13 @@ The deep's:
   (`FishView.cloak`), taking `BALL_TAKEN` of every blow (`bracedOf`); then a flash and `CLOUD`
   motes of glowing mucus thrown out to hang and sting, thinning through `CLOUD_LIFE`, and a jet
   away for `JET_T`.
-- **Orbit** (anglerfish) — its beat hangs `LURE_N` bolts on a circle `LURE_R` round its lure
-  (`lureOf`, the sprite's bulb), turning for `LURE_HOLD`, then lets them go along their spokes
-  (`Shot.orbit`, `World.circle`); each ring turns the other way. Turned, a player inside
-  `LUNGE_NEAR` in sight draws a lunge (`trick` `lunge`, through which `roleOf` is the
-  charger's, bar and lock included), and it holds wherever the lunge leaves it.
+- **Lure** (anglerfish) — its beat lets `LURE_MIN` to `LURE_MAX` bolts out of its lure
+  (`lureOf`, the sprite's bulb) to hang at spots `LURE_R` off it on a fan toward the player
+  (`Shot.hang`, `World.hangs`), following the lure as it bobs; after `LURE_HOLD` they fire at
+  the player one after another, `LURE_GAP` apart, each at where the player is as it goes. Still
+  is hit; moving through the hang and the rattle is the dodge. Turned, it always lets out the
+  most, and a player inside `LUNGE_NEAR` in sight draws a lunge (`trick` `lunge`, through which
+  `roleOf` is the charger's, bar and lock included); it holds wherever the lunge leaves it.
 - **Chain** (siphonophore) — the turn is a break (`Roles.split`): the colony is gone into two
   pieces cut where the blow that turned it landed (`Creature.struck`, read along the picture by
   `spriteColumn`), at least `LINK` columns either side. Each piece is drawn from its stretch of

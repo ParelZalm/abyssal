@@ -90,7 +90,7 @@ its line; the triggerfish's **jet** blows the player into the others; the lionfi
 fires a fan; the moon jelly's **wane** fades out of the room and back. The barracuda's
 **line** crosses the room the moment the player is in its row; the gulper eel's **gulp**
 draws the player and its shots into its jaw; the vampire squid's **cloak** curves its bolts
-and, turned, balls up inside out; the anglerfish's **orbit** hangs its bolts round its lure;
+and, turned, balls up inside out; the anglerfish's **lure** lets bolts out of its lure to hang and take aim;
 the siphonophore's **chain** breaks in two where it is cut.
 _Avoid_: AI, behaviour (that is the fauna's)
 

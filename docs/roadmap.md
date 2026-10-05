@@ -453,9 +453,9 @@ dashes off the walls; the gulper eel opens its jaw and draws the player and the 
 in, swallowing the shots, hangs its jaw exposed after a gulp that took nothing, and turned
 spits back a fan for what it swallowed; the vampire squid's bolts bend after the player, and
 turned it balls up inside out when the player comes close — its arms swept back over the
-mantle, braced — then bursts into a cloud of stinging motes and jets away; the anglerfish hangs
-its bolts on a turning ring round its lure and lets them go along their spokes, and turned it
-lunges; the siphonophore breaks in two where the blow that turned it landed, each piece a
+mantle, braced — then bursts into a cloud of stinging motes and jets away; the anglerfish lets
+three to five bolts out of its lure to hang beside it on a fan, taking aim, and fire at the
+player one after another, and turned it lunges; the siphonophore breaks in two where the blow that turned it landed, each piece a
 stretch of its picture (`cutSprite`), and a long piece breaks again. The board's *Hostile roles*
 group has each whole and turned, the siphonophore in its two pieces.
 
@@ -469,11 +469,10 @@ What it found, and what it leaves:
 - **The gulper's jaw is in tiles, not in its head's depth**, which was half a tile and let a
   player drawn to a tile off the lips go free; and a touch ended the draw as it ends a dash,
   so the turned gulper never spat. The draw goes on to its snap.
-- **A ring let go wherever its spin had it hit nothing.** Six spokes left a still player between
-  two nearly every time; one spoke now runs through where the player was as the ring formed,
-  turned onto it as it lets go, since the lure bobs while the ring turns and a spoke set at the
-  start passed by at a hair more than a shot's reach. Still is hit five rings in six; moving,
-  none.
+- **A ring let go wherever its spin had it hit nothing.** The anglerfish first hung six bolts on
+  a turning ring round its lure and let them go along their spokes, which left a still player
+  between two nearly every time. Its bolts now hang still on a fan and each fires at the player
+  as it goes: still, a hit five volleys in six; moving, two in twenty seconds.
 - **The vampire squid's ball is its rigged arms**, swept back over the mantle (`FishView.cloak`),
   not a picture: a frame of the animal inside out could replace it. None of the deep's turned
   looks are drawn; each turns in what it does.

@@ -309,17 +309,21 @@ const JET_AWAY = 1.8;
 const JET_T = 0.5;
 
 /**
- * The orbit (the anglerfish). A turret whose beat is not a ring fired out but `LURE_N` bolts
- * hung on a circle `LURE_R` tiles round its lure, turning at `LURE_SPIN` radians a second for
- * `LURE_HOLD`, and then let go out along their spokes, one of them at where the player was; each
- * ring turns the other way. The circle itself is no place to be. Below half
- * health it also lunges at a player inside `LUNGE_NEAR` tiles: a charger's wind-up, lock and dash,
- * which at its speed carries it some six tiles — the turret's bite — every `LUNGE_CD` at most.
+ * The lure (the anglerfish). A turret whose beat is not a ring but `LURE_MIN` to `LURE_MAX`
+ * bolts let out of its lure, each set at a spot `LURE_R` tiles off it on a fan toward the
+ * player, `LURE_FAN` radians apart; they hang there taking aim for `LURE_HOLD`, and then fire at
+ * the player one after another, `LURE_GAP` apart, each at where the player is as it goes. Still
+ * is hit; the hang is the time to move, and the rattle is the time to keep moving. Turned, it
+ * always lets out the most, and it also lunges at a player inside `LUNGE_NEAR` tiles: a
+ * charger's wind-up, lock and dash, which at its speed carries it some six tiles — the
+ * turret's bite — every `LUNGE_CD` at most.
  */
-export const LURE_N = 6;
+export const LURE_MIN = 3;
+export const LURE_MAX = 5;
 export const LURE_R = 1.4;
-export const LURE_SPIN = 2.6;
-export const LURE_HOLD = 1.2;
+export const LURE_FAN = 0.5;
+export const LURE_HOLD = 0.9;
+export const LURE_GAP = 0.16;
 const LUNGE_NEAR = 4;
 const LUNGE_CD = 3.5;
 
@@ -354,7 +358,7 @@ export function woundedGenome(moves: Moveset, g: Genome): Genome | null {
     case 'wane': return { ...g, glow: Math.min(1, g.glow + 0.3) };
     // the deep's are all sprites with no turned pair, and turn in what they do: the ricochet,
     // the spray, the ball, the lunge, the break
-    case 'volley': case 'burrow': case 'line': case 'gulp': case 'cloak': case 'orbit': case 'chain':
+    case 'volley': case 'burrow': case 'line': case 'gulp': case 'cloak': case 'lure': case 'chain':
       return null;
   }
 }
@@ -1075,7 +1079,7 @@ export class Roles {
 
   private turret(c: Creature, dt: number, p: Creature) {
     const balloon = c.species.moves === 'balloon';
-    if (c.species.moves === 'orbit' && c.wounded && this.lunge(c, p)) return;
+    if (c.species.moves === 'lure' && c.wounded && this.lunge(c, p)) return;
     c.anchor ??= { x: c.x, y: c.y };
     c.faceToward(p.x, FACE_SLACK * this.world.terrain!.tile);
     // it holds its spot against anything that knocked it off, facing the player
@@ -1396,8 +1400,8 @@ export class Roles {
       const volley = c.species.moves === 'volley';
       if (volley) { c.salvo = SALVO - 1; c.salvoT = SALVO_GAP; }
       this.spit(c, volley ? 0 : LEAD);
-    } else if (role === 'turret' && kind && c.species.moves === 'orbit') {
-      this.orbit(c);
+    } else if (role === 'turret' && kind && c.species.moves === 'lure') {
+      this.lure(c);
     } else if (role === 'turret' && kind) {
       c.volley++;
       const herd = c.species.moves === 'herd';
@@ -1423,25 +1427,23 @@ export class Roles {
   }
 
   /**
-   * An anglerfish's beat: `LURE_N` bolts hung on a circle round its lure, turning, to be let go
-   * along their spokes (`Shot.orbit`). Each ring turns the other way from the last, and one
-   * spoke runs through where the player was as it formed when the ring lets go: still is hit,
-   * and the hold is the time to move. Let go wherever the spin had them, six spokes left a
-   * still player between two of them nearly every time.
+   * An anglerfish's beat: bolts let out of its lure to hang on a fan toward the player
+   * (`Shot.hang`), to fire at it one after another, the near end of the fan first.
    */
-  private orbit(c: Creature) {
+  private lure(c: Creature) {
     const w = this.world, tile = w.terrain!.tile, p = w.player;
     const at = lureOf(c);
-    c.volley++;
-    const spin = c.volley % 2 ? LURE_SPIN : -LURE_SPIN;
-    const turn = (c.volley % 2) * (TAU / LURE_N / 2);
-    for (let k = 0; k < LURE_N; k++) {
-      const a = turn + (k / LURE_N) * TAU;
+    const n = c.wounded ? LURE_MAX : LURE_MIN + Math.floor(Math.random() * (LURE_MAX - LURE_MIN + 1));
+    const aim = Math.atan2(p.y - at.y, p.x - at.x);
+    for (let k = 0; k < n; k++) {
+      // a little off the fan's even spacing, or the spots read as a stamped pattern
+      const a = aim + (k - (n - 1) / 2) * LURE_FAN + (Math.random() - 0.5) * 0.15;
+      const r = LURE_R * tile * (0.85 + Math.random() * 0.3);
       const s = w.fire(c, 'bolt', at.x, at.y, a, SHOT_SPEED.bolt);
       if (!s) continue;
-      s.orbit = { by: c, a, r: LURE_R * tile, w: spin, hold: LURE_HOLD, speed: SHOT_SPEED.bolt * tile,
-                  spokes: LURE_N, aim: { x: p.x, y: p.y } };
-      s.life += LURE_HOLD;
+      const hold = LURE_HOLD + k * LURE_GAP;
+      s.hang = { by: c, ox: Math.cos(a) * r, oy: Math.sin(a) * r, hold, speed: SHOT_SPEED.bolt * tile };
+      s.life += hold;
     }
   }
 

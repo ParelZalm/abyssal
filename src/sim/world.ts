@@ -111,15 +111,12 @@ export interface Shot {
    */
   home?: number;
   /**
-   * A shot held circling a point on a body before it is let go (`Roles`' anglerfish): at `r`
-   * from `by`'s lure, from angle `a`, turning `w` radians a second, for `hold` seconds, and then
-   * out along its spoke at `speed` world units a second. Let go at once if `by` dies. As it is
-   * let go the ring is turned, by under half a spoke of its `spokes`, so that one spoke runs
-   * through `aim`: the lure bobs as the ring turns, and the spoke set for the player at the
-   * start went by it at a hair more than a shot's reach.
+   * A shot let out of a body's lure to hang beside it before it goes (`Roles`' anglerfish):
+   * thrown out to (`ox`, `oy`) off the lure over `SET`, held there as the lure bobs, and at
+   * `hold` seconds fired at the player as it is then, at `speed` world units a second. Fired at
+   * once if `by` dies.
    */
-  orbit?: { by: Creature; a: number; r: number; w: number; hold: number; speed: number;
-            spokes: number; aim: { x: number; y: number } };
+  hang?: { by: Creature; ox: number; oy: number; hold: number; speed: number };
   /** The bodies it has already landed on, which it passes without landing again. */
   hit?: Creature[];
   /**
@@ -162,8 +159,8 @@ const CHILL_DRAG = DRAG_FWD;
 const SHOT_ARM = 0.1;
 /** Seconds a homing hostile shot (`Shot.home`) bends for before it flies on straight. */
 const HOME_FOR = 1.1;
-/** Seconds an orbiting shot takes to open out from its lure to its circle. */
-const ORBIT_OPEN = 0.25;
+/** Seconds a hanging shot takes to reach its spot from the lure it left (`Shot.hang`). */
+const SET = 0.3;
 
 /**
  * Something loose in a room that the player collects by swimming into it: a half heart, a
@@ -598,8 +595,8 @@ export class World {
         // still holding on; a fry let go by a kill flies on from here
         if (s.fry.on) continue;
       }
-      // held on its circle it is put where it is, and can still meet rock and the player
-      if (!(s.orbit && this.circle(s))) {
+      // hanging by its lure it is put where it is, and can still meet rock and the player
+      if (!(s.hang && this.hangs(s))) {
         if (s.seek) this.bend(s, dt);
         if (s.home && s.t < HOME_FOR && p.alive) this.homeIn(s, dt);
         if (s.heavy) {
@@ -664,31 +661,25 @@ export class World {
   }
 
   /**
-   * An orbiting shot's step round its body's lure (`Shot.orbit`). Whether it is still held;
-   * on the step it is let go it is put on its spoke, outward, and flies from there.
+   * A hanging shot's step beside its body's lure (`Shot.hang`): out to its spot, eased, and held
+   * there. Whether it is still held; on the step it goes it is aimed at the player and fired,
+   * with the flash a shot leaves.
    */
-  private circle(s: Shot) {
-    const o = s.orbit!;
-    let a = o.a + o.w * Math.min(s.t, o.hold);
-    const at = lureOf(o.by);
-    const r = o.r * Math.min(1, s.t / ORBIT_OPEN);
-    if (s.t >= o.hold || !o.by.alive) {
-      // every shot of the ring turns by the same amount, each finding it from its own spoke
-      const spoke = TAU / o.spokes;
-      const off = ((Math.atan2(o.aim.y - at.y, o.aim.x - at.x) - a) % spoke + spoke * 1.5) % spoke - spoke / 2;
-      a += off;
-      s.x = at.x + Math.cos(a) * r;
-      s.y = at.y + Math.sin(a) * r;
-      s.vx = Math.cos(a) * o.speed;
-      s.vy = Math.sin(a) * o.speed;
-      s.orbit = undefined;
+  private hangs(s: Shot) {
+    const h = s.hang!, p = this.player;
+    const at = lureOf(h.by);
+    if (s.t >= h.hold || !h.by.alive) {
+      const a = Math.atan2(p.y - s.y, p.x - s.x);
+      s.vx = Math.cos(a) * h.speed;
+      s.vy = Math.sin(a) * h.speed;
+      s.hang = undefined;
+      this.pulses.push({ x: s.x, y: s.y, r: h.by.radius * 0.4, kind: 'shot', shot: s.kind, hostile: true });
       return false;
     }
-    s.x = at.x + Math.cos(a) * r;
-    s.y = at.y + Math.sin(a) * r;
-    // along the circle, for anything that reads its way: the splash, the stealth of its line
-    s.vx = -Math.sin(a) * o.w * r;
-    s.vy = Math.cos(a) * o.w * r;
+    const k = 1 - (1 - Math.min(1, s.t / SET)) ** 2;
+    s.x = at.x + h.ox * k;
+    s.y = at.y + h.oy * k;
+    s.vx = s.vy = 0;
     return true;
   }
 
