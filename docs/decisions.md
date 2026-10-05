@@ -158,6 +158,12 @@ The earlier flips failed on their in-betweens and on having no consequence; do n
 or a squash through the screen plane back to smooth this one. It applies to every body but a
 bell, so the ocean turns one way.
 
+What made the hostiles look broken was not the flip but flipping there and back: a brain's
+heading crossed vertical on the field's 45° steps, on a feeler choosing a side per frame, and
+on a spitter setting its facing without its heading. The fix is upstream of the flip — an
+eased heading, a flip that has to be meant for 0.12 s, a facing with slack — and the flip
+itself is unchanged (`docs/simulation.md`, *Easing and the flip*).
+
 Directional keys (left swims left) went in with the first turn-about and were reverted with
 it, then came back on their own. Side-on, tank steering inverts: facing
 left, "right" swings the nose up, so no key meant a direction on the screen, and a reversal

@@ -18,6 +18,14 @@ const KIN_SPARED = 0.5;
  */
 const FLIP_KEEP = 0.45;
 /**
+ * For everything but the player: seconds a heading has to stay across before the body flips
+ * to it, and the least between two flips. A brain's heading is noisier than a hand — a flow
+ * cell's step, a feeler swinging off the rock, the player passing overhead — and every one of
+ * those that crossed vertical was a flip there and back in a few frames.
+ */
+const FLIP_COMMIT = 0.12;
+const FLIP_REST = 0.45;
+/**
  * Top speed backing away from what a strafing body faces (`strafe`). A fish does not swim
  * tail first; it sculls. Keeping an attack turned on something while retreating from it is
  * the kiting that makes a room a fight, and this is what it costs.
@@ -104,7 +112,8 @@ export class Creature {
    * `salvoT` seconds to the next, or to the next sting a bell leaves — or the seconds an eel
    * has waited in its hole with nothing on its line, or a triggerfish ready to blow has waited
    * to get behind the player; `guardCd` seconds before a pufferfish may puff again, an
-   * archerfish looks for cover again, or an eel gives up on the hole it is swimming for;
+   * archerfish looks for cover again, an eel gives up on the hole it is swimming for, or a
+   * pack member may turn its way round the player again;
    * `surgeT` how far through its pulse a bell is; `orbit` which way round the player a pack
    * circles.
    */
@@ -164,6 +173,16 @@ export class Creature {
    */
   flipHold = 0;
   flippedAt = -Infinity;
+  /** Seconds a body that is not the player has wanted to turn back without turning (`drive`). */
+  acrossT = 0;
+  /**
+   * The heading a brain steers by, eased toward what it asks for (`Roles.steer`), and when it
+   * was last asked; and the side `clearHeading` last swung off the rock to, kept while the rock
+   * is still ahead so a body along a wall does not try one side and then the other.
+   */
+  steer = 0;
+  steeredAt = -Infinity;
+  avoid: 1 | -1 | 0 = 0;
   /**
    * A boss's hull against the room (`World.integrate`, `collideHull`): whether it was on rock
    * last step, the way out of it, and seconds before another thud may be felt — a body
@@ -608,13 +627,17 @@ export class Creature {
     // or dive and swaps its side. Only on a heading clearly across — the same 0.2 band
     // `faceFor` holds a facing with — or a body swimming near vertical would flip on every
     // wobble. A bell has no side to turn to.
-    if (throttle > 0.1 && this.swim.pulseEvery <= 0 && Math.cos(desired) * this.face < -0.2) {
-      if (Creature.clock - this.flippedAt >= this.flipHold) {
-        this.angle = Math.PI - this.angle;
-        this.face = this.face > 0 ? -1 : 1;
+    const across = throttle > 0.1 && this.swim.pulseEvery <= 0 && Math.cos(desired) * this.face < -0.2;
+    this.acrossT = across ? this.acrossT + dt : 0;
+    if (across) {
+      const hold = this.isPlayer ? this.flipHold : Math.max(this.flipHold, FLIP_REST);
+      const meant = this.isPlayer || this.acrossT >= FLIP_COMMIT;
+      if (meant && Creature.clock - this.flippedAt >= hold) {
+        this.turnAbout();
         this.vx *= FLIP_KEEP;
         this.vy *= FLIP_KEEP;
         this.flippedAt = Creature.clock;
+        this.acrossT = 0;
       } else {
         // held: the heading mirrored onto the side it faces, so it keeps the climb or dive
         // and does not turn the long way round through its back to get there
@@ -627,5 +650,23 @@ export class Creature {
     // halfway round and the back half of a hard turn crawls at the ordinary rate
     const reach = 1 + flick * (1 - Math.cos(want)) * 0.5;
     this.propel(dt, rate > 0 ? clamp(want / rate, -reach, reach) : 0, throttle, power);
+  }
+
+  /**
+   * The flip, and only the flip: the heading mirrored about vertical with the facing, so the
+   * body keeps its climb or dive. A brain that sets `face` alone leaves the heading on the old
+   * side, and `World.integrate` reads the facing back off the heading and flips it home.
+   */
+  turnAbout() {
+    this.angle = Math.PI - this.angle;
+    this.face = this.face > 0 ? -1 : 1;
+  }
+
+  /**
+   * Faced toward a point across, flipping only once it is `margin` past the body's middle: the
+   * player passing overhead flipped a spitter there and back on every sway.
+   */
+  faceToward(x: number, margin: number) {
+    if ((x - this.x) * this.face < -margin) this.turnAbout();
   }
 }

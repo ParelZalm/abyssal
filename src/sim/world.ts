@@ -729,10 +729,22 @@ export class World {
     // an eel in its hole is where its brain put it: a shot's knock or a flash's drift would
     // carry it through the rock, which is not there to hold it
     if (c.burrow === 'home' || c.burrow === 'back') c.vx = c.vy = 0;
-    c.x += c.vx * dt;
-    c.y = clamp(c.y + c.vy * dt, 30, DEPTH_MAX);
-    if (c.species.boss && this.terrain) this.meetRock(c, this.terrain, dt);
-    else if (!c.burrow) this.terrain?.collide(c, wallR(c));
+    const t = this.terrain;
+    if (c.species.boss || c.burrow || !t) {
+      c.x += c.vx * dt;
+      c.y = clamp(c.y + c.vy * dt, 30, DEPTH_MAX);
+      if (c.species.boss && t) this.meetRock(c, t, dt);
+    } else {
+      // in steps of half a cell: a barracuda's dash goes most of a tile a frame, its middle
+      // landed inside the rock, and the rock let it out by its nearest face — the far one, out
+      // of the room through the corner of a door
+      const n = clamp(Math.ceil(Math.hypot(c.vx, c.vy) * dt / (t.cell * 0.5)), 1, 8);
+      for (let k = 0; k < n; k++) {
+        c.x += c.vx * dt / n;
+        c.y = clamp(c.y + c.vy * dt / n, 30, DEPTH_MAX);
+        t.collide(c, wallR(c));
+      }
+    }
     c.biteCd = Math.max(0, c.biteCd - dt);
     c.invuln = Math.max(0, c.invuln - dt);
     c.boosting = Math.max(0, c.boosting - dt);

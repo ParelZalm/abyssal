@@ -367,16 +367,34 @@ drawn, and `RoomView` draws a grate across it. Off the grid, collision reads the
 **Steering clear.** Every body that is not the player turns its heading through
 `clearHeading` (`sim/roles.ts`) before it swims: two feelers out along the heading, at a
 body and most of a tile and at half that, and if either finds rock the heading swings out in
-steps of 0.4 rad to each side — the side the body is already turning toward first — until
-one runs clear. A shoal meeting a ledge turns along it instead of pressing into it.
+steps of 0.4 rad to each side until one runs clear. The side it swung to is kept
+(`Creature.avoid`) while the rock is still ahead, and the other taken only once it is two
+steps shorter; otherwise the side the body is already turning toward goes first. A shoal
+meeting a ledge turns along it instead of pressing into it, and does not waver along it.
 
 **The way round.** Feelers turn a body off the rock in front of it, not round a pillar
-between it and the player. A hostile without a clear line (`Terrain.clearLine`) follows a
-`Flow` field instead: a breadth-first distance from the player's cell over every collision
-cell that is water with water all round it, rebuilt when the player has moved three cells or
-the doors have changed, and read by looking two cells each way for the lowest ground. About
-9 000 cells, and it is cheap enough not to cache further — four hostiles in a room cost the
-simulation ~0.1 ms a frame.
+between it and the player. Every hostile goes by a `Flow` field: a Dijkstra distance from
+the player's cell over every collision cell that is water with water all round it — ten a
+square step and fourteen a diagonal, so open water has one shortest way and not a staircase
+of 45° legs, and a few more for each step within three cells of the rock, so the way round a
+pillar keeps off its face. It is rebuilt when the player has moved three cells or the doors
+have changed (~0.5 ms over the nursery's 9 200 cells). A body reads it by walking down the
+field up to 32 cells and aiming at the furthest of them it can swim to straight through the
+field's water: straight at the player whenever there is a body's width of water to it, and
+round the pillar's shoulder when there is not, with nothing to switch between at a corner.
+A read is a few microseconds. An eel's hole has a field of its own (`Roles.elsewhere`), or
+one eel would rebuild the player's under every other hostile.
+
+**Easing and the flip.** What a brain asks for is noisy — the field's next leg, a feeler
+swinging off the rock, the line to the player opening and closing — so a role eases its
+heading in (`Roles.steer`, about a seventh of a second) instead of handing it to `drive`
+raw. A body that is not the player then flips only once a heading has been across for
+0.12 s, and not again for 0.45 s (`FLIP_COMMIT`, `FLIP_REST`); a spitter or a turret turns to
+face the player only once it is half a tile across (`Creature.faceToward`), and mirrors its
+heading as it does. Setting `face` alone left the heading on the old side, and
+`World.integrate` read the facing back off it and flipped the body home the next frame.
+Fast bodies move against the rock in half-cell steps: a barracuda's dash covers half a tile a
+frame, and its middle landed inside the rock and was let out by the far face.
 
 ## Hostile roles
 

@@ -1,7 +1,7 @@
 import type { Genome } from '../content/genome';
 import type { Moveset, Role } from '../content/species';
 import { angleDelta, clamp, dist2, TAU } from '../core/util';
-import type { Creature } from './creature';
+import { Creature } from './creature';
 import { Flow } from './flow';
 import { depthOf, noseOf, noseReach, spriteAt, tailReach, wallR } from './hull';
 import { SPRITES } from '../content/sprites';
@@ -75,6 +75,18 @@ export const STEALTH_DELAY = 1.5;
 const DRIFT_THROTTLE = 0.85;
 
 /**
+ * How fast a brain's heading eases to what it asks for, a second (`steer`): about a seventh of
+ * a second to come round. Asked for raw, the heading jumped with every change of plan — the
+ * line to the player opening and closing at a corner, a feeler swinging off the rock, the
+ * band a spitter holds — and the body snapped round on each, or flipped there and back.
+ */
+const STEER = 7;
+/** Seconds without steering after which the heading is taken as asked, not eased from a stale one. */
+const STEER_STALE = 0.25;
+/** How far across a spitter or turret lets the player go before it turns to face it, in tiles. */
+const FACE_SLACK = 0.5;
+
+/**
  * A hostile with a moveset turns once, as its health falls under `WOUNDED` of itself — Isaac's
  * monsters change at half — in a stagger of `TURN` seconds: flinched, ringed, doing nothing.
  * The beat says the fight changed; the body says how (`woundedGenome`).
@@ -98,6 +110,8 @@ const TOKENS = 2;
 const ORBIT = 4.5;
 const ORBIT_LEAD = 0.7;
 const CIRCLE = 0.6;
+/** Seconds a pack member keeps the way round it turned to off the rock before it may turn again. */
+const ORBIT_TURN = 1.2;
 export const FRENZY_WIND = 0.2;
 const FRENZY_CD = 0.6;
 
@@ -296,11 +310,17 @@ export const SHOT_SPEED = { spit: 7, spine: 5.25, bolt: 4.5 } as const;
  * tell is the one pose the view already draws for a wind-up: the body coiled and the jaw
  * open (`Creature.pose`).
  *
- * The way to the player is by the room's water (`Flow`) whenever the straight line is
- * blocked, so nothing in a room noses into the rock between it and the player.
+ * The way to the player is by the room's water (`Flow`), straight where a body's width of
+ * water runs straight, so nothing in a room noses into the rock between it and the player;
+ * and every heading a brain asks for is eased in (`steer`), so a change of plan is a turn.
  */
 export class Roles {
   private flow: Flow | null = null;
+  /**
+   * The way to anywhere but the player: an eel's hole. One field is built for one target, and
+   * shared, every eel looking for a hole rebuilt the player's under every other hostile.
+   */
+  private elsewhere: Flow | null = null;
   private flowOf: Terrain | null = null;
 
   constructor(private readonly world: World) {}
@@ -308,7 +328,7 @@ export class Roles {
   step(c: Creature, dt: number, p: Creature, role: Role) {
     const t = this.world.terrain;
     if (!t) return;
-    if (this.flowOf !== t) { this.flowOf = t; this.flow = new Flow(t); }
+    if (this.flowOf !== t) { this.flowOf = t; this.flow = new Flow(t); this.elsewhere = null; }
     c.roleCd = Math.max(0, c.roleCd - dt);
     // a body in the rock does not swim: a drive levels it out, and an eel standing in the
     // floor levelled would swing through the rock round its middle
@@ -332,7 +352,7 @@ export class Roles {
     if (this.inked(p) && c.attack !== 'strike' && !rock) {
       if (c.attack === 'windup') c.attack = 'none';
       c.swell = 1;
-      c.drive(dt, clearHeading(t, c, c.angle + Math.sin(c.wander * 0.8) * 0.8), 0.25);
+      c.drive(dt, this.steer(c, dt, clearHeading(t, c, c.angle + Math.sin(c.wander * 0.8) * 0.8)), 0.25);
       return;
     }
     switch (c.wounded && c.species.moves === 'jet' ? 'charger' : role) {
@@ -373,7 +393,7 @@ export class Roles {
       return;
     }
     if (c.species.moves === 'pack' && sees && d < (ORBIT + 2) * t.tile) { this.circle(c, dt, p, t); return; }
-    c.drive(dt, this.way(c, p, t, sees), CHARGE_CLOSE);
+    c.drive(dt, this.steer(c, dt, this.way(c, p, t)), CHARGE_CLOSE);
   }
 
   /** A charger's dash: committed, the heading the one it wound up on, and the speed held. */
@@ -476,9 +496,9 @@ export class Roles {
       this.world.pulses.push({ x: c.den.x, y: c.den.y, r: depthOf(c) * 2, kind: 'dust' });
       return;
     }
-    const sees = t.clearLine(c.x, c.y, f.x, f.y);
-    const to = Math.atan2(f.y - c.y, f.x - c.x);
-    c.drive(dt, clearHeading(t, c, sees ? to : this.flow!.toward(c.x, c.y, f.x, f.y) ?? to), 0.8);
+    this.elsewhere ??= new Flow(t);
+    const to = this.elsewhere.toward(c.x, c.y, f.x, f.y) ?? Math.atan2(f.y - c.y, f.x - c.x);
+    c.drive(dt, this.steer(c, dt, clearHeading(t, c, to)), 0.8);
   }
 
   /** Whether the player is on a hole's line: inside its cone and reach, with nothing between. */
@@ -609,18 +629,22 @@ export class Roles {
     const b = Math.atan2(c.y - p.y, c.x - p.x) + c.orbit * ORBIT_LEAD;
     const want = Math.atan2(p.y + Math.sin(b) * r - c.y, p.x + Math.cos(b) * r - c.x);
     const a = clearHeading(t, c, want);
-    if (Math.abs(angleDelta(want, a)) > 1.2) c.orbit = c.orbit > 0 ? -1 : 1;
-    c.drive(dt, a, CIRCLE);
+    // held a while once turned, or a body boxed in on both sides turned there and back
+    if (Math.abs(angleDelta(want, a)) > 1.2 && c.guardCd <= 0) {
+      c.orbit = c.orbit > 0 ? -1 : 1;
+      c.guardCd = ORBIT_TURN;
+    }
+    c.drive(dt, this.steer(c, dt, a), CIRCLE);
   }
 
   private spitter(c: Creature, dt: number, p: Creature, t: Terrain) {
     const d = Math.sqrt(dist2(c.x, c.y, p.x, p.y));
     const aim = Math.atan2(p.y - c.y, p.x - c.x);
-    c.face = p.x >= c.x ? 1 : -1;
+    c.faceToward(p.x, FACE_SLACK * t.tile);
     if (this.tick(c, dt)) {
-      // still, and pitched toward the player as far as a fish side-on will pitch
-      c.strafe(dt, 0, 0, 0);
-      c.angle = pitched(aim, c.face, 0.6);
+      // still, and pitched toward the player as far as a fish side-on will pitch: quickly, but
+      // not in a frame, or the wind-up opened on the body jerking its nose up or down
+      c.strafe(dt, 0, 0, 0, pitched(aim, c.face, 0.6));
       if (c.attack === 'strike' && c.salvo > 0 && (c.salvoT -= dt) <= 0) {
         c.salvo--;
         c.salvoT = SALVO_GAP;
@@ -643,22 +667,20 @@ export class Roles {
     if (c.species.moves === 'volley' && c.wounded && c.roleCd > 0 && this.hide(c, dt, p, t)) return;
     // hold the band: in from too far or out of sight, back from too close, and otherwise
     // drift across the player's line so it is never a still target
-    let dx = 0, dy = 0, throttle = 0.5;
+    let a: number, throttle = 0.5;
     if (!sees || d > FAR * t.tile) {
-      const a = this.way(c, p, t, sees);
-      dx = Math.cos(a); dy = Math.sin(a);
+      a = this.way(c, p, t);
     } else if (d < NEAR * t.tile) {
-      const a = clearHeading(t, c, aim + Math.PI);
-      dx = Math.cos(a); dy = Math.sin(a);
+      a = clearHeading(t, c, aim + Math.PI);
       throttle = 0.7;
     } else {
       const behind = c.species.moves === 'jet' ? this.behind(c, p, t) : null;
       const side = Math.sin(c.wander * 0.6) >= 0 ? 1 : -1;
-      const a = clearHeading(t, c, behind ?? aim + side * Math.PI / 2);
-      dx = Math.cos(a); dy = Math.sin(a);
+      a = clearHeading(t, c, behind ?? aim + side * Math.PI / 2);
       throttle = behind === null ? 0.3 : 0.5;
     }
-    c.strafe(dt, dx, dy, throttle);
+    a = this.steer(c, dt, a);
+    c.strafe(dt, Math.cos(a), Math.sin(a), throttle);
   }
 
   /** The hostile nearest the player but `c`, which a triggerfish blows the player into. */
@@ -707,7 +729,7 @@ export class Roles {
     if (!c.anchor) return false;
     const dx = c.anchor.x - c.x, dy = c.anchor.y - c.y;
     if (Math.hypot(dx, dy) < t.tile * 0.4) { c.strafe(dt, 0, 0, 0); return true; }
-    const a = clearHeading(t, c, Math.atan2(dy, dx));
+    const a = this.steer(c, dt, clearHeading(t, c, Math.atan2(dy, dx)));
     c.strafe(dt, Math.cos(a), Math.sin(a), 0.75);
     return true;
   }
@@ -738,7 +760,7 @@ export class Roles {
   private turret(c: Creature, dt: number, p: Creature) {
     const balloon = c.species.moves === 'balloon';
     c.anchor ??= { x: c.x, y: c.y };
-    c.face = p.x >= c.x ? 1 : -1;
+    c.faceToward(p.x, FACE_SLACK * this.world.terrain!.tile);
     // it holds its spot against anything that knocked it off, facing the player
     const hx = c.anchor.x - c.x, hy = c.anchor.y - c.y;
     const off = Math.hypot(hx, hy) > c.radius * 0.3;
@@ -795,12 +817,11 @@ export class Roles {
   }
 
   private drifter(c: Creature, dt: number, p: Creature, t: Terrain) {
-    const sees = t.clearLine(c.x, c.y, p.x, p.y);
     // a bell does not aim so much as lean: the heading wanders about the way to the player
     const wobble = Math.sin(c.wander * 1.3) * 0.5;
-    if (c.species.moves === 'bloom') { this.pulse(c, dt, p, t, sees, wobble); return; }
+    if (c.species.moves === 'bloom') { this.pulse(c, dt, p, t, wobble); return; }
     const haste = c.species.moves === 'wane' && !c.brood ? this.wane(c, dt) : 1;
-    c.drive(dt, this.way(c, p, t, sees) + wobble, DRIFT_THROTTLE, 0, haste);
+    c.drive(dt, this.steer(c, dt, this.way(c, p, t) + wobble), DRIFT_THROTTLE, 0, haste);
   }
 
   /**
@@ -832,9 +853,9 @@ export class Roles {
    * A bell's pulse: a kick and a surge at the player, then a coast, and the tentacles left
    * hanging behind it as it goes — in the way it came, which is where a player circling it is.
    */
-  private pulse(c: Creature, dt: number, p: Creature, t: Terrain, sees: boolean, wobble: number) {
+  private pulse(c: Creature, dt: number, p: Creature, t: Terrain, wobble: number) {
     const k = c.wounded ? FASTER : 1;
-    const a = this.way(c, p, t, sees) + wobble * 0.5;
+    const a = this.steer(c, dt, this.way(c, p, t) + wobble * 0.5);
     if ((c.surgeT -= dt) <= -GLIDE * k) {
       c.surgeT = SURGE * k;
       const kick = Math.max(1, c.genome.speed) * SURGE_KICK;
@@ -1022,13 +1043,21 @@ export class Roles {
   }
 
   /**
-   * Which way to swim to reach the player: straight at it with a clear line, otherwise
-   * down the room's water; either way turned off any rock just ahead.
+   * Which way to swim to reach the player: down the room's water, which is straight at it
+   * whenever a body's width of water runs straight there (`Flow.toward`), and turned off any
+   * rock just ahead. It used to go straight on a clear line and by the water otherwise, and at
+   * a corner, where the line opens and closes as the body swims, it swung between the two.
    */
-  private way(c: Creature, p: Creature, t: Terrain, sees: boolean) {
-    const direct = Math.atan2(p.y - c.y, p.x - c.x);
-    const a = sees ? direct : this.flow!.toward(c.x, c.y, p.x, p.y) ?? direct;
-    return clearHeading(t, c, a);
+  private way(c: Creature, p: Creature, t: Terrain) {
+    return clearHeading(t, c, this.flow!.toward(c.x, c.y, p.x, p.y) ?? Math.atan2(p.y - c.y, p.x - c.x));
+  }
+
+  /** The heading `want` eased into from the one steered by last: see `STEER`. */
+  private steer(c: Creature, dt: number, want: number) {
+    c.steer = Creature.clock - c.steeredAt > STEER_STALE ? want
+      : c.steer + angleDelta(c.steer, want) * Math.min(1, dt * STEER);
+    c.steeredAt = Creature.clock;
+    return c.steer;
   }
 }
 
@@ -1057,13 +1086,19 @@ export function clearHeading(t: Terrain | null, c: Creature, desired: number): n
     return !t.solidAt(c.x + cx * reach, c.y + cy * reach) &&
       !t.solidAt(c.x + cx * reach * 0.5, c.y + cy * reach * 0.5);
   };
-  if (free(desired)) return desired;
-  const side = angleDelta(desired, c.angle) >= 0 ? 1 : -1;
-  for (let k = 1; k <= 7; k++) {
-    const off = k * 0.4;
-    if (free(desired + side * off)) return desired + side * off;
-    if (free(desired - side * off)) return desired - side * off;
+  if (free(desired)) { c.avoid = 0; return desired; }
+  // the side it swung to last, while the rock is still ahead, or else the side it is turning
+  // toward; the other only once it is clearly the shorter way round, or a body along a wall
+  // took whichever side ran clear first that frame, and wavered between them
+  const side = c.avoid || (angleDelta(desired, c.angle) >= 0 ? 1 : -1);
+  const bias = c.avoid ? 2 : 0;
+  let near = 0, far = 0;
+  for (let k = 1; k <= 7 && !(near && far); k++) {
+    if (!near && free(desired + side * k * 0.4)) near = k;
+    if (!far && free(desired - side * k * 0.4)) far = k;
   }
+  if (near && (!far || near <= far + bias)) { c.avoid = side; return desired + side * near * 0.4; }
+  if (far) { c.avoid = side > 0 ? -1 : 1; return desired - side * far * 0.4; }
   return desired;
 }
 
