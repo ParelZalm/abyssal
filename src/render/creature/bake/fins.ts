@@ -43,7 +43,17 @@ export function caudalFin(s: Sheet, f: Form, A: PlanArt) {
   const upper = A.finRays ? 1 : 1.2, lower = A.finRays ? 1 : 0.68;
   const notch = xr - L * (1 - f.fork * 0.78);
   const pts: Pt[] = [[xr + hp, yr - hp], [xr - L * upper, yr - S * upper]];
-  if (f.fork < 0.2) pts.push([xr - L * 1.05, yr - S * 0.35], [xr - L * 1.05, yr + S * 0.35]);
+  if (A.fan) {
+    // an arc round the wrist from tip to tip, each ray ending a little proud of the web
+    // between: a fan reads by its scalloped edge
+    const n = 14, spread = Math.atan2(S, L);
+    const rad = Math.hypot(L, S);
+    for (let i = 1; i < n; i++) {
+      const a = Math.PI + lerp(spread, -spread, i / n);
+      const r = rad * (i % 2 ? 1 : 0.9);
+      pts.push([xr + Math.cos(a) * r, yr + Math.sin(a) * r]);
+    }
+  } else if (f.fork < 0.2) pts.push([xr - L * 1.05, yr - S * 0.35], [xr - L * 1.05, yr + S * 0.35]);
   else pts.push([notch, yr]);
   pts.push([xr - L * lower, yr + S * lower], [xr + hp, yr + hp]);
   const root: Pt = [xr + hp, yr];
@@ -104,26 +114,43 @@ export function dorsalRidge(s: Sheet, f: Form, A: PlanArt) {
  * a shorter one under the tail. Size rides `finSize`, so a fin build is visible on the
  * silhouette's edge rather than only in its tail.
  */
-export function medianFins(s: Sheet, f: Form, g: Genome) {
+export function medianFins(s: Sheet, f: Form, g: Genome, A: PlanArt) {
   const peak = shoulderAt(f);
   const k = 0.7 + g.finSize * 0.3;
-  const fin = (t0: number, t1: number, dir: -1 | 1, h: number) => {
+  const fin = (t0: number, t1: number, dir: -1 | 1, h: number, comb = false) => {
     const n = 8;
+    // highest at the front and swept back: a fin held up in the flow, not a comb
+    const liftAt = (i: number) => h * Math.sin(Math.min(1, (i / n) * 1.6 + 0.1) * Math.PI * 0.62) * (1 - (i / n) * 0.45);
     const edge: Pt[] = [], out: Pt[] = [];
     for (let i = 0; i <= n; i++) {
       const t = lerp(t0, t1, i / n);
       const e = edgeAt(t, f, dir);
       edge.push([spineAt(t, f), e - dir * s.texel]);
-      // highest at the front and swept back: a fin held up in the flow, not a comb
-      const lift = h * Math.sin(Math.min(1, (i / n) * 1.6 + 0.1) * Math.PI * 0.62) * (1 - (i / n) * 0.45);
-      out.push([spineAt(t, f) - h * 0.25, e + dir * lift]);
+      // a comb's membrane runs low between its spines, which stand clear of it
+      out.push([spineAt(t, f) - h * 0.25, e + dir * liftAt(i) * (comb ? 0.4 : 1)]);
     }
     const root: Pt = [spineAt(t1, f), edgeAt(t1, f, dir)];
     s.poly([...edge, ...out.reverse()], M.FIN,
       rays(root, angle(root, out[out.length - 1]), angle(root, out[0]), Math.max(2, n)));
+    if (!comb) return;
+    // each spine its own sliver off the back, raked behind its root and lit as a ray, so the
+    // edge of the fin is a row of points
+    const spines = Math.max(3, Math.min(7, Math.round((spineAt(t0, f) - spineAt(t1, f)) * s.res / 3)));
+    const w = Math.max(s.texel * 1.1, h * 0.1);
+    for (let j = 0; j < spines; j++) {
+      const i = (j + 0.3) / spines * n;
+      const t = lerp(t0, t1, i / n);
+      const x = spineAt(t, f), e = edgeAt(t, f, dir);
+      const lift = liftAt(i) * 1.35;
+      s.poly([[x + w, e - dir * s.texel], [x - lift * 0.4, e + dir * lift], [x - w, e - dir * s.texel]],
+             M.FIN, () => 1);
+    }
   };
   const H = halfWidth(peak, f);
-  fin(clamp(peak - 0.08, 0.2, 0.5), clamp(peak + 0.26, 0.45, 0.8), -1, H * 0.62 * k);
+  // a comb runs most of the back behind the head, where an angler's first rays have become
+  // the lure; a soft dorsal stands over the body's mass
+  if (A.crest) fin(0.36, 0.8, -1, H * 0.62 * k * 1.5, true);
+  else fin(clamp(peak - 0.08, 0.2, 0.5), clamp(peak + 0.26, 0.45, 0.8), -1, H * 0.62 * k);
   fin(0.62, 0.82, 1, H * 0.42 * k);
 }
 
@@ -138,7 +165,7 @@ export function fins(s: Sheet, f: Form, g: Genome, A: PlanArt) {
     const t = Math.min(0.9, fin.at);
     const w = halfWidth(t, f);
     const L = Math.max(s.texel * 2, w * fin.len * (0.7 + g.finSize * 0.35));
-    const root: Pt = [spineAt(t, f), i === 0 ? edgeAt(t, f, 0.35) : edgeAt(t, f, 0.9)];
+    const root: Pt = [spineAt(t, f), edgeAt(t, f, fin.k ?? (i === 0 ? 0.35 : 0.9))];
     const th = lerp(1.2, 0.3, fin.rake) + (i === 0 ? 0 : 0.35);
     const tip: Pt = [root[0] - Math.cos(th) * L, root[1] + Math.sin(th) * L];
     const c = L * fin.chord;

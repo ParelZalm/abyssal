@@ -1,203 +1,486 @@
-# Roadmap: making the run more fun
+# Roadmap: the tank rework
 
-What is left from the fun pass of September 2026. The organ registry, the first synergy
-(Toxic Lure, mechanic and paint) and the design board rework are done. Each item below
-says where it lands in the code and what it depends on.
+Decided September 2026 and worked on `rework/gameloop` until it was merged into `main` as
+0.2.0 (October 2026; stages since are branches off `main`, [releasing.md](releasing.md)): the open water column becomes a chain of
+tanks made of rooms, played like *The Binding of Isaac*. Why, and what it replaces, is in
+[adr/0003](adr/0003-tanks-of-rooms-replace-the-column.md); the words are in
+[`CONTEXT.md`](../CONTEXT.md). The fun pass that came before is finished and lives in the
+history (`git show a2d4349:docs/roadmap.md`).
 
-The core diagnosis still holds: the presentation and the simulation are strong, the
-*decision layer* is thin. Every item is ranked by how much it adds to choices in a run,
-or to a reason to start the next one.
+Each stage is committed on its own and leaves the game playable. **A stage is not done
+until what it draws is on the design board** (`/design.html`, `src/design/catalog.ts`):
+every room template, tile, obstacle, role, pickup and boss gets a cell over its tank's
+water, the way every body plan already has one. Mark a stage done here in the same commit
+that finishes it.
 
-## 1. More synergies (cheap)
+## The shape of version 1
 
-Done so far: Toxic Lure, Ghost Light, Urchin, Nematocyst, Ballistic, Vivisect, Drifting
-Bloom, Whale Shark. Ballistic brought the boost seam (`Creature.boosting`, opened by
-`kick()`) and `World.hit`, a non-bite blow, so a synergy can now act on the boost or strike
-with something other than the mouth. Vivisect brought the bleed (`Creature.bleed`, ticked
-in `Combat.bleedOut`), which drips blood a hunter can follow.
+- **Three tanks.** The nursery (boss: a mantis shrimp), the reef tank (the Great White),
+  the deep tank (the Giant Squid). Beating the squid is a win: "released".
+- **6–8 rooms a tank**, one screen each, side-on, a fixed camera that slides between
+  rooms. One start, one treasure, one shop, one boss, at least three fights; a deal room
+  may open after the boss. The minimap is drawn inside the tank's outline.
+- **Controls.** WASD swims, no boost. Arrows attack in four directions, and each points
+  the body — nose-down to shoot down; shots lean with the swim. Space fires the active mutation, E takes what the player is beside
+  (a pedestal's good, an item lying loose), Q uses the held item.
+- **Hits.** Half a heart each, a boss's a whole one, ~0.8 s of invulnerability. Armour is
+  a chance to shrug one off, capped near 40%.
+- **Swallowing.** A bite that would kill swallows instead; so does reaching a carcass.
+  Ranged kills leave a carcass; a boss is never swallowed. Gulp is swallow reach. The
+  belly fills with what goes down, and a full belly passes a pickup.
+- **Descent.** Size ×~1.8, the next tank authored at that scale, nothing else changes.
 
-Each one is three touches, all following Toxic Lure:
+## 1. ~~The room frame~~
 
-1. An entry in `src/sim/organs/synergies.ts` with a `name` and a two-field `when`. Effect hooks
-   return `true` on a frame they acted, which fires the first-time toast.
-2. A branch in the matching painter in `src/render/creature/bake/`, guarded by
-   `hasSynergy(g, id)`. Fills only, no strokes.
-3. A cell in the `BUILDS` list in `src/design/catalog.ts`.
+Done: `content/tanks.ts` (the nursery tank and its first template), `sim/terrain.ts` (the
+grid and circle collision, which every body now meets), `render/room.ts` (the rock baked
+onto the pixel grid, drawn over the bodies), `Camera.hold`, and Isaac's keys — WASD swims,
+the arrows strike four ways, Space fires the active. The column's systems are out: `Bands`,
+the descent limit, the pocket, the squeeze, the shallows clock, depth labels, the depth bar
+and the gate label. The board has a Rooms group.
 
-Check the `when` against the roster too: `species.ts` gives NPCs claws, glow, sense and
-translucency, and a synergy one of them qualifies for repaints it. If a pair has no organ
-field on one side, add a morphology field for the trait (as `serrate` was for Serrated
-Teeth) rather than thresholding a stat several cards raise.
+What it found, and what it leaves:
 
-Flash Sense was keyed on the `electro` field once Ampullae became the electroreception
-organ, since a threshold on `glow` and `sense` would have repainted the Leviathan. Since
-then: Smoke Screen (jet + ink sac), Moray Jaws (eel + crushing pharynx), Stonefish (lie in
-wait + venom), Porcupine (inflation + spines) and Electric Eel (eel + electric organ). The
-last two brought `onFire`, a hook run after the active organ goes off, so a synergy can
-act on the active. The Anglerfish carries spines, a lure and `lurk`, which is why
-Stonefish is keyed on venom and not on spines. More pairs are for the next pass over the
-pool.
+- **The lunge had to give way to kiting.** A full lunge at a pursuer threw the body back
+  into it; a strike thrown against the swim keeps a quarter of it.
+- **The strike took the boost's seam** (`Creature.kick`), so Ballistic, Flash Sense, Smoke
+  Screen and the bait-ball scatter fire on a strike instead of dying with the boost.
+  Whether that is right for each of them is stage 5's question.
+- **World-sized particulate turned to stars** at a room's zoom; it is now sized in screen
+  terms. The water shader's clouds are world-sized too and read well enough — look again
+  when a tank's zoom falls at the descent.
+- **Nothing avoids a wall.** A shoal heading into one presses against it until its wander
+  turns it. Stage 4.
+- **Rooms grew, and the rock went smooth.** The first cut was 24 × 14 tiles of squares and
+  felt cramped and blocky. A template is now 32 × 18, and the rock is the smooth shape the
+  tiles imply, collided on quarter-tile cells, and broken into lit stones that sink into
+  shadow away from the water. A room is ~50 hatchling lengths across and ~6.5 s to swim (~5 s since `TEMPO`); speed is a stat now, so tune the base with the stat column (stage 5).
+- **The rock is reef rock**: knobbed limestone heaped in lumps, pitted, crusted pink and
+  violet, turf on its tops.
+- **A room bakes in ~0.5 s** on a 1024-wide window, more on a big one. Fine once a run; at
+  every door in stage 3 it has to be baked ahead or off the frame (a worker, or a few rows a
+  frame), or the slide hitches.
+- Still here from the column, for the stages that replace them: the thermocline uniforms
+  in the water shader, the level-up draft and hunger (stage 2),
+  the starting forms' depth unlock (stage 7), and the parallax scenery (stage 8).
 
-Watch: a synergy with a `burn` or `boost` modifier needs no event and cannot return
-`true`, so it will never toast. Whale Shark toasts because its wake is an `onTick` that
-returns true when it pulled something; a pure modifier synergy still needs that.
+## Art pass (pulled forward)
 
-## 2. ~~Transformations (Isaac's Guppy)~~
+Done after stage 1, from two reference frames (`docs/media/reference/`, and *Art direction*
+in `rendering.md`): the rock is dark pebbled stone with lit caps, the water navy, the
+player a pale glowing larva (`Genome.pale`), and the frame dark and made by its lights
+(`render/lighting.ts`). A first decoration pass is in (`render/decor.ts`), taken from stage
+8: sponges, anemones, kelp, coral, brain coral, sea grass, glow bulbs and a crate, placed
+along every upward face.
 
-Done: `content/forms.ts`, five families (armoured dropped — every plated plan is a
-guardian's), three different traits of one family. Each form is a plan the roster draws,
-with the wraith's smoke kept on it, plus a grant of existing organs (the Shark's `frenzy` is
-new). See `docs/progression.md`. Since done: how the ocean reads a transformed player —
-hunters of the form's plan take it for kin and leave it be above half health, then turn on
-it (`Creature.spares`) — and a second form in a long run, a new family at four traits, with
-the grants stacked.
+Left for later: the tank frame of the first reference (rooms stay cave for now), decoration
+hanging from ceilings and on walls, a crate that turns up more often, and tuning the dark
+by eye.
 
-## 3. ~~The draft reads synergies~~
+## 2. ~~Hearts and swallowing~~
 
-Done in `run/prospects.ts`: the completing card's second light and note, a lean of ×1.5
-toward completing cards and ×1.15 toward begun families, a reroll paid in fullness at a
-climbing price, and the end screen's "one card short of". A banish was left out — the
-reroll already makes the draft a resource choice, and a banish needs a run-long exclusion
-list the pool does not have yet. With only four synergies the lean mostly serves forms;
-it gets more interesting as synergies are added (§1).
+Done: heart containers in halves, every hit on the player through `Creature.takeHit` (half a
+heart, a guardian's a whole one, 0.8 s of grace it blinks through, armour a shrug chance),
+venom and bleeding in half hearts on a clock; the swallow rule (the bite that would kill,
+any size, never a guardian); carcasses that sink, settle and are swallowed from `gulp`
+reach; the belly (`run/Belly.ts`) passing a half heart or a shell; pickups taken by touch;
+the HUD's pixel hearts, belly bar and shell count. Out: hunger, `Metabolism`, XP, the
+level-up draft and the reroll. The board has a Health & pickups group.
 
-## 4. Depth as a choice, not a ladder
+What it found, and what it leaves:
 
-Gates are size-only, so the optimal play is to grind the shallows until the gate opens.
+- **The player has to be able to bite anything.** `preysOn` is a size rule, and the combat
+  used it for the player too — a larva could not touch a mackerel. `Creature.attacks` is
+  the combat's question now; `preysOn` stays what the ocean flees by.
+- **A hunter goes for the nearest meal**, so a mackerel in the room ignored the larva.
+  `Creature.hostile` takes the player as quarry whenever it is not tired; two mackerels
+  stand in as the room's hostiles until stage 4. Idle, a larva lasts about six seconds
+  against them; six strikes swallow one.
+- **Nothing gives mutations now** until the pedestals (stage 5), so a run is a fight in
+  one room: the draft, `prospects.ts` and `MutationScreen` wait for it. `regen`, `lifesteal`
+  and the Veins curse have little to act on with hearts; stage 5 rewrites those cards.
+- Heart drops are random (`Math.random`), not the seed — fine until rooms clear (stage 3).
 
-- ~~**A clock in the shallows.**~~ Done as `spendWater`: a band spends once its gate
-  below is open and the player stays. The arrival is the least hunter that can eat you
-  (a Mackerel in Open Water at 30 cm, not a shark), and past the Reef there is none, so
-  deeper bands only thin. If that is too gentle, a band could wake its guardian instead.
-- ~~**A tempting pocket below each gate.**~~ Done: `Spawner.pocket` holds a shoal of the
-  lower band's food just under a shut seal, in view.
-- ~~**Squeezing through undersized.**~~ Done: from 70% of a gate, boost into the seal for
-  a second; it costs 30% of health and 1.5% a second, with no regeneration, while too small.
+## 3. ~~The tank and its map~~
 
-## 5. Builds that play differently
+Done: `content/map.ts` deals a 7–8 room map from the seed with the types on dead ends;
+`run/TankMap.ts` runs it — rooms edge to edge in the world, entered with their fauna and, the
+first time, their hostiles behind shut doors, cleared when those are dead, and a 0.25 s slide
+between rooms with the world held still. Doors are carved through the middle of each side
+with a neighbour and shut as a solid gate band with a grate drawn across. The minimap sits
+top right, in the tank's outline. Six more nursery templates, eight in all, each tagged with
+the room types it may be. The board draws every template doored and gated, and a minimap.
 
-Most of the pool is multipliers, which converge on one optimal fish. New organs that
-change *what you do*, each an entry in `sim/organs/` plus paint:
+What it found, and what it leaves:
 
-- ~~**Diet.**~~ Done: Gill Rakers (`filter`) and Crushing Pharynx (`crush`), with the
-  `gulp`, `damage`, `biteRate` and `recoil` hooks they needed. Jellies do not sting in
-  the simulation, so "eats jellies safely" had nothing to protect against; the crusher's
-  safety is from spines and frill. The two can be taken together; if a mouth should be one
-  or the other, the draft needs an exclusion rule it does not have.
-- ~~**Locomotion.**~~ Done: Anguilliform Body (`eel`), Mantle Pump (`mantle`) and Lie in
-  Wait (`lurk`), through a `swim` hook on `Creature.propel` and a `stealth` hook. The Ribbon
-  Eel carries `eel` and `lurk`, the Anglerfish `lurk`, and an NPC's stealth now hides it
-  from the player's eyes at a distance.
-- ~~**Sense modes.**~~ Done: `sightOf` dims the eye with the light, Tapetum's
-  `eyeAdapt` wins it back, and `electro` (Ampullae) feels the living at short range in any
-  water, the wounded from twice as far. Flash Sense sits on top.
-- ~~**Costs on apex cards.**~~ Done: every apex card carries a turn, speed or metabolism
-  price in its text.
-- ~~**Cursed cards.**~~ Done: Blood Lamp (+90% bite, `glare`), Brittle Frame (speed and
-  turning, `brittle`), Open Veins (+3 regeneration, `veins`: every wound bleeds) and Leaden
-  Bones (+6 armour, `lead`: you sink, and every climb is against it). More curses belong
-  here as the pool grows.
-- ~~**One active organ slot.**~~ Done: Ink Sac, Electric Organ and Inflation, one at a
-  time, on E or the right button.
-- ~~**Zone pools.**~~ Done: `Trait.band` replaced `minStage`. A card is offered in its band
-  or deeper — the band the player is in when the draft happens — and leans ×1.6 at home.
+- **A room bake is the cost of a door.** Half a second, so the rooms next door bake a few
+  milliseconds a frame, nearest door first, and the rest under the slide; a crossing's
+  worst frame is ~20 ms. Starting a run still bakes its first room at once.
+- **The HUD outlives a run**, so the minimap's version has to be counted across tanks, or a
+  new run's first map matched the last run's and never drew.
+- Treasure, shop and boss rooms are rooms of their type with nothing of it in them yet
+  (stages 5, 6 and 7); the boss room holds four mackerels. A cleared room drops nothing
+  until the economy (stage 6).
+- Fauna is topped up in every room, cleared or not, which keeps the tank alive between
+  fights.
 
-## 6. Enemies that ask for tactics
+## 4. ~~Hostile roles~~
 
-Beaten by behaviour, not just size: the anglerfish only if you avoid its lure, a school
-edible once you split it, a shark that flees the blood you leave. Each guardian should be
-a small puzzle with a tell. Squid arms that can be torn free are the model to copy.
+Done: `sim/roles.ts` is a hostile's brain — charger, spitter, turret and drifter, each a
+wind-up, strike and recovery on `Creature.attack`, in tiles and tiles a second so they hold
+across tanks. Shots (`World.shots`, `render/shots.ts`): a jet of water, a spine, a blob of
+light, each lit. Any hostile's touch is a hit. `Flow` takes hostiles round the rock between
+them and the player, and every body turns off rock ahead (`clearHeading`). The nursery's
+hostiles are the mackerel, the archerfish, the pufferfish and the sea nettle; the reef's
+(ribbon eel, triggerfish, lionfish, moon jelly) and the deep's (barracuda, gulper, vampire
+squid, anglerfish, siphonophore) have their roles for when those tanks arrive (stage 7). A
+fight room is three or four, two at most of a role. The board has a Hostile roles group:
+each in motion on the sim's timings, and each shot.
 
-- ~~**The anglerfish, the bait ball and shark blood.**~~ Done: see *Tactics* in
-  `docs/simulation.md`.
-- ~~**Guardian tells.**~~ Done: the Great White charges, the Sperm Whale clicks, the squids
-  grab, and the Leviathan draws the water in front of it into its mouth and snaps (`suck`).
+What it found, and what it leaves:
 
-## 7. Something survives death
+- **A pose in the dark is not a tell.** Outside the larva's pool a mackerel winding up could
+  not be seen at all. Every hostile now throws a faint light of its own, which flares warm
+  through a wind-up: the lighting is the tell, which is the art direction's own terms.
+- **The danger frame closed on everything.** It warned of what could swallow the player,
+  and a room is full of hostiles; it now closes only on a hostile's body nearly on the
+  player's, by half.
+- Idle in a room of a mackerel, an archerfish and two pufferfish, a larva lasts about eight
+  seconds, half to bites and half to shots.
+- The old hunt is still what non-hostile hunters run, and `Creature.quarry` is the fallback
+  for a hostile with no role. Knockback on a struck hostile, and a charger's dash ending on a
+  wall rather than pressing into it, are left for tuning. The death screen still says
+  EATEN (stage 7's end screens).
 
-The biggest roguelite gap. There is no save beyond the best score in `localStorage`.
+## 5. ~~Pedestals and power~~
 
-- ~~**Codex.**~~ Done: `run/codex.ts`, a Codex screen off the title and end screens,
-  firsts toasted and listed on the end screen, and a *new* mark on draft cards for traits
-  never taken. Species show as names and counts; drawing each one there would need a
-  bake to an image, which is the same work as the run summary's silhouettes (§8).
-- ~~**Starting forms.**~~ Done: four, one per zone reached, from the title.
-- ~~**Daily seed.**~~ Done: a Daily button, the seed on the end screen, `?seed=` to share,
-  and a draft stream of its own so a seed deals the same hands.
-- ~~**Daily best.**~~ Done: the day's record apart from the all-time best, raced on the run
-  strip during a daily, reported on the end screen and shown on the Daily button.
+Done: the treasure room's pedestal — a plinth on flat floor under the middle of the room
+with the mutation lit over it, its card read at the top of the screen, taken by swimming
+into it. The pool is the tank's (`Trait.tank`, `dealMutations`), leaning home and toward the
+build. The actives charge by rooms cleared (Ink 2, Electric 1, Inflation 2), drawn as pips
+on Space. The stat column. Archer Spit and Spine Volley replace the bite for good, each
+painted on the body; the player's shots are `World.shots` and leave carcasses. Ballistic,
+Flash Sense and Smoke Screen fire on the strike. The board has a Pedestals & power group.
 
-## 8. Small feel wins
+What it found, and what it leaves:
 
-- ~~Name what killed you on the death screen.~~ Done: `Creature.hurt` books the species
-  and how (bite, sting, poison) on every wound; `Game.causeOfDeath` reads it if it is under
-  4 s old, and otherwise names starvation or the forced band's pressure.
-- ~~An audible, readable hunger warning.~~ Done: toasts at a quarter and at empty, the
-  fullness bar pulsing red, and a synthesised heartbeat (`audio/sound.ts`, the game's first
-  sound) that quickens as the bar drains. M mutes it, remembered.
-- ~~The fish's silhouette at each stage on the run summary.~~ Done: `Game.lineage` keeps
-  a genome copy at hatching, every level-up and a transformation; the end screens bake up
-  to eight of them and read them back off the GPU, drawn to scale.
-- ~~A card of its own for a discovery.~~ Done: `DiscoveryCard`, under the run strip for
-  four seconds with the synergy's codex line, never pausing play.
+- **Every role ran at double speed** since stage 4: the ecology's strike clock ran on
+  hostiles beside the role's own, and a recovery ended with no cooldown. A spitter fired
+  about every second and a half, not every three. Fixed; an idle larva now lasts about nine
+  seconds in a room of four.
+- **A third of the cards fed a cut system**, and are rewritten rather than cut: metabolism
+  became the belly's size, regeneration a mend as a room clears, lifesteal half hearts, the
+  boost the strike, Ram's cost the belly draining, stealth a slow, inaccurate hostile. The
+  draft screen is gone; its card is the pedestal's.
+- **Inflation on the player turns every hit aside** while swollen: a third of a hit cannot
+  come off a heart.
+- A body leaving a room from the edge of a door arrived in the rock beside the next one;
+  arrivals are held to the opening now.
+- Range, shot speed and the shots' own speed are constants on the stat column until
+  mutations move them — the stage 6 items and the deal mutations are where they would.
 
-## 9. Pixel art, side-on
+## 6. ~~The economy~~
 
-Decided September 2026: the game is drawn as pixel art on one coarse grid, and every
-creature is seen side-on instead of from above — Terraria, Isaac, Core Keeper for the
-density, and a reference frame of a midnight scene for the look. The prototype that made
-the case was `design/proto-pixel.ts`, taken off the board once it shipped. Everything
-follows, in stages, each committed on its own:
+Done: pickups for keys, chests and three items (`content/items.ts`); `run/Pockets.ts` for
+shells, keys and the pocket, used on Q; a cleared room's drop (two in five); doors that take
+a key (the shop's, and past the nursery the treasure room's) and the deal room's seal, both
+`Terrain.shut`; the shop — three goods at 3–5 shells and a mutation at 15; the deal room in
+half of all tanks, sealed beside the boss room until it is cleared, with a deal mutation for
+heart containers and a curse for nothing. Pedestals generalised to every room that offers
+something, each with its price in the water. The HUD counts keys beside shells and shows the
+pocket bottom right. The board has a Shop & deals group.
 
-1. ~~**The grid.**~~ Done: `render/pixel.ts`. The canvas is created at `1 / PIXEL`
-   resolution and scaled up with hard pixels, and `FramePass` quantises the finished frame
-   onto a stepped palette with a Bayer dither, so every gradient bands the same way.
-2. ~~**Creatures side-on.**~~ Done: `render/creature/bake/sheet.ts` paints per pixel in
-   profile — ramps, dither, a derived outline and rim — for every plan and every organ's
-   morphology, at the grid's own density, re-baked when the zoom moves a tier. The view
-   mirrors instead of rolling (`faceFor`) and caps its pitch (`drawnAngle`); the lure's
-   strike point follows both. Left for tuning: the per-plan proportions, and small
-   animals, which at their real size are a handful of texels.
-3. ~~**Light.**~~ Done: every light organ the bake records gets a bloom of its own in the
-   shared additive layer, sized in pixels of the frame, carried through the body's
-   transform and breathing on its own clock; `FramePass` bands and dithers all of it. The
-   glow floor every animal carries is halved, since the pixel rim now holds the silhouette.
-4. ~~**The water and the background.**~~ First pass done: particulate and fx dots are a
-   hard 5×5 pixel disc, and the background props are brought down to 64 texels with their
-   blur turned into screen-door dither, so a plane's distance reads as dither density. The
-   water shader is left alone — `FramePass` bands it. Since done: scenery with real
-   structure, as fields (`render/fields.ts`) — one structure per band on a plane of its own,
-   drawn as pixel art, shadows multiplied and lights added in lit water.
-5. ~~**The HUD.**~~ Done: Pixelify Sans, bundled, with font smoothing off; square corners,
-   2 px frames, hard 2 px rings for every glow, one-pixel drop shadows, flat bar fills with
-   a lit top row, bevelled buttons. The mutation icons are pixels, rastered per size onto
-   2 px cells, and the danger vignette is hard bands with a dithered edge.
+What it found, and what it leaves:
 
-6. ~~**Motion.**~~ Done: idle levels out and hovers, pitch is capped by activity, hunters
-   wind up, strike and recover with a jaw baked open for it, a wound flinches and flashes,
-   and a death is played out — belly-up, or down the swallower's throat. Turning back is a
-   flip: mirrored in a frame, checked in speed, with a squish and a crackle as it settles.
-   The design board's Motion group loops each state.
+- **The deal room is known before the boss.** Isaac rolls the devil door after the boss;
+  here the room is rolled with the map, so its sealed red door stands in the boss room from
+  the first visit. A door carved later would mean rebaking the room mid-fight. Stage 7 may
+  hide the seal until the boss dies.
+- **The deal room hangs off the boss room**, so a tank's map can have eight or nine rooms;
+  a boss room with no free cell beside it simply has no deal.
+- Five deal mutations to start: Red Muscle, Stone Hide, Devourer's Jaw, Archer's Eye and
+  Quill Storm (a fan of five, the primary read off the genome now). The curse cards still
+  speak of guardians, and the deal is paid in containers only.
+- Rolling the deal room moved the map's stream: a seed deals a different tank than it did.
 
-What is left across the whole pass is tuning, not structure: per-plan proportions and
-palettes side-on, small animals at their real size, and the fields' own tuning by eye.
+## 7. ~~Bosses and the descent~~
 
-## Suggested order
+Done: `sim/bosses.ts` — the mantis shrimp's punch (a new plan, `mantis`, its club folded
+under the head), the Great White's charge and the Giant Squid's grab, its arms torn free
+one at a time — each fitted to one screen, with a boss bar. The reef and deep tanks, at 1.8
+and 3.24 times the nursery's scale, with their fauna and hostiles, their animals' speed and
+health scaled to it; every layout dealt in every tank, mirrored half the time. The drain in
+the boss room's floor, the descent (growth ×1.8, the next tank dealt) and the drop-in at the
+start and at every descent. The *Released* screen, with the lineage. Starting forms one per
+tank reached. The board has a Bosses & the descent group: each boss's tell on a loop, and
+the drop-in into each tank.
 
-1. ~~Two or three more synergies~~ — done, Ballistic included.
-2. ~~The shallows clock~~ — done.
-3. ~~The codex~~ — done.
-4. ~~Diet and locomotion organs~~ — done.
-5. ~~Transformations~~ and ~~the draft reading them~~ — done.
-6. ~~Vivisect, Drifting Bloom and Whale Shark~~ — done. Flash Sense waits on §5's sense
-   modes.
-7. ~~Zone pools and costs on apex cards~~ — done.
-8. ~~The pocket below each gate, and forcing a seal~~ — done.
-9. ~~Sense modes and Flash Sense~~ — done.
-10. ~~Cursed cards and the active organ slot~~ — done.
-11. ~~Enemies that ask for tactics~~ — done.
-12. ~~Starting forms and a daily seed~~ — done.
-13. ~~The small feel wins~~ — done. What is left is marked as left open in each section:
-    more synergies and curses as the pool grows (§1, §5). ~~How the ocean reads a
-    transformed player and a second form (§2)~~ — done. ~~A daily best (§7)~~ and ~~a Leviathan
-    pattern of its own (§6)~~ — done.
+What it found, and what it leaves:
+
+- **The cull measured from the camera**, which is still on the last room just after a slide:
+  a boss put at the far side of its room was dropped, alive, on its first frame, and the room
+  cleared empty. It is round the room now. Fight rooms lost far hostiles the same way.
+- **A hostile ate its way out of its own tell**: a bite on passing fauna ends a strike, so the
+  Great White's charge was cut short by fry. Hostiles fight the player and nothing else, and
+  no longer regenerate.
+- **Bosses need their own pace.** The tank's full pace put the Great White's rush past what a
+  tell can answer; none left the Giant Squid a quarter minute to cross its room. They take
+  its root.
+- An idle larva lasts about eight seconds against the mantis shrimp: three whole hearts.
+- The mantis shrimp is a plain body so far — a green armoured trunk and its club; stalked
+  eyes, banding and legs are for the liveliness pass. The reef and deep tanks have no rooms or
+  decoration of their own yet (stage 8), and the deal room's seal still shows before the boss.
+
+## 8. ~~Liveliness~~
+
+Done: decoration on every face — floors, ceilings and walls — and a set per tank
+(`DECOR_SETS`): the reef's sea fans, coral, snagged nets and its centrepiece, the wreck with
+its lamp; the deep's tube worms, sea lilies, glass sponges and glow-worm threads, which light
+its rooms; chains, weed and barnacles where they belong. The reef and the deep tank have
+their own room layouts, five each, the overhangs, arches, columns and chimneys that block
+higher up. The reef's fauna grazes plankton too. The mantis shrimp got its armour bands and
+stalked eyes. The board's *Decoration* group has every kind and the tanks it grows in; the
+*Rooms* group every layout in its own tank's dress.
+
+What it found, and what it leaves:
+
+- **A room hung as thickly as its floor grows is shut.** Ceilings and walls carry under half
+  a floor's cover.
+- **The deep is seen by its threads.** With no weed and no lamp but the larva's, a deep room
+  was black; hanging glow-worm threads from every ceiling made it a cave you can read.
+- Decoration now runs to 110–145 pieces a room; a crossing's worst frame is ~16 ms.
+- Not done: a wreck on its side as an obstacle, which wants a tile of its own in the
+  templates; bottom-dwellers (crabs, shrimp) that walk the floor; per-tank rock colour.
+
+## Balance: a ranged start and Isaac's curve
+
+Done after stage 8, from playing it: a melee start was the game's hardest matchup, since a
+room's every hostile hurts by touch. Every larva now hatches with Archer Spit, at a whole hit
+a shot (it was 0.8 of a bite); the bite comes back as the Lunging Bite, a reef card, for twice
+a shot and the swallow. Hostile health follows Isaac's curve instead of cancelling the size
+difference between tanks (`hostileHp` 0.55, 0.8, 1.1), the bosses' armour is down to two or
+three and their health set to match (200, 420, 700), and a boss leaves a mutation by the drain,
+leaning toward damage. The cards say damage, not bite; the Siphon Jet speeds shots too. Shots reach 10 tiles, not 6.5: Isaac's number is half his room and was a fifth of ours. The
+board's *Pedestals & power* group has the bite beside the two shots, and the larva spitting.
+
+What it found, and what it leaves:
+
+- **Flat armour broke the bosses.** A Great White at armour 5 took two thirds off every spit,
+  and the fight was ~330 spits, the Giant Squid's ~160; nothing had been tuned against a
+  ranged primary.
+- **The nursery took two to three times Isaac's shots.** A mackerel was ten spits or eight
+  bites; it is five spits now, an archerfish three.
+- Gill Rakers' 40% now reads on every shot, which makes it a trap for a ranged body; the
+  grazer card wants rethinking. There is still no card that raises the attack rate — Isaac's
+  most common kind — and one would want a body part to show it.
+
+## Hitboxes and hits
+
+Done next, from playing it: hitboxes are the body as drawn (`sim/hull.ts`), not a circle a
+third of a size across at its middle — a mackerel is now hit from nose to tail root, where it
+was hit across a third of its length — and while a room is locked the player's shots and bite
+pass through its fauna. A hit whitens the body, knocks it along the blow, lights it and sprays
+the shot back off it; a kill lights the room round it. An idle larva still lasts about nine and
+a half seconds in a room of four, so contact on the whole body did not make a room deadlier.
+
+## Floating dead, and a closer ring
+
+The dead float belly-up where they died instead of sinking to the floor, where they were lost
+among the rock and decoration (`HANG` in `sim/world.ts`, a slow bob in `FishView.lie`). The
+ring round the larva is drawn at three of its radii, not four and a half, and fainter.
+
+## Boss fights: the room as a weapon
+
+Done next, from playing it: each boss has a set piece of its own and a way to be beaten with
+the room, each told the first time by a toast that names its answer (`World.cue`). The mantis
+shrimp is fought in its own den (`nursery-den`), whose clefts — a new tile, `|`, narrow enough
+for the larva and not for it — jam its head in a punch thrown after the larva, and it digs up
+urchins that burst under the roof into a sinking fan of spines, which a ledge keeps off. The
+Great White is dazed long by rock and briefly by a miss, and breaches from the floor under
+the player after its bubbles and the charge bar. The Giant Squid snags its arms on a pillar
+ducked behind through its tell, and draws the player in down an open line before it lashes
+(since replaced by its ink, below).
+The board has each move in *Bosses & the descent*.
+
+What it found, and what it leaves:
+
+- **A hostile hunting a larva in a cleft pressed against the rock nearest it.** `Flow` only
+  walks open water, so the cleft was off the map and the way ran out; it now walks the
+  target's own pocket out to the open.
+- **Parked on the mouth of a cleft, the wary shrimp trapped the larva under its own rain.** It
+  stands off a larva in a narrow place now.
+- **An urchin thrown from under a shelf broke on it**; the shrimp only lobs along an open arc.
+- The nursery and deep boss rooms are fixed layouts now (the den, the pillars); the reef's
+  are still the arch or the channel, both of which have rock to lure a rush into. A larva that
+  grew past about 18 cm in the nursery no longer fits the clefts. The snagged squid's resting
+  arms still reach past the pillar they are wrapped round; its size makes that hard to hide.
+
+## ~~Hostile movesets: the nursery~~
+
+Done next, from playing it: the bosses were fights and the rooms between them were not,
+since every species of a role ran the same brain. A role is now the skeleton and a moveset
+(`Species.moves`) how one species plays it, with a turn at half health — a stagger, a ring,
+the body rebuilt to show it — at most two hostiles winding up at once, and deaths that leave
+something (`Roles.died`). The mackerel come in pairs, circle, and dash one at a time,
+chaining a second dash once turned; the archerfish fires bursts of three and, turned, shoots
+from cover; the pufferfish puffs braced up close, bounces off the walls throwing fans once
+turned, and pops into a ring; the sea nettle pulses, trails stings that hang in the water,
+and buds into two ephyrae. The board's *Hostile roles* group has each moveset beside its
+turned body, and the sting.
+
+What it found, and what it leaves:
+
+- **The accent is not a phase.** A mackerel turned by its accent hue looked the same: on a
+  darter the accent is a few dots. The frenzy flushes the whole body.
+- **Cover looked for afresh never settled**: from wherever the archerfish was, the nearest
+  cover was always a little further on. It keeps a spot while the player cannot see into it.
+- An idle larva lasts about nine seconds against two mackerel and an archerfish, and fifteen
+  against a pufferfish, an archerfish and a nettle.
+- The dev panel's *clear the room* kills the ephyrae as they bud, which is what it is for.
+
+## Shot organs
+
+Done next, asked for: eight mutations that change what the shots do rather than what fires
+them, stacked on any primary and on each other, as Isaac's tear effects are — Cavitation
+bursts, Vent Gland burns and spreads from the dead, Surface Halo calls a shaft of light,
+Galvanic Cells arcs on, Needle Jet passes through, Hunting Nares bends, Brood Pouch breaks
+into fry, Brine Gland chills and shatters (`sim/organs/shots.ts`, *Shot organs* in
+`progression.md`). Each marks its shot's shape or colour and is painted on the body. The
+board has a *Shot organs* group.
+
+What it found, and what it leaves:
+
+- **Fire cannot be orange.** The player's shots keep off the hostiles' hot colours, so the
+  burn is a vent's sulphur and the light a pale gold; a red flame would read as incoming.
+- With all four of the reef and deep damage cards, a room of three reef hostiles fell to ten
+  spits in three seconds, where the numbers say about eighteen without them. Nothing is tuned yet
+  against a full stack; no synergies pair them yet (a burst that scalds, a chill that arcs).
+
+## ~~Hostile movesets: the reef~~
+
+Done: the reef's four play their roles their own way (*Movesets* in `simulation.md`). The ribbon
+eel waits in a hole in the rock with its head out, lunges along the line out of it, swims to the
+nearest hole and backs in tail first, and turned hunts in the open; the triggerfish's jet throws
+the player along its line, and it works round to blow the player into the others, and turned it
+goes red and charges; the lionfish herds with a fan of five at the player, and turned flares into
+fan and ring together; the moon jelly fades out of the room, untouchable and quicker, and back,
+and turned stays and buds an ephyra every few seconds. The triggerfish, lionfish and moon jelly
+have their turned looks as wounded frames recoloured from their sheets (`--wounded-palette`). The
+board's *Hostile roles* group has each whole and turned, the eel in a block of rock.
+
+What it found, and what it leaves:
+
+- **An eel's body swings in the rock.** Its head follows the player by turning the body about
+  the mouth, and a hole checked only straight in showed the tail swung up over a ledge a tile
+  thick. A hole now has rock for the body at either edge of the cone, which puts most of them in
+  the room's outer walls, floor and ceiling.
+- **An ambusher can be sat out.** Two eels left in their holes never lunged at a larva off their
+  lines. An eel now moves, after five seconds of nothing on its line, to a hole that has the
+  player on it; idle against two, a larva takes a hit about every seven seconds.
+- **The jet fired as soon as it could**, from wherever it was, and blew the player anywhere. It
+  holds its jet until it is behind the player from the others, for a second and a half at most.
+- Ephyrae and their mother converge on the player by the same water and stack on it; nothing
+  keeps hostiles apart. The deep's movesets are next.
+
+## ~~The Giant Squid's ink~~
+
+Done next, from playing it: the squid's grab could not be read — which way to pull to tear
+free — and at full size, arms out, it took the room. It inks now and is gone, shows as
+ghosts round the player (three, five under half health), and on the lock the real one
+resolves, colours, arms and the tell's ring, and lunges down its line; the rest go. A lunge
+into rock snags it on the pillars. Drawn at six tenths; the grab, the draw and the torn arms
+are gone (*A boss does not hold the player* in `decisions.md`). The board's *Bosses & the
+descent* has the ink.
+
+What it found, and what it leaves:
+
+- **A tint cannot make a red animal pale.** It only multiplies, and a red squid tinted pale is
+  a darker red. The ghosts went out first as the body washed out through the skin's flash,
+  which left them without arms — the arms are plain meshes the flash does not reach — and they
+  read as missing their tentacles. Their noses are four to six tiles off, so their arms reach
+  for the player without meeting over it.
+- **Ghosts alternated sides by how many had been found**, so a side walled off by a pillar
+  was tried for good and a room showed one. By the try now: three whole, three or four hurt.
+- Five ghosts rarely fit the pillar room round a larva near a wall; it shows what fits.
+- **A filter cut the ghosts' arms off in a box.** Pixi draws a filter only inside the bounds it
+  finds for what the filter covers, and takes them from the meshes rather than from any area
+  set by hand, so neither a filter per view nor one over all of them with `boundsArea` held
+  the arms. There is no filter now: a ghost's body is washed out through the skin's flash and
+  each arm drawn from a pale copy of its picture, at half alpha, since eight of them lap over
+  each other (`FishView.ghost`).
+- **The boss intro showed the squid's mantle alone**: its portrait was the bake, which is the
+  body without the rigged arms. A rigged body's portrait lays them out from the crown, fanned
+  a little (`FishView.portrait`), and a portrait taller than the intro's slot is shown at a
+  whole divisor rather than overflowing it.
+- **The board's boss cells drew every boss painted**, never having been handed the species
+  since the sprites went in; they draw the sprites now.
+
+## ~~Items: Isaac's stats, multishot and the brood~~
+
+Done next, asked for: the pool reworked toward Isaac's stats — speed, damage, tears, shot
+speed, range, the amount a strike throws and the effect its shots carry — with the synergy
+between them left to the systems, as his is (*The stats and the pool* in `progression.md`).
+Tears, range and shot speed are genome stats (`tears`, `reach`, `velocity`), and a dozen cards
+that moved turning, sense or the belly move them now. Every card has Isaac's word for it
+(`Trait.tagline`) and its numbers computed on this body as before → after (`traitDiff`), on
+its card and as a strip of arrows over its pedestal. Multishot — the Parietal Eye (Inner Eye),
+Twin Spout (20/20), Four-Eyed Fish (Mutant Spider) — and the Mouthbrooder, a primary of homing
+fry that latch and bite (C-Section); one synergy, Shoal Hunt, for the two together. Every
+mutation has a drawing of its organ (`render/itemart.ts`), and the pedestal is an altar with a
+lit niche, a shaft of light and the good's shadow. The board has a *Mutation art* group, and
+the brood and the multishot on each primary in *Pedestals & power*.
+
+What it found, and what it leaves:
+
+- **A card's own percentages drifted from the body.** Siphon Jet said "40% faster" of a shot
+  speed the column showed, and Gill Rakers' 40% on every hit showed nowhere. Computing the
+  card from the genome is what keeps it honest; the `desc` says only what no number can.
+- **Two multishot taxes multiplied left a body firing once a second**, so only the worst is
+  paid, as in Isaac. Twin Spout pays none and doubles a spit's damage on one target; it is a
+  reef rare for that, and the first to look at if the reef gets easy.
+- **Three fry on the nearest body wasted two**, which is what Shoal Hunt is for; without it a
+  fan of fry is still three fry, just less clever about it.
+- The drawings are painted in code, from shapes and a light, which reads at 20 pixels; a
+  generated sheet could replace any of them through the same `ITEM_ART` seam. Belly, sight and
+  stealth cards are still in the pool as utility, each with its numbers on the card.
+
+## Hostile movesets: the deep
+
+The barracuda strikes across the room the moment the player is on its line, and turned
+bounces three dashes off the walls; the gulper eel gulps, and turned spits out what it
+swallowed; the vampire squid's bolts curve, and turned it inverts into a spiked ball, clouds
+the water and jets away; the anglerfish's bolts circle its lure, and turned it lunges; the
+siphonophore is a chain that splits where it is cut.
+
+## The player fish rework
+
+To do, decided October 2026: the larva and every plan it can become are still painted from the
+genome (`render/creature/fishbake.ts`, the painters in `bake/`), and since the enemies went to
+authored sprites (`docs/sprites.md`) and the mutations to drawn items (`render/itemart.ts`,
+[sprite-prompts-items.md](sprite-prompts-items.md)), the player is the roughest thing on the
+screen. Its look is reworked to their standard, and it stays a body that mutations visibly change
+— the reason it was never a sprite.
+
+**Every mutation's mark on the body is in it**, the ones the items rework added with the rest,
+and each reads as the organ its item draws, so a pedestal's good and the body that took it are
+one picture:
+
+- the multishot and the brood: the Parietal Eye's lit third eye on the crown, the Twin Spout's
+  second water sac, the Four-Eyed Fish's second eye over the first, the Mouthbrooder's throat
+  pouch with the fry looking out (`bake/shotorgans.ts`, `bake/head.ts`);
+- the stat cards' morphology, which says tears, range and shot speed now: the fins of the
+  Pectorals, the tail of the Caudal Fin, the lateral line, the bladder, the barbels, the
+  pressure gland's jaw;
+- everything already painted: the primaries' sacs and quills, the shot organs, the actives,
+  the reef and deep organs, the curses, and the named synergies.
+
+Open questions for when it starts: whether the body is authored art with the organs as
+authored parts placed on it by `edgeAt` (the plans' spines and depth curves kept, the painting
+replaced), or the painters taken further; reference images first, as for the enemies. The
+board's *Mutations* and *Builds* groups are where the result is judged, every mark on the body
+beside its item.
+
+## Later
+
+Bomb fish and secret rooms; tanks four and five (the sperm whale, the colossal squid, the
+Leviathan in the basement tank); an ending cutscene.

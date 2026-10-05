@@ -7,6 +7,8 @@ import type { Creature } from './creature';
 import type { Blood } from './events';
 import { glareOf, lureRangeOf, stealthOf } from './organs';
 import type { Patterns } from './patterns';
+import { Bosses } from './bosses';
+import { clearHeading, type Roles } from './roles';
 import type { World } from './world';
 
 /**
@@ -52,8 +54,12 @@ const STRIKE_KICK = 0.95;
  * Perception lives here too: who notices whom, and what a nose can find.
  */
 export class Behaviour {
+  private readonly bosses: Bosses;
+
   constructor(private readonly world: World, private readonly combat: Combat,
-              private readonly patterns: Patterns) {}
+              private readonly patterns: Patterns, private readonly roles: Roles) {
+    this.bosses = new Bosses(world);
+  }
 
   think(c: Creature, dt: number, p: Creature) {
     if (c.isPlayer) return; // the player is steered by input
@@ -70,16 +76,25 @@ export class Behaviour {
     c.moodT -= dt;
     c.graspCd = Math.max(0, c.graspCd - dt);
     c.scatter = Math.max(0, c.scatter - dt);
-    this.tickStrike(c, dt);
+    // a role runs its own attack's clock (`Roles.tick`); run this one on it too and every
+    // step goes by twice as fast, and the recovery ends without its cooldown
+    const role = c.hostile ? c.species.role : undefined;
+    const boss = c.hostile ? c.species.boss : undefined;
+    if (!role && !boss) this.tickStrike(c, dt);
 
     // dazzled: the body hangs where the flash caught it and drifts on what it was doing
     if (c.stun > 0) {
       c.attack = 'none';
       c.stun = Math.max(0, c.stun - dt);
-      c.drive(dt, c.angle, 0);
+      // an eel in its hole is held in it (`Roles.lurk`): a drive would level it in the rock
+      if (c.burrow !== 'home' && c.burrow !== 'back') c.drive(dt, c.angle, 0);
       return;
     }
+    // a boss has its fight, fitted to its room, before any of the column's patterns
+    if (boss) { this.bosses.step(c, dt, p, boss); return; }
     if (c.species.pattern && this.patterns.patternStep(c, dt, p)) return;
+    // a room's hostile has one job, and its role is how it goes about it
+    if (role) { this.roles.step(c, dt, p, role); return; }
 
     // a squid with something in its arms stops hunting and hangs onto it, nose to the catch
     const held = c.holding;
@@ -145,6 +160,7 @@ export class Behaviour {
             break;
           }
         }
+        if (c.hostile && !c.quarry && c.tired <= 0 && p.alive) c.quarry = p;
         if (c.quarry && (!c.quarry.alive || !c.preysOn(c.quarry))) c.quarry = null;
         const prey = c.quarry ?? this.nearest(c, sense * (c.species.behavior === 'apex' ? 3 : 1),
           o => o !== c && c.preysOn(o) && this.notices(c, o));
@@ -253,6 +269,7 @@ export class Behaviour {
     if (c.y < 120) desired = Math.PI / 2;
     else if (c.y > DEPTH_MAX - 120) desired = -Math.PI / 2;
     if (Math.abs(c.x) > WORLD_HALF_W - 200) desired = c.x > 0 ? Math.PI : 0;
+    desired = clearHeading(this.world.terrain, c, desired);
 
     c.drive(dt, desired, throttle * (1 + c.panic * 0.15));
     void p;

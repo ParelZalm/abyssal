@@ -26,7 +26,29 @@ export function cut(def: Creature, att: Creature, dps: number) {
 export function sting(att: Creature, amount: number, from: Creature) {
   let a = amount;
   for (const o of att.organs) if (o.recoil) a = o.recoil(att.genome, a);
+  // the player takes recoil as it takes any blow: half a heart, if it lands at all
+  if (att.isPlayer) return a > 0 ? att.takeHit(from, 1, 'sting') : 0;
   att.hp -= a;
   if (a > 0) att.hurt(from, 'sting');
   return a;
+}
+
+/** Seconds a scald burns, and a chill holds. */
+export const BURN_TIME = 3;
+export const CHILL_TIME = 2;
+
+/**
+ * Set a body burning (Vent Gland). Status on it like venom, ticking in `World.integrate`, and
+ * kept apart from it for the same reason a bleed is: it does a thing venom does not, which is
+ * leap to what is near when the body dies burning (`Combat.slay`).
+ */
+export function ignite(def: Creature, att: Creature, dps: number) {
+  def.burn = Math.max(def.burn, dps);
+  def.burnT = BURN_TIME;
+  def.burnByPlayer = att.isPlayer;
+}
+
+/** Chill a body (Brine Gland): it swims through thick water until it thaws. */
+export function chill(def: Creature, seconds: number) {
+  def.chillT = Math.max(def.chillT, seconds);
 }

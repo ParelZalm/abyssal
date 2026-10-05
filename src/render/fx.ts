@@ -1,6 +1,7 @@
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { dotTexture } from './textures';
 import { TAU } from '../core/util';
+import type { Light } from './lighting';
 
 interface P {
   node: Sprite | Graphics;
@@ -24,7 +25,18 @@ interface P {
  */
 export class Fx {
   layer = new Container();
+  /**
+   * What is light rather than lit: above the lighting pass, additive, as the blooms are
+   * (`Game.reset`). Under the dark a streak went out where nothing lit the water round it.
+   */
+  glow = new Container();
   private live: P[] = [];
+
+  constructor() {
+    this.glow.blendMode = 'add';
+  }
+  /** Light thrown for a moment — a hit, a kill — and gone: world units, seconds. */
+  private flashes: { x: number; y: number; r: number; color: number; a: number; t: number; max: number }[] = [];
   private dots: Sprite[] = [];
   private rings: Graphics[] = [];
 
@@ -50,6 +62,41 @@ export class Fx {
         life: 0, max: 0.5 + Math.random() * 0.7, grow: 0, spread: 1, lift: -26, peak: 0.85,
         baseScale: s.scale.x });
     }
+  }
+
+  /**
+   * Debris thrown one way: `count` dots along (`dx`, `dy`), fanned `spread` radians either side
+   * of it. What a hit sprays off the body it landed on, where a `burst` would say nothing about
+   * which way the blow was going.
+   */
+  spray(x: number, y: number, dx: number, dy: number, color: number, count: number, power: number,
+        size: number, spread: number) {
+    const base = Math.atan2(dy, dx);
+    for (let i = 0; i < count; i++) {
+      const s = this.takeDot(size * (0.4 + Math.random() * 0.8), color, 0.95);
+      s.x = x; s.y = y;
+      const a = base + (Math.random() - 0.5) * 2 * spread;
+      const v = power * (0.45 + Math.random() * 0.8);
+      this.live.push({ node: s, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+        life: 0, max: 0.22 + Math.random() * 0.3, grow: 0, spread: 1, lift: -10, peak: 0.95,
+        baseScale: s.scale.x });
+    }
+  }
+
+  /**
+   * A light at (`x`, `y`) for `max` seconds, falling off fast: the frame is dark and made by
+   * its lights (*Art direction*), so the loudest thing a hit can do is light what it hit.
+   */
+  flash(x: number, y: number, color: number, r: number, a = 1, max = 0.16) {
+    this.flashes.push({ x, y, r, color, a, t: 0, max });
+  }
+
+  /** The flashes still burning, for the lighting pass. */
+  get lights(): Light[] {
+    return this.flashes.map(f => {
+      const k = 1 - f.t / f.max;
+      return { x: f.x, y: f.y, r: f.r * (0.7 + 0.3 * k), color: f.color, a: f.a * k * k };
+    });
   }
 
   /**
@@ -85,6 +132,35 @@ export class Fx {
       spread: 1, lift: -26, peak: 0.45, baseScale: s.scale.x });
   }
 
+  /**
+   * A column of light standing for `max` seconds, from `top` down `len`, `w` across: a dot
+   * stretched, so it is soft at its ends where it meets the rock and the frame quantises it.
+   */
+  beam(x: number, top: number, len: number, w: number, color: number, alpha: number, max: number) {
+    const s = this.takeDot(1, color, alpha);
+    s.width = w;
+    s.height = len;
+    s.x = x; s.y = top + len / 2;
+    this.live.push({ node: s, vx: 0, vy: 0, life: 0, max, grow: 0, spread: 1, lift: 0, peak: alpha,
+      baseScale: s.scale.x });
+  }
+
+  /**
+   * A line of light from (`x0`, `y0`) to (`x1`, `y1`), `w` across, left where it was laid and
+   * gone in `max` seconds: a dot stretched along it, so its ends are soft and a run of them
+   * laid end to end frame after frame is one line.
+   */
+  streak(x0: number, y0: number, x1: number, y1: number, w: number, color: number, alpha: number, max: number) {
+    const s = this.takeDot(1, color, alpha);
+    this.glow.addChild(s);
+    s.width = Math.hypot(x1 - x0, y1 - y0) + w;
+    s.height = w;
+    s.rotation = Math.atan2(y1 - y0, x1 - x0);
+    s.x = (x0 + x1) / 2; s.y = (y0 + y1) / 2;
+    this.live.push({ node: s, vx: 0, vy: 0, life: 0, max, grow: 0, spread: 1, lift: 0, peak: alpha,
+      baseScale: s.scale.x });
+  }
+
   ring(x: number, y: number, color: number, radius: number) {
     const g = this.rings.pop() ?? new Graphics();
     g.visible = true;
@@ -97,13 +173,15 @@ export class Fx {
   }
 
   update(dt: number) {
+    for (const f of this.flashes) f.t += dt;
+    this.flashes = this.flashes.filter(f => f.t < f.max);
     for (let i = this.live.length - 1; i >= 0; i--) {
       const p = this.live[i];
       p.life += dt;
       const t = p.life / p.max;
       if (t >= 1) {
         p.node.visible = false;
-        this.layer.removeChild(p.node);
+        p.node.parent?.removeChild(p.node);
         if (p.grow) this.rings.push(p.node as Graphics);
         else this.dots.push(p.node as Sprite);
         this.live.splice(i, 1);

@@ -1,12 +1,10 @@
 import { FAMILY_NAMES } from '../content/forms';
-import { BANDS, depthLabel } from '../content/zones';
 import type { Fx } from '../render/fx';
 import { bakeFish, releaseFish } from '../render/creature/fishbake';
 import { Creature } from '../sim/creature';
 import type { UI } from '../ui/UI';
 import type { LineageFrame } from '../ui/screens/lineage';
 import type { Best } from './best';
-import type { Bands } from './Bands';
 import { saveCodex } from './codex';
 import type { Flow } from './phase';
 import { nearMisses } from './prospects';
@@ -15,7 +13,7 @@ import type { Run } from './Run';
 /** The end of a run: the score it banks, what it says killed you, and the screen after. */
 export class Ending {
   constructor(private readonly run: Run, private readonly p: Creature,
-              private readonly bands: Bands, private readonly best: Best,
+              private readonly best: Best,
               private readonly flow: Flow,
               private readonly fx: Fx, private readonly ui: UI,
               private readonly on: { restart(): void; title(): void }) {}
@@ -48,12 +46,11 @@ export class Ending {
         ? `New best for ${date}${dayBefore ? ` (was ${dayBefore.toLocaleString()})` : ''}`
         : `Today's best ${this.best.daily(date).toLocaleString()}`] : []),
       `Stage ${run.stage}`,
-      `${BANDS[run.maxBand].name}`,
+      run.tank.name,
       `${p.genome.size.toFixed(0)} cm long`,
       `${run.eaten} creatures eaten`,
       ...(run.forms.length ? [`Became a ${run.forms.map(f => f.name).join(', then a ')}`] : []),
       ...(run.synergies.length ? [`Synergies: ${run.synergies.join(', ')}`] : []),
-      `${depthLabel(run.deepest).toLocaleString()} m deep`,
       `${Math.floor(run.elapsed / 60)}m ${Math.floor(run.elapsed % 60)}s survived`,
       ...(run.found.length ? [`New in the codex: ${run.found.join(', ')}`] : []),
       ...(misses.length ? [`One card short of ${misses.join(', ')}`] : []),
@@ -67,21 +64,19 @@ export class Ending {
 
   /**
    * Why the run ended, in the words the death screen leads with: what last hurt the body if
-   * that was in the last few seconds, and how — bitten, pricked by what it bit, or poisoned —
-   * or the water itself when it was a forced band that did it.
+   * that was in the last few seconds, and how (`Hurt`) — or something unseen when nothing did.
    */
   private causeOfDeath() {
     const p = this.p;
-    if (this.run.food <= 0) return 'You starved';
     const by = p.hurtBy;
     if (by && Creature.clock - p.hurtAt < 4) {
       const a = by.guardian ? 'The' : /^[aeiou]/i.test(by.name) ? 'An' : 'A';
       if (p.hurtHow === 'sting') return `You bit ${a.toLowerCase()} ${by.name}, and it bit back`;
       if (p.hurtHow === 'poison') return `${a} ${by.name}'s venom finished you`;
+      if (p.hurtHow === 'shot') return `${a} ${by.name} shot you down`;
+      if (p.hurtHow === 'touch') return `You brushed ${a.toLowerCase()} ${by.name} once too often`;
       return `${a} ${by.name} found you`;
     }
-    const squeezed = this.bands.squeezed;
-    if (squeezed >= 0) return `The weight of ${BANDS[squeezed].name} crushed you`;
     return 'Something bigger found you';
   }
 

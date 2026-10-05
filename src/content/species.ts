@@ -1,9 +1,31 @@
 import type { Plan } from './form';
 import { baseGenome, type Genome } from './genome';
-import { clamp, type Rng } from '../core/util';
+import type { Rng } from '../core/util';
 import { DEPTH_MAX, ZONES, type ZoneId } from './zones';
 
 export type Behavior = 'plankton' | 'school' | 'drift' | 'hunter' | 'ambush' | 'apex';
+
+/** How a hostile fights; see *Role* in `CONTEXT.md` and `sim/roles.ts`. */
+export type Role = 'charger' | 'spitter' | 'turret' | 'drifter';
+/**
+ * A hostile's own way of playing its role (*Moveset* in `CONTEXT.md`, `sim/roles.ts`): the
+ * move that makes it this animal and not another of its role, what it turns into below half
+ * its health, and what its death leaves. The nursery's: a mackerel's pack, an archerfish's
+ * volley, a pufferfish's balloon, a sea nettle's bloom. The reef's: a ribbon eel's burrow, a
+ * triggerfish's jet, a lionfish's herd, a moon jelly's wane.
+ */
+export type Moveset = 'pack' | 'volley' | 'balloon' | 'bloom' | 'burrow' | 'jet' | 'herd' | 'wane';
+/**
+ * What a body fires: a jet of water, a spine, a blob of light — and the mantis shrimp's
+ * urchin, which is thrown rather than fired, and a sea nettle's sting, which is left hanging
+ * in the water. Neither of those last two is ever the player's — and the fry, the
+ * Mouthbrooder's, which only the player lets out.
+ */
+export type ShotKind = 'spit' | 'spine' | 'bolt' | 'urchin' | 'sting' | 'fry';
+/** What a role fires: every kind but the thrown, the left and the player's fry. */
+export type FiredKind = Exclude<ShotKind, 'urchin' | 'sting' | 'fry'>;
+/** A boss's fight (`Species.boss`, `sim/bosses.ts`). */
+export type Fight = 'punch' | 'charge' | 'ink';
 
 export interface Species {
   id: string;
@@ -32,8 +54,44 @@ export interface Species {
    * into the mouth, and snaps shut on whatever arrived. The squids have their arms instead.
    */
   pattern?: 'charge' | 'click' | 'suck';
+  /**
+   * How this animal fights when a room sets it on the player as a hostile. Its behaviour is
+   * what it does as fauna; a hostile has its role's brain instead (`sim/roles.ts`).
+   */
+  role?: Role;
+  /**
+   * A charger's dash, where it is not every charger's: `reach`, how many tiles off it winds up
+   * from (`Roles.charger`'s `DASH_RANGE` when unset), and `streak`, the colour of the light the
+   * dash leaves behind it (`Impacts.trail`), for a dash too fast to read from the body alone.
+   */
+  reach?: number;
+  streak?: number;
+  /** Its moveset, for a hostile that plays its role its own way. */
+  moves?: Moveset;
+  /** What it fires, for the roles that fire. */
+  shot?: FiredKind;
+  /**
+   * A boss's fight, when a tank is built around this animal (`sim/bosses.ts`): the mantis
+   * shrimp's punch, the Great White's charge, the Giant Squid's ink. And its health, set
+   * outright: a boss is fought in hearts and strikes, not on its body's scale. Its armour is
+   * flat off every shot, so a boss's is kept to two or three: at the Great White's old five a
+   * larva's spit did a fifth of itself, and the fight was over three hundred shots. Tuned to
+   * about 60, 75 and 115 shots of a larva that found no damage, and under half that for one
+   * that doubled it, since the armour comes off a bigger shot too. The mantis shrimp's was 40,
+   * and its fight was over before the den had been round once: two clefts jammed and a rain.
+   */
+  boss?: Fight;
+  bossHp?: number;
 
   size: [number, number];
+  /**
+   * How much bigger it is drawn than its genome's size. The picture and everything that
+   * meets it — the hitbox, the radius, the lure's trap, where its shots leave the skin, the
+   * water it is spawned into — take this; its health, bite, senses and what it is worth eaten
+   * do not, since those are the genome's size. A way to let an enemy be read on screen without
+   * retuning the fight (`Creature.drawnSize`).
+   */
+  drawn?: number;
   hue: [number, number];
   accent: number;
   speed: number;
@@ -101,26 +159,88 @@ export const SPECIES: Species[] = [
     size: [9, 15], hue: [196, 216], accent: 40, speed: 165, bite: 2,
     nutrition: 1.6, weight: 15, finSize: 0.95 },
 
-  { id: 'mackerel', name: 'Mackerel', behavior: 'hunter', plan: 'darter',
-    zone: 'sunlit', band: 'open', bleed: 600,
+  { id: 'mackerel', name: 'Mackerel', behavior: 'hunter', plan: 'darter', role: 'charger',
+    moves: 'pack', zone: 'sunlit', band: 'open', bleed: 600,
     size: [20, 34], hue: [168, 192], accent: 205, speed: 210, bite: 8,
     nutrition: 2.0, weight: 11, jaw: 0.4, sense: 480 },
+
+  // the nursery's boss: a mantis shrimp in the rock, the animal whose club breaks aquarium
+  // glass. Its punch is the fastest strike in the sea, and the water it leaves boils. Sized to
+  // its den: the mantis plan is nearly four of its sizes long, so this is some four tiles of
+  // armour, a body the room can hold and the larva can get round. At 36-44 it was six and a
+  // half, a fifth of the den across, and could not turn in it without its hull in the rock
+  { id: 'mantisshrimp', name: 'Mantis Shrimp', behavior: 'apex', plan: 'mantis',
+    zone: 'sunlit', band: 'reef', guardian: true, boss: 'punch', bossHp: 300,
+    size: [22, 25], hue: [132, 150], accent: 18, speed: 170, bite: 20,
+    nutrition: 3, weight: 1, armor: 2, claws: 2, segments: 4, finSize: 0.8, sense: 600 },
+
+  // the nursery's other hostiles. Each is the animal that already does what its role does:
+  // an archerfish shoots water at what it wants, a puffer bristles, a nettle stings by being
+  // brushed against
+  { id: 'archerfish', name: 'Archerfish', behavior: 'hunter', plan: 'darter',
+    role: 'spitter', shot: 'spit', moves: 'volley',
+    // drawn bigger than its size, as the triggerfish is, so its eye and bars read: at its own
+    // it was some forty texels long in the nursery
+    zone: 'sunlit', band: 'reef', drawn: 1.6,
+    size: [12, 18], hue: [46, 58], accent: 220, speed: 150, bite: 3,
+    nutrition: 1.7, weight: 6, jaw: 0.5, finSize: 1.1 },
+
+  { id: 'pufferfish', name: 'Pufferfish', behavior: 'ambush', plan: 'darter',
+    role: 'turret', shot: 'spine', moves: 'balloon',
+    // drawn bigger than its size, as the archerfish is: a stubby body whose spots, spines and
+    // eye are fine for it, some twenty-five texels long on the board at its own. Not twice, as
+    // the lionfish is: turned it is a ball as deep as it is long, swelled taut on top, and at
+    // two that was five tiles of spines bouncing round a nursery room
+    zone: 'sunlit', band: 'reef', drawn: 1.6,
+    size: [14, 20], hue: [34, 48], accent: 28, speed: 70, bite: 4,
+    nutrition: 1.8, weight: 5, armor: 1, spikes: 1, bulk: 0.8, finSize: 0.9 },
+
+  { id: 'nettle', name: 'Sea Nettle', behavior: 'drift', plan: 'jelly', role: 'drifter',
+    // drawn three times its size, as the moon jelly is: its whole picture, the long tentacles
+    // with it, is fitted to a jelly's short form and the bell is a quarter of that, so at its
+    // own size it was eighteen texels long with a bell of five. At three it is as long as the
+    // nursery's other enemies, and its bell about the larva
+    moves: 'bloom', zone: 'sunlit', band: 'open', drawn: 3,
+    // quick for a jelly: a drifter has to arrive, and a bell's pulse is most of its speed
+    size: [12, 20], hue: [12, 28], accent: 8, speed: 64, bite: 5,
+    nutrition: 1.3, weight: 5, translucent: 0.6, glow: 0.6, veil: 0.5 },
 
   { id: 'reeffish', name: 'Reef Darter', behavior: 'school', plan: 'darter',
     zone: 'sunlit', band: 'reef',
     size: [14, 24], hue: [28, 48], accent: 275, speed: 140, bite: 4,
     nutrition: 1.8, weight: 12, finSize: 1.3 },
 
-  { id: 'moonjelly', name: 'Moon Jelly', behavior: 'drift', plan: 'jelly',
-    zone: 'sunlit', band: 'reef', bleed: 900,
+  { id: 'moonjelly', name: 'Moon Jelly', behavior: 'drift', plan: 'jelly', role: 'drifter',
+    // drawn three times its size: a jelly's form is a bell and a half long, and at its own
+    // the moon jelly was a tile in the reef, its gonads and arms gone
+    moves: 'wane', zone: 'sunlit', band: 'reef', bleed: 900, drawn: 3,
     size: [12, 26], hue: [280, 310], accent: 295, speed: 26, bite: 7,
     nutrition: 1.4, weight: 10, translucent: 0.72, glow: 0.3, veil: 0.4,
     stealth: 0.4, heal: 0.3 },
 
-  { id: 'ribbon', name: 'Ribbon Eel', behavior: 'ambush', plan: 'eel',
-    zone: 'sunlit', band: 'reef',
+  // a ribbon eel lives in a hole in the reef with its head out, and backs into it tail first
+  { id: 'ribbon', name: 'Ribbon Eel', behavior: 'ambush', plan: 'eel', role: 'charger',
+    moves: 'burrow', zone: 'sunlit', band: 'reef',
     size: [26, 44], hue: [250, 275], accent: 50, speed: 150, bite: 12,
     nutrition: 2.1, weight: 8, jaw: 0.8, segments: 3, stealth: 0.5, eel: 1, lurk: 1 },
+
+  // a triggerfish blows jets of water at the sand to turn up what is under it
+  { id: 'triggerfish', name: 'Triggerfish', behavior: 'hunter', plan: 'darter',
+    role: 'spitter', shot: 'spit', moves: 'jet',
+    // drawn twice its size: at its own it was 39 texels long in the reef, its eye and the
+    // gold lines of its face, which are what make it a triggerfish, gone
+    zone: 'sunlit', band: 'reef', drawn: 2,
+    size: [24, 38], hue: [196, 220], accent: 52, speed: 150, bite: 9,
+    nutrition: 2.0, weight: 6, jaw: 0.6, armor: 1, bulk: 0.4, finSize: 1.2 },
+
+  // a lionfish hunts by herding: fins spread wide, it corners what it is after
+  { id: 'lionfish', name: 'Lionfish', behavior: 'ambush', plan: 'darter',
+    role: 'turret', shot: 'spine', moves: 'herd',
+    // drawn twice its size, as the triggerfish is: at its own it was a tile and a bit, and
+    // its spines, which are its tell, were a smudge over its back
+    zone: 'sunlit', band: 'reef', drawn: 2,
+    size: [24, 36], hue: [4, 16], accent: 30, speed: 80, bite: 8,
+    nutrition: 2.0, weight: 5, spikes: 2, finSize: 1.9 },
 
   { id: 'reefshark', name: 'Reef Shark', behavior: 'hunter', plan: 'shark',
     zone: 'sunlit', band: 'reef', bleed: 700,
@@ -131,11 +251,14 @@ export const SPECIES: Species[] = [
   // animal to show for it. Menace is already maxed by jaw, bite and bulk without it.
   // Slate rather than the reef shark's blue, and a much lower jaw than the bite implies:
   // `formFor` turns jaw into cheek, and cheek is a wider head. A great white bites like
-  // this and is still a cone all the way back to the gills.
+  // this and is still a cone all the way back to the gills. Sized to the reef's rooms as the
+  // mantis shrimp is to its den: some seven tiles nose to tail, a fifth of the room. At
+  // 115-155 it was eleven, and its hull was in the rock for as long as it was out of it
   { id: 'greatwhite', name: 'Great White', behavior: 'apex', plan: 'greatshark', pattern: 'charge',
+    boss: 'charge', bossHp: 420,
     zone: 'sunlit', guardian: true, bleed: 200,
-    size: [115, 155], hue: [208, 220], accent: 200, speed: 260, bite: 52,
-    nutrition: 4, weight: 1.4, jaw: 0.5, armor: 5, finSize: 1.3,
+    size: [78, 92], hue: [208, 220], accent: 200, speed: 260, bite: 52,
+    nutrition: 4, weight: 1.4, jaw: 0.5, armor: 2, finSize: 1.3,
     sense: 900, metabolism: 1.6 },
 
   // ---------------------------------------------------------------- Twilight Zone
@@ -163,21 +286,30 @@ export const SPECIES: Species[] = [
     nutrition: 2.1, weight: 9, translucent: 0.7, glow: 0.3, photophores: 0.5,
     stealth: 0.9, segments: 1 },
 
-  { id: 'siphon', name: 'Siphonophore', behavior: 'drift', plan: 'jelly',
-    zone: 'twilight', bleed: 1400,
+  { id: 'siphon', name: 'Siphonophore', behavior: 'drift', plan: 'jelly', role: 'drifter',
+    // drawn four times its size: a jelly's form is a bell and a half long, and the colony at
+    // that was under a tile in the deep, a smudge where it should be a chain of lights
+    zone: 'twilight', bleed: 1400, drawn: 4,
     size: [30, 58], hue: [188, 208], accent: 175, speed: 34, bite: 16,
     nutrition: 2.2, weight: 7, translucent: 0.6, glow: 0.85, veil: 0.9,
     photophores: 0.6, segments: 2, heal: 0.45 },
 
-  { id: 'barracuda', name: 'Barracuda', behavior: 'hunter', plan: 'eel',
-    zone: 'twilight', bleed: 900,
+  { id: 'barracuda', name: 'Barracuda', behavior: 'hunter', plan: 'eel', role: 'charger',
+    // drawn bigger than its size: at its own it was 40 texels long in the deep tank, a sliver
+    // under the anglerfish with no teeth left to it, and at twice it was the gulper's length.
+    // It is the ambush from across the room: its dash, at its speed, covers eleven tiles in
+    // the deep, so it winds up from ten off, and its streak says how fast it came
+    zone: 'twilight', bleed: 900, drawn: 1.6, reach: 10, streak: 0xa8dcff,
     size: [34, 54], hue: [192, 212], accent: 45, speed: 250, bite: 15,
     nutrition: 2.2, weight: 8, jaw: 0.7, finSize: 0.7, sense: 560 },
 
   { id: 'giantsquid', name: 'Giant Squid', behavior: 'apex', plan: 'longsquid',
-    zone: 'twilight', guardian: true, bleed: 300,
+    boss: 'ink', bossHp: 700,
+    // drawn at six tenths: at its size, its arms out, it was most of the room, and there was
+    // no water left to dodge its lunge into
+    zone: 'twilight', guardian: true, bleed: 300, drawn: 0.6,
     size: [160, 210], hue: [340, 356], accent: 20, speed: 200, bite: 58,
-    nutrition: 4.5, weight: 1.4, jaw: 1.0, armor: 4, segments: 3, finSize: 1.5,
+    nutrition: 4.5, weight: 1.4, jaw: 1.0, armor: 3, segments: 3, finSize: 1.5,
     sense: 1100, eyeAdapt: 1.1, veil: 0.5, glow: 0.3 },
 
   // ---------------------------------------------------------------- Midnight Zone
@@ -192,8 +324,12 @@ export const SPECIES: Species[] = [
     nutrition: 2.5, weight: 13, photophores: 1.0, eyeAdapt: 0.4, jaw: 0.5,
     translucent: 0.2 },
 
+  // it really does throw glowing mucus at what threatens it
   { id: 'vampiresquid', name: 'Vampire Squid', behavior: 'ambush', plan: 'squid',
-    zone: 'midnight',
+    role: 'spitter', shot: 'bolt',
+    // drawn twice its size, as the anglerfish is: its picture is the body alone, some
+    // twenty-six texels long in the deep at its own, and its arms reach as far again
+    zone: 'midnight', drawn: 2,
     size: [28, 48], hue: [330, 352], accent: 22, speed: 160, bite: 18,
     nutrition: 2.4, weight: 8, finSize: 1.6, translucent: 0.2, glow: 0.4,
     photophores: 0.7, eyeAdapt: 0.9, veil: 0.8, segments: 2, stealth: 0.5 },
@@ -204,13 +340,18 @@ export const SPECIES: Species[] = [
     nutrition: 2.5, weight: 7, jaw: 1.0, glow: 0.5, photophores: 0.8,
     barbels: 0.9, eyeAdapt: 0.6, gape: 0.4 },
 
+  // its lure throws light in a ring, which is the one thing about it that is not waiting.
+  // Navy under cyan lights, after `docs/media/reference/angler.webp`
   { id: 'anglerfish', name: 'Anglerfish', behavior: 'ambush', plan: 'angler',
-    zone: 'midnight', bleed: 800,
-    size: [40, 66], hue: [252, 278], accent: 55, speed: 130, bite: 26,
+    role: 'turret', shot: 'bolt',
+    // drawn twice its size: at its own it was 20 to 30 texels long in the deep tank, and its
+    // sprite's fangs and comb were gone
+    zone: 'midnight', bleed: 800, drawn: 2,
+    size: [40, 66], hue: [222, 236], accent: 188, speed: 130, bite: 26,
     nutrition: 2.6, weight: 7, jaw: 1.1, glow: 0.9, armor: 2, spikes: 1, lure: 1,
     gape: 0.7, eyeAdapt: 0.3, photophores: 0.3, sense: 520, lurk: 1 },
 
-  { id: 'gulper', name: 'Gulper Eel', behavior: 'hunter', plan: 'eel',
+  { id: 'gulper', name: 'Gulper Eel', behavior: 'hunter', plan: 'eel', role: 'charger',
     zone: 'midnight', bleed: 900,
     size: [46, 78], hue: [262, 298], accent: 328, speed: 140, bite: 24,
     nutrition: 2.8, weight: 6, jaw: 1.3, segments: 3, finSize: 0.6,
@@ -382,80 +523,6 @@ export function genomeFor(sp: Species, rng: Rng): Genome {
  */
 export function hunts(s: Species) {
   return s.behavior === 'hunter' || s.behavior === 'ambush' || s.behavior === 'apex';
-}
-
-/**
- * The column is one long difficulty curve, and this is the whole of it.
- *
- * The top is the tutorial: swarms are thick enough that a 14 cm hatchling can eat its way
- * to its first stage without meeting anything, and the things that hunt are thinned to
- * under a fifth of their weight. The deep is the same rule run backwards — predators are
- * nearly twice as likely there, which is what makes a kill in the Abyss draw a crowd
- * (`Behaviour.smell`) while a kill in the shallows mostly draws nothing.
- *
- * The apex is thinned with the rest: the Sunlit guardian is alive from the first minute
- * and is meant to be met, but it should not be the first thing a hatchling meets.
- */
-function weightAt(s: Species, depth: number, spent: number) {
-  // one straight ramp over the whole column rather than a tutorial shelf that ends at
-  // 1000 m and a separate deep ramp that starts at 2400. Two curves with flat water
-  // between them is a difficulty step you can feel crossing, and the run is supposed to
-  // get harder the whole way down rather than twice
-  const t = clamp(depth / DEPTH_MAX, 0, 1);
-  // `spent` bends the same curve in time: water the player has outgrown and stayed in
-  // turns into the water below it — less to graze, more that hunts. Guardians are left
-  // alone, since `World` holds them to one each and a heavier roll would change nothing
-  const food = 1 - 0.65 * spent;
-  if (hunts(s)) return s.weight * (0.15 + 1.95 * t) * (s.guardian ? 1 : 1 + 1.2 * spent);
-  // the things a hatchling can actually catch, thinning as the hunters thicken
-  if (s.behavior === 'school') return s.weight * (2 - 1.1 * t) * food;
-  if (s.behavior === 'plankton') return s.weight * (1.8 - 0.9 * t) * food;
-  return s.weight;
-}
-
-/**
- * Pick a species appropriate for a depth, weighted; returns null if none fit. Guardians
- * are in the pool like anything else — a guardian is alive in its zone from the moment
- * the player first arrives, and it is `World` that holds it to one instance and keeps it
- * dead once killed.
- */
-export function rollSpecies(rng: Rng, depth: number, spent = 0): Species | null {
-  const pool = SPECIES.filter(s => {
-    const [top, bottom] = RANGE.get(s.id)!;
-    return depth >= top && depth <= bottom;
-  });
-  if (!pool.length) return null;
-  let total = 0;
-  for (const s of pool) total += weightAt(s, depth, spent);
-  let r = rng.next() * total;
-  for (const s of pool) {
-    r -= weightAt(s, depth, spent);
-    if (r <= 0) return s;
-  }
-  return pool[pool.length - 1];
-}
-
-/**
- * What comes for a player who has stayed too long: the least of the hunters that live at
- * this depth and could swallow a body this size at the top of their own range, or null.
- *
- * The least, because the arrival is a tell rather than an execution — it should be the
- * thing that makes the player go down, not the thing that ends the run. Home water only
- * (`rangeOf`), since anything from further down would be steered straight back to its
- * band by `Behaviour.think`. Past the reef nothing that is not a guardian is big enough, and
- * the thinning in `weightAt` is the whole of the clock there.
- */
-export function riserFor(depth: number, size: number): Species | null {
-  let best: Species | null = null;
-  for (const s of SPECIES) {
-    if (s.behavior !== 'hunter' || s.guardian) continue;
-    const [top, bottom] = rangeOf(s);
-    if (depth < top || depth > bottom) continue;
-    const gape = s.size[1] * (1 + ((s.jaw ?? 0.3) - 0.3) * 0.35);
-    if (gape <= size * 1.1) continue;
-    if (!best || s.size[1] < best.size[1]) best = s;
-  }
-  return best;
 }
 
 export function speciesById(id: string) {

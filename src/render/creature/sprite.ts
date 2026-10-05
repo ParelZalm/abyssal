@@ -1,0 +1,255 @@
+/**
+ * A species' authored sprite (`content/sprites.ts`) as a `Baked`, so the skinned mesh swims
+ * it exactly as it swims a painted body.
+ *
+ * The frames are drawn at one size and the game needs them at whatever density the frame is
+ * at (`render/pixel.ts`), which moves with the window and the tank's zoom. Each texel takes
+ * the coverage-weighted mean of the sprite pixels under it, snapped back to the sprite's own
+ * colours: the mean alone left in-between shades the artist never drew, which is what read
+ * as the reference shrunk rather than as pixel art. Thin parts — the lure's rod, the fangs —
+ * survive at a third of a texel's coverage, not half, or they are the first thing to go.
+ *
+ * Loaded before the game or the board starts (`loadSprites`), since a bake is synchronous.
+ */
+import { Texture } from 'pixi.js';
+import { formFor, halfWidth, type Form, type Plan } from '../../content/form';
+import type { Genome } from '../../content/genome';
+import { SPRITES, spritePoint, spriteScale, type SpriteArt } from '../../content/sprites';
+import type { Emitter } from './bake/sheet';
+import type { Baked, Rig } from './fishbake';
+import anglerRest from './sprites/anglerfish.png';
+import anglerStrike from './sprites/anglerfish-strike.png';
+import gulperRest from './sprites/gulper.png';
+import gulperStrike from './sprites/gulper-strike.png';
+import mantisRest from './sprites/mantisshrimp.png';
+import mantisStrike from './sprites/mantisshrimp-strike.png';
+import greatwhiteRest from './sprites/greatwhite.png';
+import greatwhiteStrike from './sprites/greatwhite-strike.png';
+import barracudaRest from './sprites/barracuda.png';
+import barracudaStrike from './sprites/barracuda-strike.png';
+import siphonRest from './sprites/siphon.png';
+import ribbonRest from './sprites/ribbon.png';
+import ribbonStrike from './sprites/ribbon-strike.png';
+import triggerRest from './sprites/triggerfish.png';
+import triggerStrike from './sprites/triggerfish-strike.png';
+import triggerWounded from './sprites/triggerfish-wounded.png';
+import triggerWoundedStrike from './sprites/triggerfish-wounded-strike.png';
+import lionRest from './sprites/lionfish.png';
+import lionStrike from './sprites/lionfish-strike.png';
+import lionWounded from './sprites/lionfish-wounded.png';
+import lionWoundedStrike from './sprites/lionfish-wounded-strike.png';
+import moonRest from './sprites/moonjelly.png';
+import moonWounded from './sprites/moonjelly-wounded.png';
+import archerRest from './sprites/archerfish.png';
+import archerStrike from './sprites/archerfish-strike.png';
+import mackerelRest from './sprites/mackerel.png';
+import mackerelStrike from './sprites/mackerel-strike.png';
+import mackerelWounded from './sprites/mackerel-wounded.png';
+import mackerelWoundedStrike from './sprites/mackerel-wounded-strike.png';
+import pufferRest from './sprites/pufferfish.png';
+import pufferStrike from './sprites/pufferfish-strike.png';
+import pufferWounded from './sprites/pufferfish-wounded.png';
+import pufferWoundedStrike from './sprites/pufferfish-wounded-strike.png';
+import nettleRest from './sprites/nettle.png';
+import nettleWounded from './sprites/nettle-wounded.png';
+import vampireRest from './sprites/vampiresquid.png';
+import vampireStrike from './sprites/vampiresquid-strike.png';
+import vampireArm from './sprites/vampiresquid-arm.png';
+import giantsquidRest from './sprites/giantsquid.png';
+import giantsquidStrike from './sprites/giantsquid-strike.png';
+import giantsquidTentacle from './sprites/giantsquid-tentacle.png';
+import giantsquidArm from './sprites/giantsquid-arm.png';
+
+/**
+ * Each species' frames. A drifter has no strike, and shows its rest for one (`Baked.open`). A
+ * moveset that changes the body when it turns at half health (`woundedGenome` in
+ * `sim/roles.ts`) draws the turned animal as a pair of its own, `wounded` and `woundedStrike`;
+ * without the second the wounded frame is shown for both, and the turned animal's tell is its
+ * light alone.
+ */
+interface Sources { rest: string; strike?: string; wounded?: string; woundedStrike?: string; arm?: string; tentacle?: string }
+const SOURCES: Record<string, Sources> = {
+  anglerfish: { rest: anglerRest, strike: anglerStrike },
+  gulper: { rest: gulperRest, strike: gulperStrike },
+  mantisshrimp: { rest: mantisRest, strike: mantisStrike },
+  greatwhite: { rest: greatwhiteRest, strike: greatwhiteStrike },
+  barracuda: { rest: barracudaRest, strike: barracudaStrike },
+  siphon: { rest: siphonRest },
+  ribbon: { rest: ribbonRest, strike: ribbonStrike },
+  triggerfish: { rest: triggerRest, strike: triggerStrike, wounded: triggerWounded, woundedStrike: triggerWoundedStrike },
+  lionfish: { rest: lionRest, strike: lionStrike, wounded: lionWounded, woundedStrike: lionWoundedStrike },
+  moonjelly: { rest: moonRest, wounded: moonWounded },
+  archerfish: { rest: archerRest, strike: archerStrike },
+  mackerel: { rest: mackerelRest, strike: mackerelStrike, wounded: mackerelWounded, woundedStrike: mackerelWoundedStrike },
+  pufferfish: { rest: pufferRest, strike: pufferStrike, wounded: pufferWounded, woundedStrike: pufferWoundedStrike },
+  nettle: { rest: nettleRest, wounded: nettleWounded },
+  vampiresquid: { rest: vampireRest, strike: vampireStrike, arm: vampireArm },
+  giantsquid: { rest: giantsquidRest, strike: giantsquidStrike, arm: giantsquidArm, tentacle: giantsquidTentacle },
+};
+
+/** A frame shut and open, and the colours both may snap to. */
+interface Pair { rest: ImageData; strike: ImageData; palette: number[][] }
+/** An arm's picture and its own colours (`SpriteArt.arm`). */
+interface Arm { image: ImageData; palette: number[][] }
+interface Frames extends Pair { wounded?: Pair; arm?: Arm; tentacle?: Arm }
+const frames = new Map<string, Frames>();
+
+function pixels(url: string) {
+  return new Promise<ImageData>((done, fail) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      const x = c.getContext('2d')!;
+      x.drawImage(img, 0, 0);
+      done(x.getImageData(0, 0, img.width, img.height));
+    };
+    img.onerror = fail;
+    img.src = url;
+  });
+}
+
+/**
+ * Each pair keeps its own palette: a texel of the whole animal snapped to the wounded's flush
+ * red, or the other way round, would be a colour that frame was never drawn in.
+ */
+async function pair(rest: string, strike?: string): Promise<Pair> {
+  const [r, k] = await Promise.all([pixels(rest), strike ? pixels(strike) : null]);
+  const seen = new Set<number>();
+  for (const d of [r, k ?? r]) {
+    for (let i = 0; i < d.data.length; i += 4) {
+      if (d.data[i + 3] > 0) seen.add((d.data[i] << 16) | (d.data[i + 1] << 8) | d.data[i + 2]);
+    }
+  }
+  return { rest: r, strike: k ?? r, palette: [...seen].map(c => [c >> 16, (c >> 8) & 255, c & 255]) };
+}
+
+export async function loadSprites() {
+  await Promise.all(Object.entries(SOURCES).map(async ([id, src]) => {
+    const [whole, wounded, arm, tentacle] = await Promise.all([
+      pair(src.rest, src.strike), src.wounded ? pair(src.wounded, src.woundedStrike) : undefined,
+      src.arm ? pair(src.arm) : undefined, src.tentacle ? pair(src.tentacle) : undefined]);
+    frames.set(id, { ...whole, wounded, arm: arm && { image: arm.rest, palette: arm.palette },
+                     tentacle: tentacle && { image: tentacle.rest, palette: tentacle.palette } });
+  }));
+}
+
+export const hasSprite = (id: string) => frames.has(id);
+/** Whether species `id` has its turned look drawn (`SOURCES`). */
+export const hasWounded = (id: string) => !!frames.get(id)?.wounded;
+
+/** The darkest of the sprite's colours: the outline it is ringed with at any size. */
+function darkest(palette: number[][]) {
+  return palette.reduce((a, c) => c[0] + c[1] + c[2] < a[0] + a[1] + a[2] ? c : a);
+}
+
+/**
+ * One frame resampled to `k` texels per sprite pixel, onto a canvas `w` × `h` whose row
+ * `oy` (in sprite pixels from the top of the strip) is the sprite's top, and whose first
+ * column is the sprite's column `ox`.
+ */
+function resample(d: ImageData, palette: number[][], k: number, w: number, h: number, oy: number, ox = 0) {
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const ctx = cv.getContext('2d')!;
+  const img = ctx.createImageData(w, h);
+  const px = img.data;
+  const step = 1 / k;
+  for (let iy = 0; iy < h; iy++) for (let ix = 0; ix < w; ix++) {
+    // the texel's footprint on the sprite, and how much of each pixel it covers
+    const x0 = ix * step + ox, x1 = x0 + step, y0 = iy * step - oy, y1 = y0 + step;
+    let r = 0, g = 0, b = 0, a = 0;
+    for (let y = Math.floor(y0); y < y1; y++) {
+      if (y < 0 || y >= d.height) continue;
+      const cy = Math.min(y + 1, y1) - Math.max(y, y0);
+      for (let x = Math.floor(x0); x < x1; x++) {
+        if (x < 0 || x >= d.width) continue;
+        const i = (y * d.width + x) * 4;
+        const cov = cy * (Math.min(x + 1, x1) - Math.max(x, x0)) * (d.data[i + 3] / 255);
+        r += d.data[i] * cov; g += d.data[i + 1] * cov; b += d.data[i + 2] * cov; a += cov;
+      }
+    }
+    if (a < step * step * 0.34) continue;
+    let best = palette[0], bd = Infinity;
+    for (const c of palette) {
+      // weighted toward green, as the eye is: blues this dark otherwise snap by their red
+      const dd = (c[0] - r / a) ** 2 * 0.3 + (c[1] - g / a) ** 2 * 0.59 + (c[2] - b / a) ** 2 * 0.11;
+      if (dd < bd) { bd = dd; best = c; }
+    }
+    const o = (iy * w + ix) * 4;
+    px[o] = best[0]; px[o + 1] = best[1]; px[o + 2] = best[2]; px[o + 3] = 255;
+  }
+  // ringed in the sprite's darkest colour, as every painted body is in its ramp's: against
+  // water this dark the outline is what keeps the silhouette when the fill falls into it
+  const ink = darkest(palette);
+  const solid = (i: number) => px[i * 4 + 3] === 255;
+  const ring: number[] = [];
+  for (let i = 0; i < w * h; i++) {
+    if (solid(i)) continue;
+    const x = i % w;
+    if ((x > 0 && solid(i - 1)) || (x < w - 1 && solid(i + 1)) || (i >= w && solid(i - w)) || (i + w < w * h && solid(i + w))) ring.push(i);
+  }
+  for (const i of ring) { px[i * 4] = ink[0]; px[i * 4 + 1] = ink[1]; px[i * 4 + 2] = ink[2]; px[i * 4 + 3] = 255; }
+  ctx.putImageData(img, 0, 0);
+  return cv;
+}
+
+function texture(c: HTMLCanvasElement) {
+  const t = Texture.from(c);
+  t.source.scaleMode = 'nearest';
+  return t;
+}
+
+/**
+ * The sprite of species `id` as a body of genome `g` on `plan`, at `res` texels per R unit —
+ * the bake's own density for that genome, `wounded` for the pair drawn turned at half health
+ * where it has one. The strip is held symmetric about the swim's axis, as the painted ones
+ * are, so the art does not slide off the line it bends about.
+ */
+export function bakeSprite(id: string, g: Genome, plan: Plan, res: number, wounded = false): Omit<Baked, 'users'> {
+  const all = frames.get(id)!;
+  const fr = (wounded && all.wounded) || all;
+  const s: SpriteArt = SPRITES[id];
+  const f = formFor(g, plan);
+  const per = spriteScale(s, f);
+  const k = res / per;
+  const nose = spritePoint(s, f, [s.snout, s.axis]).x;
+  const back = (0 - s.snout) / per + nose, front = (s.w - s.snout) / per + nose;
+  const halfPx = Math.max(s.axis, s.h - s.axis) + 1 / k;
+  const w = Math.ceil(s.w * k), h = Math.ceil(halfPx * 2 * k);
+  const oy = halfPx - s.axis;
+  const shut = resample(fr.rest, fr.palette, k, w, h, oy);
+  const open = resample(fr.strike, fr.palette, k, w, h, oy);
+
+  const lights: Emitter[] = (s.lights ?? []).map(l => ({ ...spritePoint(s, f, l.at), color: l.color, strength: l.strength }));
+  let depth = 0;
+  for (let i = 0; i <= 40; i++) depth = Math.max(depth, halfWidth(i / 40, f));
+  const legs: Baked['legs'] = s.legs
+    ? [s.legs.x0 / s.w, s.legs.x1 / s.w, (s.legs.root + oy) / (halfPx * 2), (s.legs.tip + oy) / (halfPx * 2)]
+    : null;
+  const trail: Baked['trail'] = s.trail ? [s.trail.x0 / s.w, s.trail.x1 / s.w] : null;
+  const arm = all.arm && s.arm ? armRig(all.arm, s.arm, s, f, per, res) : null;
+  const tentacle = all.tentacle && s.tentacle && s.arm ? armRig(all.tentacle, s.tentacle, s, f, per, res) : null;
+  return { texture: texture(shut), open: texture(open), canvas: shut, lights, depth, arm, tentacle, legs, trail,
+           back, front, halfH: halfPx / per };
+}
+
+/**
+ * A sprite's arm, or its tentacle, as the rig the painted arms use (`FishView.poseArms`): one
+ * strip from root to tip, held symmetric about the row its flesh runs along, as the body is
+ * about its axis, leaving the crown the arms do.
+ */
+function armRig(a: Arm, m: { root: number; tip: number; axis: number; reach: number }, s: SpriteArt,
+                f: Form, per: number, res: number): Rig {
+  const crown = s.arm!;
+  const reach = m.reach / per;
+  const px = (m.tip - m.root) / reach;
+  const half = Math.max(m.axis, a.image.height - m.axis);
+  const k = res / px;
+  const cv = resample(a.image, a.palette, k, Math.ceil((m.tip - m.root) * k), Math.ceil(half * 2 * k), half - m.axis, m.root);
+  // the view draws a feeding arm at half `len` and the rest at 0.78 / `armPair` of it, about
+  // the same: `reach` is the arm as drawn, so `len` is twice it
+  return { texture: texture(cv), len: reach * 2, halfH: half / px,
+           rootX: spritePoint(s, f, crown.at).x, spread: crown.spread / per };
+}
+

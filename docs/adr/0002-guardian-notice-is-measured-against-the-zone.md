@@ -1,5 +1,7 @@
 # Guardian notice is measured against the zone, not the guardian
 
+**Superseded by [0003](0003-tanks-of-rooms-replace-the-column.md)** — the column is gone.
+
 A guardian ignores the player until the player is worth eating, which is what makes being
 noticed mean something — the Great White sharing the tutorial water and not turning its
 head says more about where you are than any chase does. The obvious rule for "worth

@@ -1,7 +1,11 @@
 # Decisions and dead ends
 
 Read this before rebuilding anything here. Most of it is failure, which is the useful
-part. Two decisions large enough to have their own files live in [adr/](adr/):
+part. Decisions large enough to have their own files live in [adr/](adr/):
+
+- [0003](adr/0003-tanks-of-rooms-replace-the-column.md) — the open column became a chain
+  of tanks made of rooms (September 2026). Much of what follows is about the column and
+  stays as the record of why it was built the way it was; 0001 and 0002 are superseded.
 
 - [0001](adr/0001-depth-labels-decoupled-from-world-depth.md) — the column is 9000 tuned
   world units while the HUD reads real metres, 0 to 11,034. Literal boundaries make the
@@ -154,6 +158,12 @@ The earlier flips failed on their in-betweens and on having no consequence; do n
 or a squash through the screen plane back to smooth this one. It applies to every body but a
 bell, so the ocean turns one way.
 
+What made the hostiles look broken was not the flip but flipping there and back: a brain's
+heading crossed vertical on the field's 45° steps, on a feeler choosing a side per frame, and
+on a spitter setting its facing without its heading. The fix is upstream of the flip — an
+eased heading, a flip that has to be meant for 0.12 s, a facing with slack — and the flip
+itself is unchanged (`docs/simulation.md`, *Easing and the flip*).
+
 Directional keys (left swims left) went in with the first turn-about and were reverted with
 it, then came back on their own. Side-on, tank steering inverts: facing
 left, "right" swings the nose up, so no key meant a direction on the screen, and a reversal
@@ -163,6 +173,33 @@ thrust eases off while the body points away from where it is going, and the play
 `drive` carries a `flick` of extra turning authority for headings behind it. A hatchling
 reverses in about half a second, a length from where it started. What was undone was the
 flip, not the directions; do not take the keys back to tank steering to fix a turn.
+
+## The aim points the body, and the swim is strokes
+
+Stage 1 kept the body level for an attack up or down and moved the bite above or below the
+head (`aimY`), because a fish pointed straight up stands on its tail. It read as the larva
+spitting out of its cheek, and it left the turn — the thing side-on bodies do best — with
+nothing to do in a fight. Every arrow now points the body: nose-down at the drawn pitch cap
+(`drawnAngle`, so it never stands on its tail), a flip for left and right, and nothing thrown
+until it points. The pivot is the price of a new aim, which is what makes aiming a skill
+rather than a key. The earlier rule is in the history; do not bring back `aimY` to make a
+vertical shot instant — tune `PIVOT` instead.
+
+The steady swim went at the same time, for strokes: a kick and a glide at the same average
+speed. A steady thrust reached cruise and sat there, which read as a sprite on a rail and
+gave a dodge no answer to the key. Shots carry half the body's velocity, as Isaac's tears
+do, so the swim aims as well as the arrows.
+
+## The tempo is one number over everything that swims
+
+The game was sped up by `TEMPO` (1.25, `content/tanks.ts`) on the larva's hatch speed and on
+every spawned animal's, over the tank's `pace`, rather than by raising speeds species by
+species: the chases, the charger's close and the spitter's band were all tuned against each
+other, and one factor keeps their ratios. It is a speed and not a time scale on the frame,
+so the tells, the grace and the recoveries — the windows a fight is read in — stayed where
+they were, and the cooldowns between attacks, the shots, the player's cadence and the room
+slide were brought down beside it by hand. The larva's form reads speed (`formFor`'s
+`drive`), so it hatches a shade slimmer in the tail; that is the stat showing, not drift.
 
 ## Creatures are one deforming surface, not a chain of parts
 
@@ -192,6 +229,46 @@ Rejected along the way:
 `Scene.draw` computes the dread/danger term from `d - c.radius - p.radius`. A leviathan
 is close long before its centre is, and that gap is exactly when it should be
 frightening. Any new "how near is it" term should do the same.
+
+## A boss does not hold the player
+
+The Giant Squid's fight was a grab: the feeding pair lashed out and held the player, who had
+to swim hard away to tear free, and each escape cost the squid an arm. Played, nobody could
+tell which way to pull — the body faces the way it is drawn, not the way it is held, and the
+turn is a flip — and at full size, arms out, the squid filled the room. It is the ink now: a
+cloud, decoy ghosts round the player, the real one resolving on the lock and lunging down its
+line (`Bosses.ink`), drawn at six tenths. A move the player answers by moving is read off a
+line and a light; one answered by struggling has to say which way, and side-on art cannot.
+
+## The title is the painting, graded, not redrawn or relit
+
+Four things were tried on the title and taken out. A parallax lean, each layer shifting with
+the pointer by its depth: it pulled the eye off the painting. The layers drawn at the game's
+grid: halved, the generator's coarse pixels went to blur. Light laid over the frame —
+drifting plankton, bands of brightness running up the walls, a whirlpool brightened by its
+own light layer: new light on top of the picture, and the whirlpool blew out. And the rock
+repainted at the grid by the room's recipe, lit by a light buffer as a room is: it read as
+the game's stone and no longer as the painting, and the wall's rim light, read as life,
+came out as cyan noise. The title is the reference composite's own layers, each graded to
+where the composite has it, with only its painted life breathing.
+
+Its fish went the same way. Schools of the game's mackerel milling at each wall and fleeing
+the leviathan, and an angler on the floor: crisp game sprites in a painting, and a behaviour
+no reef has. What lives there now is a few residents at each coral, drawn on the painting's
+own pixel, that duck into it when the eyes appear. The leviathan crossed in forty-five
+seconds with surges; for its size that read as swimming past, and a pass is now minutes.
+
+The generator's water went last: a still picture of rings, turned on its ellipse, read as a
+plate spinning. The water and whirlpool are a shader now (`ui/screens/title/abyss.ts`). Its
+first foam turned at a rate falling with the radius, uncycled, and wound the spiral into
+concentric rings inside a minute; the shear is cycled and cross-faded.
+
+Then it was taken down a long way. The coral life in three colours over every wall, the far
+spires and the riverbed was a carnival — it is a few growths in one colour now. The whirlpool
+turned in half a minute at full resolution; it turns in three, at the painting's pixel. And it
+cost: per-layer canvases at cover size, ten of them a frame, built in one half-second task;
+the game's whole stage rendering behind an opaque screen; images waiting on `decode()` in a
+background tab. All four are gone.
 
 ## Reference material
 

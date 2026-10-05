@@ -6,13 +6,17 @@ export interface Genome {
   bite: number;        // damage per bite and how far above your weight you can punch
   sense: number;       // detection radius, also how much of the dark you see
   armor: number;       // flat damage reduction
-  regen: number;       // hp/sec
-  metabolism: number;  // biomass burned per second; growth costs upkeep
+  regen: number;       // hp/sec for an animal; for the player, halves mended as a room clears
+  metabolism: number;  // how much the belly needs before it passes something; ×1 is `BELLY_FULL`
   stealth: number;     // reduces the radius at which predators notice you
   gulp: number;        // multiplier on how far your mouth draws small prey in
   lifesteal: number;   // share of biomass eaten that comes back as health
   pen: number;         // armour a bite ignores outright
   ram: number;         // gills that need flow: cruising is cheap, hanging still is not
+  // the attack's stats, Isaac's: how often, how far and how fast the strike's shots go
+  tears: number;       // multiplier on strikes a second
+  reach: number;       // tiles added to a shot's range
+  velocity: number;    // multiplier on a shot's speed
 
   // organs — these carry a mechanic AND a piece of morphology
   venom: number;       // poison left in a wound, damage per second
@@ -40,6 +44,27 @@ export interface Genome {
   ink: number;         // ink sac: a cloud that hides you from everything that hunts
   discharge: number;   // electric organ: a shock that strikes and stuns all around
   inflate: number;     // inflation: swell too big to swallow, and hard to bite
+  // primaries — what the strike on the arrows is. The one slot, and taking one clears the
+  // others. Every larva hatches spitting; the mouth as a weapon is a mutation found later
+  spit: number;        // archer spit: a jet of water fired down the aim
+  volley: number;      // spine volley: a fan of three spines
+  fangs: number;       // lunging bite: the strike is the mouth again, and hits twice as hard
+  brooder: number;     // mouthbrooder: the strike lets out fry that seek, latch on and nibble
+  // multishot — how many shots one strike throws, on whichever primary fires them. Stack with
+  // each other, and with every shot organ: three fry that burn is three burning fry
+  parietal: number;    // parietal eye: two more shots, and a slower strike
+  twin: number;        // twin spout: one more shot, for nothing
+  foureye: number;     // four-eyed fish: three more shots, and a much slower strike
+  // shot organs — what the shots carry, on whichever primary fires them. Unlike the slots
+  // above these stack with each other: a shot that bursts, burns and arcs is the build
+  blast: number;       // cavitation: a shot bursts where it breaks
+  scald: number;       // vent gland: what a shot hits burns
+  halo: number;        // surface halo: now and then a hit calls down a shaft of light
+  arc: number;         // galvanic cells: a hit arcs on to the hostiles nearest it
+  pierce: number;      // needle jet: shots pass through bodies and break only on rock
+  seek: number;        // hunting nares: shots bend toward a hostile ahead of them
+  brood: number;       // brood pouch: a shot that lands breaks into fry that swim on
+  frost: number;       // brine gland: what a shot hits is chilled, and a chilled kill shatters
 
   // morphology — purely visual, but every trait nudges it so the fish reads as evolved
   hue: number;
@@ -64,6 +89,11 @@ export interface Genome {
    * that the roster's own animals also wear.
    */
   smoke: number;
+  /**
+   * How little pigment the body has, 0..1: a larva's glassy pallor, near white and barely
+   * tinted, the brightest thing in a dark tank (`docs/media/reference/`). Morphology only.
+   */
+  pale: number;
 
   // deep-water morphology — the vocabulary that tells one zone's animals from another's.
   // Hue alone cannot do it: everything below the twilight is drawn against black water.
@@ -85,11 +115,14 @@ export function baseGenome(): Genome {
   return {
     size: 14, speed: 150, turn: 4.2, bite: 6, sense: 340, armor: 0,
     regen: 0.6, metabolism: 1, stealth: 0, gulp: 1, lifesteal: 0, pen: 0, ram: 0,
+    tears: 1, reach: 0, velocity: 1,
     venom: 0, lure: 0, claws: 0, jet: 0, coral: 0, frill: 0, filter: 0, crush: 0,
     eel: 0, mantle: 0, lurk: 0, frenzy: 0, electro: 0, glare: 0, brittle: 0, veins: 0, lead: 0,
-    ink: 0, discharge: 0, inflate: 0,
+    ink: 0, discharge: 0, inflate: 0, spit: 0, volley: 0, fangs: 0, brooder: 0,
+    parietal: 0, twin: 0, foureye: 0,
+    blast: 0, scald: 0, halo: 0, arc: 0, pierce: 0, seek: 0, brood: 0, frost: 0,
     hue: 30, accentHue: 200, finSize: 1, tailSplit: 0.35, spikes: 0, serrate: 0,
-    jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0, smoke: 0,
+    jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0, smoke: 0, pale: 0,
     photophores: 0, eyeAdapt: 0, gape: 0, veil: 0, bulk: 0, barbels: 0,
   };
 }
@@ -106,6 +139,19 @@ export function armourOf(g: Genome) {
 export function maxHp(g: Genome) {
   return Math.round(10 + g.size ** 1.35 * 0.5 + armourOf(g) * 10);
 }
+/**
+ * Regeneration above the hatchling's own that mends one of the player's half hearts as a
+ * room clears. The cards were written in points a second, and a heart that fills by itself
+ * mid-fight is not Isaac's; so it is paid as the room is won, half a heart for Regenerative
+ * Tissue's 1.6.
+ */
+const REGEN_PER_HALF = 1.6;
+
+/** Half hearts the player mends each time a room is cleared. */
+export function mendPerRoom(g: Genome) {
+  return Math.round(Math.max(0, g.regen - baseGenome().regen) / REGEN_PER_HALF);
+}
+
 export function biteDamage(g: Genome) {
   return g.bite * (1 + g.size / 90);
 }

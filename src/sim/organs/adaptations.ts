@@ -11,11 +11,10 @@ export const POISE_MAX = 2;
 export const DIET: Organ[] = [
   O({ id: 'filter', when: g => g.filter > 0,
     // rakers sieve: anything small enough to go down whole is drawn in from far further,
-    // which turns a krill cloud from a chase into a sweep. The mouth is a strainer, not a
-    // weapon, so a bite into anything that has to be torn barely marks it — a filter
-    // feeder that meets a fish its own size has to leave, not fight
-    gulp: (g, base, whole) => whole ? base * (1.8 + g.filter * 0.7) : base,
-    damage: (_c, base) => base * 0.4 }),
+    // which turns a krill cloud from a chase into a sweep. What the sieve costs the attack
+    // is on the card as stats — tears up, damage down — rather than a hidden 0.4 on every
+    // hit, which read on no stat and made the card a trap for a body that shoots
+    gulp: (g, base, whole) => whole ? base * (1.8 + g.filter * 0.7) : base }),
 
   O({ id: 'crush', when: g => g.crush > 0,
     // a pharynx that cracks shell: plate does not slow it and a spined body does not hurt

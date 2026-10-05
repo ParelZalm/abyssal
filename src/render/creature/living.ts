@@ -11,18 +11,33 @@
  *   pinched toward the nearest one so the art stays hard. Moved a fraction of a pixel, an
  *   edge takes an in-between colour instead of standing still, and `FramePass` steps that
  *   colour onto the palette the way a hand-shaded in-between would be.
+ * - **The hit flash.** A wound turns the body white for a few frames (`uFlash`). A tint only
+ *   multiplies, so it can darken a body toward red but never lift it, and the red flash it
+ *   was is barely a change on a dark animal in a dark room.
+ * - **The carcass rim.** A body left dead is ringed with one texel of hot red just outside
+ *   its silhouette (`uRim`), where the texel is empty and one beside it is not. Outside, not
+ *   on, the art's own outline: a dead body is tinted down, and red laid over a dim edge read
+ *   as brown. The crop leaves a texel of water past the outline for it (`cropOf` in `fishbake.ts`).
  * - **Displacement.** Single texels of the art are moved by whole texels, the way a pixel
  *   animator nudges pixels between frames: a one-texel nub runs back along each fin's edge a
  *   column at a time, the tail's tip steps a texel on the beat, and now and then a lone nub
  *   comes and goes. Every decision is made per texel and held for a frame, so
  *   nothing is a smooth warp laid over the grid — an earlier sine field was, and it read as
  *   the art wobbling rather than the fins moving.
+ * - **Legs.** A sprite with a row of legs (`SpriteArt.legs`) walks them: each leg's tip swings
+ *   back along the ground and comes forward lifted, the root held, and the stroke runs from
+ *   the tail to the head a leg behind the next, as a mantis shrimp's legs and swimmerets beat
+ *   and a centipede's go. Also by whole texels per held frame, so a leg bends in steps.
+ * - **Trails.** What hangs behind a drifter's bell (`SpriteArt.trail`) is sent a wave on each
+ *   pulse, root to tip: held at the bell, swinging most at the tips, a strand a little behind
+ *   the one above it. Without it the bell pulsed and the tentacles hung as if painted on.
  *
  * The cost is the batch: a mesh with a shader of its own is a draw call of its own, so every
  * body on screen is one. The strip was batched before this, but each bake is a texture of its
  * own, so a school of distinct animals was already close to a call apiece.
  */
 import { GlProgram, Shader, UniformGroup, type Texture } from 'pixi.js';
+import type { Baked } from './fishbake';
 
 // GLSL 300 es, unlike `FramePass`: the edge blend is sized with `fwidth`, which ES 1.0 only
 // has behind an extension
@@ -58,6 +73,11 @@ uniform float uBody;
 uniform float uRipple;
 uniform float uSoft;
 uniform float uFlip;
+uniform float uFlash;
+uniform float uRim;
+uniform vec3 uRimColor;
+uniform vec4 uLegs;
+uniform vec2 uTrail;
 
 float hash(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
 
@@ -104,6 +124,36 @@ void main() {
   // an instant — the in-between a pixel animator draws instead of a turn
   if (uFlip > 0.0) nub = nub || hash(cell.x * 3.7 + up * 1.3 + floor(uClock * 20.0) * 5.3) < uFlip * 0.55;
   if (edge && nub) d.y += up;
+  // the legs: u0, u1 across and the root and tip down, in uv; none when u1 is not past u0
+  if (uLegs.y > uLegs.x && cuv.x > uLegs.x && cuv.x < uLegs.y && cuv.y > uLegs.z) {
+    float down = clamp((cuv.y - uLegs.z) / (uLegs.w - uLegs.z), 0.0, 1.0);
+    // two waves along the row, some four legs to a wave on the mantis shrimp's: shorter and a
+    // column's offset differs from the next by more than a texel, and a leg tears in two
+    float wave = (uLegs.y - uLegs.x) * uSize.x * 0.5;
+    float fromTail = cell.x - uLegs.x * uSize.x;
+    // an eighth of a stride a held frame, on the fins' frames: at twice their rate the stride
+    // came round three times a second and was a shimmer, not legs
+    float phase = frame * 0.785 - fromTail * 6.283 / wave;
+    // the tip's swing, a third of a leg's spacing each way, and never under a texel
+    float step = max(1.0, uSize.x * 0.018);
+    d.x += floor(down * step * cos(phase) + 0.5);
+    // lifted while it comes forward, when the cosine climbs; on the ground going back
+    d.y -= floor(down * step * 0.6 * max(0.0, -sin(phase)) + 0.5);
+  }
+  // the trail: tips at u0, root at u1; none when u1 is not past u0
+  if (uTrail.y > uTrail.x && cuv.x < uTrail.y) {
+    float along = clamp((uTrail.y - cuv.x) / (uTrail.y - uTrail.x), 0.0, 1.0);
+    float fromRoot = (uTrail.y - cuv.x) * uSize.x;
+    // a wave and a half down the trail, one to each pulse: the beat is the bell's, so the
+    // ripple leaves the rim as it squeezes. Held a twelfth of a pulse at a time
+    float wave = (uTrail.y - uTrail.x) * uSize.x / 1.5;
+    float beat = floor(uBeat * 2.0) / 2.0;
+    // a strand runs a little behind the one above it, so they do not swing as one sheet; a
+    // fraction of a radian a row, or neighbouring rows part by more than a texel and a strand tears
+    float phase = beat - fromRoot * 6.283 / wave + cell.y * 0.08;
+    float swing = max(1.0, uSize.y * 0.05);
+    d.y += floor(pow(along, 1.3) * swing * sin(phase) + 0.5);
+  }
   // only the tail's last few columns step, and by one texel, when the stroke is near its peak
   d.y += floor(clamp((0.1 - cuv.x) / 0.1, 0.0, 1.0) * sin(frame * 0.7) + 0.5);
   // sampled from the other side: to show a texel moved by d, read the one d behind it
@@ -121,6 +171,16 @@ void main() {
   vec4 c = mix(mix(texel(b), texel(b + vec2(1.0, 0.0)), w.x),
                mix(texel(b + vec2(0.0, 1.0)), texel(b + vec2(1.0, 1.0)), w.x), w.y);
   finalColor = c * vColor;
+  // a hit: the body goes white for a few frames. Premultiplied, so white is the alpha
+  finalColor.rgb = mix(finalColor.rgb, vec3(finalColor.a), uFlash);
+  // a carcass's rim, decided per texel like the nubs, and never tinted: the tint is what dims
+  // the dead body, and the rim is there to be seen on it
+  if (uRim > 0.0 && c.a < 0.5) {
+    vec2 t = floor(p);
+    float n = max(max(texel(t + vec2(1.0, 0.0)).a, texel(t - vec2(1.0, 0.0)).a),
+                  max(texel(t + vec2(0.0, 1.0)).a, texel(t - vec2(0.0, 1.0)).a));
+    if (n > 0.5) finalColor = vec4(uRimColor, 1.0) * (uRim * vColor.a);
+  }
 }
 `;
 
@@ -138,7 +198,8 @@ export interface LivingSkin {
  * A skin for one strip. `body` is the body's half-depth over the strip's half-height, which
  * is how the shader tells a fin from a flank without a mask baked for it.
  */
-export function livingSkin(texture: Texture, body: number): LivingSkin {
+export function livingSkin(texture: Texture, body: number, legs: Baked['legs'] = null,
+                           trail: Baked['trail'] = null): LivingSkin {
   program ??= GlProgram.from({ vertex, fragment, name: 'creature-living' });
   const uniforms = new UniformGroup({
     uSize: { value: new Float32Array([texture.source.pixelWidth, texture.source.pixelHeight]),
@@ -151,6 +212,15 @@ export function livingSkin(texture: Texture, body: number): LivingSkin {
     uSoft: { value: 1, type: 'f32' },
     // a flip's recoil, 1 as it snaps round to 0 settled (`FishView`)
     uFlip: { value: 0, type: 'f32' },
+    // a hit's white flash, 0..1 (`FishView.hurt`)
+    uFlash: { value: 0, type: 'f32' },
+    // a carcass's red outline, 0 off to 1 full (`FishView.lie`)
+    uRim: { value: 0, type: 'f32' },
+    uRimColor: { value: new Float32Array([1, 0.16, 0.12]), type: 'vec3<f32>' },
+    // a sprite's legs, walked in a wave (`Baked.legs`); off at zero width
+    uLegs: { value: new Float32Array(legs ?? [0, 0, 0, 0]), type: 'vec4<f32>' },
+    // what trails behind a sprite's bell, waved on the pulse (`Baked.trail`); off at zero width
+    uTrail: { value: new Float32Array(trail ?? [0, 0]), type: 'vec2<f32>' },
   });
   const shader = Object.assign(
     new Shader({ glProgram: program, resources: { uTexture: texture.source, living: uniforms } }),

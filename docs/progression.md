@@ -20,7 +20,7 @@ Three groups of fields, and the split matters:
   organs too, so a trait list would lose the crab's spines), with *modifier* hooks
   (armour faced, lure range, boost, burn, swallow heal) and *effect* hooks (`onWound`,
   `onWounded`, `onTick`, and `onFire`, run by `fire(world, c)` after the active organ goes
-  off, with the active's id — how a synergy acts on the active without owning it). `Combat.bite`, the `PlayerController` boost and `Metabolism`
+  off, with the active's id — how a synergy acts on the active without owning it). `Combat.bite`, the `PlayerController` strike and `Belly`
   call the folds in `sim/organs/query.ts` and never read an organ field by name.
   Every `Creature` caches its active organs and `refreshOrgans()` beside `view.rebuild`.
   The one exception is `coral`: it is plate, so `armourOf(g)` adds it as a derived stat.
@@ -42,8 +42,8 @@ Three groups of fields, and the split matters:
   (below half health, bleeding, poisoned or dazzled) from twice that. A body found by feel
   and not by sight is drawn in a cold cast (`FELT_TINT`) so the two read differently.
   Pores pepper the snout.
-  The three **active** organs fill one slot the player fires by hand — E or the right
-  button — on a cooldown kept by `PlayerController.fireActive`. An `active` record on the organ gives
+  The three **active** organs fill one slot the player fires by hand — Space — on a
+  cooldown kept by `PlayerController.fireActive`. An `active` record on the organ gives
   its name, HUD glyph, cooldown and `fire(c, world)`, and `activeOf` takes the first; the
   cards clear the other two fields when taken, so the slot is always one. A press is
   consumed whether or not it fired. `Ink Sac` (12 s) leaves a cloud of `3 × size + 200` on
@@ -183,73 +183,242 @@ parameter swept across its range over the water of the depth it belongs to.
 darker mass, hotter edge, blades along the flanks, the bruised aura. The player crosses
 the same thresholds as anything else.
 
-## The draft
+## Pedestals
 
-`traits.ts` holds 53 `Trait` records — id, rarity, icon, description, an optional home
-`band`, and an `apply` that mutates a `Genome`. `draftTraits(rng, reach, band, taken,
-count, lean)` picks without replacement from a rarity-weighted pool.
+The level-up draft is gone (roadmap stage 2); mutations are found on **pedestals**, one in
+each tank's treasure room (roadmap stage 5). `traits.ts` holds 76 `Trait` records — id,
+rarity, icon, Isaac's word for it (`tagline`), what it does that no number says (`desc`), an
+optional home `tank`, and an `apply` that mutates a `Genome`. What a card does to the numbers
+is never written on it by hand (*The stats and the pool*).
 
-- `RARITY_WEIGHT` sets the base odds; `RARITY_CLIMB` makes rare and apex more likely as
-  `reach` grows.
-- **`reach` is not the stage.** `Evolution.offerDraft` passes
-  `max(stage, maxBand * 2 + 1)`, so diving upgrades the odds as much as feeding does.
-- **Zone pools.** A trait's `band` is the water it belongs to: it is only offered when the
-  draft happens in that band or deeper — the band the player is *in*, `bandAt(player.y)`,
-  not the deepest reached — and it leans ×1.6 in the band itself. This replaced
-  `minStage`: reef organs (beak, coral, venom, claws, siphon, frill, lure, serrate, the
-  eel and ambush bodies, the pharynx) are found on the reef, the luminous and glass cards in
-  the twilight, and the apex cards from the twilight down. Cards with no band are offered
-  anywhere. The card names its band beside its family. Measured over the live pool with
-  a typical reach for each band:
-
-  | Band (reach) | Cards | Common / rare / apex | Home cards |
-  | --- | --- | --- | --- |
-  | Open Water (1) | 19 | 76 / 24 / 0 | 19% |
-  | Reef Shelf (3) | 32 | 56 / 44 / 0 | 43% |
-  | Twilight (5) | 41 | 43 / 55 / 2 | 23% |
-  | Midnight (7) | 47 | 39 / 51 / 10 | 8% |
-  | Abyss (9) | 50 | 35 / 53 / 12 | 4% |
-
-  Since the band is where you are, levelling in the shallows keeps the pool shallow, and a
-  thermocline reward — drafted as you arrive — is the new water's own cards.
-- **Every apex card costs something**, and its text says so: the jaws turn worse (Apex
-  Predator −18%, Titan Jaws −15%), plate and toxin and fast muscle burn more (Carapace,
-  Neurotoxin, White Muscle Burst, Ampullae, Leviathan Blood), and the heavy organs swim
-  slower (Abyssal Heart, Deep Lantern, Mantis Strike). Ram's cost was already its own
-  mechanic. Without a price the draft was "take the rarest".
-- **Cursed cards** carry a `curse`, the price in red on its own line beside a *cursed*
-  mark. The gift is bigger than the rarity gives (Blood Lamp +90% bite, Brittle Frame +35%
-  speed and +25% turning), and the curse is an organ with paint, not a stat going down:
-  `glare` (a `glare` hook, read in `Behaviour.nearest`, which shrinks the player's distance by
-  `1 + 0.6 × glare` so hunters and prey both find it from 60% further, and in `notices`,
-  which lets guardians register it smaller) paints three coals down the back; `brittle`
-  (a defender-side `taken` hook, after armour, ×1.5) crazes the skin with pale slivers;
-  `veins` (Open Veins, +3 regeneration: an `onWounded` hook that opens a bleed worth a
-  tenth of every wound a second for five, half the bite again) runs dark red veins back
-  along the flank. The bleed is a trail hunters follow, and it stops the very regeneration
-  the card pays in, since nothing heals while a wound is working; `lead` (Leaden Bones, +6
-  armour: a `swim` hook adding `SwimMods.weight`, a pull that never lets up, of 1.2 × cruise,
-  and 1.5 × cruise more `sink` with nothing driving) sinks a still body at about 40 u/s at
-  the hatchling's speed, drifts a level swim down at 20 and halves a climb — no hovering and
-  no ambush that stays where it was set. A keel of grey plates down the belly. One stack each.
-- `maxStacks` defaults to 2, so a run specialises without collapsing into one stat.
-
-- **The draft reads the build** (`run/prospects.ts`). `completes(g, owned, form, t)` takes
+- **The pool is the tank's.** A mutation's `tank` is where it belongs — the column's bands
+  folded into the three tanks: open water is the nursery, the reef shelf the reef, twilight
+  to abyss the deep. It is dealt in its own tank and every deeper one, and leans ×1.6 at
+  home; one with no tank is dealt anywhere. `RARITY_CLIMB` makes rare and apex likelier in
+  each deeper tank. The nursery's pool is the unbanded cards and the open water's, plus
+  Inflation (the pufferfish lives there now) and the two ranged primaries.
+- **Dealing.** `dealMutations(rng, tank, taken, count, lean)` draws without replacement,
+  weighted by rarity, home and `lean`. The treasure room deals its pedestal the first time
+  it is entered (`TankMap.enter` → `Evolution.offer`), from the room's own seed, so what
+  it holds reads the build as it is by then.
+- **The deal reads the build** (`run/prospects.ts`). `completes(g, owned, form, t)` takes
   the card on a copy of the genome and asks the organ registry which synergies turn live,
-  and `formDue` whether it is the third of a family — so a threshold synergy like Urchin
-  is read exactly, and nothing in the file knows which traits pair. A card that completes
-  something wears a second, green outline light beside its rarity light and says what it
-  finishes; an undiscovered synergy is announced but not named. `leanOf` weights the draw
-  ×1.5 for a completing card and ×1.15 for one that advances a family already begun,
-  passed to `draftTraits` as `lean` (0 excludes a card from that draw).
-- **Reroll**: 15 fullness, then 30, then 45 within one draft, never allowed to take the
-  last of the bar, and the new hand leaves out the one it replaces.
+  and `formDue` whether it is the third of a family. `leanOf` weights the deal ×1.5 for a
+  completing mutation and ×1.15 for one that advances a family already begun. The pedestal's
+  card says what taking it would finish (`Evolution.finishes`); an undiscovered synergy is
+  announced but not named.
+- **Taking one.** Beside the pedestal the mutation's card is shown at the top of the screen
+  (`ui/hud/OfferCard.ts`, the draft's card in `ui/hud/cards.ts`) and a key cap with E on it
+  hangs over the good (`render/prompt.ts`); pressing E takes it (`TankMap.take`,
+  `Evolution.take`). The reach to read it and to take it is one, three tiles from the good
+  (`REACH`), so the card is always what E would take, and between two stands the nearer is
+  meant. There is no screen and no pause. Swimming into it once took it, as Isaac's pedestal
+  is walked onto; now it is taken only on purpose.
+- **Every apex card costs something**, and its text says so; **cursed cards** carry a
+  `curse`, the price in red on its own line (the mechanics in `sim/organs/adaptations.ts`),
+  and are offered only in the deal room, beside the deal mutations (*The economy*).
+  `maxStacks` defaults to 2.
 - **Near misses**: the end screen lists up to three things the run was one card short of
-  (`nearMisses`), counting only cards it could still have been offered.
+  (`nearMisses`).
 
-A draft is offered on level-up (`xp >= xpNeed`, which is `45 * 1.5^(stage-1)`) and once
-per new band reached. Both set `phase = 'draft'`; `Evolution.take` rebuilds the view,
-refills health and returns to `play`.
+**Cards rewritten for what was cut.** Hunger, XP and the boost are gone, and so is health in
+points; a card whose effect fed one of them now says what it does instead:
+
+- **Metabolism is the belly.** `Belly.full` is `BELLY_FULL × metabolism`: a hungrier body
+  needs more to pass a pickup, so every apex card that cost metabolism costs pickups, and the
+  cards that saved it (Efficient Gills, Swim Bladder, Fusiform Body, Ram) fill the belly sooner.
+- **Regeneration is paid as a room clears** (`mendPerRoom`): half a heart per 1.6 above the
+  hatchling's own, so Regenerative Tissue and Symbiotic Algae mend half a heart, Open Veins a
+  heart and Abyssal Heart a heart and a half. A heart that fills by itself mid-fight is not
+  Isaac's.
+- **Healing in points goes through `Creature.heal`**, which pays the player a half heart per
+  four points (Cnidocyte Graft's lifesteal, Nematocyst).
+- **Siphon Jet** lunges harder, the boost's old kick now being the strike's. **Ballistic,
+  Flash Sense and Smoke Screen** fire on the strike's kick. **Ram Ventilation**'s cost was
+  hunger; now a still ram ventilator's belly empties, 6 cm a second (`burn`).
+- **Stealth** against a hostile makes it slow to find the player — its first attack waits
+  `STEALTH_DELAY` a point longer — and a spitter's shot go wide by `STEALTH_AIM`. A hostile
+  always knows the player is in its room.
+- **Gulp** is how far a carcass is swallowed from, and its cards say so.
+
+## The economy
+
+Roadmap stage 6: shells, keys and items, the shop and the deal room (`run/Pockets.ts`,
+`run/TankMap.ts`, `content/items.ts`).
+
+- **Pickups** are `World.pickups`: a half heart, a shell, a key, a chest, or an item. The
+  player takes one by touch, if `World.takes` lets it — `Pockets.takes`, which holds a chest
+  back until there is a key for it and never lets an item go by touch: an item is taken on
+  E, within 1.2 tiles past the body (`Pockets.nearItem`, `pickUp`), under the same prompt
+  and card as a pedestal's good, so a swap is always meant. `Pockets.collect` does the rest: shells and keys counted
+  on the run, a chest opened for a key and spilling two or three pickups, an item put in the
+  pocket (one already there is dropped, and lies 1.5 s before E will take it back).
+- **A cleared room drops** two times in five (`CLEAR_DROP`, in `Game`), where the fight was:
+  shells 45, a half heart 22, a key 15, an item 12, a chest 6. The roll is the room's own
+  seed.
+- **Items** are one in the pocket, used on Q (`Pockets.use`), Isaac's pocket key: the Food Pellet mends a heart,
+  the Air Stone bursts (`World.burst`: everything within four tiles shoved out and stunned,
+  every hostile shot inside broken), the Nerite Snail cures venom and bleeding. One that
+  would do nothing is kept, and says so.
+- **Keys.** A run starts with one. A shop's door takes one, and past the nursery a treasure
+  room's does too; a chest takes one. A locked door is its gate band shut on its own
+  (`Terrain.shut`, `'key'`), on both sides of the door, drawn as a brass grate; pressed
+  against with a key it opens (`TankMap.open`).
+- **The shop** stands three goods and a mutation on pedestals across its floor: three of a
+  half heart (3 shells), the snail (3), the pellet (4), the air stone (5) and a key (5), and
+  a mutation from the tank's pool for 15. E beside one pays and takes it; one that cannot
+  be paid says its price.
+- **The deal room.** Half of all tanks have one (`DEAL_CHANCE`, rolled with the map): a room
+  off the boss room in a cell that touches nothing else, its door sealed (`'seal'`, a red
+  grate) until the boss room is cleared, and not on the minimap until then. It stands a
+  **deal mutation** for heart containers — Red Muscle, Stone Hide (1), Devourer's Jaw,
+  Archer's Eye, Quill Storm (2): each an ordinary card pushed past its rarity — and a
+  **curse** for nothing (Blood Lamp, Brittle Frame, Open Veins, Leaden Bones). A deal always
+  leaves one container. Deals and curses are never dealt anywhere else.
+- **Pedestals** in general (`TankMap.stock`): flat floor from the middle of the room out,
+  3.2 tiles apart, the good hanging over each and a price tag between (`render/pedestals.ts`).
+  The HUD's card says the price and how to pay it.
+
+## Actives and charges
+
+The one active slot fires on Space and recharges by **rooms cleared**, not by time — Isaac's
+charges (`Organ.active.charge`): the Electric Organ every room, Ink Sac and Inflation every
+other. A new active arrives charged. `PlayerController` holds the charge, `TankMap`'s
+`cleared` hook gives it one, and the HUD draws a pip a room (`ActiveSlot`). Against a room's
+hostiles: ink hides the player, so they abandon a wind-up and hold their fire while it
+lasts; the shock stuns them; and Inflation, on the player, turns every hit aside while
+swollen (`Organ.guard`) — a third of a hit cannot be taken off hearts.
+
+## Primaries
+
+The strike on the arrows is the **primary**, one slot like the active. Every larva hatches
+with **Archer Spit** (`HATCHED` in `run/starts.ts`, taken through `Evolution.hatch` so the
+pedestals never deal it): one jet of water for a whole hit, the unit the other primaries are
+written in. **Spine Volley** fires a fan of three spines a quarter radian apart, 0.45 each
+(`Organ.primary`, `sim/organs/body.ts`). The **Mouthbrooder** lets out homing fry that latch
+and bite (*The stats and the pool*). The **Lunging Bite** (`fangs`, a reef card) is the
+mouth back: the strike lunges and bites for twice a shot (`Organ.strike`, read by
+`Combat.bite`), and what it kills is swallowed. Each replaces the others.
+
+Why the spit is the start: a room's every hostile hurts by touch, so a larva that had to bite
+stood inside all of them to land anything, and the nursery was a brawl it lost. Isaac opens
+ranged; the bite is the risk a build takes later, for the most damage the arrows throw and
+the belly it feeds.
+
+A shot flies 9 tiles a second — faster than any hostile's, and faster again with the Siphon
+Jet, which lunges a bite harder — for 10 tiles, a third of a room (`SHOT_SPEED`, `SHOT_RANGE` in
+`PlayerController`), and lands as a blow (`Combat.hit`), never a swallow, so what it kills is
+left as a carcass for the mouth. The strike's kick still opens its window, so the organs that
+answer a strike answer a shot. The body paints it: a water sac under the jaw for the spit, a
+rack of loose quills for the volley (`bake/organs.ts`), a wider jaw for the bite. The cards
+say *damage* where they once said *bite*: every hit the body lands is `biteDamage` times its
+primary's share.
+
+## Shot organs
+
+What the shots carry, on whichever primary fires them (`sim/organs/shots.ts`). Unlike the
+primaries and the active these are not a slot: they stack with each other and with
+themselves, as Isaac's tear effects do, so a build is a shot that does several things. Each
+is an organ with three new hooks — `shot` marks the shot as it is fired (`ShotMods`:
+`marks`, `pierce`, `seek`), `onShotHit` answers it landing on a body (every body, for one that
+passes through), and `onShotSpent` answers it breaking, on a body, on rock or at the end of
+its flight. `World.fly` calls them; nothing else reads the fields.
+
+| card | tank | what the shot does |
+| --- | --- | --- |
+| Hunting Nares (`seek`) | nursery, common | bends 2.6 rad/s toward a hostile in a cone ahead, out to 5 tiles |
+| Needle Jet (`pierce`) | nursery | passes through every body and pot; breaks only on rock |
+| Brood Pouch (`brood`) | nursery | a landed shot breaks into three fry, 0.35 each, for 3.5 tiles |
+| Cavitation (`blast`) | reef | bursts where it breaks: 0.6 to everything within 1.2 tiles, thrown |
+| Galvanic Cells (`arc`) | reef | a landed shot arcs on to the two nearest hostiles within 3.2 tiles, 0.5 each, a twitch |
+| Vent Gland (`scald`) | deep | burns 0.3 of the shot a second for 3 s; a body that dies burning lights all within 1.6 tiles |
+| Brine Gland (`frost`) | deep | chills 2 s (half speed: `CHILL_DRAG` is the body's own drag again); a kill shatters into four shards, 0.4 each |
+| Surface Halo (`halo`) | deep | one landed shot in four calls a shaft of light rock to rock: 1.5 to all in it, stunned |
+
+A shot thrown off another — fry, shards (`World.split`) — is smaller, carries what its
+parent carried, and throws nothing off itself, so one shot into a crowd cannot fill a room.
+Fire leaps only to what is not already alight, for the same reason. Burn and chill are
+status on the struck body like venom (`Creature.burn`, `chillT`), ticked in
+`World.integrate`, and tint it (`Scene`) and shed embers or rime off it (`Impacts.trail`).
+A body that bites has no use for any of them, so the draft deals them at a fifth of their
+weight to it (`leanOf`).
+
+The look follows the same rule as the rest of the player's shots: off the hostiles' reds.
+Fire is a vent's sulphur, the light a pale gold. Four marks change the shot's shape (a
+bubble, a shard, a needle, a clutch of roe) and the rest its colour, the first of each
+winning, so two marks read at once — a scalding burst is a sulphur bubble — and every mark
+sheds its own motes as the shot flies. Each organ is on the body too (`bake/shotorgans.ts`):
+a needle bill, nares, a lit galvanic line, sulphur glands, a bubble bladder, roe on the
+belly, rime on the back, a halo over the head. The board's *Shot organs* group has each card
+firing, each mark's shot, marks stacked, and all eight on the volley.
+
+## The stat column
+
+Isaac's left edge, under the status panel (`ui/hud/StatColumn.ts`, from `statsOf` in
+`PlayerController`), in the room's own units: damage a hit — with the multishot after it,
+`6.9×3` — tears (strikes a second), range in tiles (the bite's reach, or a shot's), shot
+speed in tiles a second (a dash for the bite), cruise speed in tiles a second, and armour as
+its chance to shrug a hit off. `statsOf` is pure in the genome, so a card can ask it of the
+body it would make.
+
+## The stats and the pool
+
+Reworked after the economy, asked for: the pool leaned on numbers Isaac does not have —
+turning, sense, the belly — and wrote its own percentages by hand, so a card said "+45%" of
+something no stat showed, and no card raised the attack rate at all. Now every card is about
+Isaac's stats first: **speed**, **damage**, **tears**, **shot speed**, **range**, the
+**amount** a strike throws, and the **effect** its shots carry.
+
+- **Three stats are new on the genome**: `tears` (a multiplier on strikes a second), `reach`
+  (tiles added to a shot's range, at least 3 in all) and `velocity` (a multiplier on a shot's
+  speed). They are stats like `speed`, read directly; each card that moves one also nudges
+  the morphology it comes from — fins for tears, the lateral line for range, the tail for
+  shot speed.
+- **The card's numbers are computed** (`input/statdiff.ts`): `traitDiff` takes the card on
+  a copy of this body's genome and reads both through `statsOf`, so the card shows each of
+  the attack's and the swim's numbers it moves as before → after, a green or red arrow, and
+  the body's other numbers (size, aim, sight, gulp, the belly's need) as shares on a line. It
+  is the body's own answer: a multishot on a body that bites moves nothing, and its card is
+  bare. The `tagline` is the word on top — "Tears up", "Triple shot, tears down" — and a `!`
+  marks a big one.
+- **Tears up** is a kind of card now: Broad Pectorals, Efficient Gills, the Segmented Trunk,
+  Gill Rakers (tears ×1.7, damage ×0.65 — its hidden 0.4 on every hit is gone), Ram
+  Ventilation, White Muscle Burst. **Range**: Lateral Line, Swim Bladder, Barbels, the Tapetum,
+  the Deep Lantern. **Shot speed**: the Forked Caudal Fin, the new Pressure Gland (nursery),
+  Fusiform Body, Siphon Jet. The Crushing Pharynx is Isaac's damage-up-tears-down.
+
+**Multishot** — how many shots a strike throws, on whichever primary fires them (the
+`amount` hook, folded by `multishotOf`; `primaryOf` fans the primary's shot out by it):
+
+| card | tank | shots | tears |
+| --- | --- | --- | --- |
+| Parietal Eye (`parietal`), Isaac's Inner Eye | nursery | +2 | ×0.6 |
+| Twin Spout (`twin`), 20/20 | reef | +1 | — |
+| Four-Eyed Fish (`foureye`), Mutant Spider | reef | +3 | ×0.45 |
+
+The extras add; the tax is the worst one carried, not their product. A primary has a count and
+a spacing of its own (the spit 1 at 0.12 rad, the volley 3 at 0.24, Quill Storm 5 at 0.15, the
+fry 1 at 0.32), the fan never opens past ±0.55 rad, and every shot of it is the primary's: a
+Parietal Eye on the volley is five spines. Each is painted: a third, lit eye on the crown, a
+second water sac under the jaw, a second eye over the first.
+
+**The Mouthbrooder** (`brooder`, a nursery primary), Isaac's C-Section: the strike lets out a
+fry (`'fry'`, a shot kind of its own, drawn as a tiny larva that wags) at 0.7 of shot speed,
+homing hard (`World.brood`: 7 rad/s, nine tiles round, a cone that turns back), that latches
+on to what it reaches and bites it three times 0.28 s apart, half a shot each
+(`World.nibble`). The first bite is the shot's landing, so every shot organ rides it; a
+Cavitation burst goes off when it lets go. Through a Needle Jet it does not latch but bites
+everything it passes. Tears ×0.85. The body shows the brood in a pale throat pouch, their
+eyes looking out.
+
+**Synergy is mostly the systems composing**, as Isaac's is: C-Section with an Inner Eye is
+three fetuses because every shot of a fan is the primary's, and a burning fry is a fry that
+carries the Vent Gland's mark. Nothing names those. What a pairing adds beyond the sum gets a
+name, as the other synergies do: **Shoal Hunt** (Mouthbrooder and any multishot) shares a
+strike's fry out over the room's hostiles, nearest first, one each (`World.share`), and a fry
+whose host dies under it swims on for 1.4 s with the bites it has left — told the first time
+one does. The draft deals multishot at a fifth of its weight to a body that bites, like the
+shot organs.
 
 ## Transformations
 
@@ -280,7 +449,10 @@ Shark, then an Angler". `Run.forms` holds them, and `Run.form` is the latest, th
   silhouette the player is meant to recognise on sight.
 - **The smoke stays.** The wraith's see-through body is `Genome.smoke` (set on the player
   in `reset`), not only the wraith plan's `smoke` art flag, so a transformed player is a
-  smoky shark among real ones. The paint reads either.
+  smoky shark among real ones. The paint reads either. The player also hatches `pale` (a
+  larva's pallor, near white; the palette lifts and desaturates its ramp) with a big eye and
+  a lavender cast, and a pale body is less see-through and carries a halo, since it is the
+  brightest thing in a dark tank.
 - **Grants are organ magnitudes**, so the registry carries them and nothing reads a form
   by name. `frenzy` is the one organ only a form grants; the `damage` hook gained the
   defender for it.
@@ -298,65 +470,100 @@ Shark, then an Angler". `Run.forms` holds them, and `Run.form` is the latest, th
 - Draft cards show a trait's families, the pause sheet shows progress per family (or the
   form once taken), the end screen names it, and the codex keeps every form reached.
 
-## Zones, bands and gates
+## Tanks and rooms
 
-`zones.ts` is five `Zone` records — the places the player names, each owning a guardian
-— over six `Band` records, which are the contiguous slices of water the column is
-actually made of. Only the Sunlit Zone is subdivided, into Open Water and the Reef
-Shelf. A band carries the `top`, `bottom`, `gate` in centimetres, `WaterLook`, and the
-`metres` label at its top.
+A run is a chain of **tanks**, each a grid of one-screen **rooms** (`content/tanks.ts`; the
+words are in `CONTEXT.md`, the decision in `docs/adr/0003-*`). A `Tank` has a name, the
+world depth whose water it borrows, a tile size in world units, its loose fauna, its
+hostiles, and how many bodies a room holds. A `RoomTemplate` is 32 × 18 rows of characters —
+`#` rock, `=` sand, `o` boulder, `.` water — authored by hand, as Isaac's are, and tagged
+with the room types it may be dealt as. Each tank deals its own: the nursery's eight, the
+reef's five (coral heads, an arch, a lagoon, shelves, a boulder channel) and the deep's five
+(a tall hall, a shaft, columns, a grotto, vent chimneys), every room mirrored half the time.
 
-- `bandAt(y)` / `zoneAt(y)` — which band or zone a depth is in.
-- `depthLabel(y)` — world depth as metres of real ocean, piecewise-linear through one
-  control point per band boundary. Presentation only; nothing in the simulation reads
-  it. See `docs/adr/0001-depth-labels-decoupled-from-world-depth.md`.
-- `descentLimit(size)` — the floor of the deepest band the player has unlocked, minus
-  12. `main` feeds it to `world` every frame.
-- `nextGate(size)` — the next sealed thermocline, for the HUD hint and the seal label.
+**Three tanks** (`TANKS`, `TANK_ORDER`): the Nursery at a 23-unit tile, its boss the mantis
+shrimp; the Reef at 41, the Great White; the Deep at 74, the Giant Squid. Each tile is the
+last times the descent's growth, 1.8, so a room is the same number of body lengths across in
+every tank. What swims in a tank takes its `pace` — the tile's ratio to the nursery's — on its
+species' speed, so a room takes as long to cross, and the game's `TEMPO` (1.25) on top, which
+the larva hatches with too; its hostiles take `hostileHp` on their
+health; a boss takes the root of the pace, the tempo, and its own health (`Species.bossHp`).
 
-Gates are checked against **body size only**, with one exception the player pays for.
-Depth unlocks the water below it, its own draft pool (see *Zone pools*) and a free
-mutation.
+**The curve is Isaac's.** `hostileHp` (0.55, 0.8, 1.1) is set so a larva that has found no
+damage kills the nursery's hostiles in three to five shots, the reef's in five to nine and the
+deep's in ten to twenty, and its bosses in about 40, 75 and 115; a build that doubled its
+damage takes under half that. The larva's own spit grows only with its size, ×1.1 a descent,
+so the difference is the pedestals: the treasure room's, and the **boss's** — a free mutation
+beside the drain in every tank but the last (`TankMap.prize`), leaning ×3 toward a card that
+hits harder (`hitsHarder` in `prospects.ts`), as Isaac's boss items are mostly stat ups. A
+boss's armour is kept to two or three, since it comes off every shot flat.
 
-**The pocket under a seal.** While a gate is shut and the player is in the band above it,
-within about a view of the shear, `Bands.tendPocket` has `Spawner.pocket` keep 14 bodies of
-the band's `pocket` species — reef fish, lanternfish, bristlemouths, dumbos, snailfish —
-in the first 70–320 units under the thermocline. They are placed in frame and fade in out
-of the shadow (an off-screen arrival swam about at the edge and was never seen), and they
-carry `Creature.hold`, a depth range that replaces their species' own in `think`, since
-the ordinary band hold pushes anything 220 units down from its band's top. The pocket is
-the reason to look down through a seal: the withheld water is visibly richer.
+**A boss is beaten faster with the room than against it.** Each has an opening the room makes
+— the mantis shrimp wedged in a cleft of its den, the Great White dazed on rock, the Giant
+Squid snagged on a pillar — held for three to three and a half seconds at half again the
+damage, where the openings a fight gives by itself are one to two. So the shot counts above
+are the ceiling, and a player who reads the room pays well under them. Each boss's set piece
+(the urchin's rain, the breach, the ink's ghosts) is what a player who only kites has to answer
+(`docs/simulation.md`, *Bosses*).
 
-**Forcing a seal.** A body at 70% of a gate or more can boost into it: `Bands.squeeze`
-counts time held at the shear (`world.blocked`) with the boost down, easing off twice as
-fast as it builds, and at 1 s puts the body through for 30% of its maximum health. That
-band is `squeezed` — open to its own floor and drawn open by the shader — and until the
-body grows to the gate or climbs back out, it loses 1.5% of maximum health a second and
-regenerates nothing. A forced entry is a raid on the pocket and the new band's cards
-(its thermocline reward is drafted on arrival as usual), not a way to live there early.
-The seal label and the blocked toast both say so once the body is big enough.
+**The descent** (`Game.descend`). The boss room's clear opens a drain in its floor
+(`TankMap.clear`, drawn by `DrainView`); swimming into it takes the next tank: the body and
+its swim ×`GROWTH` (1.8), the view rebuilt, a new map dealt, the lineage given a frame, the
+codex's `tanks` raised, and the drop-in played. Past the last tank there is no next: the run
+is won, on the *Released* screen, with the lineage.
 
-`Bands.check` watches two things: the count of open gates (for the "thermocline parts"
-toast) and `bandAt(player.y)` exceeding `maxBand`, which plays the band card and grants
-the free draft.
+**The drop-in** (`render/dropin.ts`) plays at the start of every run and at every descent,
+3.6 s, any key skipping to its end: a dark gallery, the tank's own rock and growth lit from a
+lamp hung over it, the animal falling from above into a splash, sinking and swimming down,
+and the view pushing in through the glass. The phase is `dropin` while it runs; the HUD is
+hidden and the tank's name is captioned over it. It starts on the frame it is asked for: the
+start room's bake runs under it (below).
 
-`Bands.spendWater` is the shallows clock, the answer to size-only gates making the easiest water
-the best place to grow. It runs only in a band whose gate below is already open — a player
-too small to leave is never pushed — and counts `overstay` seconds per band. After
-`SPEND_GRACE` (40 s) the band's `world.spent` climbs to 1 over `SPEND_RAMP` (100 s):
-`weightAt` cuts schools and plankton to 35% and raises non-guardian hunters to 2.2×, and
-the population target falls by 30%. Halfway, `riserFor(depth, size)` picks the least
-local hunter that can swallow the player at the top of its range and `World.summon`
-sends it in on `quarry`: it travels in without spending stamina until it could have
-sensed the player itself, then chases as any hunter does, and drops the quarry when it
-tires. Below the Reef nothing that is not a guardian is big enough, so deep bands get
-the thinning only. Spent water stays spent for the run.
+**Starting forms** (`run/starts.ts`) are one per tank reached (`Codex.tanks`): the Hatchling,
+the Reef Wrasse once a run has reached the reef, the Squid Paralarva once one has reached the
+deep.
+
+**The map** (`content/map.ts`) is dealt from the run's seed: 7–8 rooms grown out from the
+start one neighbour at a time, a room added only where it touches exactly one other so the
+map branches, and sideways preferred over up and down. The boss goes on the dead end
+furthest from the start, the treasure room and the shop on the next two, and the rest are
+fights. A map without three dead ends is thrown away and grown again. Half the time a deal
+room is hung off the boss room (*The economy*).
+
+**The tank in play** (`run/TankMap.ts`). Each room keeps whether it has been seen,
+visited and cleared, and the pickups left in it. Rooms sit edge to edge in the world, a
+room's size apart, so a door opens straight into the next room's. Entering a room puts its
+terrain in the world and its views in the display slots, gives it back its pickups and its
+fauna, and — the first time for a fight room (3–4 hostiles) or the boss room (its boss,
+`Spawner.boss`, at the far side of the room) — deals its hostiles and shuts its doors. A room clears when its last
+hostile is dead, and stays clear. Leaving through a door empties the room (`World.vacate`;
+carcasses do not keep), and the camera slides to the next room over 0.35 s while the world
+holds still, carrying the player to just inside the facing door.
+
+**Baking ahead.** A room takes about half a second to bake, so the rooms next door bake a
+few milliseconds a frame (`RoomView.prepare`, a generator run to a deadline), the one behind
+the nearest door first, and whatever is left bakes under the slide. A crossing's worst
+frame is about 20 ms. Starting a run does not bake the start room in the click: `begin`
+leaves it, and `TankMap.warm` bakes it 8 ms a frame under the drop-in, which holds in the
+black before the room until it is done (about a second in, well before it would end). The
+room behind the title is baked the same way.
+
+**The minimap** (`ui/hud/Minimap.ts`) draws the rooms seen so far inside the tank's outline —
+visited ones solid, the ones seen through a door dim, the current one lit — with a glyph on
+the boss, treasure and shop rooms. It redraws when `TankMap.version` moves, which is counted
+across every tank the page makes.
+
+The column's systems are gone with it: size gates, the descent limit, the pocket under a
+seal, forcing a seal and the shallows clock. They all existed to pace one open column in
+which the easiest water was the best place to grow, and a tank of rooms with a boss as its
+only exit paces itself. `git show 2bed3f0:docs/progression.md` has how they worked.
+
+`zones.ts` stays, as the water looks and the species' home ranges.
 
 ## Run state
 
 Held on `Game`: `stage`, `xp`, `food`, `taken` (id → stacks), `form`, `takenNames` (for the HUD
-and pause sheet), `eaten`, `deepest`, `elapsed`, `maxBand`, `gatesOpen`, `overstay` and `risen` (the
-shallows clock). `reset()`
+and pause sheet), `eaten`, `elapsed` and `tank`, the tank the run is in. `reset()`
 rebuilds all of it plus the world and the player, from a `RunChoice` — a starting form
 and, optionally, a seed.
 
@@ -376,8 +583,8 @@ the day was beaten, and the title's Daily button carries it. A daily still count
 the all-time best.
 
 **Starting forms** (`run/starts.ts`). One per zone some run has reached —
-`Codex.deepest`, written the moment a band is first entered and backfilled from the kill
-counts of codices older than it: the Reef Wrasse hatches with Parrot Beak, the
+`Codex.deepest`, backfilled from the kill counts. Nothing writes it since the column went;
+the forms become one per tank reached with the descent (roadmap stage 7). They are: the Reef Wrasse hatches with Parrot Beak, the
 Lanternfish with Photophores (smaller and quicker), the Angler Larva with Illicium
 (slower), the Squid Paralarva with Mantle Pump and Ink Sac. The traits go through the
 ordinary taken path, quietly, so they count toward families and synergies. The title
@@ -401,13 +608,39 @@ a find; a load keeps ids the game no longer has, and a corrupt store reads as em
   store is not rewritten on every kill.
 - **Where it is read.** The Codex screen, off the title and both end screens, lists
   every species by zone, the whole trait pool as HUD chips, and the synergies; anything
-  unfound keeps its slot as `???`, since what is left to find is the point. A draft card
-  for a trait never taken carries a *new* mark beside its rarity.
+  unfound keeps its slot as `???`, since what is left to find is the point. A pedestal's
+  card for a mutation never taken carries a *new* mark beside its rarity.
 
-**Hunger is said before it kills** (`Metabolism.warn`): a toast under a quarter and at
-empty, the bar pulsing red, and a heartbeat every 1.15 s quickening to 0.5 s as fullness
-runs out — `audio/sound.ts`, two synthesised sine thumps, woken on the first key or press
-since a browser will not start audio before one, and muted with M.
+## Hearts and the belly
 
-Fullness (`food`) drains at `metabolism * (1.2 + size * 0.014)` and hits health at zero
-— the cost that stops size-stacking from being free.
+Since roadmap stage 2 the player's health is **heart containers** in halves (`Run.containers`,
+three to start; `Game` sets `hpMax` to twice it every frame), and hunger, XP and the level-up
+draft are gone.
+
+- **A hit is half a heart**, a guardian's a whole one, whatever landed it
+  (`Creature.takeHit`). Every blow on the player goes through it — a bite or a blow
+  (`Combat.hitPlayer`), recoil off spines (`sting`) — and it lands nothing during the grace of
+  the last hit (`INVULN`, 0.8 s), which the body blinks through (`Scene`). Armour is a chance
+  of shrugging a hit off, 5% a point to at most 40%, with a shorter grace. Venom and bleeding
+  take half a heart every 1.5 s they run (`Creature.ail`), through no grace. The player's
+  hearts come back from pickups, and from regeneration only as a room clears (*Pedestals*).
+- **The swallow rule.** The player's bite swallows on the bite that would have killed
+  (`Combat.swallows`), whatever the size, never a guardian; the player itself is never
+  swallowed. Between the animals the old size rule holds, since their ecology runs on it.
+  The player strikes at anything (`Creature.attacks`); what the ocean flees still goes by
+  `preysOn`, so a larva is not what a mackerel runs from.
+- **Carcasses.** A death that is not a swallow leaves one (`World.carcasses`): the body rolls
+  belly-up (`FishView.lie`), sinks and settles on what is under it, and stays until the
+  player swims into it — within the `gulp` reach, which is what the stat means now — or the
+  room holds more than `CARCASS_MAX`.
+- **The belly** (`run/Belly.ts`) fills with the centimetres of hostile swallowed or eaten
+  as a carcass (`World.playerGain`) — the fauna is not food, and fills nothing; at
+  `BELLY_FULL` (80, about one nursery fight room's hostiles) times the body's metabolism it passes a
+  pickup out behind the body —
+  a half heart while there is health to fill, 60% of the time, else a shell. Pickups
+  (`World.pickups`) sink, settle, and are taken by touch after half a second; a heart is left
+  lying at full health. The heartbeat that warned of hunger now warns of the last heart.
+- **Hostiles** fight by their role (`sim/roles.ts`, and *Hostile roles* in `simulation.md`).
+
+The heartbeat is `audio/sound.ts`, two synthesised sine thumps, woken on the first key or
+press since a browser will not start audio before one, and muted with M.

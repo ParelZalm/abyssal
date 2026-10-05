@@ -208,8 +208,8 @@ export function shade(s: Sheet, pal: Palette): HTMLCanvasElement {
   const ctx = cv.getContext('2d')!;
   const img = ctx.createImageData(w, h);
   const px = img.data;
-  const pick = (v: number, x: number, y: number, lo: number, hi: number) =>
-    R[clamp(Math.floor(v * (n - 1) + bayer(x, y) * 0.9 + 0.05), lo, hi)];
+  const pick = (v: number, x: number, y: number, lo: number, hi: number, ramp = R) =>
+    ramp[clamp(Math.floor(v * (n - 1) + bayer(x, y) * 0.9 + 0.05), lo, hi)];
   const A = pal.alpha;
   const grain = pal.grain;
 
@@ -240,12 +240,12 @@ export function shade(s: Sheet, pal: Palette): HTMLCanvasElement {
       } else if (m === M.FIN || m === M.GAUZE) {
         const ray = s.aux[i] >= 1 ? 0.16 : 0;
         const L = 0.34 + ray + (fbm(x * 0.5, y * 0.5, pal.seed + 9) - 0.5) * 0.2;
-        c = pick(L, x, y, 1, n - 2);
+        c = pick(L, x, y, 1, n - 2, pal.fin);
         // a fin laid over the body gets an inner edge where it leaves it, or the two run
         // together into one value and the fin disappears into the flank
         for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0], [0, -1]] as const) {
           const j = (y + dy) * w + (x + dx);
-          if (s.get(x + dx, y + dy) === M.BODY && s.layer[j] < s.layer[i]) { c = R[1]; break; }
+          if (s.get(x + dx, y + dy) === M.BODY && s.layer[j] < s.layer[i]) { c = pal.fin[1]; break; }
         }
         if (m === M.GAUZE) a *= 0.55;
       } else if (m === M.MOUTH) {

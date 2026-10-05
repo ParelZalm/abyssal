@@ -18,12 +18,15 @@
  * geometry either, but it carried five `Graphics` objects per creature; this carries one
  * mesh and a shared texture, so a school is cheap in memory as well as in draw calls.
  */
-import { Container, MeshSimple, Sprite } from 'pixi.js';
+import { Container, MeshSimple, Sprite, Texture } from 'pixi.js';
 import { bakeFish, releaseFish, type Baked, type Rig } from './fishbake';
-import { drawnAngle, PLAN_ART, quintic, R, type Plan } from '../../content/form';
+import { SPRITES, spritePoint } from '../../content/sprites';
+import type { Species } from '../../content/species';
+import { drawnAngle, formFor, PLAN_ART, quintic, R, type Plan } from '../../content/form';
 import { menace, type Genome } from '../../content/genome';
 import { glowTexture } from '../textures';
-import { hsl, lerp } from '../../core/util';
+import type { Light } from '../lighting';
+import { clamp, hsl, lerp } from '../../core/util';
 import { artDensity, artVersion } from '../pixel';
 import { livingSkin, type LivingSkin } from './living';
 import type { Emitter } from './bake/sheet';
@@ -69,6 +72,8 @@ const MOTION: Record<Plan, Motion> = {
   whale:      { cols: 30, waves: 0.5, amp: 0.24, pulse: 0 },
   longsquid:  { cols: 26, waves: 0.6, amp: 0.26, pulse: 0.26 },
   broadsquid: { cols: 24, waves: 0.65, amp: 0.28, pulse: 0.32 },
+  // an armoured trunk barely bends; the tail fan does the swimming
+  mantis:     { cols: 26, waves: 0.55, amp: 0.2, pulse: 0 },
   // more columns than its length asks for: a veil shows every kink a coarse strip has
   wraith:    { cols: 34, waves: 1.15, amp: 0.55, pulse: 0 },
 };
@@ -84,6 +89,8 @@ export interface Pose {
   strike: number;
   /** The jaw open — a strike, a guardian's tell, or the player with prey at its mouth. */
   open: boolean;
+  /** How much of a swim stroke is left, 1 as it is kicked down to 0: only the player's. */
+  burst?: number;
 }
 export const REST: Pose = { windup: 0, strike: 0, open: false };
 
@@ -96,6 +103,9 @@ export const REST: Pose = { windup: 0, strike: 0, open: false };
  */
 const FLIP_TIME = 0.2;
 
+/** How much of the swim wave a strike thrown dead straight takes out. */
+const STRAIGHT = 0.88;
+
 /** Columns per rigged arm. An arm is thin, so it needs length resolution and nothing else. */
 const ARM_COLS = 12;
 
@@ -106,6 +116,45 @@ const ARM_COLS = 12;
  * it, since `motionFor` adds its share on top.
  */
 const SIDE_ON = 0.45;
+
+/**
+ * The flinch: how far a blow knocks the drawn body along it at its peak, in body sizes, and
+ * how much of it the body is white before it turns red — about the first 80 ms, while the
+ * hit's light is at its brightest.
+ */
+const KNOCK = 0.18;
+const HURT_WHITE = 0.72;
+
+/**
+ * A thud against rock (`bump`): seconds it rings for, and how many half-swings it makes in
+ * that — squashed against the rock, sprung long off it, and settling — so a big body reads as
+ * heavy and elastic rather than stopped. `BUMP_SQUASH` is the squash at a full-weight thud,
+ * `BUMP_REEL` the turn off a blow at the end of the body, in radians.
+ */
+const BUMP_TIME = 0.45;
+const BUMP_SWINGS = 3;
+const BUMP_SQUASH = 0.24;
+const BUMP_REEL = 0.22;
+
+/**
+ * Tucking into a crack (`nestle`): seconds it plays for; how far the body sinks back into it
+ * and comes up again, in sizes; how much narrower it squeezes; and the tail's wriggle, radians
+ * and swings — a larva working itself into the rock rather than a sprite turned on end.
+ */
+const NESTLE_TIME = 0.55;
+const NESTLE_DIP = 0.22;
+const NESTLE_SQUEEZE = 0.16;
+const NESTLE_WRIGGLE = 0.14;
+const NESTLE_SWINGS = 5;
+
+/**
+ * A carcass glows red: a rim of it round the silhouette (the skin's `uRim`), a bloom and a
+ * light. Dimmed grey and floating among the rock and the decoration, a kill left to be eaten
+ * was lost in the room; red is the colour nothing alive in the water is drawn in but blood.
+ * It comes up once the roll is done, and throbs slowly, the way a light that is not a lamp does.
+ */
+const EMBER = 0xff2a1e;
+const EMBER_IN = 0.4;
 
 export class FishView extends Container {
   /**
@@ -133,17 +182,24 @@ export class FishView extends Container {
   private lamps: { s: Sprite; e: Emitter; phase: number }[] = [];
   /** A tight, hot centre inside the halo — the halo alone reads as fog, not as a light. */
   private core = new Sprite(glowTexture());
+  /** A carcass's red bloom (`EMBER`); hidden while the body lives. */
+  private ember = new Sprite(glowTexture());
   private mesh: MeshSimple | null = null;
   /** The shader the strip is drawn with: sub-pixel sampling and displaced fins (`living.ts`). */
   private skin: LivingSkin | null = null;
   private verts = new Float32Array(0);
   private colX: number[] = [];
+  /**
+   * How much of the pulse each column takes, for a sprite whose bells alone squeeze
+   * (`SpriteArt.bells`): 1 in the bells, easing to 0 a little past them. Null pulses it all.
+   */
+  private squeeze: number[] | null = null;
   private baked: Baked | null = null;
   private motion = MOTION.darter;
   /** Counts down from 1 through a bite, driving the squash-and-snap. */
   private chompT = 0;
   /** Rigged arms, one strip each, under the body. Empty for anything without `grasp`. */
-  private arms: { mesh: MeshSimple; verts: Float32Array; feeding: boolean }[] = [];
+  private arms: { mesh: MeshSimple; verts: Float32Array; feeding: boolean; rig: Rig; v: number }[] = [];
   /** The arms' own clock: `beat` jumps on a boost, and a jump reads as a twitch in an arm. */
   private armT = Math.random() * 10;
   /** How far the feeding pair is out toward `grip`, 0 coiled to 1 fastened. */
@@ -165,26 +221,93 @@ export class FishView extends Container {
   private sway = 0;
   private recoil = 0;
   private clock = Math.random() * 10;
-  /** A flinch, 1 as the wound lands down to 0: a recoil, a red flash, a blink. */
+  /** A flinch, 1 as the wound lands down to 0: knocked along the blow, a flash, then red. */
   private hurtT = 0;
+  /** Which way the last blow was going, as a unit vector: the flinch throws the drawn body along it. */
+  private knockX = 0;
+  private knockY = 0;
+  /** A thud against rock, 1 as it lands down to 0; how hard, how nose-on, and which way it turns the body. */
+  private bumpT = 0;
+  private bumpK = 0;
+  private bumpAlong = 0;
+  private bumpTip = 0;
+  /** The turn a thud gives the body this frame, radians, applied by `place`. */
+  private reel = 0;
+  /** Tucking into a crack, 1 as it starts down to 0 (`nestle`). */
+  private nestT = 0;
   /** Which texture is on the mesh: the mouth shut, or open to strike. */
   private gaping = false;
   /** Set once the animal is dead and this view is playing its death. */
   private deathT = -1;
   private fall = { vx: 0, vy: 0, whole: false };
+  /**
+   * The body as baked, mouth shut — what a screen shows of it (the boss intro). A body with
+   * rigged arms has them laid out from its crown, straight and fanned a little, under the body:
+   * the bake is the body alone, and the Giant Squid's intro showed a mantle and nothing else.
+   */
+  get portrait(): HTMLCanvasElement | null {
+    const b = this.baked;
+    if (!b) return null;
+    if (!this.arms.length) return b.canvas;
+    const k = b.canvas.width / (b.front - b.back);
+    const A = PLAN_ART[this.plan];
+    const arms = this.arms.map(a => {
+      const len = a.rig.len * (a.feeding ? 0.5 : 0.78 / A.armPair);
+      return { a, len, heading: a.v * 0.32, rx: a.rig.rootX, ry: a.v * a.rig.spread };
+    });
+    // the picture's box, in R units: the body's, and every arm's tip and root either side
+    let x0 = b.back, x1 = b.front, y0 = -b.halfH, y1 = b.halfH;
+    for (const { a, len, heading, rx, ry } of arms) {
+      const tx = rx + Math.cos(heading) * len, ty = ry + Math.sin(heading) * len, h = a.rig.halfH;
+      x1 = Math.max(x1, tx + h); y0 = Math.min(y0, ty - h, ry - h); y1 = Math.max(y1, ty + h, ry + h);
+    }
+    const out = document.createElement('canvas');
+    out.width = Math.ceil((x1 - x0) * k);
+    out.height = Math.ceil((y1 - y0) * k);
+    const ctx = out.getContext('2d')!;
+    ctx.imageSmoothingEnabled = false;
+    for (const { a, len, heading, rx, ry } of arms) {
+      const src = a.rig.texture.source.resource as CanvasImageSource;
+      ctx.setTransform(1, 0, 0, 1, (rx - x0) * k, (ry - y0) * k);
+      ctx.rotate(heading);
+      ctx.drawImage(src, 0, -a.rig.halfH * k, len * k, a.rig.halfH * 2 * k);
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(b.canvas, Math.round((b.back - x0) * k), Math.round((-b.halfH - y0) * k));
+    return out;
+  }
+
   /** The art density this view was baked at; a new tier means a re-bake. */
   private version = artVersion;
 
-  constructor(private g: Genome, private plan: Plan = 'darter') {
+  /** A species drawn from a sprite (`content/sprites.ts`) rather than painted, or none. */
+  private readonly art?: string;
+  /** How much bigger than its genome the species is drawn (`Species.drawn`). */
+  private readonly drawn: number;
+  /** The genome as given, before the drawn size: what a re-bake starts from. */
+  private source!: Genome;
+  /** Turned at half health (`Roles`): a sprite shows its wounded pair, and keeps it on a re-bake. */
+  private wounded = false;
+
+  /**
+   * `species`, for an animal of the roster: whether it has a sprite and how big it is drawn.
+   * Only an animal that never changes has either, so a transformation never meets them.
+   * `wounded` starts it turned, as the board's turned cells show it.
+   */
+  constructor(private g: Genome, private plan: Plan = 'darter', species?: Species, wounded = false) {
     super();
-    for (const s of [this.aura, this.halo, this.core]) {
+    this.art = species && SPRITES[species.id] ? species.id : undefined;
+    this.drawn = species?.drawn ?? 1;
+    for (const s of [this.aura, this.halo, this.core, this.ember]) {
       s.anchor.set(0.5);
       s.blendMode = 'add';
     }
-    this.glow.addChild(this.aura, this.halo, this.core);
+    this.ember.tint = EMBER;
+    this.ember.visible = false;
+    this.glow.addChild(this.aura, this.halo, this.core, this.ember);
     this.murk.anchor.set(0.5);
     this.fog.addChild(this.murk);
-    this.rebuild(g);
+    this.rebuild(g, wounded);
   }
 
   /**
@@ -192,19 +315,31 @@ export class FishView extends Container {
    * this is the one place the body's final transform is put together: its facing, the
    * pitch, the hover and the strike's draw-back on top of where the simulation has it.
    */
-  place(x: number, y: number, heading: number, face: 1 | -1 = 1) {
+  place(x: number, y: number, heading: number, face: 1 | -1 = 1, upright = 0) {
     this.face = face;
     // a view that first appears facing -x is already turned, not flipping
     if (!this.placed) { this.placed = true; this.facing = face; }
     // The mirror is in the strip, so the frame only pitches. The pitch is the same climb or
     // dive either way round, which as a rotation is its negative in the mirrored frame.
-    const pitch = drawnAngle(heading, face) * face;
-    const r = pitch * this.facing + this.sway;
+    const pitch = drawnAngle(heading, face, upright) * face;
+    let r = pitch * this.facing + this.sway + this.reel;
+    if (this.nestT > 0) {
+      // worked into the crack: sunk back down its length and up again, the tail wriggling
+      const e = 1 - this.nestT;
+      const dip = Math.sin(e * Math.PI) * this.g.size * NESTLE_DIP;
+      x -= Math.cos(r) * this.facing * dip;
+      y -= Math.sin(r) * this.facing * dip;
+      r += Math.sin(e * Math.PI * NESTLE_SWINGS) * NESTLE_WRIGGLE * this.nestT;
+    }
     const unit = this.g.size / R * this.swell;
     this.scale.set(unit * this.sx, unit * this.sy);
     // drawn back along the heading on a wind-up — the coil before the spring
     x -= Math.cos(heading) * this.recoil;
     y -= Math.sin(heading) * this.recoil - this.bob;
+    // knocked along the blow, and back: the view only, the body's own shove is the sim's
+    const knock = this.hurtT * this.hurtT * this.g.size * KNOCK;
+    x += this.knockX * knock;
+    y += this.knockY * knock;
     this.x = x; this.y = y; this.rotation = r;
     this.glow.x = x; this.glow.y = y;
     // the glow layer is not rotated or mirrored with the body, so each lamp is carried
@@ -228,18 +363,42 @@ export class FishView extends Container {
   show(visible: boolean, alpha: number, tint: number) {
     if (this.deathT >= 0) return;
     this.visible = this.glow.visible = visible;
-    // a wound flashes the body red and blinks it for its first few frames — the one frame
-    // of feedback that says a bite landed, on whichever side of it you were
+    // a wound turns the body white for its first few frames (the skin's `uFlash`), lit by
+    // the light the hit threw (`Impacts`), and then red, fading. It used to blink at once,
+    // which hid the body in the very frames that were meant to show the hit land
     const h = this.hurtT;
-    const blink = h > 0.6 && Math.floor(this.clock * 30) % 2 === 0 ? 0.35 : 1;
-    this.alpha = alpha * blink;
+    this.alpha = alpha;
     this.glow.alpha = alpha;
-    this.tint = h > 0 ? mul(tint, lerpColor(0xffffff, 0xff5a4e, h * 0.85)) : tint;
+    this.tint = h > HURT_WHITE ? 0xffffff
+      : h > 0 ? mul(tint, lerpColor(0xffffff, 0xff5a4e, (h / HURT_WHITE) * 0.85)) : tint;
     this.glow.tint = tint;
     // the fog takes culling and distance, but not the danger tint: it is absence of light,
     // so tinting it would only make it glow in whatever colour the tint happens to be
     this.fog.visible = visible;
     this.fog.alpha = alpha;
+  }
+
+  /**
+   * The light this body throws on the room (`render/lighting.ts`): one light per lamp where
+   * the lamp is, and one round the body for a real light organ or a pale body's own glow.
+   * Reach is in world units — this is light falling on rock, not the bloom in the eye.
+   */
+  shine(out: Light[]) {
+    if (!this.visible || this.glow.alpha <= 0.02) return;
+    const a = this.glow.alpha;
+    const R = this.g.size * 0.62;
+    // a carcass's own lights are out; what is left is the ember
+    if (this.ember.visible) {
+      out.push({ x: this.glow.x, y: this.glow.y, r: R * 3, color: EMBER, a: this.ember.alpha * a });
+      return;
+    }
+    const own = Math.max(this.g.glow, this.g.pale * 0.6);
+    if (own > 0.05) out.push({ x: this.glow.x, y: this.glow.y, r: R * (3 + own * 5),
+      color: this.halo.tint as number, a: Math.min(1, own) * a });
+    for (const { s, e } of this.lamps) {
+      out.push({ x: this.glow.x + s.x, y: this.glow.y + s.y, r: R * (1.4 + e.strength * 2.2),
+        color: e.color, a: s.alpha * a });
+    }
   }
 
   /** A bloom per light organ, sized in pixels of the frame rather than in body lengths. */
@@ -277,7 +436,12 @@ export class FishView extends Container {
     this.rebuild(g);
   }
 
-  rebuild(g: Genome) {
+  rebuild(g: Genome, wounded = this.wounded) {
+    this.source = g;
+    this.wounded = wounded;
+    // everything the view draws reads the size off the genome it holds, so a species drawn
+    // bigger holds a copy at the size it is drawn
+    if (this.drawn !== 1) g = { ...g, size: g.size * this.drawn };
     this.g = g;
     this.version = artVersion;
     const m = this.motion = motionFor(g, this.plan);
@@ -286,10 +450,11 @@ export class FishView extends Container {
     this.mesh?.destroy();
     for (const a of this.arms) a.mesh.destroy();
     this.arms = [];
+    this.ghosted = false;
     // take the new texture before letting go of the old one, so a rebuild onto the same
     // genome never leaves the entry at zero users for an eviction to catch
     const old = this.baked;
-    this.baked = bakeFish(g, this.plan);
+    this.baked = bakeFish(g, this.plan, this.art, wounded);
     this.hangLamps(this.baked.lights);
     if (old) releaseFish(old);
     const { front, back } = this.baked;
@@ -315,9 +480,16 @@ export class FishView extends Container {
       }
     }
     this.verts = verts;
+    const bells = this.art ? SPRITES[this.art]?.bells : undefined;
+    if (bells) {
+      const s = SPRITES[this.art!], f = formFor(g, this.plan);
+      const a = spritePoint(s, f, [bells.x0, s.axis]).x, b = spritePoint(s, f, [bells.x1, s.axis]).x;
+      const ease = (b - a) * 0.25;
+      this.squeeze = this.colX.map(x => clamp(Math.min(x - a, b - x) / ease + 1, 0, 1));
+    } else this.squeeze = null;
     // arms first, so they sit under the body: the crown is tucked beneath the head
-    const rig = this.baked.arm;
-    if (rig) {
+    const rig = this.baked.arm, tentacle = this.baked.tentacle;
+    if (rig || tentacle) {
       const A = PLAN_ART[this.plan];
       const auv = new Float32Array(ARM_COLS * 4);
       const aidx = new Uint32Array((ARM_COLS - 1) * 6);
@@ -330,17 +502,20 @@ export class FishView extends Container {
         }
       }
       for (let i = 0; i < A.armCount; i++) {
+        // the outermost pair are the feeding tentacles, as they were in the painted crown, and
+        // drawn from a picture of their own where the sprite has one
+        const feeding = i === 0 || i === A.armCount - 1;
+        const own = (feeding && tentacle) || rig;
+        if (!own) continue;
         const averts = new Float32Array(ARM_COLS * 4);
-        const mesh = new MeshSimple({ texture: rig.texture, vertices: averts, uvs: auv,
+        const mesh = new MeshSimple({ texture: own.texture, vertices: averts, uvs: auv,
                                       indices: aidx });
         this.addChild(mesh);
-        // the outermost pair are the feeding tentacles, as they were in the painted crown
-        this.arms.push({ mesh, verts: averts,
-                         feeding: i === 0 || i === A.armCount - 1 });
+        this.arms.push({ mesh, verts: averts, feeding, rig: own, v: (i / (A.armCount - 1)) * 2 - 1 });
       }
     }
     this.skin?.shader.destroy();
-    this.skin = livingSkin(this.baked.texture, this.baked.depth / this.baked.halfH);
+    this.skin = livingSkin(this.baked.texture, this.baked.depth / this.baked.halfH, this.baked.legs, this.baked.trail);
     this.mesh = new MeshSimple({ texture: this.baked.texture, vertices: verts, uvs,
                                  indices: idx, shader: this.skin.shader });
     this.addChild(this.mesh);
@@ -349,8 +524,15 @@ export class FishView extends Container {
     // Every animal carries a floor of it, glowing organs or not — against water this dark
     // an unlit body is a hole in the frame, and the bloom is what gives it a silhouette
     // without stroking one.
-    const tint = hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, men * 0.75),
-                     0.6 + men * 0.3, 0.55);
+    // heated by menace as the painted accent is (`palette.ts`), and no further than the plan
+    // lets it: an angler's halo is the colour of its lure, not a warning
+    const heat = men * 0.75 * PLAN_ART[this.plan].heat;
+    // a sprite with lights of its own carries its colour in them: the halo and the core are
+    // theirs, mixed by strength, not the accent heated by menace — on a siphonophore that was
+    // a warm disc on its bare stem, a colour nowhere in the picture
+    const lit = this.art && SPRITES[this.art] ? this.baked.lights : [];
+    const own = lit.length ? mixed(lit) : null;
+    const tint = own ?? hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, heat), 0.6 + men * 0.3, 0.55);
     this.halo.visible = true;
     const gr = R * (4 + g.glow * 7);
     this.halo.width = this.halo.height = gr * 2;
@@ -358,7 +540,8 @@ export class FishView extends Container {
     // the floor is lower than it was before the pixel outline and rim: those carry the
     // silhouette in dark water now, and a disc of light round every animal reads as a
     // spotlight on each of them rather than as bioluminescence
-    this.halo.alpha = Math.min(0.95, 0.13 + g.glow * 0.65);
+    // a pale body is lit from within, so it carries a real halo whatever its organs
+    this.halo.alpha = Math.min(0.95, 0.13 + g.glow * 0.65 + g.pale * 0.3);
     // the core sits inside the body's own width, so it lifts the animal's value rather
     // than spilling a second disc of light around it
     // and only a real light organ gets one: on an unlit animal it lands as a hot white
@@ -366,8 +549,8 @@ export class FishView extends Container {
     this.core.visible = g.glow > 0.05;
     const cr = R * (1.5 + g.glow * 1.6);
     this.core.width = this.core.height = cr * 2;
-    this.core.tint = hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, men * 0.75),
-                         0.45 + men * 0.35, 0.72);
+    this.core.tint = own ?? hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, heat),
+                                0.45 + men * 0.35, 0.72);
     this.core.alpha = Math.min(0.8, g.glow * 0.75);
     this.aura.visible = men > 0.25;
     if (this.aura.visible) {
@@ -397,9 +580,31 @@ export class FishView extends Container {
     this.chompT = 1;
   }
 
-  /** A wound landed on this body. */
-  hurt() {
+  /** A wound landed on this body, from a blow going (`dx`, `dy`) — any length; none is no knock. */
+  /**
+   * The body met rock (`World.meetRock`): `k` how hard, 0 to 1; `along` 1 for nose- or tail-on
+   * and 0 for a flank laid on it, which is the axis it squashes on; `tip` which way and how far
+   * from its middle the blow landed, which turns it off the rock.
+   */
+  bump(k: number, along: number, tip: number) {
+    // a harder thud over a ringing one takes over; a lighter one is lost in it
+    if (this.bumpT * this.bumpK > k) return;
+    this.bumpT = 1;
+    this.bumpK = k;
+    this.bumpAlong = along;
+    this.bumpTip = tip;
+  }
+
+  /** The body has tucked itself into a crack (`PlayerController.nook`): the settle. */
+  nestle() {
+    this.nestT = 1;
+  }
+
+  hurt(dx = 0, dy = 0) {
     this.hurtT = 1;
+    const d = Math.hypot(dx, dy);
+    this.knockX = d > 0 ? dx / d : 0;
+    this.knockY = d > 0 ? dy / d : 0;
   }
 
   /**
@@ -411,6 +616,57 @@ export class FishView extends Container {
     this.deathT = 0;
     this.fall = { vx, vy, whole };
     this.hurtT = 0;
+    // a carcass swallowed goes down the throat without its rim; its ember fades with the rest
+    this.deadSkin(0);
+  }
+
+  /**
+   * A carcass: rolled belly-up over the first third of a second, then lying dim wherever
+   * the world has it (`World` sinks it onto the floor). Unlike `dying` it never fades — a
+   * carcass stays in the room until it is swallowed or the room is left.
+   */
+  lie(dt: number, x: number, y: number) {
+    this.deathT += dt;
+    const unit = this.g.size / R;
+    const roll = Math.min(1, this.deathT / 0.35);
+    this.scale.y = unit * Math.max(0.12, Math.abs(Math.cos(roll * Math.PI))) * (roll < 0.5 ? 1 : -1);
+    // floating, not lying: a slow rise and fall once the roll is done, each on its own phase
+    const bob = Math.sin(this.deathT * 1.3 + this.clock) * this.g.size * 0.06 * roll;
+    this.x = x; this.y = y + bob;
+    this.rotation += (Math.round(this.rotation / Math.PI) * Math.PI - this.rotation) * Math.min(1, dt * 3);
+    this.alpha = 1;
+    this.tint = 0x8f96a4;
+    if (roll >= 1 && this.mesh && this.baked) this.skinWith(this.baked.texture);
+    // the body's own lights go out over the roll, and then the ember comes up in their place
+    const lit = Math.min(1, Math.max(0, (this.deathT - 0.35) / EMBER_IN));
+    if (lit > 0 && !this.ember.visible) {
+      for (const s of [this.aura, this.halo, this.core]) s.visible = false;
+      for (const { s } of this.lamps) s.visible = false;
+      this.ember.visible = true;
+    }
+    const throb = 0.85 + 0.15 * Math.sin(this.deathT * 2.4 + this.clock);
+    this.glow.alpha = this.ember.visible ? 1 : Math.max(0, 1 - this.deathT * 3);
+    this.ember.alpha = lit * throb * 0.55;
+    this.ember.width = this.g.size * 2.2;
+    this.ember.height = this.g.size * 1.3;
+    this.ember.y = bob;
+    this.deadSkin(lit * throb);
+    this.glow.x = this.fog.x = x;
+    this.glow.y = this.fog.y = y;
+    this.fog.alpha = 0;
+  }
+
+  /**
+   * The skin of a dead body: its carcass rim, 0 to 1, and no hit flash. `animate` is what
+   * clears the flash, and a dead body is no longer animated, so a kill by a blow stayed
+   * white for as long as the carcass lay there.
+   */
+  private deadSkin(rim: number) {
+    if (!this.skin) return;
+    const u = this.skin.uniforms.uniforms;
+    u.uRim = rim;
+    u.uFlash = 0;
+    this.skin.uniforms.update();
   }
 
   /**
@@ -453,6 +709,27 @@ export class FishView extends Container {
     return this.fall.whole ? t >= 0.2 : t >= 1.3;
   }
 
+  /** Whether the body is drawn as a ghost (`ghost`). */
+  private ghosted = false;
+
+  /**
+   * Draw the body as a ghost, washed out to a cold pale: the Giant Squid's (`render/ghosts.ts`).
+   * The body through the skin's flash and each arm from a pale copy of its picture (`paled`): a
+   * tint only multiplies, so a red animal tinted pale is a darker red, and the flash is the
+   * skin's alone. A filter over the view did both at once and cut the arms off in a box, since
+   * a filter is drawn only inside the bounds Pixi finds for what it covers.
+   */
+  ghost(on: boolean) {
+    if (this.ghosted === on) return;
+    this.ghosted = on;
+    // and each arm at half the body's alpha: eight of them lap over each other at the crown, and
+    // a ghost's arms stacked brighter than its body
+    for (const a of this.arms) {
+      a.mesh.texture = on ? paled(a.rig.texture) : a.rig.texture;
+      a.mesh.alpha = on ? 0.5 : 1;
+    }
+  }
+
   /** Fasten the feeding tentacles on something in the world, followed live; null lets go. */
   grab(target: { x: number; y: number } | null) {
     this.grip = target;
@@ -463,7 +740,8 @@ export class FishView extends Container {
    * first and second derivatives vanish at the head — the wave has to arrive at the skull
    * with no slope and no curvature, or there is a crease there that reads as a joint.
    */
-  private pose(beat: number, bank: number, thrust: number, dt: number) {
+  /** `straight`, 0 to 1, flattens the swim wave and the turn's bend toward a straight body. */
+  private pose(beat: number, bank: number, thrust: number, dt: number, straight = 0) {
     if (!this.mesh || !this.baked) return;
     const m = this.motion;
     const h = this.baked.halfH;
@@ -472,7 +750,8 @@ export class FishView extends Container {
     // curls the animal like a banana
     const d = this.baked.depth;
     const n = this.colX.length;
-    const amp = d * m.amp * SIDE_ON * (0.45 + thrust * 0.75);
+    // a little of the tail's beat survives a straight body, or it reads as a frozen sprite
+    const amp = d * m.amp * SIDE_ON * (0.45 + thrust * 0.75) * (1 - straight * STRAIGHT);
     const spineY: number[] = [];
     // A turn bends the whole body into a C rather than rotating a rigid strip about its
     // middle: head and tail both fall to the inside of the turn, so the nose leads into it
@@ -483,7 +762,7 @@ export class FishView extends Container {
     const mid = (x0 + x1) / 2, half = Math.abs(x0 - x1) / 2 || 1;
     // turned round, the strip is mirrored across x, so the same steer curls the other way
     // unless the bend turns with it
-    const bend = m.pulse ? 0 : bank * d * 1.25 * this.facing;
+    const bend = m.pulse ? 0 : bank * d * 1.25 * this.facing * (1 - straight);
     for (let j = 0; j < n; j++) {
       const s = j / (n - 1);
       const env = quintic(s);
@@ -492,8 +771,10 @@ export class FishView extends Container {
     }
     // the body's origin is at x 0 on the strip, so facing -x is the strip mirrored in place
     const c = this.facing;
-    // a bell does not undulate, it contracts: the strip narrows and lengthens on the beat
+    // a bell does not undulate, it contracts: the strip narrows and lengthens on the beat —
+    // or, where only the bells squeeze, they narrow and the stem behind them holds its length
     const pulse = m.pulse ? 1 + Math.sin(beat) * m.pulse : 1;
+    const sq = this.squeeze;
     for (let j = 0; j < n; j++) {
       const x = this.colX[j] * c;
       const y = spineY[j];
@@ -503,14 +784,15 @@ export class FishView extends Container {
       const dx = this.colX[jb] - this.colX[ja], dy = spineY[jb] - spineY[ja];
       const l = Math.hypot(dx, dy) || 1;
       const nx = -dy / l * c, ny = dx / l;
-      const hw = h * (m.pulse ? 2 - pulse : 1);
-      this.verts[j * 4] = x * pulse + nx * hw;
+      const hw = h * (m.pulse ? 1 - (pulse - 1) * (sq ? sq[j] : 1) : 1);
+      const xs = sq ? x : x * pulse;
+      this.verts[j * 4] = xs + nx * hw;
       this.verts[j * 4 + 1] = y + ny * hw;
-      this.verts[j * 4 + 2] = x * pulse - nx * hw;
+      this.verts[j * 4 + 2] = xs - nx * hw;
       this.verts[j * 4 + 3] = y - ny * hw;
     }
     this.mesh.vertices = this.verts;
-    if (this.baked.arm) this.poseArms(this.baked.arm, spineY[0], pulse, thrust, dt);
+    if (this.arms.length) this.poseArms(spineY[0], pulse, thrust, dt);
   }
 
   /**
@@ -519,7 +801,7 @@ export class FishView extends Container {
    * windscreen wiper. The feeding pair is blended from that coil toward a straight line
    * onto `grip`, so a strike is the same arm uncurling rather than a second arm appearing.
    */
-  private poseArms(rig: Rig, headY: number, pulse: number, thrust: number, dt: number) {
+  private poseArms(headY: number, pulse: number, thrust: number, dt: number) {
     const n = this.arms.length;
     const A = PLAN_ART[this.plan];
     this.armT += dt * (1.4 + thrust * 1.6);
@@ -537,8 +819,7 @@ export class FishView extends Container {
     }
     const pts: number[] = new Array(ARM_COLS * 2);
     for (let i = 0; i < n; i++) {
-      const arm = this.arms[i];
-      const v = (i / (n - 1)) * 2 - 1;
+      const arm = this.arms[i], rig = arm.rig, v = arm.v;
       const ry = headY + v * rig.spread;
       let rx = rig.rootX * pulse;
       // swimming bundles the crown into a point; holding something flares it open
@@ -597,7 +878,7 @@ export class FishView extends Container {
   swell = 1;
 
   animate(dt: number, thrust: number, beat: number, bank: number, act: Pose = REST) {
-    if (this.version !== artVersion) this.rebuild(this.g);
+    if (this.version !== artVersion) this.rebuild(this.source);
     this.clock += dt;
     this.flipT = Math.max(0, this.flipT - dt / FLIP_TIME);
     if (this.facing !== this.face) { this.facing = this.face; this.flipT = 1; }
@@ -629,6 +910,15 @@ export class FishView extends Container {
     const k = act.strike;
     sx *= 1 + k * 0.16;
     sy *= 1 - k * 0.1;
+    // a swim stroke: bunched for an instant as the tail snaps, then thrown long while the
+    // kick carries it, and settled by the time the glide has bled it off
+    const b = act.burst ?? 0;
+    if (b > 0) {
+      const q = 1 - b;
+      const bunch = Math.max(0, 1 - q / 0.3), shoot = Math.sin(q * Math.PI);
+      sx *= 1 - bunch * 0.12 + shoot * 0.16;
+      sy *= 1 + bunch * 0.1 - shoot * 0.08;
+    }
     if (this.chompT > 0) {
       this.chompT = Math.max(0, this.chompT - dt * 5.5);
       // one hump: squash along the body and flare across it, then release
@@ -636,8 +926,29 @@ export class FishView extends Container {
       sx *= 1 - s * 0.3;
       sy *= 1 + s * 0.26;
     }
-    // a flinch: knocked short for an instant
-    sx *= 1 - this.hurtT * 0.1;
+    // a flinch: knocked short and bunched for an instant, keeping its volume
+    sx *= 1 - this.hurtT * 0.2;
+    sy *= 1 + this.hurtT * 0.12;
+    // a thud: flattened against the rock along the axis that met it, sprung long off it and
+    // settling, each swing smaller — keeping its volume, or it reads as the art shrinking
+    // squeezed into a crack: narrower across and drawn out along, for the moment it takes
+    this.nestT = Math.max(0, this.nestT - dt / NESTLE_TIME);
+    if (this.nestT > 0) {
+      const s = Math.sin((1 - this.nestT) * Math.PI);
+      sx *= 1 + s * NESTLE_SQUEEZE * 0.5;
+      sy *= 1 - s * NESTLE_SQUEEZE;
+    }
+    this.bumpT = Math.max(0, this.bumpT - dt / BUMP_TIME);
+    this.reel = 0;
+    if (this.bumpT > 0) {
+      const e = 1 - this.bumpT;
+      const ring = this.bumpT * this.bumpT * Math.cos(e * Math.PI * BUMP_SWINGS) * this.bumpK;
+      const on = this.bumpAlong, flat = 1 - on;
+      sx *= 1 - ring * BUMP_SQUASH * on + ring * BUMP_SQUASH * 0.5 * flat;
+      sy *= 1 + ring * BUMP_SQUASH * 0.6 * on - ring * BUMP_SQUASH * flat;
+      // turned off the rock and swinging back through it: a head that hit the wall reels
+      this.reel = this.bumpTip * BUMP_REEL * this.bumpK * this.bumpT * Math.cos(e * Math.PI * (BUMP_SWINGS - 1));
+    }
     this.sx = sx;
     this.sy = sy;
     // the jaw is a second texture on the same strip: open for the strike, and snapped shut
@@ -652,9 +963,16 @@ export class FishView extends Container {
       u.uBeat = beat;
       u.uClock = this.clock;
       u.uFlip = this.flipT;
+      u.uFlash = Math.max(this.ghosted ? GHOST_PALE : 0,
+        this.hurtT > HURT_WHITE ? 0.9 * ((this.hurtT - HURT_WHITE) / (1 - HURT_WHITE)) ** 0.5 : 0);
       this.skin.uniforms.update();
     }
-    this.pose(beat, bank, thrust * (1 + w * 0.9), dt);
+    // a strike is thrown straight: the charge drove the wave to its widest, so a gulper's
+    // dash wriggled harder than its cruise when it should go like a thrown spear. Held
+    // through most of it, and let go over its last quarter as the swim comes back
+    const straight = Math.min(1, k * 4);
+    // the stroke's tail sweeps wider than the cruise's: the snap is what the eye reads as a kick
+    this.pose(beat, bank, thrust * (1 + w * 0.9) + b * 0.7, dt, straight);
   }
 
   private skinWith(texture: Baked['texture']) {
@@ -677,4 +995,46 @@ function mul(a: number, b: number) {
 function lerpColor(a: number, b: number, t: number) {
   const ch = (s: number) => Math.round(lerp((a >> s) & 255, (b >> s) & 255, t));
   return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+}
+
+/** Lights' colours mixed by their strength. */
+function mixed(lights: Emitter[]) {
+  let r = 0, g = 0, b = 0, w = 0;
+  for (const e of lights) {
+    r += (e.color >> 16) * e.strength; g += ((e.color >> 8) & 255) * e.strength; b += (e.color & 255) * e.strength;
+    w += e.strength;
+  }
+  return (Math.round(r / w) << 16) | (Math.round(g / w) << 8) | Math.round(b / w);
+}
+
+/** How far a ghost's body is washed toward white through the skin's flash (`FishView.ghost`). */
+const GHOST_PALE = 0.88;
+const pale = new WeakMap<Texture, Texture>();
+
+/**
+ * A rigged arm's picture washed out as a ghost's body is: each texel its brightness, lifted into
+ * a cold pale, its alpha kept. Made once per picture, and kept as long as the picture is.
+ */
+function paled(t: Texture): Texture {
+  const had = pale.get(t);
+  if (had) return had;
+  const src = t.source.resource as HTMLCanvasElement;
+  const c = document.createElement('canvas');
+  c.width = src.width;
+  c.height = src.height;
+  const ctx = c.getContext('2d')!;
+  ctx.drawImage(src, 0, 0);
+  const img = ctx.getImageData(0, 0, c.width, c.height), d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const l = (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11) / 255;
+    // the body's own wash: its colour taken 0.88 of the way to white (`GHOST_PALE`)
+    d[i] = 255 * Math.min(1, 0.8 + l * 0.2);
+    d[i + 1] = 255 * Math.min(1, 0.82 + l * 0.18);
+    d[i + 2] = 255 * Math.min(1, 0.86 + l * 0.14);
+  }
+  ctx.putImageData(img, 0, 0);
+  const out = Texture.from(c);
+  out.source.scaleMode = 'nearest';
+  pale.set(t, out);
+  return out;
 }

@@ -53,8 +53,7 @@ export class RunStrip {
     if (on !== this.lastOn) { this.lastOn = on; this.combo.classList.toggle('on', on); }
     if (on) {
       const mult = s.comboMult.toFixed(2).replace(/\.?0+$/, '');
-      const bio = s.comboBiomass > 1 ? ` · +${Math.round((s.comboBiomass - 1) * 100)}% biomass` : '';
-      const label = `×${mult} chain ${s.combo}${bio}`;
+      const label = `×${mult} chain ${s.combo}`;
       if (label !== this.lastLabel) {
         this.lastLabel = label;
         (this.combo.firstChild as HTMLElement).textContent = label;

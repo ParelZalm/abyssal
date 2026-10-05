@@ -1,11 +1,14 @@
 import { PLAN_ART } from '../content/form';
 import { armourOf, biteDamage } from '../content/genome';
 import { angleDelta, clamp, dist2 } from '../core/util';
-import type { Creature } from './creature';
+import type { Creature, Hurt } from './creature';
 import type { Blood } from './events';
-import { armourAgainst, biteRateOf, damageOf, gulpOf, takenOf, wound } from './organs';
+import { armourAgainst, biteRateOf, damageOf, gulpOf, kindle, primaryOf, strikeOf, takenOf, wound } from './organs';
 import { EXPOSED_TAKEN, PATTERN_CD, RUSH_BITE } from './patterns';
+import { bracedOf, ghostly } from './roles';
 import type { World } from './world';
+import { surfaceGap } from './hull';
+import { SPRITES } from '../content/sprites';
 
 /** A school holds as a bait ball with this many of its own kind packed around a body. */
 const BALL_N = 6;
@@ -55,7 +58,8 @@ export class Combat {
    */
   bleedOut(c: Creature, dt: number) {
     c.bleedT -= dt;
-    c.hp -= c.bleed * dt;
+    if (c.isPlayer) c.ail(dt);
+    else c.hp -= c.bleed * dt;
     if ((c.drip -= dt) <= 0) {
       c.drip = DRIP_EVERY;
       const drop: Blood = { x: c.x, y: c.y, size: c.genome.size * DRIP_SIZE, t: DRIP_LIFE, from: c,
@@ -63,7 +67,7 @@ export class Combat {
       this.world.blood.push(drop);
       this.world.spilled.push(drop);
     }
-    if (c.hp <= 0) {
+    if (c.hp <= 0 && !c.isPlayer) {
       this.slay(c, c.bleedByPlayer);
       this.world.bites.push({ x: c.x, y: c.y, amount: c.bleed, fatal: true,
         onPlayer: c.isPlayer, byPlayer: c.bleedByPlayer, size: c.genome.size });
@@ -88,8 +92,8 @@ export class Combat {
 
   private pair(a: Creature, b: Creature) {
     if (!a.alive || !b.alive) return;
-    if (a.preysOn(b)) this.strike(a, b);
-    if (b.alive && b.preysOn(a)) this.strike(b, a);
+    if (a.attacks(b)) this.strike(a, b);
+    if (b.alive && b.attacks(a)) this.strike(b, a);
   }
 
   /**
@@ -101,7 +105,27 @@ export class Combat {
     // and gulp would take a body the pull has not delivered, and cutting across the cone
     // is meant to be a way out
     if (att.drawT > 0) return;
+    // a room's hostile hurts by touch, as Isaac's monsters do: a charger's dash is how it
+    // gets its body onto the player, and a drifter has nothing else. No reach past the body
+    // and no gulp, or a spitter would pull the player onto itself
+    // A squid boss holding the player is holding it: the grip is the grasp's, not a touch
+    if (att.hostile && def.isPlayer) {
+      if (att.holding === def) this.grasp(att, def);
+      else this.touch(att, def);
+      return;
+    }
     if (PLAN_ART[att.species.plan].grasp > 0 && !att.isPlayer) { this.grasp(att, def); return; }
+    // the player bites on the arrows, not on contact: only a strike that is out lands, from
+    // wherever it reaches, and nothing is pulled in — swimming into prey is not eating it
+    if (att.isPlayer) {
+      // a body with a primary fires its strike and bites nothing with it (`World.fly`); in a
+      // fight it bites what the fight is with, as its shots do
+      if (att.attack !== 'strike' || primaryOf(att)) return;
+      if ((!def.hostile && this.world.terrain?.locked) || ghostly(def)) return;
+      // the reach is to the body as drawn, so a bite at a long animal's head or tail lands
+      if (surfaceGap(def, att.biteX, att.biteY) <= att.radius * 1.1 + att.genome.size * 0.45) this.bite(att, def);
+      return;
+    }
     // a rush hits what is in its line and nothing else: none of the lunge's extra reach and
     // no gulp, or a guardian that size connects from so far off its path that the dodge the
     // tell promises cannot be made
@@ -129,62 +153,98 @@ export class Combat {
     att.view.chomp();
     // ...except in tentacles, where the catch is already at the beak: a lunge there
     // overshoots it, and the reel then pulls it the wrong way through the crown
-    if (!att.holding) {
+    // (the player's strike already carried its own lunge in, so it gets none on top)
+    if (!att.holding && !att.isPlayer) {
       const surge = Math.max(1, att.genome.speed) * 0.45;
       att.vx += Math.cos(att.angle) * surge;
       att.vy += Math.sin(att.angle) * surge;
     }
-    // anything less than half your gape goes down whole, the way a real gulp works
-    // — but not from tentacles: a beak tears, and a whole swallow at the crown would make
-    // every guardian's grab a death with nothing to struggle against
-    // an inflated body is two and a half times too wide for a mouth that would have taken it
-    const whole = !att.holding && att.swallowSize > def.genome.size * 2 * (def.puffT > 0 ? 2.5 : 1);
+    // a guardian's rush lands like a rush; the player's strike at what its primary makes it
+    const rushing = att.rushT > 0;
+    const mult = att.isPlayer ? strikeOf(att) : rushing ? RUSH_BITE : 1;
+    const whole = this.swallows(att, def, mult);
     // a bite into a bait ball glances off the wall of bodies: the mouth that could have
     // gulped one goes on gulping, but one that has to tear cannot pick a target out of it
     if (!whole && this.balled(def)) {
       if (att.isPlayer) this.world.glanced = true;
       return;
     }
-    // a guardian's rush lands like a rush, and ends on the body it found
-    const rushing = att.rushT > 0;
+    // a rush ends on the body it found
     if (rushing && def.isPlayer) { att.landed = true; att.rushT = 0; att.patternCd = PATTERN_CD; }
     // a strike ends on what it hits: the jaw closes and the body goes into its recovery
     if (att.attack === 'strike' || att.attack === 'windup') {
       att.attack = 'recover';
       att.attackT = att.attackLen = 0.4;
     }
-    this.land(att, def, whole, rushing ? RUSH_BITE : 1);
+    this.land(att, def, whole, mult);
   }
 
   /**
    * A blow that is not a bite — an organ striking with something other than the mouth.
    * No cooldown and never a swallow, but otherwise the same wound: armour, organs, and a
    * kill booked to whoever landed it. Public because organs deliver it (`organs.ts`).
+   * `ranged` is a shot's: no chomp, since the mouth that fired it is a room away, and
+   * nothing on the body it hit reaches back.
    */
-  hit(att: Creature, def: Creature, mult: number) {
+  hit(att: Creature, def: Creature, mult: number, ranged = false) {
     if (!att.alive || !def.alive) return;
-    att.view.chomp();
-    this.land(att, def, false, mult);
+    if (!ranged) att.view.chomp();
+    this.land(att, def, false, mult, ranged);
   }
 
-  /** The damage, the organs, and the death, for a bite or a blow. */
-  private land(att: Creature, def: Creature, whole: boolean, mult: number) {
+  /**
+   * Whether this bite takes the body whole.
+   *
+   * The player swallows on the bite that would have killed, whatever the size — size alone
+   * decides nothing for it — and never a guardian, which leaves a carcass. Nothing swallows
+   * the player: it is hit, in hearts (`Creature.takeHit`). Between the animals the old rule
+   * holds, since it is what their ecology runs on: anything under half a gape goes down
+   * whole, but not from tentacles — a beak tears, and a whole swallow at the crown would make
+   * every grab a death with nothing to struggle against — and an inflated body is two and a
+   * half times too wide for the mouth that would have taken it.
+   */
+  private swallows(att: Creature, def: Creature, mult: number) {
+    if (def.isPlayer) return false;
+    if (att.isPlayer) return !def.species.guardian && this.damage(att, def, mult) >= def.hp;
+    return !att.holding && att.swallowSize > def.genome.size * 2 * (def.puffT > 0 ? 2.5 : 1);
+  }
+
+  /** What a bite or a blow would take off a body, before any swallowing. */
+  private damage(att: Creature, def: Creature, mult: number) {
+    // the fauna is there to be eaten, not fought: anything the player lands on it ends it — a
+    // bite swallows it, a shot leaves the carcass — so it never soaks up a fight's attention
+    if (att.isPlayer && !def.hostile) return def.hp;
     const armour = Math.max(0, armourAgainst(att, armourOf(def.genome)));
     // a guardian spent by a missed rush is open: everything lands half again as hard
     const open = def.exposed > 0 ? EXPOSED_TAKEN : 1;
-    const dmg = whole ? def.hp
-      : takenOf(def, Math.max(1, damageOf(att, biteDamage(att.genome), def) * mult - armour)) * open;
+    return takenOf(def, Math.max(1, damageOf(att, biteDamage(att.genome), def) * mult - armour)) * open *
+      bracedOf(def);
+  }
+
+  /** The damage, the organs, and the death, for a bite or a blow. */
+  private land(att: Creature, def: Creature, whole: boolean, mult: number, ranged = false) {
+    if (def.isPlayer) { this.hitPlayer(att, def); return; }
+    const dmg = whole ? def.hp : this.damage(att, def, mult);
     def.hp -= dmg;
     def.hurt(att, 'bite');
     const fatal = def.hp <= 0;
+    // the fauna is not the player's food: what it kills of it vanishes, and fills nothing
+    const food = !att.isPlayer || def.hostile;
     // seen, not just booked: a flinch on a wound, and on a whole swallow the body goes down
     // the throat that took it instead of simply ceasing to be drawn
-    if (fatal && whole) def.eatenBy = att;
-    else def.view.hurt();
+    if (fatal && whole && food) def.eatenBy = att;
+    else def.view.hurt(def.x - att.x, def.y - att.y);
     // what the bodies do to each other beyond the damage — recoil, venom, grip — is the
     // organs' business, and a kill is read off the wound before they run so poison cannot
     // credit a bite that already finished the job
-    wound(this.world, att, def, { dmg, fatal, whole });
+    const hp = att.hp;
+    wound(this.world, att, def, { dmg, fatal, whole, ranged });
+    // recoil on the player is a hit like any other, and has to be felt as one: taken in
+    // silence under the burst of its own bite landing, it read as a hit from nowhere
+    if (att.isPlayer && att.hp < hp) {
+      this.world.bites.push({ x: att.x, y: att.y, amount: hp - att.hp, fatal: att.hp < 1,
+        onPlayer: true, byPlayer: false, size: att.genome.size });
+    }
     // recoil can finish the attacker. Nothing booked that death before, so a spined body
     // could drive a biter's health below zero and leave it swimming; the kill is the
     // defender's. The player is left to `Game.digest`, which ends the run on its own hp
@@ -195,6 +255,7 @@ export class Combat {
     }
     if (fatal) {
       this.slay(def, att.isPlayer);
+      if (whole && att.isPlayer && food) this.world.playerGain += def.genome.size;
       // a meal worth the name buys a longer lull; a krill barely registers
       if (!att.isPlayer) {
         att.sated = clamp(4 + (def.genome.size / att.genome.size) * 20, 4, 14);
@@ -203,6 +264,46 @@ export class Combat {
     }
     this.world.bites.push({ x: def.x, y: def.y, amount: dmg, fatal,
       onPlayer: def.isPlayer, byPlayer: att.isPlayer, size: def.genome.size });
+  }
+
+  /** A hostile's body against the player's. */
+  private touch(att: Creature, p: Creature) {
+    // a spent boss — dazed, wedged, snagged, resting — is the opening, and a larva that bites
+    // has to be against it to take it: its body hurting then made the fight's one answer a hit
+    if (att.species.boss && att.exposed > 0) return;
+    // a moon jelly faded from the room is not in it: what cannot be hit does not hurt
+    if (ghostly(att)) return;
+    // the body as drawn, against the player's middle and a little of it — a mackerel's head
+    // on the larva used to be out of its reach, a circle at its middle being all that hurt.
+    // The old circle stays beside it for a painted drifter only, whose tentacles trail outside
+    // the bell: on anything long it stood deeper than the body, and a barracuda's dash passing
+    // under the player still landed. A drifter drawn from a sprite has its tentacles in its hull
+    const r = att.radius * 0.7 + p.radius * 0.5;
+    const trails = att.species.role === 'drifter' && !SPRITES[att.species.id]?.hull;
+    if (surfaceGap(att, p.x, p.y) > p.radius * 0.35 && (!trails || dist2(att.x, att.y, p.x, p.y) > r * r)) return;
+    const got = this.hitPlayer(att, p, att.species.role === 'drifter' ? 'touch' : 'bite');
+    // a dash ends on what it found
+    if (got && att.attack === 'strike') {
+      att.attack = 'recover';
+      att.attackT = att.attackLen = 0.7;
+      att.landed = true;
+      att.view.chomp();
+    }
+  }
+
+  /**
+   * A blow on the player: half a heart whatever landed it, a guardian's a whole one, and
+   * nothing at all while the last hit's invulnerability runs or when armour shrugs it off
+   * (`Creature.takeHit`). The organs still answer a hit that landed — spines on the player
+   * prick what bit it.
+   */
+  hitPlayer(att: Creature, p: Creature, how: Hurt = 'bite') {
+    const got = p.takeHit(att, att.species.guardian ? 2 : 1, how);
+    if (!got) return 0;
+    wound(this.world, att, p, { dmg: got, fatal: p.hp < 1, whole: false, ranged: false });
+    this.world.bites.push({ x: p.x, y: p.y, amount: got, fatal: p.hp < 1,
+      onPlayer: true, byPlayer: false, size: p.genome.size });
+    return got;
   }
 
   /**
@@ -290,10 +391,12 @@ export class Combat {
       t: Math.min(BLOOD_MAX, def.genome.size * BLOOD_LIFE), kind: def.species.plan };
     this.world.blood.push(spill);
     this.world.spilled.push(spill);
+    this.world.roles.died(def);
+    // a body that dies burning lights what was close to it (Vent Gland)
+    kindle(this.world, def);
     if (!byPlayer) return;
     this.world.devoured.push(def.species.id);
-    this.world.playerGain += def.genome.size * def.species.nutrition;
-    this.world.playerHeal += def.species.heal ?? 0;
+    if (!def.hostile) this.world.felled.push({ x: def.x, y: def.y });
     if (def.species.guardian) {
       this.world.hunted = false;
       this.world.deadGuardians.add(def.species.id);

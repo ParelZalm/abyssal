@@ -5,6 +5,9 @@ import type { Rng } from '../core/util';
 import type { View } from './view';
 import { lightAt } from './water';
 
+/** The zoom the particulate was tuned at, which it keeps the look of. */
+const REF_ZOOM = 1.3;
+
 /**
  * Suspended particulate — the only thing that tells you the water is moving past you,
  * and the clearest per-biome cue there is: shallow bubbles race up, reef sediment is
@@ -32,6 +35,10 @@ export class Ocean {
 
   update(dt: number, view: View) {
     const { x: camX, y: camY, t } = view;
+    // Particulate is a property of the screen, not of the world: tuned at the column's
+    // hatchling zoom, and held at that apparent size and speed whatever a tank's rooms are
+    // scaled to — world-sized motes turn into stars at a room's zoom.
+    const k = REF_ZOOM / view.zoom;
     const halfW = view.w * 0.62, halfH = view.h * 0.62;
     const light = lightAt(camY);
     const b = waterAt(camY).mote;
@@ -43,15 +50,15 @@ export class Ocean {
         d.y = camY + this.rng.range(-halfH, halfH);
       }
       // bigger motes are heavier, so they lead whichever way the biome's water goes
-      d.y += b.fall * (0.55 + d.r * 0.3) * d.drift * dt;
-      d.x += (b.current * d.drift + Math.sin(t * 0.5 + d.phase) * b.sway) * dt;
+      d.y += b.fall * (0.55 + d.r * 0.3) * d.drift * dt * k;
+      d.x += (b.current * d.drift + Math.sin(t * 0.5 + d.phase) * b.sway) * dt * k;
       if (d.y > camY + halfH) { d.y = camY - halfH; d.x = camX + this.rng.range(-halfW, halfW); }
       else if (d.y < camY - halfH) { d.y = camY + halfH; d.x = camX + this.rng.range(-halfW, halfW); }
       if (d.x > camX + halfW) { d.x = camX - halfW; d.y = camY + this.rng.range(-halfH, halfH); }
       else if (d.x < camX - halfW) { d.x = camX + halfW; d.y = camY + this.rng.range(-halfH, halfH); }
       s.x = d.x; s.y = d.y;
       s.tint = b.tint;
-      s.width = s.height = d.r * 3.4 * b.size;
+      s.width = s.height = d.r * 3.4 * b.size * k;
       // living matter pulses on its own clock; sediment just sits in the current
       const pulse = 1 - b.twinkle * 0.5 * (1 - Math.sin(t * 1.7 + d.phase * 3));
       s.alpha = d.a * b.alpha * pulse * (0.6 + light * 1.4);

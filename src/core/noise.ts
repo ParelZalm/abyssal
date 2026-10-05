@@ -44,3 +44,25 @@ export function fbm(x: number, y: number, seed = 0, octaves = 3) {
 export function fbmSigned(x: number, y: number, seed = 0, octaves = 3) {
   return fbm(x, y, seed, octaves) * 2 - 1;
 }
+
+/**
+ * Cellular noise in cell units: the distance to the nearest and second-nearest of a set of
+ * points jittered one per unit cell, the offset to the nearest, and that point's own hash.
+ * Lumps, pores and knobs are all read off it — a dome over `f1`, a crevice where `f2 - f1`
+ * is small.
+ */
+export function cells(x: number, y: number, seed = 0) {
+  const cx = Math.floor(x), cy = Math.floor(y);
+  let f1 = Infinity, f2 = Infinity, dx = 0, dy = 0, id = 0;
+  for (let j = -1; j <= 1; j++) {
+    for (let i = -1; i <= 1; i++) {
+      const gx = cx + i, gy = cy + j;
+      const fx = gx + 0.15 + 0.7 * hash(gx, gy, seed);
+      const fy = gy + 0.15 + 0.7 * hash(gx, gy, seed + 1);
+      const d = Math.hypot(x - fx, y - fy);
+      if (d < f1) { f2 = f1; f1 = d; dx = x - fx; dy = y - fy; id = hash(gx, gy, seed + 2); }
+      else if (d < f2) f2 = d;
+    }
+  }
+  return { f1, f2, dx, dy, id };
+}

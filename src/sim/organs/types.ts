@@ -1,13 +1,19 @@
 import type { Genome } from '../../content/genome';
 import type { IconName } from '../../content/icon';
+import type { ShotKind } from '../../content/species';
 import type { Creature } from '../creature';
-import type { World } from '../world';
+import type { Shot, World } from '../world';
 
 export interface WoundCtx {
   dmg: number;
   fatal: boolean;
   /** Swallowed whole rather than bitten: no recoil, no venom, nothing to hold. */
   whole: boolean;
+  /**
+   * Landed by a shot from across the water: no recoil either, since the body that fired it
+   * is nowhere near the spines. A shot into a puffer cost the larva half a heart for it.
+   */
+  ranged: boolean;
 }
 
 /**
@@ -44,6 +50,55 @@ export interface BoostMods {
   cost: number;
 }
 
+/**
+ * What a shot organ marks a shot with. The simulation acts on the shot organs' hooks; the
+ * marks are what the shot carries so the art can say what it will do before it lands — its
+ * shape, its colour, what it sheds as it flies (`render/shots.ts`).
+ */
+export type ShotMark = 'blast' | 'scald' | 'halo' | 'arc' | 'pierce' | 'seek' | 'brood' | 'frost';
+
+/**
+ * How many shots a strike throws past its primary's own, and what that costs the strike's
+ * rate — Isaac's multishot. The extras add (an Inner Eye and a Mutant Spider are five
+ * tears), but the cost is the worst one carried, not their product: two penalties stacked
+ * left a body that fired once a second, and a second multishot card has to be worth taking.
+ */
+export interface AmountMods {
+  extra: number;
+  /** Multiplier on strikes a second, 0..1. */
+  tax: number;
+}
+
+/**
+ * A primary that fires fry instead of a shot (the Mouthbrooder): how many bites one gets
+ * once it has latched on, the seconds between them, and how hard it homes.
+ */
+export interface Fry { bites: number; every: number; seek: number }
+
+/** What a shot leaves the body carrying, folded from its organs as it is fired. */
+export interface ShotMods {
+  marks: ShotMark[];
+  /**
+   * The strike's fry spread over the room's hostiles, one each, and swim on from a body that
+   * dies under them (Shoal Hunt).
+   */
+  hunt: boolean;
+  /** Passes through every body in its way and breaks only on rock or the end of its flight. */
+  pierce: boolean;
+  /** Radians a second it may bend toward a hostile ahead of it; 0 flies straight. */
+  seek: number;
+}
+
+/** What a primary organ says the strike fires (`Organ.primary`). */
+export interface Primary {
+  shot: ShotKind;
+  count: number;
+  spacing: number;
+  mult: number;
+  speed: number;
+  fry?: Fry;
+}
+
 export interface Organ {
   id: string;
   /** Whether this genome carries the organ. A synergy tests two fields. */
@@ -63,7 +118,7 @@ export interface Organ {
   /** How far this body draws prey toward itself. */
   lureRange?: (g: Genome, base: number) => number;
   boost?: (g: Genome, m: BoostMods) => void;
-  /** Fullness burned per second, given the body's current motion. */
+  /** Centimetres of belly lost per second, given the body's current motion. */
   burn?: (c: Creature, base: number) => number;
   /** Health returned from a swallow of this much biomass. */
   swallowHeal?: (g: Genome, gain: number) => number;
@@ -92,11 +147,32 @@ export interface Organ {
   /** Damage a blow does to this body once armour has had its say. */
   taken?: (c: Creature, dmg: number) => number;
   /**
-   * The one active organ: what the player fires by hand, and how long it takes to come
-   * back. Only one is ever carried — the cards clear the others — so `activeOf` takes the
-   * first. `fire` acts on the world and publishes what it did on `world.pulses`.
+   * The one active organ: what the player fires by hand, and how many rooms cleared it takes
+   * to come back — Isaac's charges. Only one is ever carried — the cards clear the others —
+   * so `activeOf` takes the first. `fire` acts on the world and publishes what it did on
+   * `world.pulses`.
    */
-  active?: { name: string; icon: IconName; cd: number; fire: (c: Creature, world: World) => void };
+  active?: { name: string; icon: IconName; charge: number; fire: (c: Creature, world: World) => void };
+  /**
+   * The primary: what the strike on the arrows fires in place of the bite — a kind of shot,
+   * how many go out and how far apart (radians), each shot's share of a bite, its speed as a
+   * share of the body's shot speed, and for fry how they bite. One slot, like the active;
+   * `primaryOf` takes the first and fans it out with the multishot. Read off the genome,
+   * since a deal's variant of a primary is the same organ, turned up.
+   */
+  primary?: (g: Genome) => Primary;
+  /** Shots a strike throws past the primary's own (`AmountMods`). Folded by `multishotOf`. */
+  amount?: (g: Genome, m: AmountMods) => void;
+  /**
+   * What the bite the strike lands is worth, as a multiple of `biteDamage` — the melee
+   * primary's hook, since a body with no shot primary strikes with its mouth. Only the
+   * player's strike reads it; an organ's blow and an animal's bite are their own.
+   */
+  strike?: (g: Genome, base: number) => number;
+  /** Whether a hit on this body is turned aside entirely right now. */
+  guard?: (c: Creature) => boolean;
+  /** What a shot this body fires carries — see `ShotMods`. Folded as each one leaves. */
+  shot?: (g: Genome, m: ShotMods) => void;
 
   // ---- effects
   /** The attacker's organs, after its bite has landed. */
@@ -109,6 +185,13 @@ export interface Organ {
    * on the active through, since the cooldown and the press are the controller's.
    */
   onFire?: (c: Creature, world: World, active: string) => void | boolean;
+  /**
+   * A shot this body fired has landed on `def`, after the blow — every body it lands on, for
+   * one that passes through. `def` may be dead by it.
+   */
+  onShotHit?: (att: Creature, def: Creature, world: World, s: Shot) => void | boolean;
+  /** A shot this body fired is spent where it is: on a body, on rock, or out of flight. */
+  onShotSpent?: (att: Creature, world: World, s: Shot) => void | boolean;
 }
 
 /** Identity, for the type check: an entry reads as an organ, not as a loose object literal. */

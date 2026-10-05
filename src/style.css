@@ -15,7 +15,18 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #01060d; col
 #stage canvas { display: block; image-rendering: pixelated; }
 #ui { position: fixed; inset: 0; pointer-events: none; }
 
-.hud { position: absolute; left: 18px; top: 16px; width: 270px; display: grid; gap: 8px;
+/* the HUD's regions, each a stack its pieces flow down (or up) — see Hud.ts */
+.hud-stack { position: absolute; display: flex; flex-direction: column; pointer-events: none; }
+.hud-stack.top-left { left: 18px; top: 16px; align-items: flex-start; gap: 22px; }
+.hud-stack.top-right { right: 16px; top: 16px; align-items: flex-end; gap: 10px; }
+/* the centre stacks span the width rather than sit at 50%, which would cap them at half of it.
+   The top one is kept clear of the corners on both sides — the status panel's 270 px and its
+   margin — so it stays centred, and its cards narrow to fit on a small window */
+.hud-stack.top-centre { left: 300px; right: 300px; top: 14px; align-items: center; gap: 6px; }
+.hud-stack.top-centre > * { max-width: 100%; }
+.hud-stack.bottom-centre { left: 0; right: 0; bottom: 22px; align-items: center; gap: 12px; }
+
+.hud { width: 270px; display: grid; gap: 8px;
   background: var(--panel); border: 2px solid var(--edge); border-radius: 0; padding: 12px 14px; }
 /* No backdrop-filter on in-play chrome: the canvas under it changes every frame, so each
    blurred box is a full re-blur per frame — one per mutation chip, which is why frame rate
@@ -31,11 +42,16 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #01060d; col
 .food > i { background: #9fe07c; }
 .xp > i { background: #6f9dff; }
 
+.minimap { pointer-events: none; }
+.minimap canvas { image-rendering: pixelated; display: block; }
+.hearts { display: flex; gap: 3px; flex-wrap: wrap; }
+.hearts canvas, .counter canvas { image-rendering: pixelated; display: block; }
+.counter { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); }
 .stat-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim);
   letter-spacing: .04em; }
 .stat-row b { color: var(--ink); font-weight: 600; }
 
-.traits { position: absolute; right: 18px; top: 16px; width: 176px;
+.traits { width: 176px;
   display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 .chip { position: relative; width: 34px; height: 34px; display: grid; place-items: center;
   border-radius: 0; background: var(--panel); border: 2px solid var(--edge);
@@ -71,6 +87,39 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #01060d; col
 .overlay h2 { margin: 0; font-size: 15px; font-weight: 500; letter-spacing: .22em;
   text-transform: uppercase; color: var(--accent); }
 .overlay p { margin: 0 auto; max-width: 480px; color: var(--dim); line-height: 1.6; font-size: 14px; }
+/* the title: the canyon (title/TitleScene.ts) under a name and three words to press. Opaque,
+   so the first tank baking behind it is never seen half made */
+.title-screen { position: absolute; inset: 0; pointer-events: auto; background: #01060d;
+  display: grid; grid-template-rows: 1fr auto; justify-items: center; text-align: center;
+  overflow: hidden; }
+/* the deep water on the GPU under the rock's canvas: the rock near the window's own
+   resolution, the water at the painting's coarse pixel and shown with hard ones (see TitleScene) */
+.title-scene { position: absolute; inset: 0; }
+.title-scene canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.title-scene canvas.abyss { image-rendering: pixelated; }
+.title-front { position: relative; align-self: stretch; display: grid; justify-items: center;
+  align-content: start; padding: 24vh 24px 0; gap: 2vh; animation: title-in 1.8s ease-out .5s both; }
+/* lit from the whirlpool above: a pale face, the light's glow round it, a hard dark drop under */
+.title-front h1 { margin: 0; font-size: clamp(64px, 13vw, 210px); line-height: .9; font-weight: 600;
+  letter-spacing: .16em; margin-right: -.16em; text-transform: uppercase; color: #d4ecff;
+  text-shadow: 0 .045em 0 #01060d, 0 0 .12em rgba(90, 190, 255, .28), 0 0 .45em rgba(30, 120, 230, .16);
+  animation: title-breathe 6s ease-in-out infinite; }
+@keyframes title-breathe { 50% { color: #e8f6ff;
+  text-shadow: 0 .045em 0 #01060d, 0 0 .15em rgba(110, 205, 255, .38), 0 0 .5em rgba(40, 140, 240, .22); } }
+@keyframes title-in { from { opacity: 0; transform: translateY(12px); } }
+.title-menu { display: grid; justify-items: center; gap: 2px; margin-top: 18vh; }
+.title-menu button { pointer-events: auto; cursor: pointer; background: none; border: 0; font: inherit;
+  font-size: 14px; letter-spacing: .3em; text-transform: uppercase; padding: 6px 12px; color: var(--dim);
+  text-shadow: 0 2px 0 #01060d; }
+.title-menu button.primary { font-size: 20px; color: var(--ink); }
+.title-menu button:hover, .title-menu button:focus-visible { color: #eafdff; outline: none;
+  text-shadow: 0 2px 0 #01060d, 0 0 12px rgba(90, 200, 255, .8); }
+.title-menu button:hover::before, .title-menu button:focus-visible::before { content: '\203A  '; color: var(--accent); }
+.title-screen > .keys { position: relative; margin: 0 0 22px; opacity: .7; text-shadow: 0 2px 0 #01060d; }
+.title-screen > .keys kbd { background: rgba(2, 10, 20, .6); }
+.title-screen .starts { margin-top: 10vh; }
+.title-screen .starts + .title-menu { margin-top: 2vh; }
+@media (prefers-reduced-motion: reduce) { .title-front, .title-front h1 { animation: none; } }
 .overlay.pause { align-content: start; padding: 4vh 24px; gap: 10px; }
 .overlay.pause h1 { font-size: clamp(26px, 4vw, 40px); }
 .sheet { display: grid; grid-template-columns: minmax(190px, 240px) minmax(260px, 440px);
@@ -165,12 +214,20 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 @keyframes gate-breathe { 0%, 100% { opacity: .72; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .gate > span { animation: none; } }
 
-.toast { position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%);
-  font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent);
+.toast { font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent);
   opacity: 0; transition: opacity .3s; white-space: nowrap;
   background: var(--panel); border: 2px solid var(--edge); border-radius: 0;
   padding: 9px 20px; }
 .toast.on { opacity: 1; }
+/* a guardian's tell, read mid-fight out of the corner of the eye: bigger, in sentence case
+   rather than tracked capitals, wrapped to two balanced lines instead of one long bar, and
+   in the boss bar's red just under it so it reads as the boss's */
+.toast.boss { max-width: min(440px, 100%); white-space: normal; text-wrap: balance;
+  text-align: center; font-size: 16px; line-height: 1.35; letter-spacing: .03em;
+  text-transform: none; color: #ffd6cc; border-color: rgba(216, 56, 74, .5);
+  padding: 9px 18px; text-shadow: 0 2px 0 rgba(0,0,0,.7);
+  /* the room shows through a little: it is often laid over the floor the fight is on */
+  background: rgba(6, 18, 32, .68); }
 /* danger: the frame's edge closing in, stepped like everything else on the pixel grid —
    hard bands where the vignette was a 160 px blur, and past the last band a 2 px
    checkerboard, the same screen-door dither the far props fade by */
@@ -184,16 +241,15 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
 
 /* run strip: score, clock, chain — kept to the top edge and translucent so it never sits on prey */
-.run { position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; gap: 14px;
-  min-width: 260px; font-size: 11px; letter-spacing: .08em; color: var(--dim);
+.run { display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; gap: 14px;
+  min-width: min(260px, 100%); font-size: 11px; letter-spacing: .08em; color: var(--dim);
   text-shadow: 0 2px 0 rgba(0,0,0,.8); font-variant-numeric: tabular-nums; }
 .run > b { font-size: 22px; font-weight: 300; color: var(--ink); letter-spacing: .06em;
   text-align: center; }
 .run > b.bump { animation: score-bump .35s ease-out; }
 .run-time { text-align: right; }
 .run-best.beaten { color: #ffc270; }
-.combo { grid-column: 1 / -1; justify-self: center; width: 220px; display: grid; gap: 4px;
+.combo { grid-column: 1 / -1; justify-self: center; width: 220px; max-width: 100%; display: grid; gap: 4px;
   text-align: center; font-size: 14px; font-weight: 600; text-transform: uppercase; color: #ffc270;
   opacity: 0; transition: opacity .2s; }
 .combo.on { opacity: 1; }
@@ -259,17 +315,68 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 .btn.ghost:disabled:hover { border-color: var(--edge); color: var(--ink); }
 
 /* the active organ: one slot, bottom centre, filling back up as it recovers */
-.active { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 8px; padding: 7px 12px 7px 10px; overflow: hidden;
+.active { display: flex; align-items: center; gap: 8px; padding: 7px 12px 7px 10px; overflow: hidden;
   border-radius: 0; background: var(--panel); border: 2px solid var(--edge); color: var(--dim);
   font-size: 11px; letter-spacing: .1em; text-transform: uppercase; pointer-events: none; }
 .active[hidden] { display: none; }
-.active > i { position: absolute; inset: 0; transform-origin: bottom; background: rgba(88,224,200,.12); }
 .active > svg, .active > kbd, .active > span { position: relative; }
 .active kbd { font: inherit; font-weight: 700; font-size: 10px; padding: 1px 5px; border-radius: 0;
   border: 2px solid var(--edge); color: var(--ink); }
 .active.ready { color: var(--ink); border-color: var(--accent); box-shadow: 0 0 0 2px rgba(88,224,200,.2); }
 .active.ready > svg { color: var(--accent); }
+/* one pip a room of charge: hollow until the room is cleared, lit when it is */
+.active .pips { display: flex; gap: 4px; position: relative; }
+.active .pips > i { width: 8px; height: 12px; border: 2px solid var(--edge); background: transparent; }
+.active .pips > i.on { background: var(--accent); border-color: var(--accent);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.35); }
+
+/* the pocket: one item, bottom right, and the key that uses it */
+.item-slot { position: absolute; right: 18px; bottom: 22px; display: flex; align-items: center;
+  gap: 8px; padding: 7px 12px 7px 10px; background: var(--panel); border: 2px solid var(--edge);
+  color: var(--ink); font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+  pointer-events: none; }
+.item-slot[hidden] { display: none; }
+.item-slot .mark canvas { display: block; image-rendering: pixelated; }
+.item-slot kbd { font: inherit; font-weight: 700; font-size: 10px; padding: 1px 5px;
+  border: 2px solid var(--edge); color: var(--ink); }
+.counters { justify-content: flex-start; gap: 18px; }
+.card .mark canvas { image-rendering: pixelated; }
+/* the mutation's drawing, at twice its grain, where the glyph was */
+.card .mark.art { width: auto; height: auto; padding: 4px; }
+/* Isaac's word for it, under the name: what the card is about before its numbers say how much */
+.card .tagline { display: block; margin: -3px 0 9px; font-size: 11px; font-weight: 650;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink); }
+.card .stats { display: grid; gap: 3px; margin: 0 0 10px; padding: 7px 8px;
+  background: rgba(0,0,0,.22); border: 2px solid rgba(120,190,235,.12);
+  font-size: 12px; font-variant-numeric: tabular-nums; }
+.card .stats .row { display: grid; grid-template-columns: 14px 1fr auto 12px; align-items: center; gap: 6px; }
+.card .stats .row svg { color: var(--dim); }
+.card .stats .k { color: var(--dim); }
+.card .stats .v { color: var(--ink); white-space: nowrap; }
+.card .stats .was { color: var(--dim); }
+.card .stats .arrow { font-size: 9px; text-align: right; }
+.card .stats .up .arrow, .card .stats .minor .up { color: #8cf0a8; }
+.card .stats .down .arrow, .card .stats .minor .down { color: #f39a8e; }
+.card .stats .minor { margin-top: 3px; font-size: 10.5px; line-height: 1.45; color: var(--dim); }
+
+/* the stat column: Isaac's left edge, under the status panel, one mark and number a row */
+.stats-col { display: grid; gap: 4px;
+  font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink);
+  text-shadow: 0 2px 0 rgba(0,0,0,.8); pointer-events: none; }
+.stats-col .stat { display: flex; align-items: center; gap: 8px; }
+.stats-col .stat svg { color: var(--dim); }
+
+/* the pedestal's mutation, read before it is taken: a card at the top, clear of the floor
+   the pedestal stands on */
+.offer { display: grid; justify-items: center; gap: 6px; pointer-events: none; }
+.offer[hidden] { display: none; }
+.offer .card { cursor: default; width: 260px; max-width: 100%; }
+.offer .card:hover { transform: none; }
+.offer .how.deal { color: #ff8f84; }
+.offer .how { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--dim);
+  text-shadow: 0 2px 0 rgba(0,0,0,.8); }
+.offer .how kbd { font: inherit; font-weight: 700; padding: 1px 5px; margin-right: 2px;
+  border: 2px solid var(--edge); color: var(--ink); background: var(--panel); letter-spacing: 0; }
 
 /* the starting forms on the title: a row of small cards, the picked one lit */
 .starts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 14px auto 4px;
@@ -288,11 +395,11 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 @media (prefers-reduced-motion: reduce) { .bar.low { animation: none; box-shadow: 0 0 0 2px rgba(255,90,74,.8); } }
 
 /* a synergy's own card: under the run strip, green like the draft's completing light */
-.discovery { position: absolute; left: 50%; top: 64px; transform: translate(-50%, -8px); width: 320px;
+.discovery { transform: translateY(-8px); width: 320px;
   padding: 12px 16px 13px; border-radius: 0; text-align: center; pointer-events: none;
   background: var(--panel); border: 2px solid rgba(200,255,154,.45);
   box-shadow: 0 0 0 2px rgba(200,255,154,.16); opacity: 0; transition: opacity .35s, transform .35s; }
-.discovery.on { opacity: 1; transform: translate(-50%, 0); }
+.discovery.on { opacity: 1; transform: none; }
 .discovery .kicker { display: block; font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
   color: #c8ff9a; }
 .discovery h3 { margin: 4px 0 2px; font-size: 17px; font-weight: 600; color: var(--ink); }
@@ -304,3 +411,44 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
 .lineage-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .lineage-cell > canvas { filter: drop-shadow(0 2px 0 rgba(170,235,255,.45)); image-rendering: pixelated; }
 .lineage-cell > span { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+
+/* the boss's health along the bottom, Isaac's bar */
+.boss-bar { width: min(420px, 60vw); display: grid; gap: 4px; justify-items: center; pointer-events: none;
+  font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: #ffb8a8;
+  text-shadow: 0 2px 0 rgba(0,0,0,.8); }
+.boss-bar[hidden] { display: none; }
+.boss-bar .bar { width: 100%; }
+.boss-bar .bar > i { background: #d8384a; transition: width .1s steps(4); }
+
+/* the tank's name over the drop-in */
+.caption { position: absolute; left: 0; right: 0; top: 14%; text-align: center; pointer-events: none;
+  font-size: 30px; letter-spacing: .24em; text-transform: uppercase; color: var(--ink);
+  text-shadow: 0 3px 0 rgba(0,0,0,.85); animation: caption-in .6s steps(6) both; }
+.caption[hidden] { display: none; }
+@keyframes caption-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .caption { animation: none; } }
+
+/* the boss's intro: the room held still under a band, the larva facing the boss across it */
+.boss-intro { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center;
+  gap: 18px; pointer-events: none; background: rgba(1, 6, 13, .45); }
+.boss-intro .band { width: 100%; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: 4vw; padding: 26px 6vw; box-sizing: border-box; background: rgba(4, 10, 22, .92);
+  border-top: 2px solid #d8384a; border-bottom: 2px solid #d8384a;
+  animation: intro-band .32s steps(4) both; }
+.boss-intro canvas { display: block; image-rendering: pixelated; }
+.boss-intro .who.larva { justify-self: end; animation: intro-left .4s steps(5) .12s both; }
+/* the bake faces right; the boss turns to face the larva */
+.boss-intro .who.boss { justify-self: start; transform: scaleX(-1);
+  animation: intro-right .4s steps(5) .12s both; }
+.boss-intro .vs { font-size: 30px; letter-spacing: .2em; text-transform: uppercase; color: #ffb8a8;
+  text-shadow: 0 3px 0 rgba(0,0,0,.85); animation: intro-pop .2s steps(2) .5s both; }
+.boss-intro .title { text-align: center; animation: intro-pop .24s steps(3) .62s both; }
+.boss-intro h2 { margin: 0 0 6px; font-size: 13px; font-weight: 500; letter-spacing: .3em;
+  text-transform: uppercase; color: var(--dim); }
+.boss-intro h1 { margin: 0; font-size: clamp(30px, 5.4vw, 56px); font-weight: 300; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink); text-shadow: 0 3px 0 rgba(0,0,0,.85); }
+@keyframes intro-band { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes intro-left { from { transform: translateX(-40vw); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes intro-right { from { transform: translateX(40vw) scaleX(-1); opacity: 0; } to { transform: scaleX(-1); opacity: 1; } }
+@keyframes intro-pop { from { opacity: 0; transform: scale(1.4); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .boss-intro * { animation: none !important; } }

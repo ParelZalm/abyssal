@@ -1,5 +1,12 @@
 import { clamp, lerp } from '../core/util';
 
+/*
+ * The column's strata, kept for what they still are after the tank rework (`docs/adr/0003-*`):
+ * the look of each depth's water and the home range of every species. A tank is laid out at
+ * a band's depth to borrow both (`content/tanks.ts`). Nothing seals any more; a band's
+ * `gate` survives only as the size scale a guardian's notice is measured on.
+ */
+
 /** Floor of the water column, in world units. Depth runs 0 here to DEPTH_MAX. */
 export const DEPTH_MAX = 9000;
 /** Half the width of the water; x runs from -WORLD_HALF_W to WORLD_HALF_W. */
@@ -57,34 +64,23 @@ export interface WaterLook {
 }
 
 /**
- * A band is one contiguous slice of water with a look of its own, sealed at the top by
- * a thermocline. Most zones are a single band; the Sunlit Zone is two, because the open
- * water above the shelf and the shelf itself are not the same place to swim through.
- *
- * Bands are what the column is actually made of: every depth lookup resolves to one.
+ * A band is one contiguous slice of water with a look of its own. Most zones are a single
+ * band; the Sunlit Zone is two, because the open water above the shelf and the shelf
+ * itself are not the same water. Every depth lookup resolves to one.
  */
 export interface Band {
   id: string;
   name: string;
   top: number;
   bottom: number;
-  /** Body length, in cm, required to pass the thermocline at `top`. */
+  /** Body length, in cm, that once opened this band; now only `noticeSize`'s scale. */
   gate: number;
-  /** Depth label at `top`, in metres of real ocean. See `docs/adr/0001-*`. */
-  metres: number;
-  /**
-   * Species id of the food that gathers just under this band's seal while it is still
-   * shut — the view down through the thermocline (`Spawner.pocket`). Chosen to be what a body
-   * at the gate would want to eat: small enough to catch, worth more than the water above.
-   */
-  pocket?: string;
   water: WaterLook;
 }
 
 /**
- * A zone is a place: the unit the player names, the unit that has an ecology, and the
- * unit that has a guardian. It owns one or more bands, which are where the water look
- * and the seals actually live.
+ * A zone is an ecology: the unit that has a roster and a guardian. It owns one or more
+ * bands, which are where the water look lives.
  */
 export interface Zone {
   id: ZoneId;
@@ -105,7 +101,7 @@ export const ZONES: Zone[] = [
       // Open Water — bright, busy, shot through with rays and surface caustics; the
       // water fizzes upward with bubbles torn off the surface.
       {
-        id: 'open', name: 'Open Water', top: 0, bottom: 1100, gate: 0, metres: 0,
+        id: 'open', name: 'Open Water', top: 0, bottom: 1100, gate: 0,
         water: {
           turbid: 0.34, cloudScale: 1.7, cloudEdge: 0.35, rays: 1.5, shimmer: 0.9,
           accent: [0.72, 1.0, 0.86], ambient: 0.1,
@@ -119,7 +115,7 @@ export const ZONES: Zone[] = [
       // Reef Shelf — thick, warm, sediment-heavy water pushed sideways by a steady
       // current. Big soft masses, cover everywhere, very little moving vertically.
       {
-        id: 'reef', name: 'Reef Shelf', top: 1100, bottom: 2400, gate: 26, pocket: 'reeffish', metres: 40,
+        id: 'reef', name: 'Reef Shelf', top: 1100, bottom: 2400, gate: 26,
         water: {
           turbid: 0.62, cloudScale: 0.85, cloudEdge: 0.8, rays: 0.7, shimmer: 0.35,
           accent: [0.86, 0.92, 0.6], ambient: 0.1,
@@ -138,8 +134,7 @@ export const ZONES: Zone[] = [
       // Thin, cold, empty water. Almost no cloud, no rays worth the name, and the first
       // marine snow falling steadily through it.
       {
-        id: 'twilight', name: 'Twilight Zone', top: 2400, bottom: 4200, gate: 52, pocket: 'lanternfish',
-        metres: 100,
+        id: 'twilight', name: 'Twilight Zone', top: 2400, bottom: 4200, gate: 52,
         water: {
           turbid: 0.3, cloudScale: 0.55, cloudEdge: 0.2, rays: 0.28, shimmer: 0.18,
           accent: [0.5, 0.78, 1.0], ambient: 0.1,
@@ -158,8 +153,7 @@ export const ZONES: Zone[] = [
       // Black, still, and the only light is alive. Nearly no cloud at all; sparse
       // plankton hangs there and pulses.
       {
-        id: 'midnight', name: 'Midnight Zone', top: 4200, bottom: 6000, gate: 96, pocket: 'bristlemouth',
-        metres: 1000,
+        id: 'midnight', name: 'Midnight Zone', top: 4200, bottom: 6000, gate: 96,
         water: {
           turbid: 0.14, cloudScale: 0.4, cloudEdge: 0.12, rays: 0.0, shimmer: 0.85,
           accent: [0.24, 0.9, 0.98], ambient: 0.1,
@@ -179,8 +173,7 @@ export const ZONES: Zone[] = [
       // nothing to light it: the only motion is marine snow falling out of the dark
       // above, slow and steady and endless. Colder in tone than anything above it.
       {
-        id: 'abyss', name: 'The Abyss', top: 6000, bottom: 7500, gate: 160, pocket: 'dumbo',
-        metres: 4000,
+        id: 'abyss', name: 'The Abyss', top: 6000, bottom: 7500, gate: 160,
         water: {
           turbid: 0.08, cloudScale: 0.5, cloudEdge: 0.06, rays: 0.0, shimmer: 0.22,
           accent: [0.58, 0.68, 0.86], ambient: 0.05,
@@ -199,8 +192,7 @@ export const ZONES: Zone[] = [
       // Hot vents below. Slow enormous masses, a red-violet cast, and embers rising out
       // of the dark from something underneath you.
       {
-        id: 'trenches', name: 'The Trenches', top: 7500, bottom: DEPTH_MAX, gate: 240, pocket: 'snailfish',
-        metres: 6000,
+        id: 'trenches', name: 'The Trenches', top: 7500, bottom: DEPTH_MAX, gate: 240,
         water: {
           turbid: 0.5, cloudScale: 0.3, cloudEdge: 0.5, rays: 0.0, shimmer: 1.2,
           accent: [1.0, 0.42, 0.3], ambient: 0.24,
@@ -249,9 +241,6 @@ export const BANDS: Band[] = ZONES.flatMap(z => z.bands);
 /** Which zone each band belongs to, by the same index as `BANDS`. */
 const BAND_ZONE: Zone[] = ZONES.flatMap(z => z.bands.map(() => z));
 
-/** Depth label at the very bottom of the column, in metres. */
-const FLOOR_METRES = 11034;
-
 export function bandAt(y: number): number {
   for (let i = BANDS.length - 1; i >= 0; i--) if (y >= BANDS[i].top) return i;
   return 0;
@@ -259,37 +248,6 @@ export function bandAt(y: number): number {
 
 export function zoneOf(band: Band): Zone {
   return BAND_ZONE[BANDS.indexOf(band)];
-}
-
-/**
- * World depth as metres of real ocean — presentation only, and the one number the
- * player ever sees. Monotonic piecewise-linear through one control point per band
- * boundary, so the zones keep the depths they are actually named for while their
- * heights stay free to be tuned for pacing. See `docs/adr/0001-*`.
- */
-export function depthLabel(y: number): number {
-  for (let i = 0; i < BANDS.length; i++) {
-    const b = BANDS[i];
-    if (y >= b.bottom) continue;
-    const nextMetres = i + 1 < BANDS.length ? BANDS[i + 1].metres : FLOOR_METRES;
-    const t = clamp((y - b.top) / (b.bottom - b.top), 0, 1);
-    return Math.round(lerp(b.metres, nextMetres, t));
-  }
-  return FLOOR_METRES;
-}
-
-/** The next sealed thermocline, or null once the whole column is open. */
-export function nextGate(size: number): { band: Band; index: number } | null {
-  for (let i = 1; i < BANDS.length; i++) {
-    if (size < BANDS[i].gate) return { band: BANDS[i], index: i };
-  }
-  return null;
-}
-
-/** Deepest point the player may reach at this size — the floor of their last open band. */
-export function descentLimit(size: number): number {
-  const gate = nextGate(size);
-  return gate ? gate.band.top - 12 : DEPTH_MAX;
 }
 
 /** World units either side of a thermocline over which two bands cross-fade. */
@@ -353,15 +311,4 @@ function mixTint(a: number, b: number, t: number) {
   const g = lerp((a >> 8) & 255, (b >> 8) & 255, t);
   const bl = lerp(a & 255, b & 255, t);
   return (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(bl);
-}
-
-/**
- * Where the player is, for the HUD. A zone the player cannot subdivide is named by
- * itself; a subdivided one names the band too, since "Sunlit Zone" and "Reef Shelf"
- * are both answers to where you are and neither is the whole of it.
- */
-export function placeName(y: number): string {
-  const i = bandAt(y);
-  const zone = BAND_ZONE[i];
-  return zone.bands.length > 1 ? `${zone.name} · ${BANDS[i].name}` : zone.name;
 }

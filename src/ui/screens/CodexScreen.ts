@@ -55,7 +55,7 @@ function traitSection(codex: Codex) {
     const chip = div(n > 0 ? `chip ${t.rarity}` : 'chip unknown');
     if (n > 0) {
       found++;
-      chip.title = `${t.name} — ${t.desc}\nTaken ${n}×`;
+      chip.title = `${t.name} — ${t.tagline}. ${t.desc}\nTaken ${n}×`;
       chip.append(createIcon(t.icon, 19));
     } else {
       chip.title = `An undiscovered ${t.rarity} mutation`;

@@ -1,13 +1,11 @@
 import type { Codex } from '../run/codex';
 import type { Transformation } from '../content/forms';
-import type { Trait } from '../content/traits';
 import { Hud } from './hud/Hud';
 import type { Component } from './Component';
+import { BossIntro, type BossIntroInfo } from './screens/BossIntro';
 import { CodexScreen } from './screens/CodexScreen';
 import { DeathScreen } from './screens/DeathScreen';
-import { MutationScreen, type DraftOptions } from './screens/MutationScreen';
 import { PauseScreen } from './screens/PauseScreen';
-import { BandScreen } from './screens/BandScreen';
 import { TitleScreen, type RunChoice } from './screens/TitleScreen';
 import type { LineageFrame } from './screens/lineage';
 import { TransformScreen } from './screens/TransformScreen';
@@ -34,12 +32,14 @@ export class UI {
     this.hud.update(s);
   }
 
-  gateLabel(text: string | null, screenY: number, screenH: number) {
-    this.hud.gateLabel(text, screenY, screenH);
+  /** A title over the whole screen, or none. */
+  caption(text: string | null) {
+    this.hud.caption(text);
   }
 
-  toast(text: string) {
-    this.hud.showToast(text);
+  /** A line along the bottom; `boss` for a guardian's tell or set piece. */
+  toast(text: string, tone: 'boss' | null = null) {
+    this.hud.showToast(text, tone);
   }
 
   discovery(name: string, desc: string, first: boolean) {
@@ -53,13 +53,6 @@ export class UI {
       onStart(choice);
     }, () => this.showCodex(codex, () => this.showTitle(onStart, codex, dailyBest)), codex,
     dailyBest));
-  }
-
-  showMutation(heading: string, traits: Trait[], pick: (t: Trait) => void, opts: DraftOptions) {
-    this.show(new MutationScreen(heading, traits, t => {
-      this.hide();
-      pick(t);
-    }, opts));
   }
 
   showDeath(cause: string, stats: string[], codex: Codex, onRestart: () => void, onTitle: () => void,
@@ -85,19 +78,19 @@ export class UI {
     this.show(new CodexScreen(codex, onBack));
   }
 
-  showBand(index: number, onContinue: () => void) {
-    this.show(new BandScreen(index, () => {
-      this.hide();
-      onContinue();
-    }));
-  }
-
   showTransform(to: Transformation, was: Transformation | null, nth: number,
                 onContinue: () => void) {
     this.show(new TransformScreen(to, was, nth, () => {
       this.hide();
       onContinue();
     }));
+  }
+
+  /** The boss's intro over the stilled room; the caller ticks it and hides it when it is over. */
+  showBossIntro(info: BossIntroInfo): BossIntro {
+    const intro = new BossIntro(info);
+    this.show(intro);
+    return intro;
   }
 
   showPause(info: PauseInfo) {

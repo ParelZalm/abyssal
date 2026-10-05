@@ -19,17 +19,22 @@ import { Texture } from 'pixi.js';
 import { eyeOf, fadeOf, menace, photophoreOf, type Genome } from '../../content/genome';
 import { formFor, halfWidth, PLAN_ART, spineAt, R, type Form, type Plan, type PlanArt } from '../../content/form';
 import { fbmSigned } from '../../core/noise';
+import { lerp } from '../../core/util';
 import { BLOOM_TRAIL, hasSynergy, synergiesOf } from '../../sim/organs';
 import { artDensity } from '../pixel';
 import { palette, type Palette } from './bake/palette';
+import { bakeSprite, hasSprite, hasWounded } from './sprite';
 import { M, shade, Sheet, type Emitter } from './bake/sheet';
-import { flank, whaleSpots, camouflage, crazing, veins, ballast, viscera, mantle, cilia } from './bake/body';
+import { flank, whaleSpots, camouflage, crazing, veins, ballast, viscera, mantle, cilia, scales } from './bake/body';
 import { caudalFin, fluke, mantleFins, dorsalRidge, medianFins, fins, ribbonFin, veil, bloomTrail,
          tentacles } from './bake/fins';
 import { bluntSnout, head, lureAt, lure, barbels } from './bake/head';
 import { spines, organs, ballisticReach, urchinReach, urchinSpines, electroplates, prickles,
-         inkSac, stoneWarts } from './bake/organs';
+         inkSac, spitSac, stoneWarts, volleyQuills, armourBands } from './bake/organs';
 import { photophores, flankLights, embers } from './bake/lights';
+import { broodPouch, broodThroat, cavityBladder, galvanicLine, halo, nares, NEEDLE, needleBill, parietalEye, rime,
+  twinSac,
+         ventGlands } from './bake/shotorgans';
 
 export interface Baked {
   texture: Texture;
@@ -48,8 +53,14 @@ export interface Baked {
   users: number;
   /** One rigged arm, root at u=0 and tip at u=1, for plans with `grasp`. Null otherwise. */
   arm: Rig | null;
+  /** The feeding pair, where it is drawn apart from the arms (`SpriteArt.tentacle`). Null otherwise, and the pair is the arm. */
+  tentacle: Rig | null;
   /** The light organs, in R units, for the view to hang blooms on. */
   lights: Emitter[];
+  /** A sprite's legs, as the strip's u across and v down (`SpriteArt.legs`). Null when painted. */
+  legs: [u0: number, u1: number, root: number, tip: number] | null;
+  /** What trails behind a sprite's bell, as the strip's u from tips to root (`SpriteArt.trail`). Null when painted. */
+  trail: [u0: number, u1: number] | null;
 }
 
 /** A rigged arm's texture and where the arms leave the body, in R units. */
@@ -98,6 +109,10 @@ function key(g: Genome, plan: Plan) {
           Math.min(3, g.coral), Math.min(3, g.frill), g.jet > 0 ? 1 : 0,
           g.venom > 0 ? 1 : 0, Math.min(2, g.filter), g.crush > 0 ? 1 : 0,
           g.eel > 0 ? 1 : 0, g.mantle > 0 ? 1 : 0, g.lurk > 0 ? 1 : 0, g.smoke > 0 ? 1 : 0,
+          g.spit > 0 ? 1 : 0, g.volley > 0 ? 1 : 0, g.brooder > 0 ? 1 : 0,
+          g.parietal > 0 ? 1 : 0, g.twin > 0 ? 1 : 0, g.foureye > 0 ? 1 : 0,
+          g.blast > 0 ? 1 : 0, g.scald > 0 ? 1 : 0, Math.min(2, g.halo), g.arc > 0 ? 1 : 0,
+          g.pierce > 0 ? 1 : 0, g.seek > 0 ? 1 : 0, g.brood > 0 ? 1 : 0, g.frost > 0 ? 1 : 0,
           // a synergy's threshold can fall inside one bucket of the fields above — Urchin's
           // armour test sits mid-step — so the paint's own predicate goes in whole
           synergiesOf(g).join('+')].join('|');
@@ -112,14 +127,19 @@ function key(g: Genome, plan: Plan) {
  * blue canvas with the DOM HUD carrying on over it. Now only unused entries are evicted,
  * and if every entry is on screen the cache simply runs over its size until some free up.
  */
-export function bakeFish(g: Genome, plan: Plan): Baked {
-  const k = key(g, plan);
+export function bakeFish(g: Genome, plan: Plan, art?: string, wounded = false): Baked {
+  // a species with a sprite of its own is drawn from it (`sprite.ts`), keyed by its density,
+  // the length its form gives it, which is all the sprite's fit reads, and which pair it shows.
+  // A painted body's turned look is in its genome (`woundedGenome`), so the key has it already
+  const sprite = art && hasSprite(art) ? art : null;
+  const hurt = !!sprite && wounded && hasWounded(sprite);
+  const k = sprite ? `sprite|${sprite}|${resolutionFor(g)}|${formFor(g, plan).len}${hurt ? '|wounded' : ''}` : key(g, plan);
   let hit = cache.get(k);
   if (hit) {
     // re-inserting keeps the map in least-recently-used order for the eviction scan
     cache.delete(k);
   } else {
-    hit = paint(g, plan);
+    hit = sprite ? { ...bakeSprite(sprite, g, plan, resolutionFor(g), hurt), users: 0 } : paint(g, plan);
     evict();
   }
   cache.set(k, hit);
@@ -138,6 +158,7 @@ function evict() {
     b.texture.destroy(true);
     if (b.open !== b.texture) b.open.destroy(true);
     b.arm?.texture.destroy(true);
+    b.tentacle?.texture.destroy(true);
     cache.delete(k);
     if (cache.size < CACHE_MAX) return;
   }
@@ -154,7 +175,9 @@ function paint(g: Genome, plan: Plan): Baked {
   // The player's own plan. A single surface has no overlaps to composite, so the body is
   // simply drawn see-through and that is all.
   const smoke = A.smoke || g.smoke > 0;
-  if (smoke) pal.alpha *= 0.6;
+  // see-through, but a pale body less so: a larva's glass is lit from inside, and the
+  // water showing through it would dim the one bright thing in the tank
+  if (smoke) pal.alpha *= lerp(0.6, 0.88, g.pale);
   // Ghost Light: a light hanging in water that has nothing behind it. The lure keeps its
   // full strength, so fading the body is what makes the light stand out
   if (hasSynergy(g, 'ghostlight')) pal.alpha *= 0.62;
@@ -165,10 +188,11 @@ function paint(g: Genome, plan: Plan): Baked {
   const rigged = A.grasp > 0;
   const L = g.lure > 0 ? lureAt(g, f) : null;
   const bloom = hasSynergy(g, 'driftingbloom');
-  const reachUp = Math.max(widest * 3.2, L ? -L.y + L.r * 3 : 0,
+  const reachUp = Math.max(widest * 3.2, L ? Math.max(-L.y + L.r * 3, -L.top + R * 0.2) : 0,
                            widest * (1 + 0.7 * urchinReach(g)) * 1.6) + R * 0.4;
   const front = spineAt(0, f) + Math.max(R * 0.4, L ? L.x - spineAt(0, f) + L.r * 3 : 0,
-    hasSynergy(g, 'ballistic') ? ballisticReach(g) + R * 0.2 : 0, widest * 0.5);
+    A.club || hasSynergy(g, 'ballistic') ? ballisticReach(g) + R * 0.2 : 0, widest * 0.5,
+    g.pierce > 0 ? R * (NEEDLE + 0.1) : 0);
   const back = spineAt(1, f) - f.len * R * (f.fluke * 1.5 + g.veil * 0.7 + (bloom ? BLOOM_TRAIL * 1.1 : 0))
     - (rigged ? 0 : A.armLen * R * (1 + g.segments * 0.1) * 1.8) - R * 0.6;
   const halfH = Math.ceil(reachUp * res) / res;
@@ -191,7 +215,7 @@ function paint(g: Genome, plan: Plan): Baked {
   return { texture, open: gaping ? pixelTexture(cut(shade(gaping, pal), crop)) : texture,
            canvas, users: 0, lights: shut.lights, depth,
            back: back + crop.x / res, front: back + (crop.x + crop.w) / res, halfH: crop.h / 2 / res,
-           arm: rigged ? armRig(f, pal, A, g, res) : null };
+           arm: rigged ? armRig(f, pal, A, g, res) : null, tentacle: null, legs: null, trail: null };
 }
 
 interface Painting {
@@ -218,7 +242,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   }
   if (A.dorsalFin > 0) dorsalRidge(s, f, A);
   else if (A.finRays && A.fins.length > 0 && A.tail === 'caudal' && A.arms === 0 && g.eel <= 0) {
-    medianFins(s, f, g);
+    medianFins(s, f, g, A);
   }
 
   // --- the body itself ---------------------------------------------------
@@ -233,16 +257,25 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
 
   // --- on its skin --------------------------------------------------------
   if (hasSynergy(g, 'whaleshark')) whaleSpots(s, f, seed);
-  if (g.lurk > 0) camouflage(s, f, pal, seed);
+  // a scaled coat is a pattern of its own: blotches laid over it hid the scales and the fin
+  // across them, and the beard hung where the angler's lower jaw is
+  if (g.lurk > 0 && !A.scales) camouflage(s, f, pal, seed);
   if (g.brittle > 0) crazing(s, f, seed);
   if (g.veins > 0) veins(s, f, seed);
   if (g.lead > 0) ballast(s, f);
   if (hasSynergy(g, 'stonefish')) stoneWarts(s, f, seed);
   if (g.discharge > 0) electroplates(s, f, g);
   if (g.ink > 0) inkSac(s, f);
+  if (g.spit > 0) spitSac(s, f);
+  if (g.twin > 0) twinSac(s, f);
+  if (g.seek > 0) nares(s, f);
+  if (g.arc > 0) galvanicLine(s, f);
+  if (g.scald > 0) ventGlands(s, f);
+  if (g.blast > 0) cavityBladder(s, f);
+  if (A.bands) armourBands(s, f, pal, g.segments);
   if (g.mantle > 0) mantle(s, f, pal);
   if (smoke) viscera(s, f, pal);
-  if (photophoreOf(g) > 0) photophores(s, f, pal, g, seed);
+  if (photophoreOf(g) > 0) photophores(s, f, pal, g, A, seed);
   if (hasSynergy(g, 'flashsense')) flankLights(s, f, pal);
   if (g.glare > 0) embers(s, f, seed);
   if (len < SMALL) return false;
@@ -251,12 +284,20 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   if (A.cilia) cilia(s, f);
   if (A.spines) spines(s, f, g, men);
   if (g.inflate > 0) prickles(s, f, g, seed);
+  if (g.volley > 0) volleyQuills(s, f);
+  if (g.frost > 0) rime(s, f, seed);
+  if (g.brood > 0) broodPouch(s, f);
+  if (g.brooder > 0) broodThroat(s, f);
   if (hasSynergy(g, 'urchin')) urchinSpines(s, f, g, seed);
   fins(s, f, g, A);
-  organs(s, f, pal, g);
+  organs(s, f, pal, g, A.club);
   head(s, f, pal, g, A, men, gape);
   if (g.barbels > 0) barbels(s, f, pal, g);
   if (g.lure > 0) lure(s, f, pal, g);
+  if (g.pierce > 0) needleBill(s, f);
+  if (g.halo > 0) halo(s, f, g);
+  if (g.parietal > 0) parietalEye(s, f);
+  if (A.scales) scales(s, f, pal);
   return true;
 }
 
@@ -285,9 +326,10 @@ function pixelTexture(canvas: HTMLCanvasElement) {
 }
 
 /**
- * The painted extent plus the one-pixel outline, held symmetric about the spine: the mesh
- * spans ±halfH around its centre line, so a crop that is not centred would shift the art
- * off the line it swims about.
+ * The painted extent plus the one-pixel outline and one texel of open water past it, held
+ * symmetric about the spine: the mesh spans ±halfH around its centre line, so a crop that is
+ * not centred would shift the art off the line it swims about. The water is for the skin,
+ * which draws a carcass's rim there (`living.ts`) and has nothing to draw on past the crop.
  */
 function cropOf(s: Sheet) {
   let x0 = s.w, x1 = -1, y0 = s.h, y1 = -1;
@@ -298,8 +340,8 @@ function cropOf(s: Sheet) {
   }
   if (x1 < 0) return { x: 0, y: 0, w: s.w, h: s.h };
   const cy = s.h / 2;
-  const half = Math.min(cy, Math.max(cy - y0, y1 + 1 - cy) + 1);
-  const x = Math.max(0, x0 - 1), w = Math.min(s.w, x1 + 2) - x;
+  const half = Math.min(cy, Math.max(cy - y0, y1 + 1 - cy) + 2);
+  const x = Math.max(0, x0 - 2), w = Math.min(s.w, x1 + 3) - x;
   return { x, y: Math.round(cy - half), w, h: Math.round(half * 2) };
 }
 
