@@ -26,15 +26,34 @@ export function bluntSnout(s: Sheet, f: Form, A: PlanArt) {
   mass(s, [[x0, top], [x1 - r, top], [x1, top + r], [x1, bot - r * 1.6], [x1 - r * 2, bot], [x0, bot]]);
 }
 
-/** A drawn eye (`SpriteArt.parts`), in R units: its middle, and its radius ring and all. */
-export interface DrawnEye { x: number; y: number; r: number }
+/** A drawn eye (`SpriteArt.parts`), in R units: its middle, its radius ring and all, and its stretch. */
+export interface DrawnEye { x: number; y: number; r: number; k: number }
+/**
+ * A drawn body's head, for what is placed on it: its eye, where a drawn jaw hinges, and where a
+ * drawn mark rooted at a point and reaching to `x1` puts its tip (`drawnTip`).
+ */
+export interface DrawnHead {
+  eye: DrawnEye | null;
+  hinge: { x: number; y: number } | null;
+  tip: (name: 'illicium' | 'lantern', x0: number, y0: number, x1: number) => { x: number; y: number } | null;
+}
+
+/**
+ * Which drawn jaw a genome shows, if any (`SpriteArt.marks`): the Parrot Beak's (the only
+ * mutation with `pen`), the Serrated Teeth's saw, the Lunging Bite's fangs or a jaw as big as an
+ * apex predator's, and otherwise the Hinged Jaw's once the jaw has grown past the hatchling's.
+ */
+function jawOf(g: Genome) {
+  return g.pen > 0 ? 'beak' : g.serrate > 0 ? 'saw' : g.fangs > 0 || g.jaw >= 1.2 ? 'fangs' : g.jaw > 0.55 ? 'jaw' : null;
+}
 
 /**
  * Mouth, teeth, eye and gill slit. `attack` is how far the jaw is dropped for a strike, 0 to
  * 1: the second texture every body is baked with, which the view swaps in mid-attack.
  */
 export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men: number,
-                     attack = 0, drawn = false, eye: DrawnEye | null = null) {
+                     attack = 0, own: DrawnHead | null = null) {
+  const drawn = !!own, eye = own?.eye ?? null;
   const peak = shoulderAt(f);
   const gape = Math.min(1.5, g.gape);
   const sieve = Math.min(2, g.filter);
@@ -56,7 +75,11 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
   if (A.maw) {
     ({ nose, back, upper, lower } = maw(s, f, pal, g, attack));
   } else if (drawn) {
-    // a drawn body has its own mouth, shut and open (`BODIES`)
+    // a drawn body has its own mouth, shut and open (`BODIES`), and a grown jaw is drawn over
+    // it from its hinge, under the eye, swapped open with it; it grows past the Hinged Jaw's with
+    // the bite, from a little under the size it was drawn at, which jutted half the head out
+    const jaw = jawOf(g), k = Math.min(1.4, 0.8 + Math.max(0, g.jaw - 0.6) * 0.4);
+    if (jaw && own?.hinge) s.mark(jaw, own.hinge.x, own.hinge.y, { sx: k, sy: k, layer: 'skin' });
   } else if (open * s.res < 1.2) {
     // a mouth too small to open is a seam: one dark line from the snout to the hinge
     s.line([nose, back], M.MOUTH);
@@ -65,12 +88,12 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
   }
 
   // teeth, once the jaw is worth showing: a few long fangs, or a serrated mouth's many
-  // small ones — a saw has many, and that is what separates it from a bigger jaw
-  const fangs = A.maw ? 0 : g.serrate > 0 ? 5 + Math.round(Math.min(2, g.serrate) * 3)
+  // small ones — a saw has many, and that is what separates it from a bigger jaw. A drawn
+  // body's are in its drawn jaw
+  const fangs = A.maw || drawn ? 0 : g.serrate > 0 ? 5 + Math.round(Math.min(2, g.serrate) * 3)
     : g.jaw > 0.55 ? Math.min(7, Math.round(2 + g.jaw * 4))
-    // any mouth opened to strike shows some teeth: a gape with nothing in it is a hole. A
-    // drawn mouth is drawn open without them
-    : attack > 0 && !drawn ? 2 + Math.round(g.jaw * 3) : 0;
+    // any mouth opened to strike shows some teeth: a gape with nothing in it is a hole
+    : attack > 0 ? 2 + Math.round(g.jaw * 3) : 0;
   if (fangs > 0 && open * s.res >= 2) {
     const long = g.serrate > 0 ? 0.18 : 0.42;
     for (let i = 0; i < fangs; i++) {
@@ -137,7 +160,11 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
   // Four-Eyed Fish: Anableps's eyes stand up out of the head, each split at the waterline into
   // one that looks above and one below. Side-on that is a second eye over the first, a band of
   // the skin between them — four eyes, where the multishot says four shots
-  if (g.foureye > 0) {
+  // On a drawn eye it is the drawn one, its hump standing on the head over the eye, at three
+  // quarters of the eye's stretch: at its drawn size it was a second head at play size.
+  if (g.foureye > 0 && eye && s.mark('foureye', eye.x, eye.y - eye.r * 0.55, { sx: eye.k * 0.75, sy: eye.k * 0.75 })) {
+    // drawn
+  } else if (g.foureye > 0) {
     const uy = ey - r * 2.1, ux = ex - r * 0.2;
     s.ellipse(ux, uy + r * 0.4, r * 1.2, r * 1.1, M.BODY);
     s.blot(ux, uy, r, [8, 10, 18], 1);
@@ -262,6 +289,8 @@ function throatJaw(s: Sheet, nose: Pt, back: Pt, open: number) {
  * pits, each with a pale rim, densest at the nose and thinning back toward the eye.
  */
 function ampullae(s: Sheet, f: Form, pal: Palette, g: Genome) {
+  // drawn, a patch of pores low on the snout under the eye's front, where the painted ones scatter
+  if (s.mark('ampullae', spineAt(0.07, f), edgeAt(0.07, f, 0.45), { layer: 'skin' })) return;
   const n = 5 + Math.round(Math.min(2, g.electro) * 4);
   for (let i = 0; i < n; i++) {
     const t = 0.02 + ((i * 0.618) % 1) * 0.16;
@@ -289,10 +318,20 @@ export function lureAt(g: Genome, f: Form) {
  * so from across the screen: it goes the venom sacs' green, with a ring of barbs round it
  * and the venom running up the stalk, so the two organs read as one system.
  */
-export function lure(s: Sheet, f: Form, pal: Palette, g: Genome) {
+export function lure(s: Sheet, f: Form, pal: Palette, g: Genome, own: DrawnHead | null = null) {
   const toxicLure = hasSynergy(g, 'toxiclure');
   const { x: x1, y: y1, r, ghost, top } = lureAt(g, f);
   const x0 = spineAt(0.16, f), y0 = edgeAt(0.16, f, -1);
+  // drawn, the Illicium's or the Deep Lantern's, rooted on the brow and reaching as far forward
+  // as the painted one, its bulb held up where it is drawn and its light hung there. The player's
+  // lure draws prey rather than springing a trap, so nothing reads the painted bulb's place
+  // (`sim/organs/body.ts`). A Toxic or a Ghost lure is its own look, and is still painted
+  const name = g.lure >= 2 ? 'lantern' : 'illicium';
+  const tip = own && !toxicLure && !ghost ? own.tip(name, x0, y0, x1) : null;
+  if (tip && s.mark(name, x0, y0, { to: [tip.x, tip.y] })) {
+    s.light(tip.x, tip.y, pal.accent, 1.1, r * s.res >= 1.5);
+    return;
+  }
   const pts: Pt[] = [];
   // up off the brow, over, and down to the bulb: a rod that holds its arch and lets the
   // light hang off its end, a cubic through the arch's top
@@ -323,6 +362,10 @@ export function barbels(s: Sheet, f: Form, pal: Palette, g: Genome) {
   const count = Math.round(1 + Math.min(1.5, g.barbels) * 1.5);
   const reach = R * (0.55 + Math.min(1.5, g.barbels) * 0.9);
   const x0 = spineAt(0.07, f), y0 = edgeAt(0.07, f, 1);
+  // drawn, hanging from the chin and growing with the barbels, from small: the Hunting Nares'
+  // hint of them (0.15) at the drawn size hung off the chin like legs
+  const k = 0.55 + Math.min(1.5, g.barbels) * 0.45;
+  if (s.mark('barbels', x0, y0, { sx: k, sy: k })) return;
   for (let i = 0; i < count; i++) {
     const v = count === 1 ? 0 : i / (count - 1);
     const pts: Pt[] = [];

@@ -21,6 +21,17 @@ import type { Palette, RGB } from './palette';
 
 export const enum M { EMPTY, BODY, FIN, GAUZE, MOUTH, TOOTH, LINE }
 
+/**
+ * A drawn mark placed by a painter (`Sheet.mark`), for the bake to lay on a drawn body: its
+ * anchor at `x`, `y` in R units, stretched by `sx` and `sy`, or so that its tip lands on `to`, or
+ * so that it spans `span` R units across. `layer` is where it goes in the picture: `under` the
+ * body, on its `skin` under its drawn eye and pectoral, or `over` everything drawn.
+ */
+export interface Placed {
+  name: string; x: number; y: number; sx: number; sy: number;
+  to?: [number, number]; span?: number; layer: 'under' | 'skin' | 'over';
+}
+
 /** A point of light the view can hang a bloom on, in R units. */
 export interface Emitter { x: number; y: number; color: number; strength: number }
 
@@ -45,6 +56,10 @@ export class Sheet {
   readonly lights: Emitter[] = [];
   /** The layers the body itself was painted in, first to last: what a drawn body replaces (`fishbake.ts`). */
   skin: [number, number] = [0, 0];
+  /** The marks drawn for the body this sheet paints over (`SpriteArt.marks`); empty for a painted body. */
+  drawn: ReadonlySet<string> = new Set();
+  /** The drawn marks the painters placed instead of painting, for the bake to lay (`drawnBody`). */
+  readonly marks: Placed[] = [];
   private shapes = 0;
 
   /** `back`..`front` and ±`halfH` in R units, at `res` texels per R unit. */
@@ -78,6 +93,16 @@ export class Sheet {
     return this.mat[iy * this.w + ix];
   }
   next() { return ++this.shapes; }
+
+  /**
+   * Place drawn mark `name` with its anchor at `x`, `y`, if this body has it drawn; returns whether
+   * it did, so a painter places its mark or paints, never both.
+   */
+  mark(name: string, x: number, y: number, o: Partial<Omit<Placed, 'name' | 'x' | 'y'>> = {}) {
+    if (!this.drawn.has(name)) return false;
+    this.marks.push({ name, x, y, sx: 1, sy: 1, layer: 'over', ...o });
+    return true;
+  }
 
   /** Record a column of body for the light pass; the body painters call this. */
   column(ix: number, top: number, bot: number) {

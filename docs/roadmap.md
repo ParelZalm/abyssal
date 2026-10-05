@@ -512,10 +512,12 @@ its item.
 
 **The larva is in** (`BODIES`): its bare body and its own parts — the eye, the fin folds, the
 tail, the pectoral — drawn, and laid into the bake, each part stretched as its painter would
-grow it, so the Pectorals and a sharper eye still show. Everything a mutation adds is still
-painted, placed on the drawn outline and shaded in the drawn swatches. Next are the mutations'
-parts, a sheet per region of the body; first the two looks that hand a drawn part back to the
-painter, the forked tail and the tapetum's pale eye.
+grow it, so the Pectorals and a sharper eye still show. The head's and the tail's
+mutations are drawn too (`SpriteArt.marks`): the Tapetum's eye and the Forked Caudal Fin's tails
+in the round ones' places, the jaws, the beak, the lures, the second and third eyes, the halo,
+the nares, the pores, the pouch, the barbels, the needle, the siphon and the bloom, each placed
+where its painter put its painted one (`Sheet.mark`). The rest is still painted, placed on the
+drawn outline and shaded in the drawn swatches. Next are the back, the belly and the flank.
 
 ## Later
 

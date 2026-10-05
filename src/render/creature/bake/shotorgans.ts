@@ -8,6 +8,8 @@ import { edgeAt, halfWidth, spineAt, R, type Form } from '../../../content/form'
 import type { Genome } from '../../../content/genome';
 import type { RGB } from './palette';
 import { M, type Pt, type Sheet } from './sheet';
+import { tAt } from './body';
+import type { DrawnEye } from './head';
 
 const SULPHUR: RGB = [212, 240, 74];
 const GOLD: RGB = [255, 228, 154];
@@ -28,13 +30,17 @@ export const NEEDLE = 0.3;
 /** Needle Jet: a bill off the snout, a needlefish's, pale at the point the shots leave by. */
 export function needleBill(s: Sheet, f: Form) {
   const x = spineAt(0.01, f), y = edgeAt(0.03, f, 0.1);
+  if (s.mark('needle', x, y)) return;
   const len = R * NEEDLE;
   s.line([[x, y], [x + len, y]], M.TOOTH);
   s.dot(x + len, y, WHITE, 1);
 }
 
 /** Hunting Nares: two nostrils ahead of the eye, each a dark pit with the seeking shot's mint in its rim. */
-export function nares(s: Sheet, f: Form) {
+export function nares(s: Sheet, f: Form, eye: DrawnEye | null = null) {
+  // drawn, on the top of the head over the drawn eye's front: ahead of it, where the painted
+  // ones go, the eye leaves no head to put them on
+  if (eye && s.mark('nares', eye.x + eye.r * 0.8, eye.y - eye.r * 0.85)) return;
   for (const t of [0.05, 0.085]) {
     const x = spineAt(t, f), y = edgeAt(t, f, -0.45);
     s.dot(x, y, [8, 18, 22], 1);
@@ -116,6 +122,10 @@ export function halo(s: Sheet, f: Form, g: Genome) {
   const w = halfWidth(t, f);
   const cx = spineAt(t, f), cy = edgeAt(t, f, -1) - w * (1.1 + Math.min(1, g.halo - 1) * 0.15);
   const rx = w * 0.75, ry = Math.max(s.texel, w * 0.2);
+  if (s.mark('halo', cx, cy)) {
+    s.light(cx, cy + ry, GOLD, 0.8);
+    return;
+  }
   const n = Math.max(10, Math.round(rx * s.res * 5));
   const pts: Pt[] = [];
   for (let i = 0; i <= n; i++) {
@@ -131,12 +141,18 @@ export function halo(s: Sheet, f: Form, g: Genome) {
  * Parietal Eye: the third eye on the crown that lampreys and tuataras keep, open — a dark
  * socket on the top of the head with a pale, lit lens in it, the multishot's mark.
  */
-export function parietalEye(s: Sheet, f: Form) {
+export function parietalEye(s: Sheet, f: Form, eye: DrawnEye | null = null) {
   // behind the eye and up on the crown, where it is clear of the eye and of the dorsal line
   const t = 0.17;
   const w = halfWidth(t, f);
   const x = spineAt(t, f), y = edgeAt(t, f, -0.7);
   const r = Math.max(s.texel * 1.2, w * 0.22);
+  // drawn, on the crown behind the drawn eye, which fills the painted one's place
+  const px = eye ? eye.x - eye.r * 1.45 : x, py = eye ? edgeAt(tAt(px, f), f, -0.72) : y;
+  if (s.mark('parietal', px, py)) {
+    s.light(px, py, GOLD, 0.5);
+    return;
+  }
   s.blot(x, y, r * 1.35, DARK, 1);
   s.blot(x, y, r * 0.8, GOLD, 1);
   s.dot(x + r * 0.3, y - r * 0.3, WHITE, 1);
@@ -166,6 +182,8 @@ export function broodThroat(s: Sheet, f: Form) {
   const t = 0.12;
   const w = halfWidth(t, f);
   const x = spineAt(t, f), y = edgeAt(t, f, 0.78);
+  // drawn, the pouch hangs from the belly line under the jaw
+  if (s.mark('brood', x, edgeAt(t, f, 0.85), { layer: 'skin' })) return;
   const r = Math.max(s.texel * 1.5, w * 0.42);
   s.ellipse(x, y + r * 0.2, r, r * 0.8, M.BODY);
   s.blot(x, y + r * 0.2, r * 0.85, FRY, 0.55);
