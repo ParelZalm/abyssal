@@ -167,7 +167,21 @@ background other than flat #00FF00, soft glows, painterly texture, noise, sub-pi
 detail, text, labels, borders, shadows, a second animal.
 ```
 
-#### Sheet 2: the parts
+#### Sheet 2: the parts — done
+
+`docs/media/reference/larva-parts-sprite.png`, imported with `scripts/import-parts.mjs`, which
+finds each part on the whole larva by its shape and lays the whole on the bare body by its
+landmarks (every part agreed with the whole at 97–100%):
+
+```bash
+node scripts/import-parts.mjs docs/media/reference/larva-parts-sprite.png --body larva --snout 90 --tail 4 --axis 17
+```
+
+The bake lays the tail and the folds behind the body and the pectoral and the eye over it, each
+stretched as far as its painter would grow it past the hatchling's (`posesFor` in
+`fishbake.ts`). A mutation that changes a part's shape rather than its size — the Forked Caudal
+Fin's fork, the Tapetum's pale eye, a blind one — hands that part back to the painter until it
+is drawn too.
 
 ```text
 GOAL
@@ -227,9 +241,7 @@ place exactly.
 
 ### What comes after it
 
-1. **The import and the wiring of the parts**: found on the whole larva and kept with where
-   they sit, then laid over the body in place of the painted eye, tail and fins.
-2. **The parts the mutations add**, in sheets grouped by where they sit on a body (the head,
+1. **The parts the mutations add**, in sheets grouped by where they sit on a body (the head,
    the back, the belly, the tail, the flank), drawn to fit the larva and checked on the board's
    *Mutations* and *Builds* groups beside each item's drawing.
-3. **The five forms**, one at a time, each a Stage A and B of its own, its parts fitted to it.
+2. **The five forms**, one at a time, each a Stage A and B of its own, its parts fitted to it.

@@ -510,10 +510,12 @@ built: the prompts are [sprite-prompts-player.md](sprite-prompts-player.md). The
 *Mutations* and *Builds* groups are where the result is judged, every mark on the body beside
 its item.
 
-**The larva's body is in** (`BODIES`): its bare body drawn, laid into the bake, and everything
-else on it still painted, placed on the drawn outline and shaded in the drawn swatches, so every
-mutation already shows on it. Next is its parts sheet — the eye, the fin folds, the tail and the
-pectoral — which the import finds on the whole larva, and then the mutations' parts.
+**The larva is in** (`BODIES`): its bare body and its own parts — the eye, the fin folds, the
+tail, the pectoral — drawn, and laid into the bake, each part stretched as its painter would
+grow it, so the Pectorals and a sharper eye still show. Everything a mutation adds is still
+painted, placed on the drawn outline and shaded in the drawn swatches. Next are the mutations'
+parts, a sheet per region of the body; first the two looks that hand a drawn part back to the
+painter, the forked tail and the tapetum's pale eye.
 
 ## Later
 

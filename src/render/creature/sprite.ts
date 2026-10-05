@@ -14,7 +14,8 @@
 import { Texture } from 'pixi.js';
 import { formFor, halfWidth, spineAt, type Form, type Plan } from '../../content/form';
 import type { Genome } from '../../content/genome';
-import { SPRITES, spritePoint, spriteScale, type SpriteArt } from '../../content/sprites';
+import { SPRITES, spritePoint, spriteScale, type PartName, type Pt, type SpriteArt } from '../../content/sprites';
+import type { DrawnEye } from './bake/head';
 import type { Emitter } from './bake/sheet';
 import type { Baked, Rig } from './fishbake';
 import anglerRest from './sprites/anglerfish.png';
@@ -61,6 +62,11 @@ import giantsquidTentacle from './sprites/giantsquid-tentacle.png';
 import giantsquidArm from './sprites/giantsquid-arm.png';
 import larvaRest from './sprites/larva.png';
 import larvaStrike from './sprites/larva-strike.png';
+import larvaTail from './sprites/larva-tail.png';
+import larvaBack from './sprites/larva-back.png';
+import larvaBelly from './sprites/larva-belly.png';
+import larvaPectoral from './sprites/larva-pectoral.png';
+import larvaEye from './sprites/larva-eye.png';
 
 /**
  * Each species' frames. A drifter has no strike, and shows its rest for one (`Baked.open`). A
@@ -69,7 +75,11 @@ import larvaStrike from './sprites/larva-strike.png';
  * without the second the wounded frame is shown for both, and the turned animal's tell is its
  * light alone.
  */
-interface Sources { rest: string; strike?: string; wounded?: string; woundedStrike?: string; arm?: string; tentacle?: string }
+interface Sources {
+  rest: string; strike?: string; wounded?: string; woundedStrike?: string; arm?: string; tentacle?: string;
+  /** A player's body's parts, drawn apart (`SpriteArt.parts`). */
+  parts?: Partial<Record<PartName, string>>;
+}
 const SOURCES: Record<string, Sources> = {
   anglerfish: { rest: anglerRest, strike: anglerStrike },
   gulper: { rest: gulperRest, strike: gulperStrike },
@@ -87,14 +97,15 @@ const SOURCES: Record<string, Sources> = {
   nettle: { rest: nettleRest, wounded: nettleWounded },
   vampiresquid: { rest: vampireRest, strike: vampireStrike, arm: vampireArm },
   giantsquid: { rest: giantsquidRest, strike: giantsquidStrike, arm: giantsquidArm, tentacle: giantsquidTentacle },
-  larva: { rest: larvaRest, strike: larvaStrike },
+  larva: { rest: larvaRest, strike: larvaStrike,
+           parts: { tail: larvaTail, back: larvaBack, belly: larvaBelly, pectoral: larvaPectoral, eye: larvaEye } },
 };
 
 /** A frame shut and open, and the colours both may snap to. */
 interface Pair { rest: ImageData; strike: ImageData; palette: number[][] }
 /** An arm's picture and its own colours (`SpriteArt.arm`). */
 interface Arm { image: ImageData; palette: number[][] }
-interface Frames extends Pair { wounded?: Pair; arm?: Arm; tentacle?: Arm }
+interface Frames extends Pair { wounded?: Pair; arm?: Arm; tentacle?: Arm; parts?: Partial<Record<PartName, Arm>> }
 const frames = new Map<string, Frames>();
 
 function pixels(url: string) {
@@ -129,11 +140,15 @@ async function pair(rest: string, strike?: string): Promise<Pair> {
 
 export async function loadSprites() {
   await Promise.all(Object.entries(SOURCES).map(async ([id, src]) => {
-    const [whole, wounded, arm, tentacle] = await Promise.all([
+    const [whole, wounded, arm, tentacle, parts] = await Promise.all([
       pair(src.rest, src.strike), src.wounded ? pair(src.wounded, src.woundedStrike) : undefined,
-      src.arm ? pair(src.arm) : undefined, src.tentacle ? pair(src.tentacle) : undefined]);
+      src.arm ? pair(src.arm) : undefined, src.tentacle ? pair(src.tentacle) : undefined,
+      src.parts ? Promise.all(Object.entries(src.parts).map(async ([k, url]) => {
+        const p = await pair(url);
+        return [k, { image: p.rest, palette: p.palette }] as const;
+      })).then(Object.fromEntries) : undefined]);
     frames.set(id, { ...whole, wounded, arm: arm && { image: arm.rest, palette: arm.palette },
-                     tentacle: tentacle && { image: tentacle.rest, palette: tentacle.palette } });
+                     tentacle: tentacle && { image: tentacle.rest, palette: tentacle.palette }, parts });
   }));
 }
 
@@ -151,18 +166,21 @@ function darkest(palette: number[][]) {
 /**
  * One frame resampled to `k` texels per sprite pixel, onto a canvas `w` × `h` whose row
  * `oy` (in sprite pixels from the top of the strip) is the sprite's top, and whose first
- * column is the sprite's column `ox`.
+ * column is the sprite's column `ox`. `ky` stretches it on its own down the frame, for a part
+ * drawn deeper than it was drawn (`drawnBody`); `ring` leaves off the outline for a part that
+ * lies on the body, which has its own.
  */
-function resample(d: ImageData, palette: number[][], k: number, w: number, h: number, oy: number, ox = 0) {
+function resample(d: ImageData, palette: number[][], k: number, w: number, h: number, oy: number, ox = 0,
+                  ky = k, ring = true) {
   const cv = document.createElement('canvas');
   cv.width = w; cv.height = h;
   const ctx = cv.getContext('2d')!;
   const img = ctx.createImageData(w, h);
   const px = img.data;
-  const step = 1 / k;
+  const step = 1 / k, stepY = 1 / ky;
   for (let iy = 0; iy < h; iy++) for (let ix = 0; ix < w; ix++) {
     // the texel's footprint on the sprite, and how much of each pixel it covers
-    const x0 = ix * step + ox, x1 = x0 + step, y0 = iy * step - oy, y1 = y0 + step;
+    const x0 = ix * step + ox, x1 = x0 + step, y0 = iy * stepY - oy, y1 = y0 + stepY;
     let r = 0, g = 0, b = 0, a = 0;
     for (let y = Math.floor(y0); y < y1; y++) {
       if (y < 0 || y >= d.height) continue;
@@ -174,7 +192,7 @@ function resample(d: ImageData, palette: number[][], k: number, w: number, h: nu
         r += d.data[i] * cov; g += d.data[i + 1] * cov; b += d.data[i + 2] * cov; a += cov;
       }
     }
-    if (a < step * step * 0.34) continue;
+    if (a < step * stepY * 0.34) continue;
     let best = palette[0], bd = Infinity;
     for (const c of palette) {
       // weighted toward green, as the eye is: blues this dark otherwise snap by their red
@@ -188,13 +206,13 @@ function resample(d: ImageData, palette: number[][], k: number, w: number, h: nu
   // water this dark the outline is what keeps the silhouette when the fill falls into it
   const ink = darkest(palette);
   const solid = (i: number) => px[i * 4 + 3] === 255;
-  const ring: number[] = [];
-  for (let i = 0; i < w * h; i++) {
+  const rim: number[] = [];
+  for (let i = 0; ring && i < w * h; i++) {
     if (solid(i)) continue;
     const x = i % w;
-    if ((x > 0 && solid(i - 1)) || (x < w - 1 && solid(i + 1)) || (i >= w && solid(i - w)) || (i + w < w * h && solid(i + w))) ring.push(i);
+    if ((x > 0 && solid(i - 1)) || (x < w - 1 && solid(i + 1)) || (i >= w && solid(i - w)) || (i + w < w * h && solid(i + w))) rim.push(i);
   }
-  for (const i of ring) { px[i * 4] = ink[0]; px[i * 4 + 1] = ink[1]; px[i * 4 + 2] = ink[2]; px[i * 4 + 3] = 255; }
+  for (const i of rim) { px[i * 4] = ink[0]; px[i * 4 + 1] = ink[1]; px[i * 4 + 2] = ink[2]; px[i * 4 + 3] = 255; }
   ctx.putImageData(img, 0, 0);
   return cv;
 }
@@ -261,17 +279,56 @@ function armRig(a: Arm, m: { root: number; tip: number; axis: number; reach: num
 }
 
 
+/** How far a drawn part is stretched, across and down (`drawnBody`); a part not listed is not drawn. */
+export type Poses = Partial<Record<PartName, { sx: number; sy: number }>>;
+
+/** Behind the body, then over it, each in this order. */
+const UNDER: PartName[] = ['tail', 'back', 'belly'];
+const OVER: PartName[] = ['pectoral', 'eye'];
+/**
+ * Where a part is stretched from, as a share of its picture across and down: the edge it leaves
+ * the body by, so a bigger fin still joins where it did and an eye grows about its middle.
+ */
+const ANCHOR: Record<PartName, Pt> = { tail: [1, 0.5], back: [0.5, 1], belly: [0.5, 0], pectoral: [0, 0.5], eye: [0.5, 0.5] };
+
+/** Whether body `id` has its parts drawn (`SpriteArt.parts`). */
+export const hasParts = (id: string) => !!framesOf(id)?.parts && !!SPRITES[id]?.parts;
+
 /**
  * The player's drawn body `id` (`BODIES`) on a painted sheet's frame: `w` × `h` texels whose
  * first column is `back` and whose middle row is the spine, in R units at `res` texels each,
- * shut or `open`. The bake lays the painted parts over it (`fishbake.ts`).
+ * shut or `open`, with the parts `poses` names laid behind and over it, each stretched as it
+ * says. The bake lays what is painted over all of it (`fishbake.ts`).
  */
 export function drawnBody(id: string, f: Form, back: number, halfH: number, res: number, w: number, h: number,
-                          open: boolean): ImageData {
+                          open: boolean, poses: Poses = {}): ImageData {
   const fr = framesOf(id)!;
   const s = SPRITES[id];
   const per = spriteScale(s, f);
-  const ox = s.snout + (back - spineAt(0, f)) * per;
-  const cv = resample(open ? fr.strike : fr.rest, fr.palette, res / per, w, h, halfH * per - s.axis, ox);
-  return cv.getContext('2d')!.getImageData(0, 0, w, h);
+  const k = res / per;
+  const ox = s.snout + (back - spineAt(0, f)) * per, oy = halfH * per - s.axis;
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const ctx = cv.getContext('2d')!;
+  const part = (name: PartName, ring: boolean) => {
+    const p = fr.parts?.[name], pose = poses[name], at = s.parts?.at[name];
+    if (!p || !pose || !at || !s.parts) return;
+    // a part's pixel `u` is the body's `at + u * sc`, stretched about its anchor `a`
+    const sc = s.parts.scale, ax = ANCHOR[name][0] * p.image.width, ay = ANCHOR[name][1] * p.image.height;
+    ctx.drawImage(resample(p.image, p.palette, k * sc * pose.sx, w, h,
+      (oy + at[1] + ay * sc) / (sc * pose.sy) - ay, (ox - at[0] - ax * sc) / (sc * pose.sx) + ax,
+      k * sc * pose.sy, ring), 0, 0);
+  };
+  for (const name of UNDER) part(name, true);
+  ctx.drawImage(resample(open ? fr.strike : fr.rest, fr.palette, k, w, h, oy, ox), 0, 0);
+  for (const name of OVER) part(name, false);
+  return ctx.getImageData(0, 0, w, h);
+}
+
+/** Body `id`'s drawn eye on form `f` stretched by `sx`, for what is painted round it (`head`). */
+export function drawnEye(id: string, f: Form, sx: number): DrawnEye | null {
+  const s = SPRITES[id], at = s.parts?.at.eye, p = framesOf(id)?.parts?.eye;
+  if (!s.parts || !at || !p) return null;
+  const sc = s.parts.scale, half = p.image.width / 2 * sc;
+  return { ...spritePoint(s, f, [at[0] + half, at[1] + p.image.height / 2 * sc]), r: half * sx / spriteScale(s, f) };
 }

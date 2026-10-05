@@ -15,8 +15,9 @@ never mutate, so an enemy can be **drawn from a sprite** instead: one authored p
 animal, which can match its reference exactly.
 
 - **Enemies, and the player's bare bodies.** The player's bodies are drawn bare and laid under
-  its painted parts (`BODIES`, [sprite-prompts-player.md](sprite-prompts-player.md)); a plan
-  with no drawn body is painted whole.
+  its painted mutations, with its own parts drawn apart on a sheet of their own and found on the
+  whole animal by `scripts/import-parts.mjs` (`BODIES`, `SpriteArt.parts`,
+  [sprite-prompts-player.md](sprite-prompts-player.md)); a plan with no drawn body is painted whole.
 - **Size decides what survives.** A sprite is resampled to the frame's pixel density
   (`render/pixel.ts`), which falls with the tank's zoom and a smaller window. At 20–30 texels
   long, which is an anglerfish at its own size in the deep tank, the reference itself is a

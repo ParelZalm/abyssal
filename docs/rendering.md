@@ -38,8 +38,9 @@ and resamples them to the bake's density through the same cache: a coverage-weig
 per texel, snapped back to the sprite's own colours, ringed in its darkest. The player's
 bodies are coming over too (`BODIES`, `docs/sprite-prompts-player.md`): a drawn body is laid
 into the painted bake as its body (`lay` in `fishbake.ts`), the painted body under it giving way,
-and what the painters put behind it, on it and off it — the tail, the eye, every mutation — is
-placed on its outline (`drawnForm`, `Form.outline`) and shaded in its own swatches
+with its own parts drawn apart (`SpriteArt.parts`) and laid behind and over it, each stretched as
+its painter would have grown it (`posesFor`). What the painters still put on it — every mutation
+— is placed on its outline (`drawnForm`, `Form.outline`) and shaded in its own swatches
 (`SpriteArt.ramp`). The anglerfish is the first
 (`render/creature/sprites/`), from `docs/media/reference/angler-sprite.webp`, imported with
 `npm run sprite`. How a sheet is asked for, imported and checked is

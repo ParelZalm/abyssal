@@ -17,6 +17,12 @@ import type { Species } from './species';
 
 export type Pt = [number, number];
 
+/**
+ * The parts a player's body is drawn apart from (`SpriteArt.parts`): what a mutation replaces or
+ * resizes, so each is a picture of its own the bake can stretch, swap or leave off.
+ */
+export type PartName = 'tail' | 'back' | 'belly' | 'pectoral' | 'eye';
+
 /** A light organ on the picture: where the view hangs a bloom, its colour and how bright. */
 export interface SpriteLight { at: Pt; color: number; strength: number }
 
@@ -94,6 +100,13 @@ export interface SpriteArt {
    * a painted fin on the drawn larva came out the brown of a neutral genome.
    */
   ramp?: number[];
+  /**
+   * A player's body's parts (`SOURCES.parts`), each drawn on a sheet of its own and found on the
+   * whole animal by `scripts/import-parts.mjs`: `at` is each part's top-left in this picture's
+   * pixels, and `scale` how many of them one of a part's pixels is, since the whole on the parts
+   * sheet was not drawn quite the bare body's length.
+   */
+  parts?: { scale: number; at: Partial<Record<PartName, Pt>> };
 }
 
 export const SPRITES: Record<string, SpriteArt> = {
@@ -274,9 +287,12 @@ export const SPRITES: Record<string, SpriteArt> = {
                 hull: [[192.5, 17, 7], [170.5, 16.5, 9], [148.5, 18.5, 14], [126.5, 19, 15.3], [104.5, 19, 14.4],
                        [82.5, 19, 12.8], [60.5, 18.5, 10.6], [38.5, 18.5, 6.4], [16.5, 18, 7.6]] },
   // The player's bodies (`BODIES`), keyed by the body's name rather than a species'. The larva's
-  // frames are its bare body: its eye, fins and tail are painted on it (`fishbake.ts`)
-  // `npm run sprite -- larva-sprite.png --id larva --key green --fringe --keep '78,6,93,28'`
+  // frames are its bare body, and its parts are drawn apart (`docs/sprite-prompts-player.md`):
+  // `npm run sprite -- larva-sprite.png --id larva --key green --fringe`, then
+  // `node scripts/import-parts.mjs docs/media/reference/larva-parts-sprite.png --body larva --snout 90 --tail 4 --axis 17`
   larva: { w: 92, h: 34, snout: 90, tail: 4, axis: 17,
+           parts: { scale: 0.935, at: { eye: [64.8, 5.3], tail: [-13.8, 6.3], pectoral: [47, 21.2], back: [4.9, -5],
+                                       belly: [4.9, 20.3] } },
            ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
            hull: [[86.5, 17, 9.3], [76.5, 17, 13.6], [66.5, 17, 12.8], [56.5, 17, 11], [47.5, 17, 10.2],
                   [37.5, 17, 7.6], [27.5, 17, 6], [17.5, 17.5, 5.5], [7.5, 17.5, 3.8]] },

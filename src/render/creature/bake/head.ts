@@ -26,12 +26,15 @@ export function bluntSnout(s: Sheet, f: Form, A: PlanArt) {
   mass(s, [[x0, top], [x1 - r, top], [x1, top + r], [x1, bot - r * 1.6], [x1 - r * 2, bot], [x0, bot]]);
 }
 
+/** A drawn eye (`SpriteArt.parts`), in R units: its middle, and its radius ring and all. */
+export interface DrawnEye { x: number; y: number; r: number }
+
 /**
  * Mouth, teeth, eye and gill slit. `attack` is how far the jaw is dropped for a strike, 0 to
  * 1: the second texture every body is baked with, which the view swaps in mid-attack.
  */
 export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men: number,
-                     attack = 0, drawn = false) {
+                     attack = 0, drawn = false, eye: DrawnEye | null = null) {
   const peak = shoulderAt(f);
   const gape = Math.min(1.5, g.gape);
   const sieve = Math.min(2, g.filter);
@@ -88,7 +91,7 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
   // the eye. A light-gathering eye is pale because of the tapetum behind it; past the point
   // of no light at all there is nothing to gather, and a blind socket is a dimple
   const te = A.eyeAt;
-  const ex = spineAt(te, f);
+  let ex = spineAt(te, f);
   let ey = edgeAt(te, f, -0.35);
   if (A.stalks) {
     // carried up on a stalk off the top of the head, leaning forward
@@ -98,9 +101,14 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
   }
   // capped against the head: `eyeOf` grows with sense, and a hunter's big eye is still an
   // eye in a head, not a disc covering half of it
-  const r = Math.max(s.texel * 0.5, halfWidth(te, f) * Math.min(0.3, 0.15 * eyeOf(g) * A.eye));
+  let r = Math.max(s.texel * 0.5, halfWidth(te, f) * Math.min(0.3, 0.15 * eyeOf(g) * A.eye));
   const pale = A.paleEyes || g.eyeAdapt > 0.45;
-  if (g.eyeAdapt < -0.4) {
+  if (eye) {
+    // the drawn eye is in the picture (`SpriteArt.parts`); what is painted round it — the
+    // Four-Eyed Fish's second eye — is placed on it. Its pupil is about the painted eye's size
+    ({ x: ex, y: ey } = eye);
+    r = eye.r * 0.6;
+  } else if (g.eyeAdapt < -0.4) {
     s.blot(ex, ey, r * 0.8, pal.ramp[1], 0.8);
   } else if (A.eyeGlow > 0) {
     // a guardian looks back at you: a red eye with a hot centre and light round it

@@ -16,20 +16,20 @@
  * order they run in, back to front, and is the one place to read what a body is made of.
  */
 import { Texture } from 'pixi.js';
-import { eyeOf, fadeOf, menace, photophoreOf, type Genome } from '../../content/genome';
+import { baseGenome, eyeOf, fadeOf, menace, photophoreOf, type Genome } from '../../content/genome';
 import { formFor, halfWidth, PLAN_ART, spineAt, R, type Form, type Plan, type PlanArt } from '../../content/form';
 import { fbmSigned } from '../../core/noise';
 import { lerp } from '../../core/util';
 import { BLOOM_TRAIL, hasSynergy, synergiesOf } from '../../sim/organs';
 import { artDensity } from '../pixel';
 import { palette, type Palette, type RGB } from './bake/palette';
-import { bakeSprite, drawnBody, hasSprite, hasWounded } from './sprite';
+import { bakeSprite, drawnBody, drawnEye, hasParts, hasSprite, hasWounded, type Poses } from './sprite';
 import { BODIES, drawnForm, SPRITES } from '../../content/sprites';
 import { M, shade, Sheet, type Emitter } from './bake/sheet';
 import { flank, whaleSpots, camouflage, crazing, veins, ballast, viscera, mantle, cilia, scales } from './bake/body';
 import { caudalFin, fluke, mantleFins, dorsalRidge, medianFins, fins, ribbonFin, veil, bloomTrail,
          tentacles } from './bake/fins';
-import { bluntSnout, head, lureAt, lure, barbels } from './bake/head';
+import { bluntSnout, head, lureAt, lure, barbels, type DrawnEye } from './bake/head';
 import { spines, organs, ballisticReach, urchinReach, urchinSpines, electroplates, prickles,
          inkSac, spitSac, stoneWarts, volleyQuills, armourBands } from './bake/organs';
 import { photophores, flankLights, embers } from './bake/lights';
@@ -204,7 +204,9 @@ function paint(g: Genome, plan: Plan): Baked {
   const back = spineAt(1, f) - f.len * R * (f.fluke * 1.5 + g.veil * 0.7 + (bloom ? BLOOM_TRAIL * 1.1 : 0))
     - (rigged ? 0 : A.armLen * R * (1 + g.segments * 0.1) * 1.8) - R * 0.6;
   const halfH = Math.ceil(reachUp * res) / res;
-  const at = { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn: !!drawn };
+  const poses = drawn && hasParts(drawn) ? posesFor(g, plan, f, A) : {};
+  const eye = drawn && poses.eye ? drawnEye(drawn, f, poses.eye.sx) : null;
+  const at = { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn: !!drawn, poses, eye };
 
   // Two pictures of the same animal on identical sheets: the mouth shut, and the mouth
   // open for an attack. Cropped to their union, so the view can swap one texture for the
@@ -217,15 +219,18 @@ function paint(g: Genome, plan: Plan): Baked {
 
   let depth = 0;
   for (let i = 0; i <= 40; i++) depth = Math.max(depth, halfWidth(i / 40, f));
-  const crop = union(cropOf(shut), gaping ? cropOf(gaping) : null);
   const picture = (sh: Sheet, open: boolean) => {
     const cv = shade(sh, pal);
-    if (drawn) lay(cv, sh, drawnBody(drawn, f, sh.back, sh.halfH, sh.res, sh.w, sh.h, open), pal.alpha);
-    return cut(cv, crop);
+    if (drawn) lay(cv, sh, drawnBody(drawn, f, sh.back, sh.halfH, sh.res, sh.w, sh.h, open, poses), pal.alpha);
+    return cv;
   };
-  const canvas = picture(shut, false);
+  const shutCv = picture(shut, false), gapingCv = gaping ? picture(gaping, true) : null;
+  // a drawn part reaches past anything painted, so a drawn body is cropped to what is on the canvas
+  const cropped = (sh: Sheet, cv: HTMLCanvasElement) => drawn ? cropOf(sh, alphaOf(cv)) : cropOf(sh);
+  const crop = union(cropped(shut, shutCv), gaping && gapingCv ? cropped(gaping, gapingCv) : null);
+  const canvas = cut(shutCv, crop);
   const texture = pixelTexture(canvas);
-  return { texture, open: gaping ? pixelTexture(picture(gaping, true)) : texture,
+  return { texture, open: gapingCv ? pixelTexture(cut(gapingCv, crop)) : texture,
            canvas, users: 0, lights: shut.lights, depth,
            back: back + crop.x / res, front: back + (crop.x + crop.w) / res, halfH: crop.h / 2 / res,
            arm: rigged ? armRig(f, pal, A, g, res) : null, tentacle: null, legs: null, trail: null };
@@ -236,6 +241,10 @@ interface Painting {
   smoke: boolean; bloom: boolean; rigged: boolean;
   /** Painted over a drawn body (`BODIES`): the body, its mouth and its gut are the picture's. */
   drawn: boolean;
+  /** The drawn body's parts that show, which the painters leave to it (`posesFor`). */
+  poses: Poses;
+  /** The drawn eye, for what is painted round it. */
+  eye: DrawnEye | null;
 }
 
 /**
@@ -243,7 +252,7 @@ interface Painting {
  * body is made of. `gape` opens the mouth, 0 shut to 1 wide. Returns whether the body was
  * big enough to have a head worth drawing.
  */
-function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn }: Painting, gape: number) {
+function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, poses, eye }: Painting, gape: number) {
   // --- behind the body ---------------------------------------------------
   const jellyArms = A.arms > 0 && !rigged;
   if (jellyArms) tentacles(s, f, A, g);
@@ -253,12 +262,10 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn }
   if (!jellyArms) {
     if (A.tail === 'fluke') fluke(s, f, A);
     else if (A.tail === 'mantle') mantleFins(s, f, A);
-    else caudalFin(s, f, A);
+    else if (!poses.tail) caudalFin(s, f, A);
   }
   if (A.dorsalFin > 0) dorsalRidge(s, f, A);
-  else if (A.finRays && A.fins.length > 0 && A.tail === 'caudal' && A.arms === 0 && g.eel <= 0) {
-    medianFins(s, f, g, A);
-  }
+  else if (foldsOf(g, A) && !poses.back) medianFins(s, f, g, A);
 
   // --- the body itself ---------------------------------------------------
   const first = s.next();
@@ -299,16 +306,18 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn }
 
   // --- standing off it ---------------------------------------------------
   if (A.cilia) cilia(s, f);
-  if (A.spines) spines(s, f, g, men);
+  // a drawn hatchling is drawn smooth-backed, so on a drawn body the spines are only what
+  // menace has grown past the hatchling's, with the Spines' own
+  if (A.spines) spines(s, f, g, drawn ? Math.max(0, men - menace(baseGenome())) : men);
   if (g.inflate > 0) prickles(s, f, g, seed);
   if (g.volley > 0) volleyQuills(s, f);
   if (g.frost > 0) rime(s, f, seed);
   if (g.brood > 0) broodPouch(s, f);
   if (g.brooder > 0) broodThroat(s, f);
   if (hasSynergy(g, 'urchin')) urchinSpines(s, f, g, seed);
-  fins(s, f, g, A);
+  if (!poses.pectoral) fins(s, f, g, A);
   organs(s, f, pal, g, A.club);
-  head(s, f, pal, g, A, men, gape, drawn);
+  head(s, f, pal, g, A, men, gape, drawn, eye);
   if (g.barbels > 0) barbels(s, f, pal, g);
   if (g.lure > 0) lure(s, f, pal, g);
   if (g.pierce > 0) needleBill(s, f);
@@ -352,6 +361,42 @@ function lay(cv: HTMLCanvasElement, s: Sheet, body: ImageData, alpha: number) {
   ctx.putImageData(img, 0, 0);
 }
 
+/** Whether the painters give this body its median fins: the fold a drawn larva's are (`posesFor`). */
+const foldsOf = (g: Genome, A: PlanArt) => A.finRays && A.fins.length > 0 && A.tail === 'caudal' && A.arms === 0 && g.eel <= 0;
+
+/**
+ * Which of a drawn body's parts show on genome `g`, and stretched how far: each as far as its
+ * painter would grow it past the hatchling's (`baseGenome`), read off the same terms, so the
+ * Pectorals' fins are still bigger fins and a sharp eye a bigger eye. A part is left off where
+ * the painters would not draw it at all, and left to them where a mutation changes its shape
+ * rather than its size — a forked tail, a blind or a tapetum-pale eye — until that look is
+ * drawn too.
+ */
+function posesFor(g: Genome, plan: Plan, f: Form, A: PlanArt): Poses {
+  const b = baseGenome(), f0 = formFor(b, plan);
+  const poses: Poses = {};
+  const fan = (x: Genome) => 0.7 + x.finSize * 0.35;
+  if (A.tail === 'caudal' && A.arms === 0 && g.tailSplit <= b.tailSplit) {
+    poses.tail = { sx: f.fluke / f0.fluke, sy: (2.4 + f.fork * 1.8) / (2.4 + f0.fork * 1.8) };
+  }
+  if (A.dorsalFin === 0 && foldsOf(g, A)) {
+    const k = (0.7 + g.finSize * 0.3) / (0.7 + b.finSize * 0.3);
+    poses.back = poses.belly = { sx: 1, sy: k };
+  }
+  if (A.fins.length > 0) poses.pectoral = { sx: fan(g) / fan(b), sy: fan(g) / fan(b) };
+  const sees = (x: Genome) => Math.min(0.3, 0.15 * eyeOf(x) * A.eye);
+  if (g.eyeAdapt >= -0.4 && g.eyeAdapt <= 0.45 && !A.paleEyes && !A.eyeLamp && !A.eyeGlow && !A.stalks) {
+    poses.eye = { sx: sees(g) / sees(b), sy: sees(g) / sees(b) };
+  }
+  return poses;
+}
+
+/** Which pixels of a canvas are drawn on, for cropping it (`cropOf`). */
+function alphaOf(cv: HTMLCanvasElement) {
+  const d = cv.getContext('2d')!.getImageData(0, 0, cv.width, cv.height).data;
+  return (i: number) => d[i * 4 + 3] > 0;
+}
+
 /** Body lengths, in texels, below which detail is dropped. See `paint`. */
 const TINY = 6, SMALL = 12;
 
@@ -382,11 +427,11 @@ function pixelTexture(canvas: HTMLCanvasElement) {
  * not centred would shift the art off the line it swims about. The water is for the skin,
  * which draws a carcass's rim there (`living.ts`) and has nothing to draw on past the crop.
  */
-function cropOf(s: Sheet) {
+function cropOf(s: Sheet, drawnOn = (i: number) => s.mat[i] !== M.EMPTY || s.decal.has(i)) {
   let x0 = s.w, x1 = -1, y0 = s.h, y1 = -1;
   for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
     const i = y * s.w + x;
-    if (s.mat[i] === M.EMPTY && !s.decal.has(i)) continue;
+    if (!drawnOn(i)) continue;
     if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
   }
   if (x1 < 0) return { x: 0, y: 0, w: s.w, h: s.h };
