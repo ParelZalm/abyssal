@@ -3,9 +3,15 @@ import type { Stats } from '../../input/PlayerController';
 import { div, span } from '../dom/element';
 import { createIcon } from '../icons';
 
-/** The six stats, in Isaac's order, each with its mark and how it is written. */
-const ROWS: { key: keyof Stats; icon: IconName; label: string; fmt: (v: number) => string }[] = [
-  { key: 'damage', icon: 'teeth', label: 'Damage', fmt: v => v.toFixed(1) },
+type Num = 'damage' | 'rate' | 'range' | 'shotSpeed' | 'speed' | 'armour';
+
+/**
+ * The six stats, in Isaac's order, each with its mark and how it is written. Damage carries
+ * the multishot as a count after it — Isaac keeps his tear count off the column, but here a
+ * strike of three is three of the number, and the number alone undersold every multishot card.
+ */
+const ROWS: { key: Num; icon: IconName; label: string; fmt: (v: number, s: Stats) => string }[] = [
+  { key: 'damage', icon: 'teeth', label: 'Damage', fmt: (v, s) => s.shots > 1 ? `${v.toFixed(1)}×${s.shots}` : v.toFixed(1) },
   { key: 'rate', icon: 'pulse', label: 'Rate', fmt: v => v.toFixed(2) },
   { key: 'range', icon: 'ring', label: 'Range', fmt: v => v.toFixed(1) },
   { key: 'shotSpeed', icon: 'bolt', label: 'Shot speed', fmt: v => v.toFixed(1) },
@@ -21,7 +27,7 @@ const ROWS: { key: keyof Stats; icon: IconName; label: string; fmt: (v: number) 
  */
 export class StatColumn {
   readonly element = div('stats-col');
-  private readonly values = new Map<keyof Stats, HTMLElement>();
+  private readonly values = new Map<Num, HTMLElement>();
   private last = '';
 
   constructor() {
@@ -38,7 +44,7 @@ export class StatColumn {
   update(s: Stats) {
     const texts = ROWS.map(r => {
       const v = s[r.key];
-      return v === null ? '—' : r.fmt(v);
+      return v === null ? '—' : r.fmt(v, s);
     });
     const key = texts.join('|');
     if (key === this.last) return;

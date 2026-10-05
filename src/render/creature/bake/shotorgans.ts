@@ -17,6 +17,10 @@ const ICE: RGB = [216, 246, 255];
 const ROE: RGB = [244, 200, 224];
 const PEARL: RGB = [232, 244, 255];
 const WHITE: RGB = [255, 255, 255];
+const WATER: RGB = [120, 196, 240];
+const DARK: RGB = [8, 10, 18];
+/** A fry's glass, the larva's own (`render/shots.ts`). */
+const FRY: RGB = [220, 232, 255];
 
 /** How far the needle stands off the nose: inside the sheet's own margin there (`paint`). */
 export const NEEDLE = 0.3;
@@ -121,4 +125,52 @@ export function halo(s: Sheet, f: Form, g: Genome) {
   s.line(pts);
   for (const [x, y] of pts) s.dot(x, y, GOLD, 1);
   s.light(cx, cy + ry, GOLD, 0.8);
+}
+
+/**
+ * Parietal Eye: the third eye on the crown that lampreys and tuataras keep, open — a dark
+ * socket on the top of the head with a pale, lit lens in it, the multishot's mark.
+ */
+export function parietalEye(s: Sheet, f: Form) {
+  // behind the eye and up on the crown, where it is clear of the eye and of the dorsal line
+  const t = 0.17;
+  const w = halfWidth(t, f);
+  const x = spineAt(t, f), y = edgeAt(t, f, -0.7);
+  const r = Math.max(s.texel * 1.2, w * 0.22);
+  s.blot(x, y, r * 1.35, DARK, 1);
+  s.blot(x, y, r * 0.8, GOLD, 1);
+  s.dot(x + r * 0.3, y - r * 0.3, WHITE, 1);
+  s.light(x, y, GOLD, 0.5);
+}
+
+/** Twin Spout: a second water sac behind the first, with its own line of water to the lip. */
+export function twinSac(s: Sheet, f: Form) {
+  const t = 0.23;
+  const w = halfWidth(t, f);
+  const x = spineAt(t, f), y = edgeAt(t, f, 0.62);
+  s.blot(x, y, w * 0.3, WATER, 0.85, M.BODY);
+  s.dot(x + w * 0.1, y - w * 0.12, PEARL, 0.9);
+  const nose = spineAt(0.03, f), lip = edgeAt(0.04, f, 0.32);
+  const n = Math.max(2, Math.round((nose - x) * s.res));
+  for (let i = 1; i <= n; i++) {
+    const k = i / n;
+    s.dot(x + (nose - x) * k, y + (lip - y) * k, WATER, 0.6);
+  }
+}
+
+/**
+ * Mouthbrooder: the throat let down into a pouch, the young showing through it — a pale bulge
+ * under the jaw and the dark eyes of the fry packed in it, looking out.
+ */
+export function broodThroat(s: Sheet, f: Form) {
+  const t = 0.12;
+  const w = halfWidth(t, f);
+  const x = spineAt(t, f), y = edgeAt(t, f, 0.78);
+  const r = Math.max(s.texel * 1.5, w * 0.42);
+  s.ellipse(x, y + r * 0.2, r, r * 0.8, M.BODY);
+  s.blot(x, y + r * 0.2, r * 0.85, FRY, 0.55);
+  for (const [dx, dy] of [[-0.45, 0.05], [0.05, 0.35], [0.4, -0.05]]) {
+    s.dot(x + dx * r, y + r * 0.2 + dy * r, DARK, 1);
+    s.dot(x + dx * r + s.texel, y + r * 0.2 + dy * r - s.texel, WHITE, 0.6);
+  }
 }

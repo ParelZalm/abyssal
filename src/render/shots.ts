@@ -56,6 +56,14 @@ export const SHOT_MAPS: Record<ShotKind, readonly string[]> = {
     '.#xd#xd#',
     '..#..#..',
   ],
+  // a Mouthbrooder's fry: a forked tail, a body the larva's own pale, and a dark eye at the nose
+  fry: [
+    '##...####.',
+    '#d#.#hhhh#',
+    '.#dxxxx#x#',
+    '#d#.#xdd#.',
+    '##...###..',
+  ],
 };
 
 /**
@@ -70,6 +78,8 @@ export const SHOT_COLOURS: Record<ShotKind, Palette> = {
   bolt: { x: '#7affd8', h: '#eafff8', d: '#2aa88a', o: '#0a3a30' },
   urchin: { x: '#b070d0', h: '#f0d8ff', d: '#6a3490', o: '#1e0a2a' },
   sting: { x: '#f0a0b0', h: '#fff0f4', d: '#a05068', o: '#2a0a14' },
+  // the larva's own glass, so its brood reads as its young and not as one more shot
+  fry: { x: '#dce8ff', h: '#ffffff', d: '#8ea4d0', o: '#141e3a' },
 };
 export const HOSTILE_COLOURS: Record<ShotKind, Palette> = {
   spit: { x: '#ff3b30', h: '#ffe0b0', d: '#b3101c', o: '#2a0206' },
@@ -80,6 +90,7 @@ export const HOSTILE_COLOURS: Record<ShotKind, Palette> = {
   // the nettle's own rust and red, a jelly's colour and not a shot's: it is not dodged as one,
   // it is swum round
   sting: { x: '#ff5a48', h: '#ffd0c0', d: '#b0281c', o: '#2a0604' },
+  fry: { x: '#ff6a5a', h: '#ffe0d8', d: '#b0303a', o: '#2a0608' },
 };
 
 /**
@@ -94,6 +105,7 @@ export const SHOT_GLOW: Record<ShotKind, { color: number; a: number }> = {
   bolt: { color: 0x7affd8, a: 0.9 },
   urchin: { color: 0xd8a0ff, a: 0.6 },
   sting: { color: 0xf0a0b0, a: 0.3 },
+  fry: { color: 0xdce8ff, a: 0.4 },
 };
 export const HOSTILE_GLOW: Record<ShotKind, { color: number; a: number }> = {
   spit: { color: 0xff3b30, a: 0.8 },
@@ -101,6 +113,7 @@ export const HOSTILE_GLOW: Record<ShotKind, { color: number; a: number }> = {
   bolt: { color: 0xff2e6a, a: 1 },
   urchin: { color: 0xff4aa8, a: 1 },
   sting: { color: 0xff6a50, a: 0.45 },
+  fry: { color: 0xff6a5a, a: 0.6 },
 };
 
 /**
@@ -178,13 +191,15 @@ export function shotGlow(kind: ShotKind, hostile: boolean, marks?: readonly Shot
 
 /** Whether the shot is drawn the same way up whichever way it flies. */
 export function shotRound(kind: ShotKind, marks?: readonly ShotMark[]) {
-  const shape = marks && SHAPE_ORDER.find(m => marks.includes(m));
+  const shape = kind !== 'fry' && marks && SHAPE_ORDER.find(m => marks.includes(m));
   return shape ? ROUND.has(shape) : kind === 'bolt';
 }
 
 const textures = new Map<string, Texture>();
 export function shotTexture(kind: ShotKind, hostile = false, marks?: readonly ShotMark[]) {
-  const shape = marks && SHAPE_ORDER.find(m => marks.includes(m));
+  // a fry keeps its own shape whatever it carries: marks colour it, and a fry drawn as a
+  // bubble or a needle is one more shot and not the brood
+  const shape = kind !== 'fry' && marks && SHAPE_ORDER.find(m => marks.includes(m));
   const colour = marks && COLOUR_ORDER.find(m => marks.includes(m));
   const key = `${kind}${hostile ? '!' : ''}|${shape ?? ''}|${colour ?? ''}`;
   let t = textures.get(key);
@@ -210,6 +225,9 @@ const THROB = 16;
 const URCHIN_SPIN = 5;
 /** What a shot thrown off another is drawn at, as a share of a whole one (`World.split`). */
 const SPAWNED = 0.7;
+/** How far a fry's body wags either side of its line, and how fast: it swims, it is not thrown. */
+const FRY_WAG = 0.3;
+const FRY_WAG_RATE = 18;
 /** How far a hanging sting sways either side of straight down, and how fast. */
 const STING_SWAY = 0.5;
 const STING_SWAY_RATE = 3;
@@ -253,8 +271,10 @@ export class ShotView {
       // point along their line
       s.rotation = shotRound(k.kind, k.marks) ? 0 : k.kind === 'urchin' ? k.t * URCHIN_SPIN
         : k.kind === 'sting' ? Math.PI / 2 + Math.sin(k.t * STING_SWAY_RATE + k.x) * STING_SWAY
-          : Math.atan2(k.vy, k.vx);
+          : Math.atan2(k.vy, k.vx) + (k.kind === 'fry' ? Math.sin(k.t * FRY_WAG_RATE + k.x) * FRY_WAG : 0);
       s.scale.set(px * (k.spawned ? SPAWNED : 1));
+      // a fry is side-on like every animal: swimming left it is mirrored, not upside down
+      if (k.kind === 'fry' && k.vx < 0) s.scale.y *= -1;
       // something left in the water thins out through its life rather than breaking
       const left = k.fades ? 1 - (k.t / k.life) ** 2 : 1;
       s.alpha = left;

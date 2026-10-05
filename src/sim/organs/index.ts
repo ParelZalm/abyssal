@@ -21,13 +21,13 @@ import type { Creature } from '../creature';
 import type { World } from '../world';
 import { ACTIVES } from './actives';
 import { CURSES, DIET, LOCOMOTION, SENSES } from './adaptations';
-import { BODY, FORMS, PRIMARIES } from './body';
+import { AMOUNT, BODY, FORMS, PRIMARIES } from './body';
 import { SHOT_ORGANS } from './shots';
 import { SYNERGY_ORGANS } from './synergies';
 import type { Organ, WoundCtx } from './types';
 import type { Shot } from '../world';
 
-export type { BoostMods, Organ, ShotMark, ShotMods, SwimMods, WoundCtx } from './types';
+export type { AmountMods, BoostMods, Fry, Organ, Primary, ShotMark, ShotMods, SwimMods, WoundCtx } from './types';
 export { kindle } from './shots';
 export { POISE_MAX } from './adaptations';
 export { PUFF_TIME, shockReach } from './actives';
@@ -39,7 +39,7 @@ export * from './query';
  * number compose in the same order every time, and `activeOf` takes the first active.
  */
 export const ORGANS: Organ[] = [
-  ...BODY, ...DIET, ...LOCOMOTION, ...SENSES, ...CURSES, ...ACTIVES, ...PRIMARIES, ...SHOT_ORGANS,
+  ...BODY, ...DIET, ...LOCOMOTION, ...SENSES, ...CURSES, ...ACTIVES, ...PRIMARIES, ...AMOUNT, ...SHOT_ORGANS,
   ...FORMS, ...SYNERGY_ORGANS,
 ];
 

@@ -36,7 +36,7 @@ export class Evolution {
       const t = TRAITS.find(x => x.id === id)!;
       t.apply(g);
       run.taken.set(t.id, (run.taken.get(t.id) ?? 0) + 1);
-      run.takenNames.push({ name: t.name, desc: t.desc, icon: t.icon, rarity: t.rarity, stacks: 1 });
+      run.takenNames.push({ name: t.name, desc: `${t.tagline}. ${t.desc}`, icon: t.icon, rarity: t.rarity, stacks: 1 });
     }
     s.tweak?.(g);
     p.view.rebuild(g);
@@ -84,7 +84,7 @@ export class Evolution {
     if (first) run.discover(t.name);
     const existing = run.takenNames.find(x => x.name === t.name);
     if (existing) existing.stacks++;
-    else run.takenNames.push({ name: t.name, desc: t.desc, icon: t.icon,
+    else run.takenNames.push({ name: t.name, desc: `${t.tagline}. ${t.desc}`, icon: t.icon,
       rarity: t.rarity, stacks: 1 });
     p.genome.accentHue += 12;
     p.view.rebuild(p.genome);

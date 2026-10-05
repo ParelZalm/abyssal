@@ -91,6 +91,15 @@ export interface Shot {
   /** Radians a second it bends toward a hostile ahead of it (Hunting Nares). */
   seek?: number;
   /**
+   * A Mouthbrooder's fry: the bites it has left once latched, the clock to the next, the body
+   * it holds and where on it, and whether it has swum on from a kill (Shoal Hunt).
+   */
+  fry?: { left: number; every: number; cd: number; on: Creature | null; ox: number; oy: number; hunted: boolean };
+  /** Spreads over the hostiles with the rest of its strike, and swims on from a kill (Shoal Hunt). */
+  hunt?: boolean;
+  /** The hostile this shot was let out for, which it homes on before anything nearer. */
+  target?: Creature | null;
+  /**
    * World units a second it throws the player along its line, whether or not the hit lands:
    * a triggerfish's jet (`Roles`' `JET_KNOCK`) is water, and moves what it meets.
    */
@@ -115,6 +124,14 @@ const SPAWN_R = 0.7;
  */
 const SEEK_REACH = 5;
 const SEEK_CONE = 1.1;
+/**
+ * A fry is not aimed, it hunts: it looks round further and wider than a seeking shot, and
+ * turns back for what it has passed — a C-Section's fetus finds the room, not the line.
+ */
+const FRY_REACH = 9;
+const FRY_CONE = 2.4;
+/** Seconds a fry swims on for after its host dies under it (Shoal Hunt), looking for the next. */
+const FRY_ON = 1.4;
 /**
  * The thick water of a chill: another body's worth of forward drag, so a chilled body tops
  * out at about half its speed, a dash included.
@@ -398,7 +415,8 @@ export class World {
     const m = shotModsOf(by);
     const s: Shot = { kind, x, y, vx: Math.cos(a) * v + cvx, vy: Math.sin(a) * v + cvy, r: SHOT_R * t.tile,
       t: 0, life: range / speed, mult, by,
-      ...(m.marks.length ? { marks: m.marks, pierce: m.pierce, seek: m.seek } : {}) };
+      ...(m.marks.length ? { marks: m.marks, pierce: m.pierce, seek: m.seek } : {}),
+      ...(m.hunt ? { hunt: true } : {}) };
     this.shots.push(s);
     this.pulses.push({ x, y, r: by.radius * 0.6, kind: 'shot', shot: kind, hostile: !by.isPlayer });
     return s;
@@ -431,6 +449,28 @@ export class World {
   }
 
   /**
+   * Make `s` a fry (`Shot.fry`): it homes as hard as `seek`, and bites `bites` times, `every`
+   * seconds apart, once it has latched on.
+   */
+  brood(s: Shot, bites: number, every: number, seek: number) {
+    s.fry = { left: bites, every, cd: 0, on: null, ox: 0, oy: 0, hunted: false };
+    s.seek = Math.max(s.seek ?? 0, seek);
+  }
+
+  /**
+   * Shoal Hunt: a strike's fry shared out over the hostiles, nearest first, one each, so a
+   * fan of them is a fry on every body in the room and not three on the nearest. Past as many
+   * as there are hostiles the share starts over.
+   */
+  share(shots: readonly Shot[]) {
+    const p = this.player;
+    const prey = this.creatures.filter(c => c.hostile && this.canHit(c))
+      .sort((a, b) => dist2(p.x, p.y, a.x, a.y) - dist2(p.x, p.y, b.x, b.y));
+    if (!prey.length) return;
+    shots.forEach((s, i) => { s.target = prey[i % prey.length]; });
+  }
+
+  /**
    * Whether the player's shot, or what it bursts into, can land on `c`: anything alive but the
    * player — and while a room holds the player in, only what holds it. A shoal of fry between
    * the larva and a mackerel soaked up every shot aimed through it.
@@ -455,13 +495,19 @@ export class World {
     const t = this.terrain;
     if (!t || !s.seek) return;
     const a = Math.atan2(s.vy, s.vx);
-    let want = 0, best = (SEEK_REACH * t.tile) ** 2, found = false;
-    for (const c of this.creatures) {
+    const cone = s.fry ? FRY_CONE : SEEK_CONE;
+    let want = 0, best = ((s.fry ? FRY_REACH : SEEK_REACH) * t.tile) ** 2, found = false;
+    if (s.target && !(s.target.alive && this.canHit(s.target))) s.target = null;
+    if (s.target) {
+      want = Math.atan2(s.target.y - s.y, s.target.x - s.x);
+      found = true;
+    }
+    for (const c of found ? [] : this.creatures) {
       if (!c.hostile || !this.canHit(c) || s.hit?.includes(c)) continue;
       const d = dist2(s.x, s.y, c.x, c.y);
       if (d > best) continue;
       const to = Math.atan2(c.y - s.y, c.x - s.x);
-      if (Math.abs(angleDelta(a, to)) > SEEK_CONE) continue;
+      if (Math.abs(angleDelta(a, to)) > cone) continue;
       best = d; want = to; found = true;
     }
     if (!found) return;
@@ -509,6 +555,12 @@ export class World {
     for (let i = this.shots.length - 1; i >= 0; i--) {
       const s = this.shots[i];
       s.t += dt;
+      if (s.fry?.on) {
+        // its bites spent, or what it held died under it with nothing to swim on to
+        if (!this.nibble(s, dt)) { this.shots.splice(i, 1); this.spend(s, true); continue; }
+        // still holding on; a fry let go by a kill flies on from here
+        if (s.fry.on) continue;
+      }
       if (s.seek) this.bend(s, dt);
       if (s.heavy) {
         s.vx *= Math.exp(-s.heavy.drag * dt);
@@ -532,6 +584,15 @@ export class World {
           c.vy += s.vy * 0.15;
           (s.hit ??= []).push(c);
           shotHit(this, s, c);
+          // a fry holds on and keeps biting; one that passes through (Needle Jet) bites as it goes
+          if (s.fry && !s.pierce && c.alive && s.fry.left > 1) {
+            s.fry.on = c;
+            s.fry.ox = s.x - c.x;
+            s.fry.oy = s.y - c.y;
+            s.fry.left--;
+            s.fry.cd = s.fry.every;
+            break;
+          }
           if (!s.pierce) { spent = struck = true; break; }
           // through and out the other side: the impact without the shot's end
           this.pulses.push({ x: s.x, y: s.y, r: s.r * 3, kind: 'impact', shot: s.kind, marks: s.marks,
@@ -556,22 +617,60 @@ export class World {
       }
       if (!spent) continue;
       this.shots.splice(i, 1);
-      if (s.fades && !struck && s.t > s.life) continue;
-      // at the top of its arc, from where it was a step before; one that met rock short of
-      // it only breaks there
-      if (s.burst && (!s.apex || s.vy >= 0)) s.burst(s.x - s.vx * dt, s.y - s.vy * dt);
-      // what it bursts into happens where it was a step before, out of the rock it met
-      if (s.marks) {
-        s.x -= s.vx * dt;
-        s.y -= s.vy * dt;
-        shotSpent(this, s);
-      }
-      // a shot that found a body is an impact, with the way it was going; one that found rock
-      // or ran out is a splash
-      this.pulses.push({ x: s.x, y: s.y, r: s.r * 3, kind: struck ? 'impact' : 'splash', shot: s.kind,
-        hostile: !s.by.isPlayer, marks: s.marks,
-        vx: struck ? s.vx : undefined, vy: struck ? s.vy : undefined });
+      this.spend(s, struck, dt);
     }
+  }
+
+  /**
+   * A latched fry's step: held where it bit, biting on its clock. Whether it is still at it;
+   * false once its bites are spent or its host is dead. A fry of Shoal Hunt whose host dies
+   * lets go and swims on with the bites it has left, for a little while, to the next; it is
+   * still at it, but loose.
+   */
+  private nibble(s: Shot, dt: number) {
+    const f = s.fry!, host = f.on!;
+    if (host.alive) {
+      s.x = host.x + f.ox;
+      s.y = host.y + f.oy;
+      f.cd -= dt;
+      if (f.cd <= 0) {
+        f.cd = f.every;
+        f.left--;
+        this.combat.hit(this.player, host, s.mult, true);
+        this.pulses.push({ x: s.x, y: s.y, r: s.r * 2, kind: 'impact', shot: s.kind, marks: s.marks,
+          vx: s.vx, vy: s.vy });
+      }
+      if (host.alive && f.left > 0) return true;
+    }
+    if (!s.hunt || f.left <= 0) return false;
+    f.on = null;
+    f.hunted = true;
+    s.target = null;
+    s.t = 0;
+    s.life = FRY_ON;
+    return true;
+  }
+
+  /**
+   * A shot out of the water: what it bursts into and the splash or impact it leaves. `dt` is
+   * the step it broke on, which it is put back by, out of the rock it met.
+   */
+  private spend(s: Shot, struck: boolean, dt = 0) {
+    if (s.fades && !struck && s.t > s.life) return;
+    // at the top of its arc, from where it was a step before; one that met rock short of
+    // it only breaks there
+    if (s.burst && (!s.apex || s.vy >= 0)) s.burst(s.x - s.vx * dt, s.y - s.vy * dt);
+    // what it bursts into happens where it was a step before, out of the rock it met
+    if (s.marks) {
+      s.x -= s.vx * dt;
+      s.y -= s.vy * dt;
+      shotSpent(this, s);
+    }
+    // a shot that found a body is an impact, with the way it was going; one that found rock
+    // or ran out is a splash
+    this.pulses.push({ x: s.x, y: s.y, r: s.r * 3, kind: struck ? 'impact' : 'splash', shot: s.kind,
+      hostile: !s.by.isPlayer, marks: s.marks,
+      vx: struck ? s.vx : undefined, vy: struck ? s.vy : undefined });
   }
 
   /** Development: every hostile in the room dead by the player's hand, so the room clears. */

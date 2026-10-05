@@ -508,11 +508,26 @@ Isaac's layout: the status panel top left (hearts, belly, shells), the stat colu
 charge, and, beside a pedestal, the mutation's card at the top (`OfferCard`), clear of the
 floor the pedestal stands on.
 
-**The pedestal** (`render/pedestal.ts`) is drawn in the world: a plinth of the rock's own
-stone, a tile across, stood on flat floor under the middle of the room (`Terrain.standAt`),
-and the mutation over it as its glyph in its rarity's colour, bobbing, with a bloom and a
-light — the one lit thing in its room. The glyphs are one raster (`render/glyphs.ts`) for
-the HUD's SVG and the world's canvas alike.
+**The pedestal** (`render/pedestals.ts`) is drawn in the world: Isaac's altar in the rock's
+own stone — a lit capstone, a shaft with a niche cut in it, a stepped foot — stood on flat
+floor under the middle of the room (`Terrain.standAt`). The niche glows in the offer's
+colour (its rarity's, or the deal room's red), a shaft of light falls on the stand, and the
+mutation hangs over it as its drawing, bobbing over its own shadow, with a bloom and a light —
+the one lit thing in its room. Over it, until the player is near enough for the card, a strip
+of badges says what it would move on this body: the stat column's mark and an arrow lit green
+or red (`stripCanvas`, read off `traitDiff`), Isaac's "damage up" read from across a room.
+
+**The item drawings** (`render/itemart.ts`) are one per mutation, 20 art pixels square, of the
+organ itself — gill arches, an eye, a clutch of roe, the fry in a parent's mouth — never a
+symbol for it. They are painted the way a creature's sheet is: a drawing says what each pixel
+is (shape and material: flesh, ivory, fin, enamel, glow and the rest, four tones each) and the
+shading picks its tone afterwards from the surface's normal against a light from the top left
+— a disc is a ball, a capsule a cylinder, a polygon a pillow off its own edge. What lies under
+another shape takes a step of shadow along the seam, and the outline is read off the finished
+silhouette, so nothing is stroked. Light that is not lit, a glint or a lamp, goes on last.
+The card at the top of the screen shows the same drawing at twice its grain. The HUD's small
+chips keep the one-colour glyphs (`render/glyphs.ts`), which are one raster for the HUD's SVG
+and the world's canvas alike: a full-colour drawing at chip size is a smudge.
 
 The DOM is not under `FramePass`, so it is put on the grid by hand. The glyphs are path data
 stroked once per size onto a grid of 2 px cells and kept or dropped by coverage

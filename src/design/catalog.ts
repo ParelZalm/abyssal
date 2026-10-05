@@ -25,6 +25,7 @@ import { generateMap } from '../content/map';
 import { Minimap } from '../ui/hud/Minimap';
 import { spriteCanvas } from '../render/pickups';
 import { PedestalsView } from '../render/pedestals';
+import { traitDiffFromHatch } from '../input/statdiff';
 import { DropIn } from '../render/dropin';
 import type { Pedestal } from '../run/TankMap';
 import { ITEM_IDS, ITEMS } from '../content/items';
@@ -1485,18 +1486,42 @@ class PedestalsCell extends Container {
 
 /** A board cell of plinths, `SPACING` apart, bobbing on the board's clock. */
 function pedestalsItem(id: string, name: string, note: string, stands: Omit<Pedestal, 'x' | 'y'>[],
-                    span: number): DesignItem {
+                    span: number, extra: Partial<DesignItem> = {}): DesignItem {
   const tank = tankById('nursery');
   const step = tank.tile * 3.2;
   const laid: Pedestal[] = stands.map((s, i) => ({ ...s, x: (i - (stands.length - 1) / 2) * step, y: 20 }));
+  // the strips over a mutation are read against a body, and the board's is the larva as it hatches
+  const g = larva();
   let clock = 0;
   return {
-    id, name, note, source: 'src/render/pedestals.ts', span, depth: tank.depth,
+    id, name, note, source: 'src/render/pedestals.ts', span, depth: tank.depth, ...extra,
     make: () => new PedestalsCell(),
     animate: (view: Container, dt: number) => {
       clock += dt;
-      (view as PedestalsCell).view.update(laid, tank.tile * HOVER, 2 / SHOT_PX, clock);
+      (view as PedestalsCell).view.update(laid, tank.tile * HOVER, 2 / SHOT_PX, clock, g);
     },
+  };
+}
+
+/**
+ * Every mutation on its pedestal, as the treasure room stands it: the drawing over the plinth
+ * in its colours, the niche lit in its rarity's, and the strip of what it would move on a
+ * hatchling. The focus panel has the card's numbers. The drawings are the question here — does
+ * the gill card read as gills from across a room — and only the whole pool at once shows two
+ * that read alike.
+ */
+function itemGroup(): DesignGroup {
+  return {
+    id: 'items', name: 'Mutation art',
+    note: 'Every mutation on its pedestal: its drawing, the niche in its rarity\'s colour, and the strip of what it moves on a hatchling.',
+    items: TRAITS.map(t => {
+      const rows = traitDiffFromHatch(t, tankById('nursery').tile);
+      const facts: Record<string, string | number> = { tagline: t.tagline, rarity: t.rarity, tank: t.tank ?? 'any' };
+      for (const r of rows) facts[r.label] = r.before ? `${r.before} → ${r.after}` : r.after;
+      return pedestalsItem(`item-${t.id}`, t.name, `${t.tagline}. ${t.desc}`,
+        [{ good: { kind: 'mutation', trait: t }, price: t.deal ? { containers: t.deal } : null }], 60,
+        { source: 'src/render/itemart.ts', facts, icon: t.icon, rarity: t.rarity });
+    }),
   };
 }
 
@@ -1535,14 +1560,18 @@ function powerGroup(): DesignGroup {
       `${t.name} on its plinth: the glyph in its rarity's colour, lit, bobbing`,
       [{ good: { kind: 'mutation', trait: t }, price: null }], 60);
   };
-  // the larva hatches with the spit, so its cell is the larva as it is
-  const primary = (id: string) => {
+  // the larva hatches with the spit, so its cell is the larva as it is; `more` are cards taken
+  // on top of the primary, for the multishot on it
+  const primary = (id: string, more: string[] = []) => {
     const t = TRAITS.find(x => x.id === id)!;
     const g = larva();
     if (!HATCHED.includes(id)) t.apply(g);
+    for (const m of more) TRAITS.find(x => x.id === m)!.apply(g);
     const prim = primaryOf({ organs: organsOf(g), genome: g } as never)!;
+    const names = more.map(m => TRAITS.find(x => x.id === m)!.name);
     return {
-      id: `primary-${id}`, name: t.name, note: t.desc,
+      id: ['primary', id, ...more].join('-'), name: [t.name, ...names].join(' + '),
+      note: more.length ? `${prim.fan.length} of the primary's shot a strike: every shot of the fan is the primary's.` : t.desc,
       source: 'src/sim/organs/body.ts', span: 110, depth: tank.depth, genome: g,
       facts: { shot: prim.shot, fan: prim.fan.length, 'share of a shot': prim.mult,
         speed: PLAYER_SHOT_SPEED, range: SHOT_RANGE },
@@ -1588,13 +1617,15 @@ function powerGroup(): DesignGroup {
   };
   return {
     id: 'power', name: 'Pedestals & power',
-    note: 'The treasure room\'s pedestal at each rarity, the stat column, and each primary: the spit the larva hatches with, the volley, and the bite.',
+    note: 'The treasure room\'s pedestal at each rarity, the stat column, each primary — the spit the larva hatches with, the volley, the brood and the bite — and the multishot on them.',
     items: [
       pedestal('muscle'), pedestal('inflate'), pedestal('apexjaw'),
       { id: 'stat-column', name: 'stat column', note: 'damage, rate, range, shot speed, speed, armour — a hatchling\'s',
         source: 'src/ui/hud/StatColumn.ts', span: 70, depth: tank.depth,
         make: () => spriteCell(statColumnCanvas(), 1) },
-      primary('archerspit'), primary('spinevolley'), bite(),
+      primary('archerspit'), primary('spinevolley'), primary('brooder'), bite(),
+      primary('archerspit', ['parietal']), primary('archerspit', ['twin']), primary('archerspit', ['foureye']),
+      primary('spinevolley', ['parietal']), primary('brooder', ['parietal']),
     ],
   };
 }
@@ -2021,7 +2052,7 @@ export function catalog(): DesignSection[] {
   return [
     { name: 'Tanks', groups: [roomGroup(), decorGroup(), waterGroup()] },
     { name: 'Animals', groups: [speciesGroup(), roleGroup(), bossGroup(), guardianGroup()] },
-    { name: 'The run', groups: [healthGroup(), powerGroup(), shotOrganGroup(), economyGroup()] },
+    { name: 'The run', groups: [healthGroup(), powerGroup(), itemGroup(), shotOrganGroup(), economyGroup()] },
     { name: 'The body', groups: [planGroup(), motionGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup()] },
     { name: 'Column era', archived: true, groups: [propGroup(), fieldGroup()] },
   ];

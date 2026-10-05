@@ -13,6 +13,10 @@ export interface Genome {
   lifesteal: number;   // share of biomass eaten that comes back as health
   pen: number;         // armour a bite ignores outright
   ram: number;         // gills that need flow: cruising is cheap, hanging still is not
+  // the attack's stats, Isaac's: how often, how far and how fast the strike's shots go
+  tears: number;       // multiplier on strikes a second
+  reach: number;       // tiles added to a shot's range
+  velocity: number;    // multiplier on a shot's speed
 
   // organs — these carry a mechanic AND a piece of morphology
   venom: number;       // poison left in a wound, damage per second
@@ -45,6 +49,12 @@ export interface Genome {
   spit: number;        // archer spit: a jet of water fired down the aim
   volley: number;      // spine volley: a fan of three spines
   fangs: number;       // lunging bite: the strike is the mouth again, and hits twice as hard
+  brooder: number;     // mouthbrooder: the strike lets out fry that seek, latch on and nibble
+  // multishot — how many shots one strike throws, on whichever primary fires them. Stack with
+  // each other, and with every shot organ: three fry that burn is three burning fry
+  parietal: number;    // parietal eye: two more shots, and a slower strike
+  twin: number;        // twin spout: one more shot, for nothing
+  foureye: number;     // four-eyed fish: three more shots, and a much slower strike
   // shot organs — what the shots carry, on whichever primary fires them. Unlike the slots
   // above these stack with each other: a shot that bursts, burns and arcs is the build
   blast: number;       // cavitation: a shot bursts where it breaks
@@ -105,9 +115,11 @@ export function baseGenome(): Genome {
   return {
     size: 14, speed: 150, turn: 4.2, bite: 6, sense: 340, armor: 0,
     regen: 0.6, metabolism: 1, stealth: 0, gulp: 1, lifesteal: 0, pen: 0, ram: 0,
+    tears: 1, reach: 0, velocity: 1,
     venom: 0, lure: 0, claws: 0, jet: 0, coral: 0, frill: 0, filter: 0, crush: 0,
     eel: 0, mantle: 0, lurk: 0, frenzy: 0, electro: 0, glare: 0, brittle: 0, veins: 0, lead: 0,
-    ink: 0, discharge: 0, inflate: 0, spit: 0, volley: 0, fangs: 0,
+    ink: 0, discharge: 0, inflate: 0, spit: 0, volley: 0, fangs: 0, brooder: 0,
+    parietal: 0, twin: 0, foureye: 0,
     blast: 0, scald: 0, halo: 0, arc: 0, pierce: 0, seek: 0, brood: 0, frost: 0,
     hue: 30, accentHue: 200, finSize: 1, tailSplit: 0.35, spikes: 0, serrate: 0,
     jaw: 0.3, eyeSize: 1, glow: 0, segments: 0, translucent: 0, smoke: 0, pale: 0,

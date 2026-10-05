@@ -7,4 +7,6 @@ export type IconName =
   | 'shield' | 'eye' | 'wave' | 'glow' | 'ghost' | 'gill' | 'pulse' | 'mass'
   | 'bolt' | 'spiral' | 'blade' | 'drop' | 'ring' | 'funnel' | 'sieve' | 'molar'
   | 'coil' | 'bell' | 'crouch' | 'ink' | 'shock' | 'puff'
-  | 'seek' | 'needle' | 'roe' | 'blast' | 'chain' | 'flame' | 'flake' | 'halo';
+  | 'seek' | 'needle' | 'roe' | 'blast' | 'chain' | 'flame' | 'flake' | 'halo'
+  | 'eye3' | 'eye4' | 'twin' | 'fry' | 'gland' | 'quills' | 'leaf' | 'beak' | 'coral'
+  | 'venom' | 'lure' | 'claw' | 'frill' | 'lamp' | 'lantern' | 'shots';

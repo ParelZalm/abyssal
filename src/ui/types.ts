@@ -1,3 +1,4 @@
+import type { StatRow } from '../input/statdiff';
 import type { Family, Transformation } from '../content/forms';
 import type { Genome } from '../content/genome';
 import type { ItemId } from '../content/items';
@@ -54,7 +55,8 @@ export interface HudState {
   stats: Stats;
   /**
    * What E would take now, a pedestal's good or an item lying loose: the good and its price,
-   * what taking it would finish, and whether the codex has it.
+   * what taking it would finish, whether the codex has it, and what it would do to the body's
+   * numbers (`traitDiff`), for a mutation.
    */
-  offer: { good: Good; price: Price | null; note: string | null; isNew: boolean } | null;
+  offer: { good: Good; price: Price | null; note: string | null; isNew: boolean; rows: StatRow[] } | null;
 }

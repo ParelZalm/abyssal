@@ -123,6 +123,16 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
     if (r * s.res >= 1.2) s.dot(ex + r * 0.35, ey - r * 0.35, [236, 246, 250], 0.95);
     else if (pale) s.dot(ex, ey, iris, 1);
   }
+  // Four-Eyed Fish: Anableps's eyes stand up out of the head, each split at the waterline into
+  // one that looks above and one below. Side-on that is a second eye over the first, a band of
+  // the skin between them — four eyes, where the multishot says four shots
+  if (g.foureye > 0) {
+    const uy = ey - r * 2.1, ux = ex - r * 0.2;
+    s.ellipse(ux, uy + r * 0.4, r * 1.2, r * 1.1, M.BODY);
+    s.blot(ux, uy, r, [8, 10, 18], 1);
+    if (r * s.res >= 1.5) s.blot(ux, uy, r * 0.55, rgbOf(g.hue + 180, 0.2, 0.25), 1);
+    s.dot(ux + r * 0.35, uy - r * 0.35, [236, 246, 250], 0.95);
+  }
 
   // the gill slit: a dark crescent behind the head
   if (A.gills) {

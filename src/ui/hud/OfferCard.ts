@@ -15,13 +15,13 @@ export class OfferCard {
 
   update(o: HudState['offer']) {
     const good = o?.good;
-    const key = o && good ? `${good.kind === 'mutation' ? good.trait.id : good.pickup}|${o.note ?? ''}|${JSON.stringify(o.price)}` : '';
+    const key = o && good ? `${good.kind === 'mutation' ? good.trait.id : good.pickup}|${o.note ?? ''}|${JSON.stringify(o.price)}|${JSON.stringify(o.rows)}` : '';
     if (key === this.last) return;
     this.last = key;
     this.element.hidden = !o;
     if (!o || !good) { this.element.replaceChildren(); return; }
     const card = good.kind === 'mutation'
-      ? mutationCard(good.trait, { note: o.note, isNew: o.isNew })
+      ? mutationCard(good.trait, { note: o.note, isNew: o.isNew, rows: o.rows })
       : pickupCard(good.pickup);
     const price = o.price;
     const how = span();

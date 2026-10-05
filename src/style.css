@@ -341,6 +341,23 @@ ul.inventory li.empty { grid-template-columns: 1fr; }
   border: 2px solid var(--edge); color: var(--ink); }
 .counters { justify-content: flex-start; gap: 18px; }
 .card .mark canvas { image-rendering: pixelated; }
+/* the mutation's drawing, at twice its grain, where the glyph was */
+.card .mark.art { width: auto; height: auto; padding: 4px; }
+/* Isaac's word for it, under the name: what the card is about before its numbers say how much */
+.card .tagline { display: block; margin: -3px 0 9px; font-size: 11px; font-weight: 650;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink); }
+.card .stats { display: grid; gap: 3px; margin: 0 0 10px; padding: 7px 8px;
+  background: rgba(0,0,0,.22); border: 2px solid rgba(120,190,235,.12);
+  font-size: 12px; font-variant-numeric: tabular-nums; }
+.card .stats .row { display: grid; grid-template-columns: 14px 1fr auto 12px; align-items: center; gap: 6px; }
+.card .stats .row svg { color: var(--dim); }
+.card .stats .k { color: var(--dim); }
+.card .stats .v { color: var(--ink); white-space: nowrap; }
+.card .stats .was { color: var(--dim); }
+.card .stats .arrow { font-size: 9px; text-align: right; }
+.card .stats .up .arrow, .card .stats .minor .up { color: #8cf0a8; }
+.card .stats .down .arrow, .card .stats .minor .down { color: #f39a8e; }
+.card .stats .minor { margin-top: 3px; font-size: 10.5px; line-height: 1.45; color: var(--dim); }
 
 /* the stat column: Isaac's left edge, under the status panel, one mark and number a row */
 .stats-col { display: grid; gap: 4px;

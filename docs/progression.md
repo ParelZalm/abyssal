@@ -186,8 +186,10 @@ the same thresholds as anything else.
 ## Pedestals
 
 The level-up draft is gone (roadmap stage 2); mutations are found on **pedestals**, one in
-each tank's treasure room (roadmap stage 5). `traits.ts` holds 55 `Trait` records — id,
-rarity, icon, description, an optional home `tank`, and an `apply` that mutates a `Genome`.
+each tank's treasure room (roadmap stage 5). `traits.ts` holds 76 `Trait` records — id,
+rarity, icon, Isaac's word for it (`tagline`), what it does that no number says (`desc`), an
+optional home `tank`, and an `apply` that mutates a `Genome`. What a card does to the numbers
+is never written on it by hand (*The stats and the pool*).
 
 - **The pool is the tank's.** A mutation's `tank` is where it belongs — the column's bands
   folded into the three tanks: open water is the nursery, the reef shelf the reef, twilight
@@ -293,7 +295,8 @@ The strike on the arrows is the **primary**, one slot like the active. Every lar
 with **Archer Spit** (`HATCHED` in `run/starts.ts`, taken through `Evolution.hatch` so the
 pedestals never deal it): one jet of water for a whole hit, the unit the other primaries are
 written in. **Spine Volley** fires a fan of three spines a quarter radian apart, 0.45 each
-(`Organ.primary`, `sim/organs/body.ts`). The **Lunging Bite** (`fangs`, a reef card) is the
+(`Organ.primary`, `sim/organs/body.ts`). The **Mouthbrooder** lets out homing fry that latch
+and bite (*The stats and the pool*). The **Lunging Bite** (`fangs`, a reef card) is the
 mouth back: the strike lunges and bites for twice a shot (`Organ.strike`, read by
 `Combat.bite`), and what it kills is swallowed. Each replaces the others.
 
@@ -351,10 +354,71 @@ firing, each mark's shot, marks stacked, and all eight on the volley.
 
 ## The stat column
 
-Isaac's left edge, under the status panel (`ui/hud/StatColumn.ts`, from
-`PlayerController.stats`), in the room's own units: damage a hit, attacks a second, range in
-tiles (the bite's reach, or a shot's), shot speed in tiles a second (a dash for the bite),
-cruise speed in tiles a second, and armour as its chance to shrug a hit off.
+Isaac's left edge, under the status panel (`ui/hud/StatColumn.ts`, from `statsOf` in
+`PlayerController`), in the room's own units: damage a hit — with the multishot after it,
+`6.9×3` — tears (strikes a second), range in tiles (the bite's reach, or a shot's), shot
+speed in tiles a second (a dash for the bite), cruise speed in tiles a second, and armour as
+its chance to shrug a hit off. `statsOf` is pure in the genome, so a card can ask it of the
+body it would make.
+
+## The stats and the pool
+
+Reworked after the economy, asked for: the pool leaned on numbers Isaac does not have —
+turning, sense, the belly — and wrote its own percentages by hand, so a card said "+45%" of
+something no stat showed, and no card raised the attack rate at all. Now every card is about
+Isaac's stats first: **speed**, **damage**, **tears**, **shot speed**, **range**, the
+**amount** a strike throws, and the **effect** its shots carry.
+
+- **Three stats are new on the genome**: `tears` (a multiplier on strikes a second), `reach`
+  (tiles added to a shot's range, at least 3 in all) and `velocity` (a multiplier on a shot's
+  speed). They are stats like `speed`, read directly; each card that moves one also nudges
+  the morphology it comes from — fins for tears, the lateral line for range, the tail for
+  shot speed.
+- **The card's numbers are computed** (`input/statdiff.ts`): `traitDiff` takes the card on
+  a copy of this body's genome and reads both through `statsOf`, so the card shows each of
+  the attack's and the swim's numbers it moves as before → after, a green or red arrow, and
+  the body's other numbers (size, aim, sight, gulp, the belly's need) as shares on a line. It
+  is the body's own answer: a multishot on a body that bites moves nothing, and its card is
+  bare. The `tagline` is the word on top — "Tears up", "Triple shot, tears down" — and a `!`
+  marks a big one.
+- **Tears up** is a kind of card now: Broad Pectorals, Efficient Gills, the Segmented Trunk,
+  Gill Rakers (tears ×1.7, damage ×0.65 — its hidden 0.4 on every hit is gone), Ram
+  Ventilation, White Muscle Burst. **Range**: Lateral Line, Swim Bladder, Barbels, the Tapetum,
+  the Deep Lantern. **Shot speed**: the Forked Caudal Fin, the new Pressure Gland (nursery),
+  Fusiform Body, Siphon Jet. The Crushing Pharynx is Isaac's damage-up-tears-down.
+
+**Multishot** — how many shots a strike throws, on whichever primary fires them (the
+`amount` hook, folded by `multishotOf`; `primaryOf` fans the primary's shot out by it):
+
+| card | tank | shots | tears |
+| --- | --- | --- | --- |
+| Parietal Eye (`parietal`), Isaac's Inner Eye | nursery | +2 | ×0.6 |
+| Twin Spout (`twin`), 20/20 | reef | +1 | — |
+| Four-Eyed Fish (`foureye`), Mutant Spider | reef | +3 | ×0.45 |
+
+The extras add; the tax is the worst one carried, not their product. A primary has a count and
+a spacing of its own (the spit 1 at 0.12 rad, the volley 3 at 0.24, Quill Storm 5 at 0.15, the
+fry 1 at 0.32), the fan never opens past ±0.55 rad, and every shot of it is the primary's: a
+Parietal Eye on the volley is five spines. Each is painted: a third, lit eye on the crown, a
+second water sac under the jaw, a second eye over the first.
+
+**The Mouthbrooder** (`brooder`, a nursery primary), Isaac's C-Section: the strike lets out a
+fry (`'fry'`, a shot kind of its own, drawn as a tiny larva that wags) at 0.7 of shot speed,
+homing hard (`World.brood`: 7 rad/s, nine tiles round, a cone that turns back), that latches
+on to what it reaches and bites it three times 0.28 s apart, half a shot each
+(`World.nibble`). The first bite is the shot's landing, so every shot organ rides it; a
+Cavitation burst goes off when it lets go. Through a Needle Jet it does not latch but bites
+everything it passes. Tears ×0.85. The body shows the brood in a pale throat pouch, their
+eyes looking out.
+
+**Synergy is mostly the systems composing**, as Isaac's is: C-Section with an Inner Eye is
+three fetuses because every shot of a fan is the primary's, and a burning fry is a fry that
+carries the Vent Gland's mark. Nothing names those. What a pairing adds beyond the sum gets a
+name, as the other synergies do: **Shoal Hunt** (Mouthbrooder and any multishot) shares a
+strike's fry out over the room's hostiles, nearest first, one each (`World.share`), and a fry
+whose host dies under it swims on for 1.4 s with the bites it has left — told the first time
+one does. The draft deals multishot at a fifth of its weight to a body that bites, like the
+shot organs.
 
 ## Transformations
 

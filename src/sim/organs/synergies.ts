@@ -394,4 +394,14 @@ export const SYNERGY_ORGANS: Organ[] = [
       c.heal(dps * dt * (0.3 + c.genome.lifesteal * 2));
       return true;
     } }),
+
+  // Isaac's C-Section with an Inner Eye is three fetuses, and nobody had to say so: every shot
+  // of a multishot fan is the primary's (`primaryOf`), so three fry a strike is the systems
+  // composing. What the pairing adds is the brood behaving as one — three on the nearest
+  // mackerel was a waste of two of them — and it is told the first time a fry swims on
+  O({ id: 'shoalhunt', name: 'Shoal Hunt',
+    when: g => g.brooder > 0 && (g.parietal > 0 || g.twin > 0 || g.foureye > 0),
+    desc: 'Mouthbrooder and more than one shot a strike. The fry share the room out between them, one a hostile, and a fry whose host dies under it swims on to the next with the bites it has left.',
+    shot: (_g, m) => { m.hunt = true; },
+    onShotHit: (_att, _def, _w, s) => !!s.fry?.hunted }),
 ];

@@ -40,11 +40,14 @@ export function completes(g: Genome, owned: Trait[], forms: readonly Transformat
 /** How much a card that would do nothing for the body is still dealt. */
 const DEAD_CARD = 0.2;
 
-/** Whether `t` grows a shot organ: something the shots carry, which a bite does not. */
+/**
+ * Whether `t` grows something only shots use: a shot organ, which the shots carry, or a
+ * multishot, which throws more of them. A bite has no use for either.
+ */
 function carriesShot(t: Trait) {
   const g = baseGenome();
   t.apply(g);
-  return organsOf(g).some(o => o.shot);
+  return organsOf(g).some(o => o.shot || o.amount);
 }
 
 /**
@@ -54,8 +57,8 @@ function carriesShot(t: Trait) {
  */
 export function leanOf(g: Genome, owned: Trait[], forms: readonly Transformation[],
                        counts: Record<Family, number>, t: Trait) {
-  // a shot organ on a body that bites is a card that does nothing, and the draft says so by
-  // all but leaving it out — not wholly, since a primary that fires may still come
+  // a shot organ or a multishot on a body that bites is a card that does nothing, and the
+  // draft says so by all but leaving it out — not wholly, since a primary that fires may come
   if (carriesShot(t) && !organsOf(g).some(o => o.primary)) return DEAD_CARD;
   if (completes(g, owned, forms, t).length) return 1.5;
   // a family already become is finished with, so it no longer pulls the draft its way

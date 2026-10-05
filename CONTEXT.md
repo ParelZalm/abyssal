@@ -131,6 +131,10 @@ a burn, a chill, an arc, a shaft of light, passing through, bending, breaking in
 slot: shot organs stack with each other and on any primary that fires.
 _Avoid_: tear effect, bullet modifier
 
+**Multishot** — how many shots one strike throws, past what its primary throws by itself: a
+third eye, a second spout. Every shot of it is the primary's, and carries every shot organ.
+_Avoid_: triple shot, spread
+
 **Charge** — a room cleared, counted toward the active mutation's next use. Each active
 needs its own number of them.
 _Avoid_: cooldown, recharge time

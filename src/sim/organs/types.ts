@@ -57,13 +57,46 @@ export interface BoostMods {
  */
 export type ShotMark = 'blast' | 'scald' | 'halo' | 'arc' | 'pierce' | 'seek' | 'brood' | 'frost';
 
+/**
+ * How many shots a strike throws past its primary's own, and what that costs the strike's
+ * rate — Isaac's multishot. The extras add (an Inner Eye and a Mutant Spider are five
+ * tears), but the cost is the worst one carried, not their product: two penalties stacked
+ * left a body that fired once a second, and a second multishot card has to be worth taking.
+ */
+export interface AmountMods {
+  extra: number;
+  /** Multiplier on strikes a second, 0..1. */
+  tax: number;
+}
+
+/**
+ * A primary that fires fry instead of a shot (the Mouthbrooder): how many bites one gets
+ * once it has latched on, the seconds between them, and how hard it homes.
+ */
+export interface Fry { bites: number; every: number; seek: number }
+
 /** What a shot leaves the body carrying, folded from its organs as it is fired. */
 export interface ShotMods {
   marks: ShotMark[];
+  /**
+   * The strike's fry spread over the room's hostiles, one each, and swim on from a body that
+   * dies under them (Shoal Hunt).
+   */
+  hunt: boolean;
   /** Passes through every body in its way and breaks only on rock or the end of its flight. */
   pierce: boolean;
   /** Radians a second it may bend toward a hostile ahead of it; 0 flies straight. */
   seek: number;
+}
+
+/** What a primary organ says the strike fires (`Organ.primary`). */
+export interface Primary {
+  shot: ShotKind;
+  count: number;
+  spacing: number;
+  mult: number;
+  speed: number;
+  fry?: Fry;
 }
 
 export interface Organ {
@@ -122,11 +155,14 @@ export interface Organ {
   active?: { name: string; icon: IconName; charge: number; fire: (c: Creature, world: World) => void };
   /**
    * The primary: what the strike on the arrows fires in place of the bite — a kind of shot,
-   * the fan of headings it goes out on (radians off the aim), and each shot's share of a
-   * bite. One slot, like the active; `primaryOf` takes the first. Read off the genome,
+   * how many go out and how far apart (radians), each shot's share of a bite, its speed as a
+   * share of the body's shot speed, and for fry how they bite. One slot, like the active;
+   * `primaryOf` takes the first and fans it out with the multishot. Read off the genome,
    * since a deal's variant of a primary is the same organ, turned up.
    */
-  primary?: (g: Genome) => { shot: ShotKind; fan: readonly number[]; mult: number };
+  primary?: (g: Genome) => Primary;
+  /** Shots a strike throws past the primary's own (`AmountMods`). Folded by `multishotOf`. */
+  amount?: (g: Genome, m: AmountMods) => void;
   /**
    * What the bite the strike lands is worth, as a multiple of `biteDamage` — the melee
    * primary's hook, since a body with no shot primary strikes with its mouth. Only the

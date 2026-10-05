@@ -32,7 +32,8 @@ import { bluntSnout, head, lureAt, lure, barbels } from './bake/head';
 import { spines, organs, ballisticReach, urchinReach, urchinSpines, electroplates, prickles,
          inkSac, spitSac, stoneWarts, volleyQuills, armourBands } from './bake/organs';
 import { photophores, flankLights, embers } from './bake/lights';
-import { broodPouch, cavityBladder, galvanicLine, halo, nares, NEEDLE, needleBill, rime,
+import { broodPouch, broodThroat, cavityBladder, galvanicLine, halo, nares, NEEDLE, needleBill, parietalEye, rime,
+  twinSac,
          ventGlands } from './bake/shotorgans';
 
 export interface Baked {
@@ -108,7 +109,8 @@ function key(g: Genome, plan: Plan) {
           Math.min(3, g.coral), Math.min(3, g.frill), g.jet > 0 ? 1 : 0,
           g.venom > 0 ? 1 : 0, Math.min(2, g.filter), g.crush > 0 ? 1 : 0,
           g.eel > 0 ? 1 : 0, g.mantle > 0 ? 1 : 0, g.lurk > 0 ? 1 : 0, g.smoke > 0 ? 1 : 0,
-          g.spit > 0 ? 1 : 0, g.volley > 0 ? 1 : 0,
+          g.spit > 0 ? 1 : 0, g.volley > 0 ? 1 : 0, g.brooder > 0 ? 1 : 0,
+          g.parietal > 0 ? 1 : 0, g.twin > 0 ? 1 : 0, g.foureye > 0 ? 1 : 0,
           g.blast > 0 ? 1 : 0, g.scald > 0 ? 1 : 0, Math.min(2, g.halo), g.arc > 0 ? 1 : 0,
           g.pierce > 0 ? 1 : 0, g.seek > 0 ? 1 : 0, g.brood > 0 ? 1 : 0, g.frost > 0 ? 1 : 0,
           // a synergy's threshold can fall inside one bucket of the fields above — Urchin's
@@ -265,6 +267,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   if (g.discharge > 0) electroplates(s, f, g);
   if (g.ink > 0) inkSac(s, f);
   if (g.spit > 0) spitSac(s, f);
+  if (g.twin > 0) twinSac(s, f);
   if (g.seek > 0) nares(s, f);
   if (g.arc > 0) galvanicLine(s, f);
   if (g.scald > 0) ventGlands(s, f);
@@ -284,6 +287,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   if (g.volley > 0) volleyQuills(s, f);
   if (g.frost > 0) rime(s, f, seed);
   if (g.brood > 0) broodPouch(s, f);
+  if (g.brooder > 0) broodThroat(s, f);
   if (hasSynergy(g, 'urchin')) urchinSpines(s, f, g, seed);
   fins(s, f, g, A);
   organs(s, f, pal, g, A.club);
@@ -292,6 +296,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   if (g.lure > 0) lure(s, f, pal, g);
   if (g.pierce > 0) needleBill(s, f);
   if (g.halo > 0) halo(s, f, g);
+  if (g.parietal > 0) parietalEye(s, f);
   if (A.scales) scales(s, f, pal);
   return true;
 }

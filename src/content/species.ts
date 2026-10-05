@@ -18,11 +18,12 @@ export type Moveset = 'pack' | 'volley' | 'balloon' | 'bloom' | 'burrow' | 'jet'
 /**
  * What a body fires: a jet of water, a spine, a blob of light — and the mantis shrimp's
  * urchin, which is thrown rather than fired, and a sea nettle's sting, which is left hanging
- * in the water. Neither of those last two is ever the player's.
+ * in the water. Neither of those last two is ever the player's — and the fry, the
+ * Mouthbrooder's, which only the player lets out.
  */
-export type ShotKind = 'spit' | 'spine' | 'bolt' | 'urchin' | 'sting';
-/** What a role fires, and a primary: every kind but the thrown and the left. */
-export type FiredKind = Exclude<ShotKind, 'urchin' | 'sting'>;
+export type ShotKind = 'spit' | 'spine' | 'bolt' | 'urchin' | 'sting' | 'fry';
+/** What a role fires: every kind but the thrown, the left and the player's fry. */
+export type FiredKind = Exclude<ShotKind, 'urchin' | 'sting' | 'fry'>;
 /** A boss's fight (`Species.boss`, `sim/bosses.ts`). */
 export type Fight = 'punch' | 'charge' | 'ink';
 

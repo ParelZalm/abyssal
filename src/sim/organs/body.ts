@@ -2,7 +2,7 @@ import { drawnAngle, formFor, lureBulb, R } from '../../content/form';
 import { spriteBulb } from '../../content/sprites';
 import { dist2 } from '../../core/util';
 import { envenom, sting } from './effects';
-import { O, type Organ } from './types';
+import { O, type Fry, type Organ } from './types';
 
 /** Centimetres of belly a still ram ventilator loses a second. */
 const RAM_DRAIN = 6;
@@ -89,7 +89,6 @@ export const BODY: Organ[] = [
     swallowHeal: (g, gain) => gain * g.lifesteal }),
 ];
 
-const SPIT_FAN = [0];
 /**
  * The lunging bite against a shot. It has to be worth coming close for: a room's every
  * hostile hurts by touch, so a mouth is the whole body inside what can hit it. At twice a
@@ -97,25 +96,61 @@ const SPIT_FAN = [0];
  * damage the arrows can throw.
  */
 const FANG_MULT = 2;
-const VOLLEY_FAN = [-0.24, 0, 0.24];
-const STORM_FAN = [-0.3, -0.15, 0, 0.15, 0.3];
+/** The volley's spines, a quarter radian apart; Quill Storm's five closer, so its middle three still land together. */
+const VOLLEY_SPACING = 0.24;
+const STORM_SPACING = 0.15;
+/**
+ * The spacing a multishot card fans a spit at: Isaac's Inner Eye is three tears a hair
+ * apart, which at ten tiles are a tile and a half wide — a spread that still lands on one
+ * mackerel close and finds a second further off.
+ */
+const SPIT_SPACING = 0.12;
+/**
+ * The Mouthbrooder's fry, Isaac's C-Section: let out slower than a jet, they home hard,
+ * latch on to what they reach and bite it three times over most of a second. Three bites at
+ * half a shot is a shot and a half — more than a spit, for being slow to arrive and spent
+ * on one body — and every shot organ rides the first bite. They spread wider than a spit so
+ * a fan of them finds a room rather than one body.
+ */
+const FRY: Fry = { bites: 3, every: 0.28, seek: 7 };
+const FRY_MULT = 0.5;
+const FRY_SPEED = 0.7;
+const FRY_SPACING = 0.32;
 
 /**
  * The primaries: what the strike is. The spit — every larva's, from the hatch — is one shot
  * for a whole hit, the unit the rest are measured in; the volley three, spread a quarter of a
  * radian, each under half — more damage in all at a crowd, less on one target unless it is
- * close enough for the fan to land whole. The fangs fire nothing: the strike is the lunge and
- * the bite again, for twice a shot.
+ * close enough for the fan to land whole. The fry are slow and sure. The fangs fire nothing:
+ * the strike is the lunge and the bite again, for twice a shot.
  */
 export const PRIMARIES: Organ[] = [
   O({ id: 'spit', when: g => g.spit > 0,
-    primary: () => ({ shot: 'spit', fan: SPIT_FAN, mult: 1 }) }),
-  // Quill Storm (a deal) is the volley at two: five spines, the fan no wider, so the middle
-  // three still land together on one target
+    primary: () => ({ shot: 'spit', count: 1, spacing: SPIT_SPACING, mult: 1, speed: 1 }) }),
+  // Quill Storm (a deal) is the volley at two: five spines, the fan no wider
   O({ id: 'volley', when: g => g.volley > 0,
-    primary: g => ({ shot: 'spine', fan: g.volley >= 2 ? STORM_FAN : VOLLEY_FAN, mult: 0.45 }) }),
+    primary: g => g.volley >= 2
+      ? { shot: 'spine', count: 5, spacing: STORM_SPACING, mult: 0.45, speed: 1 }
+      : { shot: 'spine', count: 3, spacing: VOLLEY_SPACING, mult: 0.45, speed: 1 } }),
+  O({ id: 'brooder', when: g => g.brooder > 0,
+    primary: () => ({ shot: 'fry', count: 1, spacing: FRY_SPACING, mult: FRY_MULT, speed: FRY_SPEED, fry: FRY }) }),
   O({ id: 'fangs', when: g => g.fangs > 0,
     strike: (_g, base) => base * FANG_MULT }),
+];
+
+/**
+ * Multishot: shots a strike throws past its primary's own (`AmountMods`). Each card has its
+ * own tax on the rate, and only the worst one carried is paid.
+ */
+const PARIETAL_TAX = 0.6;
+const FOUREYE_TAX = 0.45;
+export const AMOUNT: Organ[] = [
+  O({ id: 'parietal', when: g => g.parietal > 0,
+    amount: (_g, m) => { m.extra += 2; m.tax = Math.min(m.tax, PARIETAL_TAX); } }),
+  O({ id: 'twin', when: g => g.twin > 0,
+    amount: (_g, m) => { m.extra += 1; } }),
+  O({ id: 'foureye', when: g => g.foureye > 0,
+    amount: (_g, m) => { m.extra += 3; m.tax = Math.min(m.tax, FOUREYE_TAX); } }),
 ];
 
 /** Organs only a transformation grants. */

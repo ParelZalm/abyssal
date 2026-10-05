@@ -414,6 +414,35 @@ What it found, and what it leaves:
 - **The board's boss cells drew every boss painted**, never having been handed the species
   since the sprites went in; they draw the sprites now.
 
+## ~~Items: Isaac's stats, multishot and the brood~~
+
+Done next, asked for: the pool reworked toward Isaac's stats — speed, damage, tears, shot
+speed, range, the amount a strike throws and the effect its shots carry — with the synergy
+between them left to the systems, as his is (*The stats and the pool* in `progression.md`).
+Tears, range and shot speed are genome stats (`tears`, `reach`, `velocity`), and a dozen cards
+that moved turning, sense or the belly move them now. Every card has Isaac's word for it
+(`Trait.tagline`) and its numbers computed on this body as before → after (`traitDiff`), on
+its card and as a strip of arrows over its pedestal. Multishot — the Parietal Eye (Inner Eye),
+Twin Spout (20/20), Four-Eyed Fish (Mutant Spider) — and the Mouthbrooder, a primary of homing
+fry that latch and bite (C-Section); one synergy, Shoal Hunt, for the two together. Every
+mutation has a drawing of its organ (`render/itemart.ts`), and the pedestal is an altar with a
+lit niche, a shaft of light and the good's shadow. The board has a *Mutation art* group, and
+the brood and the multishot on each primary in *Pedestals & power*.
+
+What it found, and what it leaves:
+
+- **A card's own percentages drifted from the body.** Siphon Jet said "40% faster" of a shot
+  speed the column showed, and Gill Rakers' 40% on every hit showed nowhere. Computing the
+  card from the genome is what keeps it honest; the `desc` says only what no number can.
+- **Two multishot taxes multiplied left a body firing once a second**, so only the worst is
+  paid, as in Isaac. Twin Spout pays none and doubles a spit's damage on one target; it is a
+  reef rare for that, and the first to look at if the reef gets easy.
+- **Three fry on the nearest body wasted two**, which is what Shoal Hunt is for; without it a
+  fan of fry is still three fry, just less clever about it.
+- The drawings are painted in code, from shapes and a light, which reads at 20 pixels; a
+  generated sheet could replace any of them through the same `ITEM_ART` seam. Belly, sight and
+  stealth cards are still in the pool as utility, each with its numbers on the card.
+
 ## Hostile movesets: the deep
 
 The barracuda strikes across the room the moment the player is on its line, and turned

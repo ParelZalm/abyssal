@@ -6,6 +6,7 @@ import { baseGenome, type Genome } from './content/genome';
 import { speciesById, type Species } from './content/species';
 import { TANK_ORDER, tankById, tankIndex, TEMPO, type RoomType, type TankId } from './content/tanks';
 import { TRAITS } from './content/traits';
+import { traitDiff } from './input/statdiff';
 import type { Launch } from './dev/launch';
 import { Input } from './input/Input';
 import { PlayerController } from './input/PlayerController';
@@ -21,7 +22,7 @@ import { GhostView } from './render/ghosts';
 import { PotView } from './render/pots';
 import { PromptView } from './render/prompt';
 import { ShotView } from './render/shots';
-import { BOB, DrainView, GLYPH, PedestalsView } from './render/pedestals';
+import { BOB, DrainView, GLYPH, goodLift, PedestalsView } from './render/pedestals';
 import { DropIn } from './render/dropin';
 import { Lighting, lightTexture } from './render/lighting';
 import { STAGE_LEVEL, stageLights } from './render/stage';
@@ -583,9 +584,10 @@ export class Game {
     this.ghosts.update(this.world.ghosts, this.world.creatures, dt, view.t);
     this.pots.update(this.world.pots, view.zoom);
     this.shots.update(this.world.shots, view.zoom);
-    this.pedestals.update(this.tank.pedestals, this.tank.room.tile * HOVER, view.zoom, view.t);
-    this.drain.update(this.tank.drain, view.zoom, view.t);
     const within = this.phase === 'play' && !this.tank.sliding ? this.within() : null;
+    this.pedestals.update(this.tank.pedestals, this.tank.room.tile * HOVER, view.zoom, view.t, p.genome,
+      within?.pedestal ?? null);
+    this.drain.update(this.tank.drain, view.zoom, view.t);
     this.prompt.update(within, view.zoom, view.t);
     const stage = this.tank.stage;
     const dread = this.scene.draw(view, this.world, p, this.phase, this.dread,
@@ -637,7 +639,8 @@ export class Game {
     const s = this.tank.offered;
     if (s?.good) {
       const tall = s.good.kind === 'mutation' ? GLYPH : SPRITES[s.good.pickup].length;
-      return { good: s.good, price: s.price, x: s.x, y: s.y - this.tank.room.tile * HOVER,
+      return { good: s.good, price: s.price, x: s.x,
+        y: s.y - goodLift(this.tank.room.tile * HOVER, this.camera.zoom, !!s.price),
         lift: tall / 2 + BOB, pedestal: s, pickup: null };
     }
     const k = this.pockets.nearItem();
@@ -659,6 +662,7 @@ export class Game {
     if (!w) return null;
     const trait = w.good.kind === 'mutation' ? w.good.trait : null;
     return { good: w.good, price: w.price, note: trait && this.evolution.finishes(trait),
-      isNew: !!trait && !this.run.codex.traits[trait.id] };
+      isNew: !!trait && !this.run.codex.traits[trait.id],
+      rows: trait ? traitDiff(this.player.genome, trait, this.tank.room.tile) : [] };
   }
 }

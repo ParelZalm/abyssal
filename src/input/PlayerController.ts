@@ -1,7 +1,8 @@
-import { biteDamage } from '../content/genome';
+import { biteDamage, type Genome } from '../content/genome';
 import { angleDelta } from '../core/util';
 import type { Fx } from '../render/fx';
-import { activeOf, biteRateOf, boostModsOf, fire, POISE_MAX, primaryOf, PUFF_TIME, strikeOf } from '../sim/organs';
+import { activeOf, boostModsOf, fire, organsOf, POISE_MAX, primaryOf, PUFF_TIME, strikeEveryOf,
+  strikeOf } from '../sim/organs';
 import { DRAG_FWD, shrugChance, type Creature } from '../sim/creature';
 import type { World } from '../sim/world';
 import type { Input } from './Input';
@@ -46,6 +47,8 @@ const ATTACK_EVERY = 0.33;
  */
 export const SHOT_SPEED = 9;
 export const SHOT_RANGE = 10;
+/** The least a shot reaches, in tiles, whatever the cards take off it: past the body's own nose. */
+const RANGE_MIN = 3;
 const RECOIL = 0.18;
 /**
  * Seconds a body keeps facing its attack after the arrow is let go. Without it a tap flips
@@ -110,6 +113,10 @@ export const NOOK_OUT = 0.18;
 export interface Stats {
   /** Damage a hit does, before armour. */
   damage: number;
+  /** Shots one strike throws: 1 for the bite. */
+  shots: number;
+  /** What one strike throws, by its shot's kind, or null for the bite. */
+  shot: string | null;
   /** Attacks a second. */
   rate: number;
   /** How far an attack reaches, in tiles. */
@@ -120,6 +127,39 @@ export interface Stats {
   speed: number;
   /** The chance of shrugging a hit off, 0..1. */
   armour: number;
+}
+
+type Body = { organs: ReturnType<typeof organsOf>; genome: Genome };
+
+/** Tiles a shot of this body's flies, past its rock-bound nose. */
+const rangeOf = (g: Genome) => Math.max(RANGE_MIN, SHOT_RANGE + g.reach);
+
+/** Tiles a second this body's shots fly, before the primary's own share of it. */
+const shotSpeedOf = (b: Body) => SHOT_SPEED * b.genome.velocity * boostModsOf(b).kick;
+
+/**
+ * What a genome's attack and swim come to, in tiles of `tile` world units — the stat column's
+ * numbers, and a pedestal's card's, which takes the mutation on a copy and shows both. Pure in
+ * the genome, so a card can ask it of a body that does not exist yet. A fry's damage is one
+ * bite of it; a hit's worth is the card's to say.
+ */
+export function statsOf(g: Genome, tile: number): Stats {
+  const b: Body = { organs: organsOf(g), genome: g };
+  const prim = primaryOf(b);
+  const bite = biteDamage(g);
+  // the bite's reach is `Combat.strike`'s, from the head (the player is drawn at its size, so
+  // its radius is `Creature.radius` of it), and the lunge carries it on
+  const radius = g.size * 0.62;
+  return {
+    damage: prim ? bite * prim.mult : bite * strikeOf(b),
+    shots: prim ? prim.fan.length : 1,
+    shot: prim?.shot ?? null,
+    rate: 1 / strikeEveryOf(b, ATTACK_EVERY),
+    range: prim ? rangeOf(g) : (radius * 1.1 + g.size * 0.45) / tile,
+    shotSpeed: prim ? shotSpeedOf(b) * prim.speed : null,
+    speed: g.speed / tile,
+    armour: shrugChance(g),
+  };
 }
 
 /**
@@ -175,23 +215,7 @@ export class PlayerController {
 
   /** The stat column, in tiles of `tile` world units. */
   stats(tile: number): Stats {
-    const p = this.p, g = p.genome;
-    const prim = primaryOf(p);
-    const bite = biteDamage(g);
-    return {
-      damage: prim ? bite * prim.mult : bite * strikeOf(p),
-      rate: 1 / biteRateOf(p, ATTACK_EVERY),
-      // the bite's reach is `Combat.strike`'s, from the head, and the lunge carries it on
-      range: prim ? SHOT_RANGE : (p.radius * 1.1 + g.size * 0.45) / tile,
-      shotSpeed: prim ? this.shotSpeed() : null,
-      speed: g.speed / tile,
-      armour: shrugChance(g),
-    };
-  }
-
-  /** Tiles a second the body's shots fly. */
-  private shotSpeed() {
-    return SHOT_SPEED * boostModsOf(this.p).kick;
+    return statsOf(this.p.genome, tile);
   }
 
   steer(dt: number) {
@@ -345,7 +369,7 @@ export class PlayerController {
     const p = this.p;
     p.attack = 'strike';
     p.attackT = p.attackLen = STRIKE;
-    this.attackCd = biteRateOf(p, ATTACK_EVERY);
+    this.attackCd = strikeEveryOf(p, ATTACK_EVERY);
     const prim = primaryOf(p);
     if (prim) {
       // fired, not bitten: from the mouth, down the aim, leaning with the swim. The kick
@@ -353,10 +377,16 @@ export class PlayerController {
       // pushed back a little rather than thrown forward
       p.kick(STRIKE);
       const a = Math.atan2(ay, ax);
+      const speed = shotSpeedOf(p) * prim.speed;
+      const out = [];
       for (const off of prim.fan) {
-        this.world.fire(p, prim.shot, p.biteX, p.biteY, a + off, this.shotSpeed(), SHOT_RANGE, prim.mult,
+        const s = this.world.fire(p, prim.shot, p.biteX, p.biteY, a + off, speed, rangeOf(p.genome), prim.mult,
           p.vx * SHOT_CARRY, p.vy * SHOT_CARRY);
+        if (!s) continue;
+        if (prim.fry) this.world.brood(s, prim.fry.bites, prim.fry.every, prim.fry.seek);
+        out.push(s);
       }
+      if (out[0]?.hunt) this.world.share(out);
       const top = Math.max(1, p.genome.speed);
       p.vx -= ax * top * RECOIL;
       p.vy -= ay * top * RECOIL;
