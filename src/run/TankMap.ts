@@ -589,6 +589,16 @@ export class TankMap {
     return best;
   }
 
+  /**
+   * Development: `goods` on plinths in the current room, free, in place of what it offered —
+   * as many as its floor has room for, which is how many this returns. The lab's shelf.
+   */
+  stand(goods: (Good | null)[]) {
+    const spots = this.spots(this.room, goods.length);
+    this.cell.pedestals = spots.map((at, k) => ({ x: at.x, y: at.y, good: goods[k] ?? null, price: null }));
+    return spots.length;
+  }
+
   /** E at a pedestal: pay for its good and take it. False when it cannot be paid. */
   take(s: Pedestal): boolean {
     if (!s.good || !this.hooks.buy(s)) return false;

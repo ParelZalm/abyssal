@@ -303,6 +303,12 @@ export class World {
     }
   }
 
+  /** Development: a living body out of the room at once, leaving nothing behind (the lab's targets). */
+  release(c: Creature) {
+    const i = this.creatures.indexOf(c);
+    if (i >= 0) this.remove(i);
+  }
+
   private remove(i: number) {
     const c = this.creatures[i];
     // a culled body has to take its grip with it, or the survivor holds a ghost

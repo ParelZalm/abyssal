@@ -212,6 +212,18 @@ export class Spawner {
     c.vy = Math.sin(a) * v;
   }
 
+  /**
+   * Development: one of `tank`'s hostiles at (`x`, `y`), as a fight deals it — its pace and its
+   * health — but placed by hand. The lab's targets. Null where it does not fit.
+   */
+  target(room: Terrain, tank: Tank, sp: Species, x: number, y: number) {
+    const c = this.place(room, sp, x, y, tank);
+    if (!c) return null;
+    c.hostile = true;
+    c.hp = c.hpMax = c.hpMax * tank.hostileHp;
+    return c;
+  }
+
   private place(room: Terrain, sp: Species, x: number, y: number, tank: Tank, scale = 1) {
     if (!room.clearAt(x, y, sp.size[1] * (sp.drawn ?? 1) * scale * 0.4)) return null;
     const c = this.world.add(sp, x, y);

@@ -1,6 +1,7 @@
 /**
  * DEV PANEL — the game's corner in development: a link to the design board, and on the
- * backquote key (or a click on *dev*) a panel with every launch (`dev/launch.ts`) and what
+ * backquote key (or a click on *dev*) a panel with every launch (`dev/launch.ts`), the lab
+ * (`dev/lab.ts`), and what
  * can be done to the run under way: clear the room, go to any room of the tank or down to the
  * next, god mode, riches, any mutation.
  *
@@ -57,6 +58,8 @@ function launcher(): HTMLElement {
         room === 'boss' ? 'boss' : ''));
     }
     row.appendChild(link('drop-in', { tank, dropin: true }, `${TANK_NAMES[tank]} with its drop-in first`));
+    row.appendChild(link('lab', { tank, lab: true },
+      `${TANK_NAMES[tank]}'s treasure room stocked with every mutation, free, and targets to shoot`, 'lab'));
     root.appendChild(row);
   }
 
@@ -98,6 +101,7 @@ const LAUNCH_CSS = `
   background: rgba(255,255,255,.04); border: 1px solid var(--edge); border-radius: 4px; padding: 2px 6px; }
 .dev-launch a:hover, .dev-launch button:hover { border-color: var(--accent); color: var(--accent); }
 .dev-launch a.boss { color: #ffc270; border-color: rgba(255,185,94,.45); }
+.dev-launch a.lab { color: var(--accent); border-color: rgba(88,224,200,.45); }
 .dev-launch .cheats { margin-top: 4px; }
 .dev-launch button { color: var(--dim); }
 .dev-launch button[data-on="1"] { color: #032018; background: var(--accent); border-color: var(--accent); font-weight: 600; }

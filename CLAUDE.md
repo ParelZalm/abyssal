@@ -64,7 +64,9 @@ starts a run past the title in any tank and room, grown as a descent would grow 
 `/?traits=inksac,beak`. The flags are `god` (hearts refill; hits still land), `calm` (fight
 rooms deal no hostiles), `rich`, `dropin`; `seed` pins the map, and without it a seed is
 found whose tank has the room asked for. *Again* on the end screen replays the launch on the
-same seed. In the game the backquote key opens the dev panel (`src/dev/panel.ts`), which
+same seed. `/?lab=1` (`&tank=reef`, `deep`) is the lab (`src/dev/lab.ts`): the treasure
+room stocked with the whole pool a shelf at a time, free and restocking, with targets and a
+damage-a-second meter — `[`/`]` shelf, `T` targets still/live/off, `R` a new body. In the game the backquote key opens the dev panel (`src/dev/panel.ts`), which
 has every launch and some live actions: clear the room,
 go to any room (`Game.warp`), go down to the next tank, give a mutation, toggle god.
 
