@@ -501,11 +501,21 @@ one picture:
 - everything already painted: the primaries' sacs and quills, the shot organs, the actives,
   the reef and deep organs, the curses, and the named synergies.
 
-Open questions for when it starts: whether the body is authored art with the organs as
-authored parts placed on it by `edgeAt` (the plans' spines and depth curves kept, the painting
-replaced), or the painters taken further; reference images first, as for the enemies. The
-board's *Mutations* and *Builds* groups are where the result is judged, every mark on the body
-beside its item.
+Decided as it started: **drawn bodies and drawn parts.** Each body the player can be — the
+larva and the five forms — is a picture, bare, and every mark a mutation makes is a picture of
+its own part, placed on the body by `edgeAt` (the plans' spines and depth curves kept, the
+painting replaced). The painters taken further was the other way, and the enemies showed how
+far a painter gets from a reference. Reference images first, the larva's before anything is
+built: the prompts are [sprite-prompts-player.md](sprite-prompts-player.md). The board's
+*Mutations* and *Builds* groups are where the result is judged, every mark on the body beside
+its item.
+
+**The larva is in** (`BODIES`): its bare body and its own parts — the eye, the fin folds, the
+tail, the pectoral — drawn, and laid into the bake, each part stretched as its painter would
+grow it, so the Pectorals and a sharper eye still show. Everything a mutation adds is still
+painted, placed on the drawn outline and shaded in the drawn swatches. Next are the mutations'
+parts, a sheet per region of the body; first the two looks that hand a drawn part back to the
+painter, the forked tail and the tapetum's pale eye.
 
 ## Later
 
