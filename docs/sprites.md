@@ -14,7 +14,9 @@ on the tag `archive/prototype-angler-art` (the board's *PROTOTYPE · Angler art*
 never mutate, so an enemy can be **drawn from a sprite** instead: one authored picture of one
 animal, which can match its reference exactly.
 
-- **Enemies only.** The player and every plan it can transform into stay painted.
+- **Enemies, and the player's bare bodies.** The player's bodies are drawn bare and laid under
+  its painted parts (`BODIES`, [sprite-prompts-player.md](sprite-prompts-player.md)); a plan
+  with no drawn body is painted whole.
 - **Size decides what survives.** A sprite is resampled to the frame's pixel density
   (`render/pixel.ts`), which falls with the tank's zoom and a smaller window. At 20–30 texels
   long, which is an anglerfish at its own size in the deep tank, the reference itself is a

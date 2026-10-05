@@ -1,9 +1,9 @@
 /**
  * Authored art: species drawn from a sprite instead of painted from their genome.
  *
- * Only an animal that never changes can have one. Enemies do not mutate; the player does,
- * and every plan it can take is painted (`render/creature/fishbake.ts`), because a mutation
- * has to show on the body. A sprite is one picture of one animal, so it is the way to hit a
+ * Only an animal that never changes can be one whole. Enemies do not mutate; the player does,
+ * so its pictures are bare bodies (`BODIES`) that its parts and mutations are painted over
+ * (`render/creature/fishbake.ts`), because a mutation has to show on the body. A sprite is one picture of one animal, so it is the way to hit a
  * reference sheet exactly, which the painters cannot (`docs/rendering.md`, *Art direction*).
  *
  * The landmarks, in the sprite's own pixels, tie the picture to the body the simulation
@@ -88,6 +88,12 @@ export interface SpriteArt {
    * `x0 + w` of `of`'s frames (`cutSprite`). A siphonophore cut in two is two of these.
    */
   cut?: { of: string; x0: number };
+  /**
+   * A player's body (`BODIES`): its six shades, outline to highlight, from its reference
+   * sheet's swatches. What is painted over it is shaded in these rather than the genome's, or
+   * a painted fin on the drawn larva came out the brown of a neutral genome.
+   */
+  ramp?: number[];
 }
 
 export const SPRITES: Record<string, SpriteArt> = {
@@ -267,7 +273,39 @@ export const SPRITES: Record<string, SpriteArt> = {
                 tentacle: { root: 4, tip: 419, axis: 20, reach: 190 },
                 hull: [[192.5, 17, 7], [170.5, 16.5, 9], [148.5, 18.5, 14], [126.5, 19, 15.3], [104.5, 19, 14.4],
                        [82.5, 19, 12.8], [60.5, 18.5, 10.6], [38.5, 18.5, 6.4], [16.5, 18, 7.6]] },
+  // The player's bodies (`BODIES`), keyed by the body's name rather than a species'. The larva's
+  // frames are its bare body: its eye, fins and tail are painted on it (`fishbake.ts`)
+  // `npm run sprite -- larva-sprite.png --id larva --key green --fringe --keep '78,6,93,28'`
+  larva: { w: 92, h: 34, snout: 90, tail: 4, axis: 17,
+           ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
+           hull: [[86.5, 17, 9.3], [76.5, 17, 13.6], [66.5, 17, 12.8], [56.5, 17, 11], [47.5, 17, 10.2],
+                  [37.5, 17, 7.6], [27.5, 17, 6], [17.5, 17.5, 5.5], [7.5, 17.5, 3.8]] },
 };
+
+/**
+ * The player's drawn bodies, by the plan they are drawn for (`docs/sprite-prompts-player.md`).
+ * A body is the bare animal; what marks it — the eye, the fins, every mutation — is painted
+ * over it and placed on its outline (`drawnForm`), until those are drawn too. A plan not here
+ * is painted whole, as every plan was.
+ */
+export const BODIES: Partial<Record<Plan, string>> = { wraith: 'larva' };
+
+/** How many steps nose to tail a drawn outline is sampled at (`Form.outline`). */
+const OUTLINE = 24;
+
+/**
+ * Form `f` with body `id`'s outline in place of its curve, for painting over the picture: the
+ * hull's samples are 85% of the drawn half-depth (`SpriteArt.hull`), so they are scaled back out
+ * to the edge the parts sit on.
+ */
+export function drawnForm(id: string, f: Form): Form {
+  const s = SPRITES[id];
+  if (!s.hull) return f;
+  const per = spriteScale(s, f);
+  const outline = Array.from({ length: OUTLINE + 1 }, (_, i) =>
+    hullAt(s.hull!, s.snout + (s.tail - s.snout) * i / OUTLINE)[1] / 0.85 / per);
+  return { ...f, outline };
+}
 
 /**
  * While the roster is converted (`docs/sprites.md`), only enemies drawn from a sprite are

@@ -92,6 +92,13 @@ export interface Form {
   up?: number;
   /** How far the spine bows the back upward, as a fraction of `width`. */
   arch?: number;
+  /**
+   * A drawn body's outline (`drawnForm` in `sprites.ts`): its half-depth in R units at even
+   * steps nose to tail root, which `halfWidth` reads in place of the curve. Only the bake sets
+   * it, so the painted parts are placed on the picture they are laid over; the simulation's
+   * form is the plan's, which the picture was drawn to fit.
+   */
+  outline?: number[];
 }
 
 /**
@@ -421,6 +428,10 @@ export function shoulderAt(f: Form) {
  */
 export function halfWidth(t: number, f: Form): number {
   const u = Math.min(1, Math.max(0, t));
+  if (f.outline) {
+    const o = f.outline, x = u * (o.length - 1), i = Math.min(o.length - 2, Math.floor(x));
+    return lerp(o[i], o[i + 1], x - i);
+  }
   const peak = shoulderAt(f);
   let w: number;
   if (f.trunk > 0) {

@@ -19,7 +19,8 @@ white in the middle of the room — that is the target) and `tank-room.webp` for
 
 ## The larva
 
-The chosen Stage A sheet is `docs/media/reference/larva.webp`.
+The chosen Stage A sheet is `docs/media/reference/larva.webp` (the second one made: plain fin
+folds, a round pectoral, the body a cone behind a round head).
 
 ### Stage A
 
@@ -104,7 +105,16 @@ larva on the bare body. Each part therefore has to be drawn at exactly its size 
 The sizes come off the Stage A sheet: tail tip to snout 112 art pixels, the tail a fifth of it,
 the eye 22 across, the body 32 deep without its folds and 48 with them.
 
-#### Sheet 1: the bare body
+#### Sheet 1: the bare body — done
+
+`docs/media/reference/larva-sprite.webp`, imported as `larva` (`BODIES.wraith`):
+
+```bash
+npm run sprite -- /tmp/larva-sprite.png --id larva --key green --fringe --keep '78,6,93,28'
+```
+
+The mouth is a colour change inside the silhouette, which the import's diff does not see, so
+it is kept by hand; the outline came out a grey-green, which `--fringe` now takes on green.
 
 ```text
 GOAL
@@ -182,14 +192,14 @@ LAYOUT
   size, angle and shape it has on the whole larva above, facing the same way, not
   rotated, not enlarged:
   1. the tail (the rounded fan, cut flat where it joins the tail stalk);
-  2. the back fin fold (the striped fold along the back, its lower edge where it
+  2. the back fin fold (the soft plain fold along the back, its lower edge where it
      meets the body);
   3. the belly fin fold (the same along the belly, its upper edge where it meets the
      body);
   4. the pectoral fin (the small round fin behind the head);
   5. the eye (the black pupil, the pale-silver ring and the white glint).
 - Where a part meets the body, finish its edge with the outline like the rest of it.
-- Fin rays and the notochord are at least 2 art pixels thick.
+- The tail's faint rays are at least 2 art pixels thick.
 - Background: flat pure green #00FF00, one colour, nothing else. Do not use green
   anywhere on the animal, and do not let the outline pick up a green tint where it
   meets the background.
@@ -217,9 +227,8 @@ place exactly.
 
 ### What comes after it
 
-1. **The import and the wiring**: the bare body's frames as an enemy's are imported, and the
-   parts found on the whole and kept with where they sit; the larva is drawn from them, and
-   checked on the board's *Body plans* against the painted one.
+1. **The import and the wiring of the parts**: found on the whole larva and kept with where
+   they sit, then laid over the body in place of the painted eye, tail and fins.
 2. **The parts the mutations add**, in sheets grouped by where they sit on a body (the head,
    the back, the belly, the tail, the flank), drawn to fit the larva and checked on the board's
    *Mutations* and *Builds* groups beside each item's drawing.

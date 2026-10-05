@@ -162,7 +162,9 @@ Read `docs/decisions.md` before rebuilding anything that looks missing.
   per pixel on a `Sheet`), the skinned mesh in `render/creature/fishview.ts`.
 - **An enemy may be drawn from a sprite instead** (`content/sprites.ts`,
   `render/creature/sprite.ts`): enemies never mutate, so one authored picture can match a
-  reference where the painters cannot. The player and every plan it can take stay painted.
+  reference where the painters cannot. The player is being moved over too, a body at a time
+  (`BODIES`): a drawn body is laid into the bake and its eye, fins and mutations are still
+  painted over it, placed on its outline (`drawnForm`); the rest of its plans stay painted.
   The whole workflow — the prompts for whoever makes the art, `npm run sprite` to import a
   sheet, the wiring and the checks — is `docs/sprites.md`; which enemies are done and which
   are next is `docs/roadmap-enemies-rework.md`. Until the roster is through, only reworked

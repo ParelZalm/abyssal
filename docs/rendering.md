@@ -35,8 +35,12 @@ holds each sprite's landmarks in its own pixels — snout and tail root span the
 so the hull lies inside the picture; the axis the swim bends about; the lure's bulb, which
 the trap fires from. `render/creature/sprite.ts` loads the frames before anything is drawn
 and resamples them to the bake's density through the same cache: a coverage-weighted mean
-per texel, snapped back to the sprite's own colours, ringed in its darkest. The player and
-every plan it can take stay painted. The anglerfish is the first
+per texel, snapped back to the sprite's own colours, ringed in its darkest. The player's
+bodies are coming over too (`BODIES`, `docs/sprite-prompts-player.md`): a drawn body is laid
+into the painted bake as its body (`lay` in `fishbake.ts`), the painted body under it giving way,
+and what the painters put behind it, on it and off it — the tail, the eye, every mutation — is
+placed on its outline (`drawnForm`, `Form.outline`) and shaded in its own swatches
+(`SpriteArt.ramp`). The anglerfish is the first
 (`render/creature/sprites/`), from `docs/media/reference/angler-sprite.webp`, imported with
 `npm run sprite`. How a sheet is asked for, imported and checked is
 [`sprites.md`](sprites.md).

@@ -12,7 +12,7 @@
  * Loaded before the game or the board starts (`loadSprites`), since a bake is synchronous.
  */
 import { Texture } from 'pixi.js';
-import { formFor, halfWidth, type Form, type Plan } from '../../content/form';
+import { formFor, halfWidth, spineAt, type Form, type Plan } from '../../content/form';
 import type { Genome } from '../../content/genome';
 import { SPRITES, spritePoint, spriteScale, type SpriteArt } from '../../content/sprites';
 import type { Emitter } from './bake/sheet';
@@ -59,6 +59,8 @@ import giantsquidRest from './sprites/giantsquid.png';
 import giantsquidStrike from './sprites/giantsquid-strike.png';
 import giantsquidTentacle from './sprites/giantsquid-tentacle.png';
 import giantsquidArm from './sprites/giantsquid-arm.png';
+import larvaRest from './sprites/larva.png';
+import larvaStrike from './sprites/larva-strike.png';
 
 /**
  * Each species' frames. A drifter has no strike, and shows its rest for one (`Baked.open`). A
@@ -85,6 +87,7 @@ const SOURCES: Record<string, Sources> = {
   nettle: { rest: nettleRest, wounded: nettleWounded },
   vampiresquid: { rest: vampireRest, strike: vampireStrike, arm: vampireArm },
   giantsquid: { rest: giantsquidRest, strike: giantsquidStrike, arm: giantsquidArm, tentacle: giantsquidTentacle },
+  larva: { rest: larvaRest, strike: larvaStrike },
 };
 
 /** A frame shut and open, and the colours both may snap to. */
@@ -257,3 +260,18 @@ function armRig(a: Arm, m: { root: number; tip: number; axis: number; reach: num
            rootX: spritePoint(s, f, crown.at).x, spread: crown.spread / per };
 }
 
+
+/**
+ * The player's drawn body `id` (`BODIES`) on a painted sheet's frame: `w` × `h` texels whose
+ * first column is `back` and whose middle row is the spine, in R units at `res` texels each,
+ * shut or `open`. The bake lays the painted parts over it (`fishbake.ts`).
+ */
+export function drawnBody(id: string, f: Form, back: number, halfH: number, res: number, w: number, h: number,
+                          open: boolean): ImageData {
+  const fr = framesOf(id)!;
+  const s = SPRITES[id];
+  const per = spriteScale(s, f);
+  const ox = s.snout + (back - spineAt(0, f)) * per;
+  const cv = resample(open ? fr.strike : fr.rest, fr.palette, res / per, w, h, halfH * per - s.axis, ox);
+  return cv.getContext('2d')!.getImageData(0, 0, w, h);
+}

@@ -22,8 +22,9 @@ import { fbmSigned } from '../../core/noise';
 import { lerp } from '../../core/util';
 import { BLOOM_TRAIL, hasSynergy, synergiesOf } from '../../sim/organs';
 import { artDensity } from '../pixel';
-import { palette, type Palette } from './bake/palette';
-import { bakeSprite, hasSprite, hasWounded } from './sprite';
+import { palette, type Palette, type RGB } from './bake/palette';
+import { bakeSprite, drawnBody, hasSprite, hasWounded } from './sprite';
+import { BODIES, drawnForm, SPRITES } from '../../content/sprites';
 import { M, shade, Sheet, type Emitter } from './bake/sheet';
 import { flank, whaleSpots, camouflage, crazing, veins, ballast, viscera, mantle, cilia, scales } from './bake/body';
 import { caudalFin, fluke, mantleFins, dorsalRidge, medianFins, fins, ribbonFin, veil, bloomTrail,
@@ -166,15 +167,22 @@ function evict() {
 
 function paint(g: Genome, plan: Plan): Baked {
   const res = resolutionFor(g);
-  const f = formFor(g, plan);
+  // a plan with a drawn body (`BODIES`) is painted over the picture, its parts placed on the
+  // picture's outline rather than the plan's curve
+  const body = BODIES[plan];
+  const drawn = body && hasSprite(body) ? body : null;
+  const f = drawn ? drawnForm(drawn, formFor(g, plan)) : formFor(g, plan);
   const men = menace(g);
   const A = PLAN_ART[plan];
   const seed = Math.round(g.hue * 7 + g.accentHue * 3 + g.spikes * 11) % 9973;
   const pal = palette(g, men, A, seed);
+  const shades = drawn && SPRITES[drawn].ramp;
+  if (shades) pal.ramp = pal.fin = shades.map((c): RGB => [c >> 16, (c >> 8) & 255, c & 255]);
 
   // The player's own plan. A single surface has no overlaps to composite, so the body is
   // simply drawn see-through and that is all.
-  const smoke = A.smoke || g.smoke > 0;
+  // A drawn body is see-through in its own picture, gut and spine and all.
+  const smoke = !drawn && (A.smoke || g.smoke > 0);
   // see-through, but a pale body less so: a larva's glass is lit from inside, and the
   // water showing through it would dim the one bright thing in the tank
   if (smoke) pal.alpha *= lerp(0.6, 0.88, g.pale);
@@ -196,7 +204,7 @@ function paint(g: Genome, plan: Plan): Baked {
   const back = spineAt(1, f) - f.len * R * (f.fluke * 1.5 + g.veil * 0.7 + (bloom ? BLOOM_TRAIL * 1.1 : 0))
     - (rigged ? 0 : A.armLen * R * (1 + g.segments * 0.1) * 1.8) - R * 0.6;
   const halfH = Math.ceil(reachUp * res) / res;
-  const at = { g, f, A, pal, men, seed, smoke, bloom, rigged };
+  const at = { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn: !!drawn };
 
   // Two pictures of the same animal on identical sheets: the mouth shut, and the mouth
   // open for an attack. Cropped to their union, so the view can swap one texture for the
@@ -210,9 +218,14 @@ function paint(g: Genome, plan: Plan): Baked {
   let depth = 0;
   for (let i = 0; i <= 40; i++) depth = Math.max(depth, halfWidth(i / 40, f));
   const crop = union(cropOf(shut), gaping ? cropOf(gaping) : null);
-  const canvas = cut(shade(shut, pal), crop);
+  const picture = (sh: Sheet, open: boolean) => {
+    const cv = shade(sh, pal);
+    if (drawn) lay(cv, sh, drawnBody(drawn, f, sh.back, sh.halfH, sh.res, sh.w, sh.h, open), pal.alpha);
+    return cut(cv, crop);
+  };
+  const canvas = picture(shut, false);
   const texture = pixelTexture(canvas);
-  return { texture, open: gaping ? pixelTexture(cut(shade(gaping, pal), crop)) : texture,
+  return { texture, open: gaping ? pixelTexture(picture(gaping, true)) : texture,
            canvas, users: 0, lights: shut.lights, depth,
            back: back + crop.x / res, front: back + (crop.x + crop.w) / res, halfH: crop.h / 2 / res,
            arm: rigged ? armRig(f, pal, A, g, res) : null, tentacle: null, legs: null, trail: null };
@@ -221,6 +234,8 @@ function paint(g: Genome, plan: Plan): Baked {
 interface Painting {
   g: Genome; f: Form; A: PlanArt; pal: Palette; men: number; seed: number;
   smoke: boolean; bloom: boolean; rigged: boolean;
+  /** Painted over a drawn body (`BODIES`): the body, its mouth and its gut are the picture's. */
+  drawn: boolean;
 }
 
 /**
@@ -228,7 +243,7 @@ interface Painting {
  * body is made of. `gape` opens the mouth, 0 shut to 1 wide. Returns whether the body was
  * big enough to have a head worth drawing.
  */
-function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Painting, gape: number) {
+function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn }: Painting, gape: number) {
   // --- behind the body ---------------------------------------------------
   const jellyArms = A.arms > 0 && !rigged;
   if (jellyArms) tentacles(s, f, A, g);
@@ -246,7 +261,9 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   }
 
   // --- the body itself ---------------------------------------------------
+  const first = s.next();
   flank(s, f, 0.05, seed);
+  s.skin = [first, s.next()];
   // A detail budget. At its real size a krill is four texels long, and an eye socket or a
   // ring of cilia on a body that small is the whole animal: it reads as a black square
   // with a hair on it. Below `SMALL` pixels of length a body is a body and its lights;
@@ -291,7 +308,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   if (hasSynergy(g, 'urchin')) urchinSpines(s, f, g, seed);
   fins(s, f, g, A);
   organs(s, f, pal, g, A.club);
-  head(s, f, pal, g, A, men, gape);
+  head(s, f, pal, g, A, men, gape, drawn);
   if (g.barbels > 0) barbels(s, f, pal, g);
   if (g.lure > 0) lure(s, f, pal, g);
   if (g.pierce > 0) needleBill(s, f);
@@ -299,6 +316,40 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged }: Paint
   if (g.parietal > 0) parietalEye(s, f);
   if (A.scales) scales(s, f, pal);
   return true;
+}
+
+/**
+ * Lay a drawn body (`drawnBody`) into a painted canvas `cv` of sheet `s`, as its body: the
+ * painted body under it gives way to the picture, what is painted behind the body stays behind
+ * it, and what is painted on and off it stays over it. The painted body is still painted first,
+ * so a part's outline and its inner edge are worked out against a body where the picture is;
+ * where the painted body runs past the picture it is dropped with its outline. `alpha` is the
+ * palette's, for a body faded as a whole (Ghost Light).
+ */
+function lay(cv: HTMLCanvasElement, s: Sheet, body: ImageData, alpha: number) {
+  const ctx = cv.getContext('2d')!;
+  const img = ctx.getImageData(0, 0, s.w, s.h);
+  const p = img.data, d = body.data, n = s.w * s.h;
+  const [lo, hi] = s.skin;
+  const behind = (i: number) => s.mat[i] !== M.EMPTY && s.layer[i] < lo;
+  const over = (i: number) => (s.mat[i] !== M.EMPTY && s.layer[i] > hi) || s.decal.has(i);
+  const part = (i: number) => behind(i) || over(i);
+  for (let i = 0; i < n; i++) {
+    const o = i * 4;
+    if (d[o + 3] === 0) {
+      if (part(i)) continue;
+      // the outline of a part is kept; the painted body's, and the body, are not
+      const x = i % s.w;
+      const edge = s.mat[i] === M.EMPTY && ((x > 0 && part(i - 1)) || (x < s.w - 1 && part(i + 1)) ||
+        (i >= s.w && part(i - s.w)) || (i + s.w < n && part(i + s.w)));
+      if (!edge) p[o + 3] = 0;
+      continue;
+    }
+    const a = over(i) ? p[o + 3] / 255 : 0;
+    for (let c = 0; c < 3; c++) p[o + c] = p[o + c] * a + d[o + c] * (1 - a);
+    p[o + 3] = Math.max(p[o + 3] * a, 255 * alpha);
+  }
+  ctx.putImageData(img, 0, 0);
 }
 
 /** Body lengths, in texels, below which detail is dropped. See `paint`. */

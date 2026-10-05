@@ -31,7 +31,7 @@ export function bluntSnout(s: Sheet, f: Form, A: PlanArt) {
  * 1: the second texture every body is baked with, which the view swaps in mid-attack.
  */
 export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men: number,
-                     attack = 0) {
+                     attack = 0, drawn = false) {
   const peak = shoulderAt(f);
   const gape = Math.min(1.5, g.gape);
   const sieve = Math.min(2, g.filter);
@@ -52,6 +52,8 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
   let lower: Pt = [nose[0] - s.texel * 0.5 + open * (0.2 + attack * 0.15), nose[1] + open * (0.75 + attack * 0.2)];
   if (A.maw) {
     ({ nose, back, upper, lower } = maw(s, f, pal, g, attack));
+  } else if (drawn) {
+    // a drawn body has its own mouth, shut and open (`BODIES`)
   } else if (open * s.res < 1.2) {
     // a mouth too small to open is a seam: one dark line from the snout to the hinge
     s.line([nose, back], M.MOUTH);
@@ -63,8 +65,9 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
   // small ones — a saw has many, and that is what separates it from a bigger jaw
   const fangs = A.maw ? 0 : g.serrate > 0 ? 5 + Math.round(Math.min(2, g.serrate) * 3)
     : g.jaw > 0.55 ? Math.min(7, Math.round(2 + g.jaw * 4))
-    // any mouth opened to strike shows some teeth: a gape with nothing in it is a hole
-    : attack > 0 ? 2 + Math.round(g.jaw * 3) : 0;
+    // any mouth opened to strike shows some teeth: a gape with nothing in it is a hole. A
+    // drawn mouth is drawn open without them
+    : attack > 0 && !drawn ? 2 + Math.round(g.jaw * 3) : 0;
   if (fangs > 0 && open * s.res >= 2) {
     const long = g.serrate > 0 ? 0.18 : 0.42;
     for (let i = 0; i < fangs; i++) {
@@ -135,7 +138,7 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
   }
 
   // the gill slit: a dark crescent behind the head
-  if (A.gills) {
+  if (A.gills && !drawn) {
     const tg = Math.min(0.4, peak * 0.9);
     const n = Math.max(2, Math.round(halfWidth(tg, f) * 1.2 * s.res));
     for (let i = 0; i <= n; i++) {

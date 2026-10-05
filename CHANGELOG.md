@@ -8,6 +8,9 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+- **The larva is drawn.** Its body is a hand-drawn picture now, pale and see-through with its
+  spine and gut showing, like the enemies'; its eye, tail and fins are still painted onto it,
+  in its own colours, and every mutation shows on it as before.
 - **The deep's hostiles fight their own way**, each with a turn at half health. The barracuda
   hangs across from you and crosses the room the moment you are in its row, stunned on the rock
   it stops on; turned, it ricochets three dashes off the walls. The gulper eel draws you and

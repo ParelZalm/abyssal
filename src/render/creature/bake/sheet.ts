@@ -43,6 +43,8 @@ export class Sheet {
   readonly bot: Float32Array;
   readonly decal = new Map<number, [number, number, number, number]>();
   readonly lights: Emitter[] = [];
+  /** The layers the body itself was painted in, first to last: what a drawn body replaces (`fishbake.ts`). */
+  skin: [number, number] = [0, 0];
   private shapes = 0;
 
   /** `back`..`front` and ±`halfH` in R units, at `res` texels per R unit. */

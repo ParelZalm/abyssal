@@ -214,9 +214,12 @@ const hue = ([r, g, b]) => {
   return mx === b ? 240 + 60 * (r - g) / (mx - mn) : mx === r ? (360 + 60 * (g - b) / (mx - mn)) % 360
     : 120 + 60 * (b - r) / (mx - mn);
 };
-const isFringe = c => c && hue(c) >= fringeFrom && hue(c) <= fringeTo &&
-  (green ? c[1] > c[2] : c[1] < c[0] && c[1] < c[2]);
 const lum = c => c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
+// on green, a dark outline the bleed only greyed is too dull for a hue at all: the larva's
+// violet-grey outline came out a grey-green and a grey-teal, whose green over its red is the tell
+const dullGreen = c => green && lum(c) < 160 && c[1] > c[0] + 6;
+const isFringe = c => c && ((hue(c) >= fringeFrom && hue(c) <= fringeTo &&
+  (green ? c[1] > c[2] : c[1] < c[0] && c[1] < c[2])) || dullGreen(c));
 let fringe = 0;
 if (fringeAt >= 0) for (const g of grids) {
   const at = (i, j) => i < 0 || j < 0 || i >= g.w || j >= g.h ? null : g.cells[j * g.w + i];
