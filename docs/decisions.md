@@ -234,6 +234,36 @@ cloud, decoy ghosts round the player, the real one resolving on the lock and lun
 line (`Bosses.ink`), drawn at six tenths. A move the player answers by moving is read off a
 line and a light; one answered by struggling has to say which way, and side-on art cannot.
 
+## The title is the painting, graded, not redrawn or relit
+
+Four things were tried on the title and taken out. A parallax lean, each layer shifting with
+the pointer by its depth: it pulled the eye off the painting. The layers drawn at the game's
+grid: halved, the generator's coarse pixels went to blur. Light laid over the frame —
+drifting plankton, bands of brightness running up the walls, a whirlpool brightened by its
+own light layer: new light on top of the picture, and the whirlpool blew out. And the rock
+repainted at the grid by the room's recipe, lit by a light buffer as a room is: it read as
+the game's stone and no longer as the painting, and the wall's rim light, read as life,
+came out as cyan noise. The title is the reference composite's own layers, each graded to
+where the composite has it, with only its painted life breathing.
+
+Its fish went the same way. Schools of the game's mackerel milling at each wall and fleeing
+the leviathan, and an angler on the floor: crisp game sprites in a painting, and a behaviour
+no reef has. What lives there now is a few residents at each coral, drawn on the painting's
+own pixel, that duck into it when the eyes appear. The leviathan crossed in forty-five
+seconds with surges; for its size that read as swimming past, and a pass is now minutes.
+
+The generator's water went last: a still picture of rings, turned on its ellipse, read as a
+plate spinning. The water and whirlpool are a shader now (`ui/screens/title/abyss.ts`). Its
+first foam turned at a rate falling with the radius, uncycled, and wound the spiral into
+concentric rings inside a minute; the shear is cycled and cross-faded.
+
+Then it was taken down a long way. The coral life in three colours over every wall, the far
+spires and the riverbed was a carnival — it is a few growths in one colour now. The whirlpool
+turned in half a minute at full resolution; it turns in three, at the painting's pixel. And it
+cost: per-layer canvases at cover size, ten of them a frame, built in one half-second task;
+the game's whole stage rendering behind an opaque screen; images waiting on `decode()` in a
+background tab. All four are gone.
+
 ## Reference material
 
 The visual language of the creature pass — heavy outline, lit inner rim, segment volume,

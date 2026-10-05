@@ -221,6 +221,41 @@ The drain (`DrainView` in `render/pedestals.ts`) is a pixel-map grate in the bos
 floor with a pulsing cold light rising out of it: once the boss is dead it is the brightest
 thing in the room, which is how it is found.
 
+## The title
+
+The title (`ui/screens/title/`) is the reference composite's canyon
+(`docs/media/reference/title.webp`) in the dark, under a whirlpool that turns and a storm
+that flickers through it. Two canvases, the deep water under the rock.
+
+- **The water is drawn, not painted** (`abyss.ts`, a fragment shader). The whirlpool is a
+  vortex seen from below: a logarithmic spiral turning as one, a turn in about three minutes,
+  bent by foam that turns faster nearer the eye. Sheared for ever, that foam winds every arm
+  into a ring, so it is sheared over a forty-second cycle, two cycles half apart and
+  cross-faded. It is drawn at the painting's own coarse pixel and shown with hard pixels, soft
+  inside them: the water sits on the rock's grid, and a frame of it is a few thousand texels.
+- **The leviathan is seen in the thunder.** Lightning overhead strikes in a flicker of two or
+  three (closer together while it passes); for that instant the water behind it is lit and it
+  stands in it as a wall of black with light along its back. Otherwise it is a shade darker
+  than the dark and four ember eyes (drawn on the rock's canvas, under the rock) that look
+  about and blink. Between passes the eyes are sometimes there alone. A pass is minutes.
+- **The rock is the generator's, keyed at load** (`layers.ts`: the probe for the magenta key
+  is red over a third of green) **and graded to where the composite has it** (`GRADES`). In a
+  flash it shows as painted, for an instant.
+- **The life is kept to a few growths, in one colour.** None on the far spires or the
+  riverbed, the canyon's eight biggest and the closest walls' five; the rest is dimmed into the
+  rock. A field of points across every wall, in three colours, overwhelmed the frame. The
+  painted bubbles are among what is dropped; bubbles rise in strings off the corals and vents.
+- **What lives there lives on the corals.** Each kept growth with open water beside it is a
+  coral with a few residents, small fish on the painting's own pixel, hovering off it. When the
+  eyes open in the frame they duck into the coral, and come out one by one once it has gone.
+- **What it costs.** The rock, the rock as painted, the life and its bloom are each one picture,
+  every layer stacked into it and cut to the frame, so a frame draws four of them; built in
+  slices between frames, none longer than a few tens of milliseconds, and kept for the page.
+  Drawn per layer at cover size, they were the frame's whole budget, and the build held the
+  page for half a second at every resize. The game's stage is not drawn under the title
+  (`Game.frame`), and the layers load on `load`, not `decode()`, which a background tab
+  defers until it is shown.
+
 ## Decoration
 
 `render/decor.ts`: what grows on the rock, what has sunk onto it and what hangs from it,

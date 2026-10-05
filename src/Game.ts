@@ -472,6 +472,9 @@ export class Game {
     dt = this.camera.slow(dt);
     this.fx.update(dt);
     const { W, H } = this.camera;
+    // the title is opaque, so the stage under it is not drawn: rendering the tank, its water
+    // and its frame pass every frame behind it was the costliest thing on the title screen
+    this.app.stage.visible = this.phase !== 'title';
     if (this.phase === 'title') {
       // the title sits idle over the first tank: bake its view from the gallery meanwhile,
       // and the room behind the title a slice at a time rather than in the page's first frame

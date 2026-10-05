@@ -2,7 +2,8 @@ import type { Codex } from '../../run/codex';
 import { dailySeed, STARTS, type Start } from '../../run/starts';
 import { TANK_NAMES, TANK_ORDER } from '../../content/tanks';
 import type { Component } from '../Component';
-import { actions, button, div, h1, h2, kbd, keysLine, p, span } from '../dom/element';
+import { button, div, h1, kbd, keysLine, p, span } from '../dom/element';
+import { TitleScene } from './title/TitleScene';
 
 /** How a run is to be started: which body, and on which ocean. */
 export interface RunChoice { start: string; seed?: number; daily?: string }
@@ -14,7 +15,9 @@ function remembered() {
 }
 
 export class TitleScreen implements Component {
-  readonly element = div('overlay');
+  readonly element = div('title-screen');
+  private readonly scene = new TitleScene();
+  private readonly hatch: HTMLButtonElement;
 
   constructor(onStart: (choice: RunChoice) => void, onCodex: () => void, codex: Codex,
               dailyBest: (date: string) => number) {
@@ -46,33 +49,39 @@ export class TitleScreen implements Component {
 
     const today = dailySeed();
     const todayBest = dailyBest(today.key);
-    this.element.append(
-      h2('A fish evolution roguelite'),
-      h1('Abyssal'),
-      p('You begin as something small enough to be swallowed whole, dropped into the nursery tank of an aquarium. Eat what is smaller, strike at what is not, and mutate.'),
-      p('Every tank is a warren of rooms and a thing at its heart that is the only way out. Beat it and you are moved on to a bigger tank, deeper in the building, and you grow to fill it.'),
-      keysLine([kbd('W'), kbd('A'), kbd('S'), kbd('D'), ' swim  ·  ', kbd('←'), kbd('↑'),
-        kbd('→'), kbd('↓'), ' strike that way']),
-      keysLine([
-        kbd('Space'), ' active mutation  ·  ', kbd('E'), ' take  ·  ', kbd('Q'), ' item  ·  ',
-        kbd('P'), ' pause  ·  ', kbd('M'), ' sound',
-      ]),
-      ...(codex.tanks > 0 ? [forms] : []),
-      actions(
-        button('Hatch', () => onStart({ start: pick })),
-        // the daily is one ocean for everyone, so it is always the hatchling in it
-        button(`Daily \u00b7 ${today.key}${todayBest ? ` \u00b7 best ${todayBest.toLocaleString()}` : ''}`,
-          () => onStart({ start: 'hatchling', seed: today.seed, daily: today.key }), 'btn ghost'),
-        button('Codex', onCodex, 'btn ghost'),
-      ),
+    const hatch = button('Hatch', () => onStart({ start: pick }), 'primary');
+    const menu = div('title-menu');
+    menu.append(
+      hatch,
+      // the daily is one ocean for everyone, so it is always the hatchling in it
+      button(`Daily \u00b7 ${today.key}${todayBest ? ` \u00b7 best ${todayBest.toLocaleString()}` : ''}`,
+        () => onStart({ start: 'hatchling', seed: today.seed, daily: today.key }), ''),
+      button('Codex', onCodex, ''),
     );
+    // the picture is the pitch; the words are only what a first run needs to move and bite
+    const front = div('title-front');
+    front.append(
+      h1('Abyssal'),
+      ...(codex.tanks > 0 ? [forms] : []),
+      menu,
+    );
+    this.element.append(
+      this.scene.element,
+      front,
+      keysLine([kbd('WASD'), ' swim  ', kbd('\u2190\u2191\u2192\u2193'), ' strike  ', kbd('Space'),
+        ' mutation  ', kbd('P'), ' pause']),
+    );
+    this.hatch = hatch;
   }
 
   mount(parent: HTMLElement) {
     parent.append(this.element);
+    // Enter hatches, as the one button a first visit is looking for
+    this.hatch.focus({ preventScroll: true });
   }
 
   destroy() {
+    this.scene.destroy();
     this.element.remove();
   }
 }
