@@ -65,6 +65,11 @@ earlier sheets as style references every time, so the roster stays one style:
 `docs/media/reference/cave-room.webp` for the world and `docs/media/reference/angler.webp`
 for a finished animal.
 
+**Once a prompt is done**, its heading is struck through and marked done (`## ~~Mackerel~~ — done`),
+and its prompt text is cut, leaving what was made, its import command and what went wrong, with
+`git show <commit>:docs/<file>` for the prompt itself. A page of prompts is read for what is still
+to be made, and a done one in full looked the same as one waiting.
+
 ### Stage A — the reference sheet (design)
 
 Four images of one animal, which is where its design gets argued out. It is not used in the
