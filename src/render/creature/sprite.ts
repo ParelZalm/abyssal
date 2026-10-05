@@ -311,7 +311,8 @@ export function drawnBody(id: string, f: Form, back: number, halfH: number, res:
   cv.width = w; cv.height = h;
   const ctx = cv.getContext('2d')!;
   const part = (name: PartName, ring: boolean) => {
-    const p = fr.parts?.[name], pose = poses[name], at = s.parts?.at[name];
+    const p = fr.parts?.[name], at = s.parts?.at[name], fit = s.parts?.size?.[name] ?? 1;
+    const pose = poses[name] && { sx: poses[name]!.sx * fit, sy: poses[name]!.sy * fit };
     if (!p || !pose || !at || !s.parts) return;
     // a part's pixel `u` is the body's `at + u * sc`, stretched about its anchor `a`
     const sc = s.parts.scale, ax = ANCHOR[name][0] * p.image.width, ay = ANCHOR[name][1] * p.image.height;
@@ -330,5 +331,6 @@ export function drawnEye(id: string, f: Form, sx: number): DrawnEye | null {
   const s = SPRITES[id], at = s.parts?.at.eye, p = framesOf(id)?.parts?.eye;
   if (!s.parts || !at || !p) return null;
   const sc = s.parts.scale, half = p.image.width / 2 * sc;
-  return { ...spritePoint(s, f, [at[0] + half, at[1] + p.image.height / 2 * sc]), r: half * sx / spriteScale(s, f) };
+  return { ...spritePoint(s, f, [at[0] + half, at[1] + p.image.height / 2 * sc]),
+           r: half * sx * (s.parts.size?.eye ?? 1) / spriteScale(s, f) };
 }

@@ -104,9 +104,11 @@ export interface SpriteArt {
    * A player's body's parts (`SOURCES.parts`), each drawn on a sheet of its own and found on the
    * whole animal by `scripts/import-parts.mjs`: `at` is each part's top-left in this picture's
    * pixels, and `scale` how many of them one of a part's pixels is, since the whole on the parts
-   * sheet was not drawn quite the bare body's length.
+   * sheet was not drawn quite the bare body's length. `size` draws a part smaller or bigger than
+   * the sheet has it, about the same anchor it grows from (`drawnBody`): the larva's eye as drawn
+   * covered the front of the head and the mouth with it.
    */
-  parts?: { scale: number; at: Partial<Record<PartName, Pt>> };
+  parts?: { scale: number; at: Partial<Record<PartName, Pt>>; size?: Partial<Record<PartName, number>> };
 }
 
 export const SPRITES: Record<string, SpriteArt> = {
@@ -292,7 +294,7 @@ export const SPRITES: Record<string, SpriteArt> = {
   // `node scripts/import-parts.mjs docs/media/reference/larva-parts-sprite.png --body larva --snout 90 --tail 4 --axis 17`
   larva: { w: 92, h: 34, snout: 90, tail: 4, axis: 17,
            parts: { scale: 0.935, at: { eye: [64.8, 5.3], tail: [-13.8, 6.3], pectoral: [47, 21.2], back: [4.9, -5],
-                                       belly: [4.9, 20.3] } },
+                                       belly: [4.9, 20.3] }, size: { eye: 0.72 } },
            ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
            hull: [[86.5, 17, 9.3], [76.5, 17, 13.6], [66.5, 17, 12.8], [56.5, 17, 11], [47.5, 17, 10.2],
                   [37.5, 17, 7.6], [27.5, 17, 6], [17.5, 17.5, 5.5], [7.5, 17.5, 3.8]] },
