@@ -38,7 +38,7 @@ import {
   STRIKE, STROKE_EVERY,
 } from '../input/PlayerController';
 import { primaryOf, organsOf, shotModsOf, strikeOf, type ShotMark } from '../sim/organs';
-import { HATCHED } from '../run/starts';
+import { HATCHED, hatchedGenome } from '../run/starts';
 import { shotGlow, shotRound, shotTexture } from '../render/shots';
 import { glowTexture } from '../render/textures';
 import { BAR_OVER, ChargeBar } from '../render/tells';
@@ -92,6 +92,11 @@ export interface DesignItem {
    * without each group writing that out by hand.
    */
   genome?: Genome;
+  /**
+   * What `genome` is measured off, where it is not the bare base genome: the Mutations group's
+   * hatched larva, so a cell lists what its mutation moved and not the larva's own pale and smoke.
+   */
+  from?: Genome;
   /** The HUD glyph, for cells that are a mutation. The *icons* option draws it as a chip. */
   icon?: IconName;
   rarity?: Rarity;
@@ -650,9 +655,12 @@ function homeDepth(t: Trait) {
 }
 
 /**
- * Every mutation on the hatchling, once. The card's text says what a trait does; this row
- * is whether the body says it too. A trait whose cell is indistinguishable from the one
- * beside it has broken the organ rule, and that is only visible with the whole pool in one place.
+ * Every mutation on the hatchling, once: the larva as a run hatches it, drawn, with the mark the
+ * mutation adds drawn on it where there is one (`SpriteArt.marks`) and painted where there is
+ * not. The card's text says what a trait does; this row is whether the body says it too. A
+ * trait whose cell is indistinguishable from the one beside it has broken the organ rule, and
+ * that is only visible with the whole pool in one place. It was the darter on the bare base
+ * genome until the larva was drawn, which no run hatches as.
  */
 function mutationGroup(): DesignGroup {
   return {
@@ -660,9 +668,9 @@ function mutationGroup(): DesignGroup {
     name: 'Mutations',
     note: 'Every mutation taken once on the hatchling: does the body say what the card says?',
     items: TRAITS.map(t => {
-      const g = baseGenome();
+      const g = larva();
       g.size = 40;
-      t.apply(g);
+      if (!HATCHED.includes(t.id)) t.apply(g);
       return {
         id: t.id,
         name: t.name,
@@ -672,9 +680,10 @@ function mutationGroup(): DesignGroup {
         depth: homeDepth(t),
         facts: { rarity: t.rarity, stacks: t.maxStacks ?? 2, tank: t.tank ?? 'any' },
         genome: g,
+        from: { ...larva(), size: 40 },
         icon: t.icon,
         rarity: t.rarity,
-        make: () => boardFish(g, 'darter'),
+        make: () => boardFish(g, 'wraith'),
         animate: fishAnimate,
       };
     }),
@@ -1676,10 +1685,9 @@ function roleGroup(): DesignGroup {
 
 /** The larva, as `Game.reset` hatches it: see-through, pale and big-eyed, and spitting. */
 function larva(): Genome {
-  const g = baseGenome();
+  const g = hatchedGenome();
   g.speed *= TEMPO;
-  g.hue = 255; g.accentHue = 196; g.smoke = 1; g.pale = 1; g.eyeSize = 1.5;
-  for (const id of HATCHED) TRAITS.find(t => t.id === id)!.apply(g);
+  g.hue = 255;
   return g;
 }
 

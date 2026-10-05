@@ -110,9 +110,8 @@ const MORPH = { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fo
  * the same way the cards phrase them, so "+45% bite" on the card is "bite ×1.45" here.
  */
 const RATIO = new Set<keyof Genome>(['speed', 'turn', 'bite', 'sense', 'metabolism', 'gulp', 'size']);
-function deltaOf(g: Genome): string[] {
-  const base = baseGenome();
-  base.size = 40;
+function deltaOf(g: Genome, from?: Genome): string[] {
+  const base = from ?? { ...baseGenome(), size: 40 };
   const out: string[] = [];
   for (const k of Object.keys(base) as (keyof Genome)[]) {
     const a = base[k], b = g[k];
@@ -193,7 +192,7 @@ function build() {
         root.addChild(cell.chip);
       }
       if (showMorph && item.genome) {
-        const lines = deltaOf(item.genome);
+        const lines = deltaOf(item.genome, item.from);
         const shown = lines.length > 9 ? [...lines.slice(0, 8), `… ${lines.length - 8} more`] : lines;
         cell.morph = new Text({ text: shown.join('\n') || 'as hatched', style: MORPH });
         root.addChild(cell.morph);
@@ -552,7 +551,7 @@ function renderInfo() {
   h3.textContent = 'facts';
   info.append(h3, dl);
   if (item.genome) {
-    const lines = deltaOf(item.genome);
+    const lines = deltaOf(item.genome, item.from);
     const h3m = document.createElement('h3');
     h3m.textContent = 'off the hatchling';
     const ul = document.createElement('ul');

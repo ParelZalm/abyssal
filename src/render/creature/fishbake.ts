@@ -315,8 +315,9 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, 
   // --- standing off it ---------------------------------------------------
   if (A.cilia) cilia(s, f);
   // a drawn hatchling is drawn smooth-backed, so on a drawn body the spines are only what
-  // menace has grown past the hatchling's, with the Spines' own
-  if (A.spines) spines(s, f, g, drawn ? Math.max(0, men - menace(hatchedGenome())) : men);
+  // menace has grown past the hatchling's at the same size, with the Spines' own: size alone
+  // grows menace, and the board's larva, drawn bigger to be seen, came out spined
+  if (A.spines) spines(s, f, g, drawn ? Math.max(0, men - menace({ ...hatchedGenome(), size: g.size })) : men);
   if (g.inflate > 0) prickles(s, f, g, seed);
   if (g.volley > 0) volleyQuills(s, f);
   if (g.frost > 0) rime(s, f, seed);
