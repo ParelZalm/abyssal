@@ -8,8 +8,9 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
-- **The larva is drawn.** It is a hand-drawn picture now, like the enemies': pale and
-  see-through with its spine and gut showing, a huge eye, soft fin folds and a round tail. Bigger
+- **The larva is drawn.** It is a hand-drawn picture now, like the enemies': a pale,
+  see-through fry with its spine and gut showing, a deep round head and a big eye, a back fold
+  arching over its trunk and a fan of a tail. Bigger
   fins and a sharper eye still grow on it, and every other mutation is painted onto it as before,
   in its own colours.
 - **The deep's hostiles fight their own way**, each with a turn at half health. The barracuda

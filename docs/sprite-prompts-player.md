@@ -20,155 +20,36 @@ prompt itself is in the history, where each one says.
 
 ---
 
-## The larva — redrawn
+## ~~The larva~~ — done
 
-The first larva is in the game (`BODIES.wraith`), but its body was a cone behind a round head,
-and it is drawn again to a more natural fish: `docs/media/reference/larva.webp` is the new Stage
-A, a deep round head tapering to a narrow tail stalk, a separate fan of a tail on rays, a back
-fold that arches up over the middle of the trunk, a shallower belly fold, a fan of a pectoral
-over the gut, and the eye about a sixth of the length. Until both sheets below are in, the game
-keeps the first one. The first one's prompts and imports are in the history:
-`git show 92d0f2e:docs/sprite-prompts-player.md`.
+Drawn twice. The first body was a cone behind a round head; the second, in the game
+(`BODIES.wraith`), is a more natural fish: a deep round head tapering to a narrow tail stalk, a
+fan of a tail on rays, a back fold arching over the trunk, a fan of a pectoral over the gut.
+Both rounds' prompts are in the history: `git show 888a941:docs/sprite-prompts-player.md`.
 
-- ~~Stage A~~ — done: `docs/media/reference/larva.webp`.
+- ~~Stage A~~ — `docs/media/reference/larva.webp`. The prompt moved the eye back from the sheet,
+  with 5 art pixels of head in front of it: the first larva's eye covered the snout and the mouth.
+- ~~Stage B, sheet 1: the parts~~ — `docs/media/reference/larva-parts-sprite.png`, made first and
+  attached to the body's, since the first round's two sheets drew two different bodies. It came
+  back at one image pixel to the art pixel. `scripts/import-parts.mjs` finds each part on the
+  whole larva by its shape (every one agreed at 97–100%) and lays the whole on the bare body by its
+  landmarks:
 
-### Stage B
+  ```bash
+  node scripts/import-parts.mjs docs/media/reference/larva-parts-sprite.png --body larva --snout 87 --tail 4 --axis 15 --pitch 1
+  ```
 
-Two sheets again, and **the parts sheet first** this time. The first larva's two sheets did not
-agree — the bare body came back a cone, the whole larva on the parts sheet a cylinder with a
-head — and the game laid the parts from one on the body from the other. So the parts sheet,
-with the whole larva on it, is made first, and the bare body is asked for as exactly the body
-of that whole larva, with the parts sheet attached.
+- ~~Stage B, sheet 2: the bare body~~ — `docs/media/reference/larva-sprite.webp`, rest and strike:
 
-**On green:** the larva is lavender, and magenta bled into it cannot be told from paint.
+  ```bash
+  npm run sprite -- /tmp/larva-sprite.png --id larva --key green --fringe
+  ```
 
-**The sizes**, off the Stage A sheet's "in game" image at 112 art pixels from tail tip to snout:
-the tail 24 long and 26 tall; the body, tail stalk to snout, 88 long, 28 deep at the head and 8
-at the stalk; the back fold 52 long and 14 tall at its arch; the belly fold 48 long and 10 deep;
-the eye 20 across; the pectoral 12 by 13; the whole larva 42 deep with its folds. One change from
-the sheet: **the eye sits a little further back**, with 5 art pixels of head in front of it,
-because on the first larva the eye covered the snout and the mouth with it.
-
-**Attach both:** `cave-room.webp`, `tank-room.webp`, `angler.webp` and `larva.webp`; for sheet 2,
-the parts sheet that came back as well.
-
-#### Sheet 1: the parts
-
-```text
-GOAL
-True pixel-art sprite sheet of the fish larva in the attached reference sheet, for a
-game: the whole larva once, and under it its parts drawn apart, as in the reference's
-"parts" image. Same design and colours — the deep round head, the trunk tapering to a
-narrow tail stalk, the fan tail on rays, the arched back fold — redrawn as clean pixel
-art on a strict grid.
-
-THE GRID (most important)
-- The sheet is exactly 160 × 136 art pixels.
-- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
-  square block.
-- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
-  than one block. No dithering noise. Every block is one flat colour.
-- 1-block outline (#79728F) round each silhouette, never thicker.
-
-LAYOUT
-- Top row: the WHOLE larva, assembled, as in the reference's "in game" image: facing
-  RIGHT, straight and horizontal, 112 art pixels from tail tip to snout and 42 deep
-  with its fin folds. Centred left to right. The eye is 20 across and sits with 5 art
-  pixels of head in front of it; the small mouth is at the tip of the snout, just
-  below the middle line, a short dark seam.
-- Bottom rows: its five parts, each on its own with at least 8 art pixels of
-  background on every side between it and anything else, each drawn at EXACTLY the
-  size, angle and shape it has on the whole larva above, facing the same way, not
-  rotated, not enlarged:
-  1. the tail (the round fan on its rays, cut flat where it joins the tail stalk);
-  2. the back fin fold (the fold arching up over the trunk, its lower edge where it
-     meets the body);
-  3. the belly fin fold (the shallower fold along the belly, its upper edge where it
-     meets the body);
-  4. the pectoral fin (the small fan behind the head, over the gut);
-  5. the eye (the black pupil, the pale-silver ring and the white glint).
-- Where a part meets the body, finish its edge with the outline like the rest of it.
-- The tail's and the pectoral's rays and the notochord are at least 2 art pixels
-  thick.
-- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
-  anywhere on the animal, and do not let the outline pick up a green tint where it
-  meets the background.
-
-PALETTE
-Use these colours, plus at most 8 in-between shades of them: outline #79728F, deep
-shadow #B8B0D8, body #E8E4F8, body highlight #F4F2FF, fin #D6D0ED, gut #6A5A8A, eye
-ring #CDD3E3, pupil #080B16. Light comes from above and slightly in front: lit top,
-darker belly; each part shaded as its own rounded form, the fins paler and more
-see-through than the body.
-
-LIGHTS
-The eye's glint is a flat white block. NO glow halo, bloom or light spill, on the
-animal or on the background. The game adds the glow itself.
-
-AVOID
-Labels, leader lines, dotted outlines, parts that differ from the whole larva in size
-or shape, a part drawn twice, any background other than flat #00FF00, soft glows,
-painterly texture, noise, sub-pixel detail, text, borders, shadows, a second animal.
-```
-
-#### Sheet 2: the bare body
-
-```text
-GOAL
-True pixel-art sprite of the fish larva's BARE BODY, for a game: EXACTLY the body of
-the whole larva at the top of the attached parts sheet — the same outline, the same
-head, the same taper, the same shading — with its eye, its fin folds, its tail and its
-pectoral fin taken off. The notochord and the gut show through it as they do there.
-2 frames of the same body, side by side, left to right: "rest", "strike".
-
-THE GRID (most important)
-- Each frame is exactly 144 × 64 art pixels.
-- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
-  square block.
-- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
-  than one block. No dithering noise. Every block is one flat colour.
-- 1-block outline (#79728F) round the whole silhouette, never thicker.
-
-COMPOSITION
-- Strict side view, facing RIGHT, body straight and horizontal.
-- From the tail stalk (where the tail joins, cut flat) to the snout the body is 88 art
-  pixels long, 28 deep at the head and 8 at the stalk, as on the parts sheet.
-- Where the eye goes the head is plain body colour, shaded as the rest of the head: no
-  socket, no hole, no dotted outline. The game puts the eye on it.
-- The body is centred vertically: its midline, tail stalk to snout, lies along the
-  frame's horizontal centre line.
-- The notochord is a straight line at least 2 art pixels thick.
-- Everything fits inside the frame with at least 4 art pixels of margin, in both frames.
-- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
-  anywhere on the animal, and do not let the outline pick up a green tint where it
-  meets the background.
-
-PALETTE
-The parts sheet's colours: outline #79728F, deep shadow #B8B0D8, body #E8E4F8, body
-highlight #F4F2FF, fin #D6D0ED, gut #6A5A8A, plus at most 8 in-between shades.
-
-FRAME 1 — "rest"
-The bare body at rest, the small mouth at the tip of the snout shut: a short dark seam.
-
-FRAME 2 — "strike"
-Identical to frame 1 in every pixel except the mouth: the lower jaw dropped open, a
-dark gape (#6A5A8A at its deepest) 5 art pixels tall cut into the tip of the snout. No
-teeth. Same frame size, same position, same everything else, so the two can be swapped
-without the animal moving.
-
-AVOID
-A body shaped differently from the whole larva on the parts sheet, an eye, an eye
-socket or a dotted outline, fin folds, a tail, a pectoral fin, any background other
-than flat #00FF00, soft glows, painterly texture, noise, sub-pixel detail, text,
-labels, borders, shadows, a second animal.
-```
-
-**What to send back:** both PNGs. On the parts sheet, check that each part laid on the whole
-larva would cover its own place exactly; on the body sheet, that the body is the whole larva's.
-
-**When they land:** `npm run sprite` for the body and `scripts/import-parts.mjs` for the parts,
-as the first larva went in; then the eye's trim (`parts.size.eye`, 0.72 on the first larva, whose
-eye was a fifth of its length) is set again against this one, likely back to 1.
+  The bake lays the tail and the folds behind the body and the pectoral and the eye over it, each
+  stretched as far as its painter would grow it past the hatched larva's (`posesFor` in
+  `fishbake.ts`). A mutation that changes a part's shape rather than its size — the Forked Caudal
+  Fin's fork, the Tapetum's pale eye — hands that part back to the painter until it is drawn too.
+  The eye is drawn at its full size; the first larva's was trimmed to 0.72 (`parts.size`).
 
 ### What comes after it
 
@@ -179,8 +60,6 @@ eye was a fifth of its length) is set again against this one, likely back to 1.
 ---
 
 ## The larva's mutations
-
-**Wait for the redrawn larva** above: these are drawn to its parts sheet and its sizes.
 
 Every mark a mutation makes on the body, drawn as a part of its own, fitted to the drawn larva.
 There is no Stage A: the larva fixes the style, and each item's drawing fixes what the organ
