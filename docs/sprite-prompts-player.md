@@ -281,3 +281,235 @@ Electric Eel's organ is the electric field placed again back to the tail.
 the Moray Jaws' second jaw, which are the head's, missed by its sheet; the Urchin's thorns,
 which radiate from the body's middle and want a mark the game can turn; and the Whale Shark's
 spots.
+
+---
+
+## The Shark
+
+- ~~Stage A~~ — done: `docs/media/reference/shark.webp`. Its prompt is in the history:
+  `git show 8a71e19:docs/sprite-prompts-player.md`.
+
+The first of the five forms (`content/forms.ts`): three different Predator mutations rebuild the
+larva onto the shark's plan, with Frenzy. **It is still the player**, not a shark of the roster:
+the player keeps the larva's see-through body on every form (`Genome.smoke`), so a transformed
+player is unmistakable among real sharks, and it may never wear a guardian's silhouette, so it
+must not read as the Great White. It is the larva grown into a shark's shape: the same pale
+lavender glass, the notochord and the gut showing, the same eye, on a torpedo with a shark's fins.
+
+The shape is the plan's (`PLANS.shark`, `PLAN_ART.shark` in `content/form.ts`): a long torpedo with
+a pointed snout, the mouth under it, a small eye about an eighth of the way back, five gill slits,
+a tall first dorsal at mid-body, big raked pectorals, small pelvics, a small second dorsal and
+anal fin, and a tail whose upper lobe is longer than its lower.
+
+**The parts image is the first draft of how it comes apart**, as the larva's was: the bare body,
+the eye, the first dorsal (the `back` part), the pectoral, the pelvic (the `belly` part) and the
+tail, which are what the bake stretches and swaps (`PartName`). The second dorsal, the anal fin and
+the gill slits stay on the body.
+
+### Stage B
+
+Two sheets, **the parts sheet first**, then the bare body with the parts sheet attached, as the
+larva went: its first two sheets drew two different bodies. And the Stage A sheet did it again, its
+"parts" image a shorter, rounder body than its "in game" one; the "in game" one is the target.
+
+What changes from the sheet: **the mouth**, missing from it, a crescent seam under the snout behind
+the eye; **five gill slits**, where it drew four; **the notochord** a 2-pixel line running up into
+the tail's upper lobe, where it drew a thick bar that read as a stripe.
+
+**The sizes**, off the "in game" image at 128 art pixels from tail tip to snout: the body, tail
+stalk to snout, 104 long and 22 deep; the tail 23 long and 37 tall; the first dorsal 25 along its
+base and 17 tall; the pectoral 16 by 20; the pelvic 8 by 6; the eye 8 across, its middle 9 behind
+the snout tip; the whole shark 53 deep with its fins. Drawn a little longer than the larva's 112,
+since the game sizes it by its genome either way and the fins want the pixels.
+
+**On green**, as the larva was. **Attach both:** `shark.webp`, `larva-parts-sprite.png` (the
+larva's sheet, the style the parts are cut in), `cave-room.webp` and `angler.webp`; for sheet 2,
+the parts sheet that came back as well.
+
+**The order flipped:** the bare body came back first, and on size (104 × 22 in both frames, on
+the grid), so it is the target: `docs/media/reference/shark-sprite.png`. The parts sheet is made
+against it, with it attached, the whole shark on it EXACTLY that body with the parts added.
+
+#### Sheet 1: the parts
+
+```text
+GOAL
+True pixel-art sprite sheet of the pale shark in the attached reference sheet, for a
+game: the whole shark once, and under it its parts drawn apart. The design and colours
+of the reference's "in game" image — the pale see-through lavender torpedo, the tall
+raked first dorsal, the sickle pectoral, the shark's tail with the longer upper lobe —
+redrawn as clean pixel art on a strict grid, in the style of the attached larva parts
+sheet (the same creature before it changed).
+
+THE GRID (most important)
+- The sheet is exactly 160 × 128 art pixels.
+- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
+  square block, so the image is 1280 × 1024.
+- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
+  than one block. No dithering noise. Every block is one flat colour.
+- 1-block outline (#79728F) round each silhouette, never thicker.
+
+LAYOUT
+- The whole shark's body must be EXACTLY the attached bare body (its "rest" frame,
+  shark-sprite.png): the same outline, length, depth, snout, gill slits, notochord,
+  gut, second dorsal and anal fin, and the same shading, pixel for pixel, with the
+  eye and the parts added onto it.
+- Top: the WHOLE shark, assembled, as in the reference's "in game" image: facing
+  RIGHT, straight and horizontal, 128 art pixels from tail tip to snout and 53 deep
+  with its fins. Centred left to right.
+  - The body, tail stalk to snout, 104 long and 22 deep at its deepest, a third of the
+    way back; a pointed conical snout.
+  - The eye 8 across, its middle 9 art pixels behind the snout tip and a little above
+    the middle line: black pupil, pale-silver ring, one white glint.
+  - The mouth: a closed crescent seam 7 long UNDER the snout, below and just behind
+    the eye, a short dark line (#6A5A8A).
+  - FIVE gill slits: short upright curved seams, 2 art pixels apart, behind the head
+    and in front of the pectoral, a shade darker than the body (#B8B0D8).
+  - The notochord: a straight line 2 art pixels thick (#B8B0D8), from behind the gills
+    back along the middle and up into the tail's upper lobe. A line, not a band.
+  - The gut: a small darker rounded shape (#6A5A8A) low behind the pectoral's root.
+  - The first dorsal 25 along its base and 17 tall, raked back, mid-body; the second
+    dorsal and the anal fin small triangles near the tail stalk; the pelvic 8 by 6
+    under the belly two thirds back; the pectoral 16 by 20, raked back and down from
+    low behind the gills; the tail 23 long and 37 tall, the upper lobe longer.
+- Bottom rows: its five parts, each on its own with at least 8 art pixels of
+  background on every side between it and anything else, each drawn at EXACTLY the
+  size, angle and shape it has on the whole shark above, facing the same way, not
+  rotated, not enlarged:
+  1. the tail (cut flat where it joins the tail stalk);
+  2. the first dorsal fin (its lower edge where it meets the back);
+  3. the pectoral fin (cut where it meets the body);
+  4. the pelvic fin (its upper edge where it meets the belly);
+  5. the eye (the black pupil, the pale-silver ring and the white glint).
+  The second dorsal, the anal fin, the gill slits and the mouth stay on the body and
+  are NOT drawn apart.
+- Where a part meets the body, finish its edge with the outline like the rest of it.
+- Fin rays, where drawn, are at least 2 art pixels thick.
+- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
+  anywhere on the animal, and do not let the outline pick up a green tint where it
+  meets the background.
+
+PALETTE
+Use these colours, plus at most 8 in-between shades of them: outline #79728F, deep
+shadow #B8B0D8, body #E8E4F8, body highlight #F4F2FF, fin #D6D0ED, gut #6A5A8A, eye
+ring #CDD3E3, pupil #080B16. Light comes from above and slightly in front: lit top,
+darker belly; each part shaded as its own form, the fins paler and more see-through
+than the body.
+
+LIGHTS
+The eye's glint is a flat white block. NO glow halo, bloom or light spill, on the
+animal or on the background. The game adds the glow itself.
+
+AVOID
+Labels, leader lines, dotted outlines, parts that differ from the whole shark in size
+or shape, a part drawn twice, teeth, an open mouth, a stripe along the body, grey or
+white-bellied colouring, any background other than flat #00FF00, soft glows,
+painterly texture, noise, sub-pixel detail, text, borders, shadows, a second animal.
+```
+
+#### Sheet 2: the bare body
+
+```text
+GOAL
+True pixel-art sprite of the pale shark's BARE BODY, for a game: EXACTLY the body of
+the whole shark at the top of the attached parts sheet — the same outline, the same
+snout, the same taper, the same shading, the gill slits, the mouth, the notochord and
+the gut, the second dorsal and the anal fin still on it — with its eye, its first
+dorsal, its pectoral, its pelvic and its tail taken off.
+2 frames of the same body, side by side, left to right: "rest", "strike".
+
+THE GRID (most important)
+- Each frame is exactly 144 × 48 art pixels.
+- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
+  square block, so the image is 2304 × 384.
+- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
+  than one block. No dithering noise. Every block is one flat colour.
+- 1-block outline (#79728F) round the whole silhouette, never thicker.
+
+COMPOSITION
+- Strict side view, facing RIGHT, body straight and horizontal.
+- From the tail stalk (where the tail joins, cut flat) to the snout the body is 104 art
+  pixels long and 22 deep, as on the parts sheet.
+- Where the eye goes the head is plain body colour, shaded as the rest of the head: no
+  socket, no hole, no dotted outline. The game puts the eye on it. Where the first
+  dorsal, the pectoral and the pelvic joined, the outline runs smooth and unbroken.
+- The body is centred vertically: its midline, tail stalk to snout, lies along the
+  frame's horizontal centre line.
+- Everything fits inside the frame with at least 4 art pixels of margin, in both frames.
+- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
+  anywhere on the animal, and do not let the outline pick up a green tint where it
+  meets the background.
+
+PALETTE
+The parts sheet's colours: outline #79728F, deep shadow #B8B0D8, body #E8E4F8, body
+highlight #F4F2FF, fin #D6D0ED, gut #6A5A8A, plus at most 8 in-between shades.
+
+FRAME 1 — "rest"
+The bare body at rest, the mouth under the snout shut: the crescent seam.
+
+FRAME 2 — "strike"
+Identical to frame 1 in every pixel except the mouth: the lower jaw dropped open under
+the snout, a dark crescent gape (#6A5A8A at its deepest) 4 art pixels tall. No teeth:
+the game adds teeth when a mutation grows them. Same frame size, same position, same
+everything else, so the two can be swapped without the animal moving.
+
+AVOID
+A body shaped differently from the whole shark on the parts sheet, an eye, an eye
+socket or a dotted outline, the first dorsal, the pectoral, the pelvic, the tail,
+teeth, any background other than flat #00FF00, soft glows, painterly texture, noise,
+sub-pixel detail, text, labels, borders, shadows, a second animal.
+```
+
+**What to send back:** the parts sheet first. Check that each part laid on the whole shark would
+cover its own place exactly; then the body sheet, made with it attached, and check that the body
+is the whole shark's.
+
+**In** (`BODIES.shark`), both sheets: `shark-sprite.png` and `shark-parts-sprite.png`.
+
+```bash
+npm run sprite -- docs/media/reference/shark-sprite.png --id shark --key green --fringe --pitch 8
+node scripts/import-parts.mjs docs/media/reference/shark-parts-sprite.png --body shark --snout 111 --tail 5 --axis 13 --stalk
+```
+
+As it went: the body sheet came first, and the parts were drawn against it. Pasted into the chat
+the sheets arrived as small lossy WebPs; the files themselves are on the grid. The sprite importer
+found the grid at half the pitch, so it is given. The parts importer named the parts the larva's
+way, the pectoral the smallest, which on a shark is the pelvic: now the back's is the highest and
+the pectoral the furthest forward of the two under it. And it took the midline from the tail's
+middle row, which on a shark's swept-up tail runs over the back and took the dorsal's tip for the
+snout: `--stalk` takes it from the tail stalk (the larva keeps its row, a pixel off, as it went in).
+The bake lays the drawn dorsal where `dorsalRidge` painted one and the pelvic as the belly part,
+grown as the pectorals are (`posesFor`).
+
+**It wears the larva's drawn marks** (`marksFrom`), each placed by its painter on the Shark's
+outline at near the larva's scale (its parts came in at 1.01 to the larva's 0.94), with a hinge of
+its own under the snout and its own tail kept under a Forked Caudal Fin, since a shark's is forked
+already. The two eyes drawn to the larva's eye, 20 across to the Shark's 8, are drawn at 0.4
+(`markSize`). Judged at the board's size, every mutation baked on it:
+
+- **Read as they are:** the parietal eye, the halo, the nares, the pouch, the needle; the volley,
+  rime, coral, prickles, warts; the claws, frill, lead, photophores; every flank part and coat.
+- ~~**To draw for the Shark:**~~ the jaws and the lures, drawn below.
+- ~~**To place for it:**~~ the brood pouch's roe hung where the Shark's big pectoral covers it, and
+  the siphon behind the anal fin its body keeps, half inside its slim stalk; both are moved on it
+  (`SpriteArt.place`). And every mark sat a pixel or two up and in on it: a drawn outline still
+  took the plan's arched spine and back-heavy depth (`up`, `arch`) over the picture's own shape,
+  which the larva's plan has none of (`drawnForm`).
+- **Not the marks':** the Dorsal Spines draw nothing on any shark, since the plan has none
+  (`PLAN_ART.shark.spines`); and the Barbels card draws no barbels on any body, since it never
+  sets `g.barbels`.
+
+### ~~The Shark's jaws and lures~~ — done
+
+`docs/media/reference/shark-head-sprite.png`, 10 parts in a 4 × 3 grid of 72 × 56 cells, at 8×:
+
+```bash
+node scripts/import-marks.mjs docs/media/reference/shark-head-sprite.png --body shark --cols 4 --rows 3 --names jaw:left,jaw-open:left,fangs:left,fangs-open:left,saw:left,saw-open:left,beak:left,beak-open:left,illicium:bottomleft,lantern:bottomleft
+```
+
+As it went: the marks the larva's would not lend it. Its jaws, drawn for a snout with the mouth on
+its tip, jutted past the Shark's as an underbite; these are drawn for the mouth on the underside,
+from the hinge under the eye. Its lures, drawn to the larva's reach, were stretched to the Shark's
+and stood taller than the arch the bake sizes the canvas to, and were cut through; these are drawn
+to the Shark's own reach, 42 and 50 forward, and lie at their size. The Shark's own marks come
+before the larva's it wears. The prompt is in the history: `git show b652617:docs/sprite-prompts-player.md`.

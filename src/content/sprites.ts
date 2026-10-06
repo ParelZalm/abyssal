@@ -131,12 +131,46 @@ export interface SpriteArt {
    */
   marks?: Partial<Record<MarkName, { at: Pt; tip?: Pt }>>;
   /**
+   * Another body whose drawn marks this one wears until its own are drawn: the forms borrow the
+   * larva's, drawn to near the same scale. `markSize` draws one of them bigger or smaller on this
+   * body, for a mark drawn to the lender's proportions: the larva's eye is two and a half times
+   * the Shark's.
+   */
+  marksFrom?: string;
+  markSize?: Partial<Record<MarkName, number>>;
+  /**
+   * Where a mark sits along this body, as `t` (0 the snout, 1 the tail), and optionally how far
+   * out from the spine, as `edgeAt`'s side, where its painter's place is under one of the body's
+   * own fins: on the Shark the roe hung under its big pectoral, and the siphon behind the anal fin
+   * its body keeps, half inside its slim stalk, where its pale tube read as more belly.
+   */
+  place?: Partial<Record<MarkName, number | [number, number]>>;
+  /**
    * Where a drawn jaw hinges on a player's body: on the larva at the drawn eye's front edge, on
    * the mouth's line, so the jaw juts from the snout. Hinged behind the mouth, as a jaw is, it ran
    * under the eye, which fills the larva's head down to the mouth.
    */
   hinge?: Pt;
 }
+
+/** The larva's drawn marks (`SpriteArt.marks`), which the forms wear too (`marksFrom`). */
+const LARVA_MARKS: SpriteArt['marks'] = { tapetum: { at: [10, 10] }, foureye: { at: [13, 23] }, parietal: { at: [5, 5] }, halo: { at: [13, 4] },
+  nares: { at: [7, 4] }, ampullae: { at: [8, 5] }, spit: { at: [5, 5] }, brood: { at: [12, 0] },
+  barbels: { at: [20, 0] }, needle: { at: [0, 4.5] },
+  illicium: { at: [2, 25], tip: [26, 9.3] }, lantern: { at: [2, 33], tip: [26.3, 10.9] },
+  jaw: { at: [0, 4] }, 'jaw-open': { at: [0, 5] }, fangs: { at: [0, 8] }, 'fangs-open': { at: [0, 5] },
+  saw: { at: [0, 4] }, 'saw-open': { at: [0, 5] }, beak: { at: [0, 7] }, 'beak-open': { at: [0, 7] },
+  fork: { at: [24, 15] }, fork2: { at: [30, 18] }, siphon: { at: [18, 3.5] }, smoke: { at: [18, 3.5] },
+  bloom: { at: [60, 20] },
+  spine: { at: [4.5, 10] }, quill: { at: [13, 12] }, rime: { at: [2.5, 8] }, coral: { at: [4.5, 7] },
+  coral2: { at: [4.5, 10] }, prickle: { at: [2, 4] }, porcupine: { at: [6.5, 8] }, wart: { at: [3.5, 7] },
+  claw: { at: [0, 3.5] }, 'claw-saw': { at: [0, 3.5] }, club: { at: [0, 4] }, frill: { at: [5.5, 0] },
+  roe: { at: [12.5, 0] }, lead: { at: [4, 2.5] }, photophore: { at: [3, 2.5] }, funnel: { at: [7, 0] },
+  beard: { at: [10, 0] },
+  ink: { at: [4.5, 4.5] }, electric: { at: [10.5, 7] }, galvanic: { at: [39, 3.5] },
+  vent: { at: [4.5, 8.5] }, cavity: { at: [6, 6] }, venom: { at: [5.5, 5.5] },
+  nematocyst: { at: [10.5, 10.5] }, coal: { at: [2.5, 2.5] }, veins: { at: [50, 10.5] },
+  brittle: { at: [28.5, 10] }, mottle: { at: [31.5, 11] }, mantle: { at: [17.5, 13] } };
 
 export const SPRITES: Record<string, SpriteArt> = {
   // `npm run sprite -- angler-sprite.png --id anglerfish` (`docs/sprites.md`), from
@@ -321,7 +355,7 @@ export const SPRITES: Record<string, SpriteArt> = {
   // `node scripts/import-parts.mjs docs/media/reference/larva-parts-sprite.png --body larva --snout 87 --tail 4 --axis 15 --pitch 1`
   // its marks: `node scripts/import-marks.mjs docs/media/reference/larva-head-sprite.png --body larva
   // --cols 4 --rows 5 --flip barbels --names tapetum:mid,…` and the tail and back sheets' the same,
-  // with the names as below (the back's at `--pitch 1`, every part anchored at its foot: `:bottom`; the
+  // with the names as in `LARVA_MARKS` (the back's at `--pitch 1`, every part anchored at its foot: `:bottom`; the
   // belly's by the edge it joins by; the flank's at the middle, the ink sac's and the nematocyst
   // gland's set by hand on the sac, since the duct moves it, and its cracks darkened with
   // `--recolour 'brittle:ecf4ea>4a4458,b8c0b8>6a6478'`; its vent gland and nematocyst gland are
@@ -329,28 +363,34 @@ export const SPRITES: Record<string, SpriteArt> = {
   // anchor is set by hand to the shut one's, since its swung lower plate moved the left edge's
   // middle down it, and the beak jumped on every bite
   larva: { w: 88, h: 30, snout: 87, tail: 4, axis: 15, hinge: [79, 17.5],
-           marks: { tapetum: { at: [10, 10] }, foureye: { at: [13, 23] }, parietal: { at: [5, 5] }, halo: { at: [13, 4] },
-                    nares: { at: [7, 4] }, ampullae: { at: [8, 5] }, spit: { at: [5, 5] }, brood: { at: [12, 0] },
-                    barbels: { at: [20, 0] }, needle: { at: [0, 4.5] },
-                    illicium: { at: [2, 25], tip: [26, 9.3] }, lantern: { at: [2, 33], tip: [26.3, 10.9] },
-                    jaw: { at: [0, 4] }, 'jaw-open': { at: [0, 5] }, fangs: { at: [0, 8] }, 'fangs-open': { at: [0, 5] },
-                    saw: { at: [0, 4] }, 'saw-open': { at: [0, 5] }, beak: { at: [0, 7] }, 'beak-open': { at: [0, 7] },
-                    fork: { at: [24, 15] }, fork2: { at: [30, 18] }, siphon: { at: [18, 3.5] }, smoke: { at: [18, 3.5] },
-                    bloom: { at: [60, 20] },
-                    spine: { at: [4.5, 10] }, quill: { at: [13, 12] }, rime: { at: [2.5, 8] }, coral: { at: [4.5, 7] },
-                    coral2: { at: [4.5, 10] }, prickle: { at: [2, 4] }, porcupine: { at: [6.5, 8] }, wart: { at: [3.5, 7] },
-                    claw: { at: [0, 3.5] }, 'claw-saw': { at: [0, 3.5] }, club: { at: [0, 4] }, frill: { at: [5.5, 0] },
-                    roe: { at: [12.5, 0] }, lead: { at: [4, 2.5] }, photophore: { at: [3, 2.5] }, funnel: { at: [7, 0] },
-                    beard: { at: [10, 0] },
-                    ink: { at: [4.5, 4.5] }, electric: { at: [10.5, 7] }, galvanic: { at: [39, 3.5] },
-                    vent: { at: [4.5, 8.5] }, cavity: { at: [6, 6] }, venom: { at: [5.5, 5.5] },
-                    nematocyst: { at: [10.5, 10.5] }, coal: { at: [2.5, 2.5] }, veins: { at: [50, 10.5] },
-                    brittle: { at: [28.5, 10] }, mottle: { at: [31.5, 11] }, mantle: { at: [17.5, 13] } },
+           marks: LARVA_MARKS,
            parts: { scale: 0.943, at: { eye: [64.4, 4.2], tail: [-17.7, 4.2], pectoral: [51.2, 20.2], back: [4.9, -4.3],
                                        belly: [4.9, 19.2] } },
            ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
            hull: [[84.5, 16, 6], [74.5, 14.5, 11.5], [64.5, 14.5, 11.5], [55.5, 15.5, 11.5], [45.5, 15, 11.9],
                   [35.5, 15, 11], [26.5, 15, 9.3], [16.5, 15.5, 6.4], [6.5, 16, 6]] },
+  // The Shark form (`docs/sprite-prompts-player.md`): its bare body came back before its parts, so
+  // the parts were drawn against it. `npm run sprite -- docs/media/reference/shark-sprite.png --id
+  // shark --key green --fringe --pitch 8` (the grid found itself at half the pitch), then
+  // `node scripts/import-parts.mjs docs/media/reference/shark-parts-sprite.png --body shark
+  // --snout 111 --tail 5 --axis 13 --stalk`: its tail sweeps up, so the midline is the stalk's.
+  // The larva's palette, so its ramp; its marks are the larva's painters' until drawn for it
+  shark: { w: 116, h: 25, snout: 111, tail: 5, axis: 13, hinge: [101, 17.5], marksFrom: 'larva',
+           // its own jaws and lures, drawn for its mouth under the snout and its reach
+           // (`shark-head-sprite.png`, the larva's head sheet's import with `--body shark`), over
+           // the larva's it wears
+           marks: { ...LARVA_MARKS, jaw: { at: [0, 4] }, 'jaw-open': { at: [0, 4] }, fangs: { at: [0, 6] },
+                    'fangs-open': { at: [0, 4] }, saw: { at: [0, 5] }, 'saw-open': { at: [0, 4] },
+                    beak: { at: [0, 3.5] }, 'beak-open': { at: [0, 3.5] },
+                    illicium: { at: [0.5, 27], tip: [42.5, 18.6] }, lantern: { at: [0.5, 36], tip: [50.0, 25.3] } },
+           // the larva's eye is 20 across and the Shark's 8: the eyes drawn to it, at its size
+           markSize: { tapetum: 0.4, foureye: 0.4 },
+           place: { roe: 0.52, siphon: [0.72, 1.4], smoke: [0.72, 1.4] },
+           parts: { scale: 1.010, at: { eye: [97.9, 8], tail: [-16.2, -14.3], back: [48.4, -14.3], pectoral: [67.6, 18],
+                                       belly: [39.3, 21.1] } },
+           ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
+           hull: [[107.5, 14, 2.5], [95.5, 13.5, 5.5], [82.5, 13.5, 7.2], [70.5, 13.5, 8.9], [58.5, 13, 9.3],
+                  [45.5, 13, 8.5], [33.5, 13.5, 6.4], [20.5, 14, 5.1], [8.5, 13.5, 3]] },
 };
 
 /**
@@ -359,7 +399,7 @@ export const SPRITES: Record<string, SpriteArt> = {
  * over it and placed on its outline (`drawnForm`), until those are drawn too. A plan not here
  * is painted whole, as every plan was.
  */
-export const BODIES: Partial<Record<Plan, string>> = { wraith: 'larva' };
+export const BODIES: Partial<Record<Plan, string>> = { wraith: 'larva', shark: 'shark' };
 
 /** How many steps nose to tail a drawn outline is sampled at (`Form.outline`). */
 const OUTLINE = 24;
@@ -375,7 +415,9 @@ export function drawnForm(id: string, f: Form): Form {
   const per = spriteScale(s, f);
   const outline = Array.from({ length: OUTLINE + 1 }, (_, i) =>
     hullAt(s.hull!, s.snout + (s.tail - s.snout) * i / OUTLINE)[1] / 0.85 / per);
-  return { ...f, outline };
+  // the picture has its own shape: the plan's arched spine and its back-heavy depth (`up`) on top
+  // of it put everything placed on the Shark's a pixel or two up and in, and its roe under its belly
+  return { ...f, outline, up: 0.5, arch: 0 };
 }
 
 /**

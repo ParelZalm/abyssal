@@ -4,7 +4,7 @@
  * apart (`docs/sprite-prompts-player.md`, *Sheet 2*).
  *
  *   node scripts/import-parts.mjs <sheet.png> --body larva --snout 90 --tail 4 --axis 17
- *                                 [--key green] [--pitch 8] [--out src/render/creature/sprites]
+ *                                 [--stalk] [--key green] [--pitch 8] [--out src/render/creature/sprites]
  *
  * The sheet is the whole animal once, assembled, and each part apart from it at its size on
  * the whole. A generator does not hold a part's position from one image to the next, so where a
@@ -14,8 +14,9 @@
  * the whole's snout to its `--snout`, the tail's middle to its `--axis`.
  *
  * Which part is which is read off where it lands: the eye is the one with the pupil's black in
- * it, the tail the one furthest back, the pectoral the smallest of the rest, and the two folds
- * the back's above the belly's. Check what it prints against the sheet.
+ * it, the tail the one furthest back, the back's fin (a fold, a dorsal) the highest of the rest,
+ * the pectoral the furthest forward of the two left, and the belly's the other. Check what it
+ * prints against the sheet.
  *
  * Writes `<body>-<part>.png` at one pixel per art pixel, a preview of the parts laid on the
  * whole at six times into the system's temp folder, and prints `parts` for the body's entry in
@@ -147,19 +148,26 @@ const take = (name, pick) => {
 };
 take('eye', l => l.reduce((a, p) => dark(p) > dark(a) ? p : a));
 take('tail', l => l.reduce((a, p) => p.dx < a.dx ? p : a));
-take('pectoral', l => l.reduce((a, p) => p.n < a.n ? p : a));
+// the back's is the highest, and the pectoral the furthest forward of the two under it: the
+// larva's pectoral was also its smallest, but a shark's pelvic is smaller than its pectoral
 take('back', l => l.reduce((a, p) => p.dy < a.dy ? p : a));
+take('pectoral', l => l.reduce((a, p) => p.dx + p.w > a.dx + a.w ? p : a));
 take('belly', l => l[0]);
 if (left.length) console.warn(`${left.length} piece(s) left over, not written`);
 
 // ------------------------------------------------------------------ onto the body
 
-// The tail's joint is its front edge on the whole, and its middle row the axis; the whole's
-// snout is the furthest column forward on that row, give or take the mouth's notch.
+// The tail's joint is its front edge on the whole, and the axis its middle row, or with `--stalk`
+// the middle of the tail stalk just in front of it; the whole's snout is the furthest column
+// forward on that row, give or take the mouth's notch. A round fan's middle is near enough its
+// stalk's (the larva's, a pixel off, is kept as it went in), but a shark's tail sweeps up: its
+// middle row ran over the back, and the dorsal's tip was taken for the snout.
 const tail = named.get('tail');
 if (!tail) throw new Error('no tail found: the whole cannot be laid on the body without its joint');
 const joint = tail.dx + tail.w - 1;
-const axisW = tail.dy + (tail.h - 1) / 2;
+const stalk = Array.from({ length: whole.h }, (_, y) => whole.img[y * whole.w + joint + 2] ? y : -1).filter(y => y >= 0);
+const axisW = argv.includes('--stalk') && stalk.length ? (stalk[0] + stalk[stalk.length - 1]) / 2
+  : tail.dy + (tail.h - 1) / 2;
 let snoutW = joint;
 for (let y = Math.floor(axisW) - 3; y <= Math.ceil(axisW) + 3; y++) {
   for (let x = whole.w - 1; x > snoutW; x--) if (whole.img[y * whole.w + x]) { snoutW = x; break; }

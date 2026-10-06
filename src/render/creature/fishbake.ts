@@ -210,7 +210,8 @@ function paint(g: Genome, plan: Plan): Baked {
   const eye = drawn && poses.eye ? drawnEye(drawn, f, poses.eye.sx) : null;
   const own = drawn ? { eye, hinge: drawnHinge(drawn, f),
                        tip: (n: MarkName, x0: number, y0: number, x1: number) => drawnTip(drawn, f, n, x0, y0, x1) } : null;
-  const at = { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn: !!drawn, poses, own, marks };
+  const at = { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn: !!drawn, poses, own, marks,
+              place: (drawn && SPRITES[drawn].place) || {} };
 
   // Two pictures of the same animal on identical sheets: the mouth shut, and the mouth
   // open for an attack. Cropped to their union, so the view can swap one texture for the
@@ -251,6 +252,8 @@ interface Painting {
   own: DrawnHead | null;
   /** The marks the drawn body has, which its painters place instead of painting (`Sheet.mark`). */
   marks: ReadonlySet<string>;
+  /** Where the drawn body moves a mark off its painter's place (`SpriteArt.place`). */
+  place: Readonly<Record<string, number | [number, number]>>;
 }
 
 /**
@@ -258,8 +261,10 @@ interface Painting {
  * body is made of. `gape` opens the mouth, 0 shut to 1 wide. Returns whether the body was
  * big enough to have a head worth drawing.
  */
-function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, poses, own, marks }: Painting, gape: number) {
+function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, poses, own, marks, place }: Painting,
+              gape: number) {
   s.drawn = marks;
+  s.place = place;
   const eye = own?.eye ?? null;
   // --- behind the body ---------------------------------------------------
   const jellyArms = A.arms > 0 && !rigged;
@@ -272,7 +277,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, 
     else if (A.tail === 'mantle') mantleFins(s, f, A);
     else if (!poses.tail) caudalFin(s, f, A);
   }
-  if (A.dorsalFin > 0) dorsalRidge(s, f, A);
+  if (A.dorsalFin > 0) { if (!poses.back) dorsalRidge(s, f, A); }
   else if (foldsOf(g, A) && !poses.back) medianFins(s, f, g, A);
 
   // --- the body itself ---------------------------------------------------
@@ -389,6 +394,10 @@ function posesFor(g: Genome, plan: Plan, f: Form, A: PlanArt, marks: ReadonlySet
   const fan = (x: Genome) => 0.7 + x.finSize * 0.35;
   if (A.tail === 'caudal' && A.arms === 0 && g.tailSplit <= b.tailSplit) {
     poses.tail = { sx: f.fluke / f0.fluke, sy: (2.4 + f.fork * 1.8) / (2.4 + f0.fork * 1.8) };
+  } else if (A.tail === 'caudal' && A.arms === 0 && SPRITES[BODIES[plan] ?? '']?.marksFrom) {
+    // a body wearing the larva's marks keeps its own tail: the Shark's is forked already, and the
+    // larva's fork in its place was the larva's tail on a shark
+    poses.tail = { sx: f.fluke / f0.fluke, sy: f.fluke / f0.fluke };
   } else if (A.tail === 'caudal' && A.arms === 0) {
     // the Forked Caudal Fin's tail in the round one's place, and deeper for a second; its own
     // fork is drawn, so it grows only with the fin
@@ -400,6 +409,12 @@ function posesFor(g: Genome, plan: Plan, f: Form, A: PlanArt, marks: ReadonlySet
     poses.back = poses.belly = { sx: 1, sy: k };
   }
   if (A.fins.length > 0) poses.pectoral = { sx: fan(g) / fan(b), sy: fan(g) / fan(b) };
+  // a body with a real dorsal (the Shark's) has it drawn as its back, at the size the ridge was,
+  // and its second pair, the pelvics, as its belly, grown as the pectorals are
+  if (A.dorsalFin > 0) {
+    poses.back = { sx: 1, sy: 1 };
+    if (A.fins.length > 1) poses.belly = poses.pectoral;
+  }
   const sees = (x: Genome) => Math.min(0.3, 0.15 * eyeOf(x) * A.eye);
   const pale = A.paleEyes || g.eyeAdapt > 0.45;
   if (g.eyeAdapt >= -0.4 && (!pale || marks.has('tapetum')) && !A.eyeLamp && !A.eyeGlow && !A.stalks) {
