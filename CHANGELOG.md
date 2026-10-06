@@ -8,6 +8,17 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+- **The larva's back is drawn.** What stands up off it is drawn now: the Dorsal Spines, the
+  Spine Volley's quills (three, five for a Quill Storm), the Brine Gland's rime, the coral's
+  knobs and branches, the Inflation's prickles and the Porcupine's quills, the Stonefish's warts.
+- **And its belly.** What hangs under it or sits low on it is drawn: the Pincer Claws (serrated
+  for Vivisect) and the Ballistic club, the Anemone Frill's tentacles, the Brood Pouch's roe, the
+  Leaden Bones' keel, the photophores, the Mantle Pump's funnel and Lie in Wait's beard.
+- **And its flank.** What shows through its side is drawn: the Ink Sac, the Electric Organ (to the
+  tail for the Electric Eel), the Galvanic Cells' wire, the Vent Gland, Cavitation's bladder, the
+  venom gland (ringed for Nematocyst), Blood Lamp's coals, Open Veins, Brittle Frame's cracks,
+  Lie in Wait's mottling and the Mantle Pump's rings.
+
 ## [0.3.0] — 2026-10-05
 
 - **The larva is drawn.** It is a hand-drawn picture now, like the enemies': a pale,

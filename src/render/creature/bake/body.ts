@@ -7,7 +7,7 @@ import { edgeAt, halfWidth, shoulderAt, spineAt, R, type Form } from '../../../c
 import { fbm, fbmSigned } from '../../../core/noise';
 import { lerp, TAU } from '../../../core/util';
 import type { Palette, RGB } from './palette';
-import { M, type Pt, type Sheet } from './sheet';
+import { BACK, M, STANDS, type Pt, type Sheet } from './sheet';
 
 /** The t of a column's centre, from its x in R units. Inverse of `spineAt`. */
 export const tAt = (x: number, f: Form) => (f.len * 0.52 * R - x) / (f.len * R);
@@ -103,7 +103,8 @@ export function whaleSpots(s: Sheet, f: Form, seed: number) {
  * jaw, the wobbegong's beard, so the front of the animal has no clean line.
  */
 export function camouflage(s: Sheet, f: Form, pal: Palette, seed: number) {
-  for (let t = 0.08; t < 0.96; t += 0.05) {
+  const coat = s.mark('mottle', spineAt(0.52, f), edgeAt(0.52, f, 0), { layer: 'coat', least: STANDS });
+  for (let t = 0.08; !coat && t < 0.96; t += 0.05) {
     const w = halfWidth(t, f);
     for (let j = 0; j < 3; j++) {
       const d = fbm(t * 9, j * 4, seed + 151);
@@ -113,6 +114,8 @@ export function camouflage(s: Sheet, f: Form, pal: Palette, seed: number) {
              dark ? pal.ramp[1] : pal.ramp[4], dark ? 0.7 : 0.45, M.BODY);
     }
   }
+  // drawn, the beard is one fringe under the jaw; the blotches are still painted
+  if (s.mark('beard', spineAt(0.14, f), edgeAt(0.14, f, -BACK), { layer: 'under', least: STANDS })) return;
   for (let i = 0; i < 6; i++) {
     const t = 0.03 + i * 0.045;
     const x = spineAt(t, f), y = edgeAt(t, f, 1);
@@ -126,6 +129,7 @@ export function camouflage(s: Sheet, f: Form, pal: Palette, seed: number) {
  * a short diagonal at its own angle, so the body reads as something already breaking.
  */
 export function crazing(s: Sheet, f: Form, seed: number) {
+  if (s.mark('brittle', spineAt(0.49, f), edgeAt(0.49, f, 0), { layer: 'coat', least: STANDS })) return;
   const pale: RGB = [236, 244, 234];
   for (let t = 0.12; t < 0.86; t += 0.05) {
     const n = fbm(t * 19, 3, seed + 251, 1);
@@ -146,6 +150,8 @@ export function crazing(s: Sheet, f: Form, seed: number) {
  * that will bleed. Low on the flank and thin on purpose: a cursed mark, not a wound.
  */
 export function veins(s: Sheet, f: Form, seed: number) {
+  // drawn, the three are one picture, their front ends together behind the gills
+  if (s.mark('veins', spineAt(0.24, f), edgeAt(0.24, f, 0.27), { layer: 'skin', least: STANDS })) return;
   const red: RGB = [150, 22, 34];
   for (let v = 0; v < 3; v++) {
     const t0 = 0.24 + v * 0.05;
@@ -166,6 +172,7 @@ export function veins(s: Sheet, f: Form, seed: number) {
 export function ballast(s: Sheet, f: Form) {
   const lead: RGB = [62, 66, 76], sheen: RGB = [148, 152, 164];
   for (let t = 0.2; t < 0.8; t += 0.075) {
+    if (s.mark('lead', spineAt(t, f), edgeAt(t, f, 0.78), { layer: 'skin', least: STANDS })) continue;
     const w = halfWidth(t, f);
     const x = spineAt(t, f), y = edgeAt(t, f, 0.78);
     const r = Math.max(s.texel, w * 0.2);
@@ -205,13 +212,15 @@ export function viscera(s: Sheet, f: Form, pal: Palette) {
  * pointing forward, because a mantle jet fires backwards by aiming its siphon the other way.
  */
 export function mantle(s: Sheet, f: Form, pal: Palette) {
-  for (let i = 0; i < 5; i++) {
+  const rings = s.mark('mantle', spineAt(0.33, f), edgeAt(0.33, f, 0), { layer: 'coat', least: STANDS });
+  for (let i = 0; !rings && i < 5; i++) {
     const t = 0.16 + i * 0.085;
     const x = spineAt(t, f);
     const y0 = s.py(edgeAt(t, f, -1)), y1 = s.py(edgeAt(t, f, 1));
     for (let iy = Math.floor(y0); iy <= y1; iy++) s.dotPx(Math.floor(s.px(x)), iy, pal.ramp[1], 0.45);
   }
   const tf = 0.3;
+  if (s.mark('funnel', spineAt(tf, f), edgeAt(tf, f, -BACK), { layer: 'under', least: STANDS })) return;
   const x = spineAt(tf, f), y = edgeAt(tf, f, 1);
   const w = halfWidth(tf, f);
   s.poly([[x - w * 0.5, y - w * 0.2], [x + w * 0.6, y - w * 0.1], [x + w * 0.6, y + w * 0.3],

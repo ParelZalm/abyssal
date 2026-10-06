@@ -115,6 +115,19 @@ const SOURCES: Record<string, Sources> = {
 interface Pair { rest: ImageData; strike: ImageData; palette: number[][] }
 /** An arm's picture and its own colours (`SpriteArt.arm`). */
 interface Arm { image: ImageData; palette: number[][] }
+
+/** A mark turned upside down (`Placed.flip`), made once per mark: resample takes no negative scale. */
+const flipped = new WeakMap<Arm, Arm>();
+function upsideDown(a: Arm): Arm {
+  let f = flipped.get(a);
+  if (f) return f;
+  const { width: w, height: h, data } = a.image;
+  const img = new ImageData(w, h);
+  for (let y = 0; y < h; y++) img.data.set(data.subarray((h - 1 - y) * w * 4, (h - y) * w * 4), y * w * 4);
+  f = { image: img, palette: a.palette };
+  flipped.set(a, f);
+  return f;
+}
 interface Frames extends Pair {
   wounded?: Pair; arm?: Arm; tentacle?: Arm; parts?: Partial<Record<PartName, Arm>>; marks?: Record<string, Arm>;
 }
@@ -331,9 +344,10 @@ export function drawnBody(id: string, f: Form, back: number, halfH: number, res:
   cv.width = w; cv.height = h;
   const ctx = cv.getContext('2d')!;
   // a picture drawn at the parts' scale, its pixel (`ax`, `ay`) on texel (`tx`, `ty`), stretched
-  const lay = (a: Arm, ax: number, ay: number, tx: number, ty: number, sx: number, sy: number, ring: boolean) => {
+  const lay = (a: Arm, ax: number, ay: number, tx: number, ty: number, sx: number, sy: number, ring: boolean,
+               to = ctx) => {
     const kx = k * sc * sx, ky = k * sc * sy;
-    ctx.drawImage(resample(a.image, a.palette, kx, w, h, ty / ky - ay, ax - tx / kx, ky, ring), 0, 0);
+    to.drawImage(resample(a.image, a.palette, kx, w, h, ty / ky - ay, ax - tx / kx, ky, ring), 0, 0);
   };
   const part = (name: PartName, ring: boolean) => {
     const p = fr.parts?.[name], at = s.parts?.at[name], fit = s.parts?.size?.[name] ?? 1, pose = poses[name];
@@ -345,10 +359,11 @@ export function drawnBody(id: string, f: Form, back: number, halfH: number, res:
     if (swap && its) lay(swap, its.at[0], its.at[1], tx, ty, pose.sx * fit, pose.sy * fit, ring);
     else lay(p, ax, ay, tx, ty, pose.sx * fit, pose.sy * fit, ring);
   };
-  const mark = (m: Placed) => {
+  const mark = (m: Placed, to = ctx) => {
     const name = open && fr.marks?.[`${m.name}-open`] ? `${m.name}-open` : m.name;
-    const a = fr.marks?.[name], its = s.marks?.[name as MarkName];
-    if (!a || !its) return;
+    const drawn = fr.marks?.[name], its = s.marks?.[name as MarkName];
+    if (!drawn || !its) return;
+    const a = m.flip ? upsideDown(drawn) : drawn;
     let { sx, sy } = m;
     // stretched to land its tip where the painter's tip is (a lure's bulb, where its trap fires),
     // or to span what the painter's spans (the bloom's reach, where it stings)
@@ -356,12 +371,22 @@ export function drawnBody(id: string, f: Form, back: number, halfH: number, res:
       sx = (m.to[0] - m.x) * per / ((its.tip[0] - its.at[0]) * sc);
       sy = (m.to[1] - m.y) * per / ((its.tip[1] - its.at[1]) * sc);
     } else if (m.span) sx = sy = m.span * per / (a.image.width * sc);
-    lay(a, its.at[0], its.at[1], (m.x - back) * res, (m.y + halfH) * res, sx, sy, m.layer === 'under');
+    const grow = m.least ? Math.max(1, m.least / (k * sc)) : 1;
+    sx *= grow; sy *= grow;
+    lay(a, its.at[0], m.flip ? a.image.height - its.at[1] : its.at[1], (m.x - back) * res, (m.y + halfH) * res,
+        sx, sy, m.layer === 'under', to);
   };
   const layer = (l: Placed['layer']) => { for (const m of marks) if (m.layer === l) mark(m); };
   for (const name of UNDER) part(name, true);
   layer('under');
-  ctx.drawImage(resample(open ? fr.strike : fr.rest, fr.palette, k, w, h, oy, ox), 0, 0);
+  const pic = resample(open ? fr.strike : fr.rest, fr.palette, k, w, h, oy, ox);
+  const coats = marks.filter(m => m.layer === 'coat');
+  if (coats.length) {
+    const on = pic.getContext('2d')!;
+    on.globalCompositeOperation = 'source-atop';
+    for (const m of coats) mark(m, on);
+  }
+  ctx.drawImage(pic, 0, 0);
   layer('skin');
   for (const name of OVER) part(name, false);
   layer('over');

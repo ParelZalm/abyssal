@@ -25,11 +25,26 @@ export const enum M { EMPTY, BODY, FIN, GAUZE, MOUTH, TOOTH, LINE }
  * A drawn mark placed by a painter (`Sheet.mark`), for the bake to lay on a drawn body: its
  * anchor at `x`, `y` in R units, stretched by `sx` and `sy`, or so that its tip lands on `to`, or
  * so that it spans `span` R units across. `layer` is where it goes in the picture: `under` the
- * body, on its `skin` under its drawn eye and pectoral, or `over` everything drawn.
+ * body, on its `skin` under its drawn eye and pectoral, or `over` everything drawn; a `coat` is on
+ * the skin too, clipped to the body's own picture, so a patch the size of the trunk need not match
+ * its outline. `flip` turns
+ * it upside down about its anchor: what stands on the back, hung under the belly. `least` is the
+ * fewest texels an art pixel of it may shrink to: the larva is baked at about a third of its
+ * drawing, where a spine 2 pixels thick averages into its own outline and is gone.
  */
+/**
+ * Where a drawn part stands on the back, as an `edgeAt` side: its foot a little inside the
+ * outline and laid under the body, so the body hides the foot's cut edge and only what stands
+ * proud of it shows. Its negative is the belly's.
+ */
+export const BACK = -0.9;
+
+/** `Placed.least` for what stands off the body: no smaller than half its drawing. */
+export const STANDS = 0.5;
+
 export interface Placed {
   name: string; x: number; y: number; sx: number; sy: number;
-  to?: [number, number]; span?: number; layer: 'under' | 'skin' | 'over';
+  to?: [number, number]; span?: number; layer: 'under' | 'skin' | 'coat' | 'over'; flip?: boolean; least?: number;
 }
 
 /** A point of light the view can hang a bloom on, in R units. */
@@ -185,6 +200,11 @@ export class Sheet {
     const ix = Math.floor(this.px(x)), iy = Math.floor(this.py(y));
     this.dotPx(ix, iy, [255, 255, 255]);
     if (big) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) this.dotPx(ix + dx, iy + dy, c);
+    this.emit(x, y, c, strength);
+  }
+
+  /** A bloom with nothing painted under it: for a drawn lens (`mark`), which is its own hot pixel. */
+  emit(x: number, y: number, c: RGB, strength = 1) {
     this.lights.push({ x, y, color: (c[0] << 16) | (c[1] << 8) | c[2], strength });
   }
 }

@@ -165,3 +165,119 @@ Both rounds' prompts are in the history: `git show 7ed5410:docs/sprite-prompts-p
 mark is placed where its painter put the painted one (`Sheet.mark`), with its anchor read off
 its shape by the import: the middle, a flat edge, a jaw's hinge, a lure's root.
 
+
+### The back, the belly and the flank
+
+What is still painted on the larva after the head and the tail: everything that stands off its
+back, hangs under its belly or shows through its flank. Painted on the drawn larva these came
+out as a few faint pixels each (the coral a row of pink dots, the quills a grey smudge, the
+claws a speck under the jaw), so they are what the board's *Mutations* group says least about.
+
+**A row is one part, placed again and again.** The painters stand one to seven spines along
+the back, five quills, four rime crystals, a keel of eight lead plates, a row of lights; each is
+drawn here once, and the game places it at every point its painter does, along the drawn
+outline, so a row follows the back's curve where one picture of the whole row would stand off it
+in a gap, as the ribbon fin did. Two of the coral, so a crust of them is not a stamp.
+
+**A coat is clipped to the body.** The crazing, the mottling and the mantle's rings cover the
+flank rather than sit on one place in it; each is drawn as a patch the size of the larva's
+trunk, and the game lays it only where the body is, so its edge need not match the outline.
+
+The larva's trunk is 26 art pixels deep behind its head, 16 at two thirds of the way back and
+8 at the tail stalk, which is the room these have.
+
+Also attach `larva-head-sprite.png` and `larva-tail-sprite.png`, the parts already drawn, for
+the style.
+
+### ~~The back~~ — done
+
+`docs/media/reference/larva-back-sprite.png`, 8 parts in a 4 × 2 grid of 32 × 32 cells, which came
+back at one image pixel to the art pixel:
+
+```bash
+node scripts/import-marks.mjs docs/media/reference/larva-back-sprite.png --body larva --cols 4 --rows 2 --pitch 1 --names spine:bottom,quill:bottom,rime:bottom,coral:bottom,coral2:bottom,prickle:bottom,porcupine:bottom,wart:bottom
+```
+
+As it went: the larva is baked at about a third of its drawing in a tank, where a part 2 pixels
+thick averages into its own outline, so what stands off the body is drawn at no less than half its
+drawing (`Placed.least`), and a prickle at its whole. A Spine Volley is three quills and a Quill
+Storm five, spread along the back: five at the painted spacing crossed each other's outlines into a
+lattice. The prickles and the porcupine quills under the belly are the back's turned over
+(`Placed.flip`). The spine, the knob and the branch came back mostly outline, a flat cushion and a
+trophy, and the spine read grey at half size; they were drawn again on a sheet of their own,
+`larva-back-redraw-sprite.png` (3 × 1 cells of 32 × 32, at 8×), asked for solid fill with the
+outline only round it:
+
+```bash
+node scripts/import-marks.mjs docs/media/reference/larva-back-redraw-sprite.png --body larva --cols 3 --rows 1 --names spine:bottom,coral:bottom,coral2:bottom
+```
+
+Both prompts are in the history: `git show 3078a75:docs/sprite-prompts-player.md` for the sheet;
+the redraw's added a block, *mostly fill, little outline*, which every part standing off the body
+wants.
+
+### ~~The belly~~ — done
+
+`docs/media/reference/larva-belly-sprite.png`, 9 parts in a 3 × 3 grid of 40 × 24 cells, at 8×:
+
+```bash
+node scripts/import-marks.mjs docs/media/reference/larva-belly-sprite.png --body larva --cols 3 --rows 3 --names claw:left,claw-saw:left,club:left,frill:top,roe:top,lead:mid,photophore:mid,funnel:top,beard:top
+```
+
+As it went: drawn with the back's floor (`Placed.least`), hung from the belly as the back's stand
+on it, the body over their cut edges. A frill is three tentacles and one more a stack: six in that
+stretch of belly overlapped into a comb. The Ballistic club spans what the painted heel did, past
+the snout. A drawn photophore is its own lens, so its light only hangs the bloom (`Sheet.emit`);
+Flash Sense's row is the same lens up the flank. The claws came back boxy, an orange block with a
+slot, and read as claws only by their colour; the beard is a strip with drips more than flaps.
+The prompt is in the history: `git show 9cf81c6:docs/sprite-prompts-player.md`.
+
+### ~~The flank~~ — done
+
+`docs/media/reference/larva-flank-sprite.png`, 12 parts in a 3 × 4 grid of 72 × 32 cells, at 8×,
+drawn without an outline since they lie inside the body; then its vent gland and nematocyst gland
+from `larva-flank-redraw-sprite.png`, 2 × 1 cells of the same size:
+
+```bash
+node scripts/import-marks.mjs docs/media/reference/larva-flank-sprite.png --body larva --cols 3 --rows 4 --names ink:mid,electric:mid,galvanic:right,vent:mid,cavity:mid,venom:mid,nematocyst:mid,coal:mid,veins:right,brittle:mid,mottle:mid,mantle:mid --recolour 'brittle:ecf4ea>4a4458,b8c0b8>6a6478'
+node scripts/import-marks.mjs docs/media/reference/larva-flank-redraw-sprite.png --body larva --cols 2 --rows 1 --names vent:mid,nematocyst:mid
+```
+
+As it went: the cracks came back pale, the painter's colour for a dark body, and vanished on the
+pale larva, so they are darkened in the import (`--recolour`, matched on the colours as drawn,
+since the fringe clean-up took their greenish grey for bled green). The vent gland's dark edge
+outweighed its core at half size and read mustard, and the capsules came back as crosses in their
+edge colour, so those two were drawn again, mostly bright. The coats — the crazing, the mottling,
+the mantle's rings — are laid in a layer of their own clipped to the body's picture (`coat` in
+`Placed.layer`). The ink sac's and the nematocyst gland's anchors are set by hand on the sac. The
+vent gland and the cavitation bladder sit further back than their painters put them: the drawn eye
+covers the larva's head to about t 0.28. The Electric Eel lays the field three times to the tail.
+Both prompts are in the history: `git show bb0ed0b:docs/sprite-prompts-player.md`.
+
+**What to send back:** the three PNGs. Check that the cells are on the grid (the importer cuts
+by position), that no part runs into its neighbour's cell, and that the background is one green
+right up to every outline.
+
+### The code side, when they land
+
+| Part | Anchor | Placed |
+| --- | --- | --- |
+| spine, quill, crystal, coral, prickle, porcupine quill, wart | the middle of the flat bottom edge | each point its painter stands one on the back; a prickle and a porcupine quill mirrored under the belly too |
+| claws, club (Ballistic) | the middle of the flat left edge | under the head, reaching forward; a second Pincer Claws a second claw behind the first |
+| frill, roe, funnel, beard | the middle of the flat top edge | on the belly line |
+| lead plate, photophore, coal, the flank's patches | the middle | where the painter puts its painted one |
+| galvanic line, veins | the middle of the right end | their front ends, behind the gills |
+| ink sac, nematocyst gland | the sac's middle, set by hand | as the open beak's was: the duct moves the middle |
+
+The coats (crazing, mottling, mantle rings) need a layer the bake does not have yet, laid over
+the body and clipped to it (`drawnBody`); the lights (photophores, coals, vent glands, the
+galvanic spark) keep the painter's `s.light`, so the bloom stays where the drawn lens is.
+
+Three marks need no art of their own: Twin Spout's second sac is the Archer Spit's sac drawn
+again behind the first, Flash Sense's flank row is the photophore placed higher, and the
+Electric Eel's organ is the electric field placed again back to the tail.
+
+**Still painted after these:** the Gill Rakers' comb and slits, the Crushing Pharynx's jowl and
+the Moray Jaws' second jaw, which are the head's, missed by its sheet; the Urchin's thorns,
+which radiate from the body's middle and want a mark the game can turn; and the Whale Shark's
+spots.

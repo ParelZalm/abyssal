@@ -517,7 +517,11 @@ mutations are drawn too (`SpriteArt.marks`): the Tapetum's eye and the Forked Ca
 in the round ones' places, the jaws, the beak, the lures, the second and third eyes, the halo,
 the nares, the pores, the pouch, the barbels, the needle, the siphon and the bloom, each placed
 where its painter put its painted one (`Sheet.mark`). The rest is still painted, placed on the
-drawn outline and shaded in the drawn swatches. Next are the back, the belly and the flank.
+drawn outline and shaded in the drawn swatches. The back, the belly and the flank are drawn too
+(`docs/sprite-prompts-player.md`), each part placed at every point its painter paints one and never
+shrunk past half its drawing (`Placed.least`), the coats clipped to the body. Still painted: the
+Gill Rakers', Crushing Pharynx's and Moray Jaws' marks, the Urchin's thorns, the Whale Shark's
+spots and Twin Spout's second sac. Next are the five forms.
 
 ## Later
 
