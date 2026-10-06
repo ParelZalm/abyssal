@@ -622,7 +622,11 @@ ink, red or dark colouring, a web between the arms, any background other than fl
 shadows, a second animal.
 ```
 
-#### Sheet 1b: the arm and the tentacle, drawn again
+#### ~~Sheet 1b: the arm and the tentacle, drawn again~~ — done
+
+`docs/media/reference/squid-arms-sprite.png`: the tentacle solid, the arm 5 thick over its root half
+and stepping to 3 over the rest, which greys toward the tip at half size and reads as an arm
+tapering.
 
 The parts sheet came back (`squid-parts-sprite.png`) clean but for its arms: the arm 84 outline
 pixels to 36 of fill, a grey line at half size, and the eight on the whole a grey grille; the
