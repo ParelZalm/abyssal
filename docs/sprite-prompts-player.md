@@ -700,8 +700,23 @@ dotted outline, fins, arms, tentacles, a funnel, ink, any background other than 
 shadows, a second animal.
 ```
 
-**What to send back:** the parts sheet first, then the body sheet made with it attached; tell me
-each file's name in Downloads. **When they land:** `npm run sprite` for the body with `--pitch 8`,
-`scripts/import-parts.mjs` for the parts, taught to tell an arm and a tentacle from the fins; then
-the drawn arm and tentacle rigged in the painted arms' place (`armRig`), the fish fins the painted
-plan carries turned off on the drawn body, and the Squid wearing the larva's marks as the Shark does.
+**In** (`BODIES.squid`): `squid-sprite.png`, the eye and fins off `squid-parts-sprite.png`, and the
+arm and tentacle off `squid-arms-sprite.png`.
+
+```bash
+npm run sprite -- docs/media/reference/squid-sprite.png --id squid --key green --fringe --pitch 8
+node scripts/import-parts.mjs docs/media/reference/squid-parts-sprite.png --body squid --snout 106 --tail 5 --axis 14 --whole 0,96,22.5 --only eye,tail
+node scripts/import-marks.mjs docs/media/reference/squid-arms-sprite.png --body squid --cols 2 --rows 1 --names arm:left,tentacle:left
+```
+
+As it went: the parts importer could not read a squid's landmarks — its fins straddle the mantle's
+point rather than join behind it, and its arms run past its head, so the snout it found was a
+tentacle's club — so they are given by hand (`--whole`: the mantle's point, the head's front, the
+fins' middle row), and the arm and tentacle on the parts sheet, taken for fins, are left out
+(`--only`). The drawn arm and tentacle are rigged as a sprite squid's are, in the painted ones'
+place (`drawnArms`); its fins are its `tail` though it has arms (`posesFor`), and the fish fins the
+painted plan carries are left to the drawn pectoral it does not have, so none show. It wears the
+larva's marks, its eyes at 0.7, **and not the Mantle Pump's rings**, which its form always has
+and which banded it grey: a squid's mantle is the pump (`markSize` 0). Judged on the board: the
+marks sit as on the Shark, but the jaws show none, since it has no hinge — a squid's mouth is a
+beak among its arms, and wants a mark of its own — and the lure arches high off its head.

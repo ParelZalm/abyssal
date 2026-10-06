@@ -4,7 +4,8 @@
  * apart (`docs/sprite-prompts-player.md`, *Sheet 2*).
  *
  *   node scripts/import-parts.mjs <sheet.png> --body larva --snout 90 --tail 4 --axis 17
- *                                 [--stalk] [--key green] [--pitch 8] [--out src/render/creature/sprites]
+ *                                 [--stalk] [--whole joint,snout,axis] [--only eye,tail]
+ *                                 [--key green] [--pitch 8] [--out src/render/creature/sprites]
  *
  * The sheet is the whole animal once, assembled, and each part apart from it at its size on
  * the whole. A generator does not hold a part's position from one image to the next, so where a
@@ -164,18 +165,28 @@ if (left.length) console.warn(`${left.length} piece(s) left over, not written`);
 // middle row ran over the back, and the dorsal's tip was taken for the snout.
 const tail = named.get('tail');
 if (!tail) throw new Error('no tail found: the whole cannot be laid on the body without its joint');
-const joint = tail.dx + tail.w - 1;
+// `--whole joint,snout,axis` gives the three by hand, in the whole's own pixels, where they cannot
+// be read: a squid's fins straddle its mantle's point rather than join behind it, and its arms
+// run on past its head, so the snout found was a tentacle's club
+const given = opt('whole')?.split(',').map(Number);
+const joint = given ? given[0] : tail.dx + tail.w - 1;
 const stalk = Array.from({ length: whole.h }, (_, y) => whole.img[y * whole.w + joint + 2] ? y : -1).filter(y => y >= 0);
 const axisW = argv.includes('--stalk') && stalk.length ? (stalk[0] + stalk[stalk.length - 1]) / 2
   : tail.dy + (tail.h - 1) / 2;
+const axisAt = given ? given[2] : axisW;
 let snoutW = joint;
 for (let y = Math.floor(axisW) - 3; y <= Math.ceil(axisW) + 3; y++) {
   for (let x = whole.w - 1; x > snoutW; x--) if (whole.img[y * whole.w + x]) { snoutW = x; break; }
 }
+if (given) snoutW = given[1];
 const k = (land.snout - land.tail) / (snoutW - joint);
-const toBody = (x, y) => [+(land.tail + (x - joint) * k).toFixed(1), +(land.axis + (y - axisW) * k).toFixed(1)];
+const toBody = (x, y) => [+(land.tail + (x - joint) * k).toFixed(1), +(land.axis + (y - axisAt) * k).toFixed(1)];
 
 const fileOf = name => `${body}-${name}.png`;
+// `--only eye,tail` writes those alone: the squid's arm and tentacle are rigged from a sheet of
+// their own, and here they would be taken for its back's and belly's fins
+const only = opt('only')?.split(',');
+if (only) for (const name of [...named.keys()]) if (!only.includes(name)) named.delete(name);
 const lines = [];
 for (const [name, p] of named) {
   const px = new Uint8Array(p.w * p.h * 4);
@@ -208,7 +219,7 @@ const previewPath = join(tmpdir(), `${body}-parts-preview.png`);
 writeFileSync(previewPath, encodePng(pw * S, ph * S, prev));
 
 console.log(`\npitch ${P} · grid ${cw}×${ch} · whole ${whole.w}×${whole.h} · ${named.size} parts${bleeds ? ` · ${bleeds} bled cells cleaned` : ''}`);
-console.log(`whole: joint ${joint}, snout ${snoutW}, axis ${axisW}; ${k.toFixed(3)} body pixels to its pixel`);
+console.log(`whole: joint ${joint}, snout ${snoutW}, axis ${axisAt}; ${k.toFixed(3)} body pixels to its pixel`);
 console.log(`wrote ${[...named.keys()].map(n => join(out, fileOf(n))).join(', ')}`);
 console.log(`preview ${previewPath}`);
 console.log(`\ncontent/sprites.ts, on ${body}:\n  parts: { scale: ${k.toFixed(3)}, at: { ${lines.join(', ')} } },`);

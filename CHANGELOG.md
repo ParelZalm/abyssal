@@ -13,6 +13,9 @@ plays and a patch is a fix or a balance pass.
   and it wears the larva's drawn mutations, its eyes sized to its own, with jaws and lures drawn
   for it: the mouth under its snout, the lure arching from its brow. Its brood pouch hangs clear of
   its pectoral, and its siphon of its anal fin.
+- **The Squid is drawn.** Becoming a Squid makes the larva a drawn squid of the same pale glass,
+  its fins and its eye drawn apart, its arms and tentacles drawn and rigged at its head, and it
+  wears the larva's drawn mutations.
 
 ## [0.4.0] — 2026-10-06
 
