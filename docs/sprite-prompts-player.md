@@ -760,6 +760,11 @@ Shark's and the Squid's were.
 before it, how far the larva's look carries), `cave-room.webp` and `tank-room.webp`, and
 `ribbon.webp` and `gulper.webp` as what it must not look like. Generate each image on its own.
 
+**The first try came back a stretched larva:** right in its glass, eye, notochord and gut, but 5
+times as long as deep where 10 was asked, deepest at mid-body rather than behind the head, with no
+mouth seam, and fins that grew taller to a fanned tail. The prompt below spells the proportion out
+in pixels and keeps the fin low and even. Do not attach that sheet: it pulls the proportions back.
+
 ```text
 STYLE (shared by every image)
 Reference sheet for a game creature: the player character of the game, a pale glowing
@@ -779,24 +784,30 @@ animal fits in the frame with a margin around it. Output as a large lossless PNG
 least 2048 px wide.
 
 ANATOMY (must be accurate)
-A young moray eel, side view, about 10 times as long as it is deep (fins not counted).
-- Body: long and muscular, flattened side to side, deepest just behind the head and
-  staying almost as deep for its first two thirds, then tapering through its last third
-  to a narrow, rounded tail tip. Smooth thick skin, no scales.
-- Head: heavy and deep, about an eighth of the body length, its top rising in a gentle
-  hump behind the eye to the deepest point of the body; a blunt rounded snout.
-- Mouth: closed, a long seam from the snout tip back past the eye to about the middle
-  of the head, lips together, no teeth showing. Two small short tube nostrils at the tip
-  of the snout, pointing forward.
-- Eye: one round eye low on the head, above the front of the mouth, close to the snout:
+A young moray eel, side view: VERY long and slender — an eel, a long ribbon of a body,
+not a fish. The body (fins not counted) is 10 times as long as it is deep: drawn 1800 px
+long, it is only 180 px deep at its deepest. Measure it; the larva's short body must not
+carry over.
+- Body: long and muscular, flattened side to side, deepest right behind the head, at
+  the gill opening, and staying almost that deep for its first two thirds, then tapering
+  through its last third to a narrow pointed tail tip. Smooth thick skin, no scales.
+- Head: heavy and deep, the deepest part of the animal, about an eighth of the body
+  length, its top rising in a gentle hump behind the eye; a blunt rounded snout.
+- Mouth: closed, drawn plainly as a long darker line from the snout tip back past the
+  eye to about the middle of the head, lips together, no teeth showing. Two small short
+  tube nostrils at the tip of the snout, pointing forward.
+- Eye: one round eye low on the head, just above the mouth line, set back from the snout
+  tip by about its own width:
   the larva's eye — a black pupil, a thin pale-silver ring, one small white glint high
   on its front — about two fifths of the head's depth across.
 - Gill opening: one small dark round hole on the side, behind the head at mid-height.
 - One continuous fin: the dorsal fin rises just behind the head and runs low along the
   whole back, round the tail tip, and forward under the belly as the anal fin, which
   begins at the vent just behind the middle of the body. The fin is a low soft fold,
-  about a quarter of the body's depth tall, with no separate tail fin. NO pectoral fins,
-  NO pelvic fins.
+  about a fifth of the body's depth tall and the same height all the way along — not
+  taller toward the tail. At the tail it wraps round the pointed end of the body as a
+  small rounded edge, no wider than the body there: no fan, no separate tail fin. NO
+  pectoral fins, NO pelvic fins.
 - See-through like the larva: a faint straight line of the notochord along the middle of
   the body from behind the head to the tail tip, and a small darker rounded gut low in
   the body, about a quarter of the way back. No spots, no mottling, no stripes, no
@@ -831,7 +842,9 @@ A single row of 8 large square colour swatches taken from image 1, each with its
 code under it: outline, deep shadow, body, body highlight, fin, gut, eye ring, pupil.
 
 AVOID
-Three-quarter or front views, a wavy, S-curved or coiled body, a swimming pose, several
+A short, stubby or fish-like body, a body less than 8 times as long as it is deep, tall
+fins, fins that grow taller toward the tail, a fan-shaped tail, a missing mouth line,
+three-quarter or front views, a wavy, S-curved or coiled body, a swimming pose, several
 animals, a scene, a rock or a hole, blue, yellow, green, brown or dark colouring,
 spots, mottling or stripes, an open mouth, visible teeth, barbels, leaf or flared
 nostrils, pectoral or pelvic fins, a separate forked tail fin, lights or photophores,
