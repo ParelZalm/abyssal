@@ -351,6 +351,18 @@ export const SPRITES: Record<string, SpriteArt> = {
            ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
            hull: [[84.5, 16, 6], [74.5, 14.5, 11.5], [64.5, 14.5, 11.5], [55.5, 15.5, 11.5], [45.5, 15, 11.9],
                   [35.5, 15, 11], [26.5, 15, 9.3], [16.5, 15.5, 6.4], [6.5, 16, 6]] },
+  // The Shark form (`docs/sprite-prompts-player.md`): its bare body came back before its parts, so
+  // the parts were drawn against it. `npm run sprite -- docs/media/reference/shark-sprite.png --id
+  // shark --key green --fringe --pitch 8` (the grid found itself at half the pitch), then
+  // `node scripts/import-parts.mjs docs/media/reference/shark-parts-sprite.png --body shark
+  // --snout 111 --tail 5 --axis 13 --stalk`: its tail sweeps up, so the midline is the stalk's.
+  // The larva's palette, so its ramp; its marks are the larva's painters' until drawn for it
+  shark: { w: 116, h: 25, snout: 111, tail: 5, axis: 13,
+           parts: { scale: 1.010, at: { eye: [97.9, 8], tail: [-16.2, -14.3], back: [48.4, -14.3], pectoral: [67.6, 18],
+                                       belly: [39.3, 21.1] } },
+           ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
+           hull: [[107.5, 14, 2.5], [95.5, 13.5, 5.5], [82.5, 13.5, 7.2], [70.5, 13.5, 8.9], [58.5, 13, 9.3],
+                  [45.5, 13, 8.5], [33.5, 13.5, 6.4], [20.5, 14, 5.1], [8.5, 13.5, 3]] },
 };
 
 /**
@@ -359,7 +371,7 @@ export const SPRITES: Record<string, SpriteArt> = {
  * over it and placed on its outline (`drawnForm`), until those are drawn too. A plan not here
  * is painted whole, as every plan was.
  */
-export const BODIES: Partial<Record<Plan, string>> = { wraith: 'larva' };
+export const BODIES: Partial<Record<Plan, string>> = { wraith: 'larva', shark: 'shark' };
 
 /** How many steps nose to tail a drawn outline is sampled at (`Form.outline`). */
 const OUTLINE = 24;

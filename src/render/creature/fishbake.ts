@@ -272,7 +272,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, 
     else if (A.tail === 'mantle') mantleFins(s, f, A);
     else if (!poses.tail) caudalFin(s, f, A);
   }
-  if (A.dorsalFin > 0) dorsalRidge(s, f, A);
+  if (A.dorsalFin > 0) { if (!poses.back) dorsalRidge(s, f, A); }
   else if (foldsOf(g, A) && !poses.back) medianFins(s, f, g, A);
 
   // --- the body itself ---------------------------------------------------
@@ -400,6 +400,12 @@ function posesFor(g: Genome, plan: Plan, f: Form, A: PlanArt, marks: ReadonlySet
     poses.back = poses.belly = { sx: 1, sy: k };
   }
   if (A.fins.length > 0) poses.pectoral = { sx: fan(g) / fan(b), sy: fan(g) / fan(b) };
+  // a body with a real dorsal (the Shark's) has it drawn as its back, at the size the ridge was,
+  // and its second pair, the pelvics, as its belly, grown as the pectorals are
+  if (A.dorsalFin > 0) {
+    poses.back = { sx: 1, sy: 1 };
+    if (A.fins.length > 1) poses.belly = poses.pectoral;
+  }
   const sees = (x: Genome) => Math.min(0.3, 0.15 * eyeOf(x) * A.eye);
   const pale = A.paleEyes || g.eyeAdapt > 0.45;
   if (g.eyeAdapt >= -0.4 && (!pale || marks.has('tapetum')) && !A.eyeLamp && !A.eyeGlow && !A.stalks) {

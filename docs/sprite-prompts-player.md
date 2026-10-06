@@ -464,9 +464,24 @@ sub-pixel detail, text, labels, borders, shadows, a second animal.
 cover its own place exactly; then the body sheet, made with it attached, and check that the body
 is the whole shark's.
 
-**When they land:** `scripts/import-parts.mjs` for the parts and `npm run sprite` for the body, as
-the larva went in, and `BODIES.shark`. The bake's parts are the larva's fold-shaped ones so far; the
-shark's first dorsal goes where the painted `dorsalRidge` was, and its pelvic where the belly fold
-was. The mutations' marks are the larva's, fitted to its outline: each is placed on the shark's by
-its painter and judged on the board, and the ones that read wrong at the shark's scale are drawn
-again for it.
+**In** (`BODIES.shark`), both sheets: `shark-sprite.png` and `shark-parts-sprite.png`.
+
+```bash
+npm run sprite -- docs/media/reference/shark-sprite.png --id shark --key green --fringe --pitch 8
+node scripts/import-parts.mjs docs/media/reference/shark-parts-sprite.png --body shark --snout 111 --tail 5 --axis 13 --stalk
+```
+
+As it went: the body sheet came first, and the parts were drawn against it. Pasted into the chat
+the sheets arrived as small lossy WebPs; the files themselves are on the grid. The sprite importer
+found the grid at half the pitch, so it is given. The parts importer named the parts the larva's
+way, the pectoral the smallest, which on a shark is the pelvic: now the back's is the highest and
+the pectoral the furthest forward of the two under it. And it took the midline from the tail's
+middle row, which on a shark's swept-up tail runs over the back and took the dorsal's tip for the
+snout: `--stalk` takes it from the tail stalk (the larva keeps its row, a pixel off, as it went in).
+The bake lays the drawn dorsal where `dorsalRidge` painted one and the pelvic as the belly part,
+grown as the pectorals are (`posesFor`).
+
+**Its marks are the larva's painters' for now**, and on a drawn body the head's painters leave the
+jaw and the teeth to a drawn mark, so a Shark that takes the Hinged Jaw shows none: the larva's
+drawn marks are next, placed on the Shark at its scale (its parts came in at 1.01 to the larva's
+0.94, near the same) with a hinge of its own, and the ones that read wrong drawn again for it.

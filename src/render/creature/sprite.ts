@@ -68,6 +68,13 @@ import larvaBack from './sprites/larva-back.png';
 import larvaBelly from './sprites/larva-belly.png';
 import larvaPectoral from './sprites/larva-pectoral.png';
 import larvaEye from './sprites/larva-eye.png';
+import sharkRest from './sprites/shark.png';
+import sharkStrike from './sprites/shark-strike.png';
+import sharkTail from './sprites/shark-tail.png';
+import sharkBack from './sprites/shark-back.png';
+import sharkBelly from './sprites/shark-belly.png';
+import sharkPectoral from './sprites/shark-pectoral.png';
+import sharkEye from './sprites/shark-eye.png';
 
 /** Every sprite file, by its path: the marks are looked up here by name (`marksFrom`). */
 const FILES = import.meta.glob<string>('./sprites/*.png', { eager: true, import: 'default' });
@@ -109,6 +116,9 @@ const SOURCES: Record<string, Sources> = {
   larva: { rest: larvaRest, strike: larvaStrike,
            parts: { tail: larvaTail, back: larvaBack, belly: larvaBelly, pectoral: larvaPectoral, eye: larvaEye },
            marks: marksFrom('larva') },
+  shark: { rest: sharkRest, strike: sharkStrike,
+           parts: { tail: sharkTail, back: sharkBack, belly: sharkBelly, pectoral: sharkPectoral, eye: sharkEye },
+           marks: marksFrom('shark') },
 };
 
 /** A frame shut and open, and the colours both may snap to. */
