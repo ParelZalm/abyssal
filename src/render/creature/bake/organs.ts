@@ -54,9 +54,12 @@ export function organs(s: Sheet, f: Form, pal: Palette, g: Genome, club = false)
   // frill: stinging tentacles along the rear of the belly — unless they have let go and
   // trail behind, which is the Drifting Bloom and is painted under the body
   if (g.frill > 0 && !hasSynergy(g, 'driftingbloom')) {
-    const n = Math.round(4 + g.frill * 2);
+    // drawn, three to a frill and one more a stack: six drawn tentacles in that stretch of belly
+    // overlapped into a comb
+    const n = s.drawn.has('frill') ? Math.min(5, 2 + Math.round(g.frill)) : Math.round(4 + g.frill * 2);
     for (let i = 0; i < n; i++) {
       const t = 0.62 + (i / Math.max(1, n - 1)) * 0.32;
+      if (s.mark('frill', spineAt(t, f), edgeAt(t, f, -BACK), { layer: 'under', least: STANDS })) continue;
       const x = spineAt(t, f), y = edgeAt(t, f, 1);
       const len = Math.max(s.texel * 2, R * (0.18 + g.frill * 0.08));
       const pts: Pt[] = [[x, y], [x - len * 0.4, y + len * 0.7], [x - len * 0.9, y + len]];
@@ -74,6 +77,9 @@ export function organs(s: Sheet, f: Form, pal: Palette, g: Genome, club = false)
     const w = halfWidth(t, f);
     const len = Math.max(s.texel * 3, w * 0.95);
     const x = spineAt(t, f), y = edgeAt(t, f, 0.8);
+    // drawn, a second claw behind the first and a little smaller
+    const k = 1 - i * 0.12;
+    if (s.mark(vivisect ? 'claw-saw' : 'claw', x, y, { sx: k, sy: k, layer: 'skin', least: STANDS })) continue;
     const tip: Pt = [x + len, y + len * 0.35];
     // two jaws opening forward: the lower one hooked up, the upper one straight
     s.poly([[x, y - len * 0.1], [x + len * 0.7, y - len * 0.05], tip, [x + len * 0.5, y + len * 0.1],
@@ -141,6 +147,8 @@ function raptorials(s: Sheet, f: Form, pal: Palette, g: Genome) {
   const t0 = shoulderAt(f) * 0.9;
   const tip = spineAt(0, f) + ballisticReach(g);
   const y0 = edgeAt(t0, f, 0.85), y1 = edgeAt(0.05, f, 1);
+  // drawn, the arm and its club reach as far as the painted heel does
+  if (s.mark('club', spineAt(t0, f), y0, { span: tip - spineAt(t0, f), layer: 'skin' })) return;
   const heavy = 1 + Math.min(1, (g.claws - 1) * 0.35);
   const th = Math.max(s.texel, halfWidth(0.1, f) * 0.18 * heavy);
   s.poly([[spineAt(t0, f), y0 - th], [tip - th * 2, y1 - th], [tip, y1], [tip - th * 2, y1 + th * 1.4],

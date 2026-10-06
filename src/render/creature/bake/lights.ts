@@ -9,7 +9,7 @@ import { tAt } from './body';
 import { fbm } from '../../../core/noise';
 import { hash01, lerp } from '../../../core/util';
 import { toInt, type Palette, type RGB } from './palette';
-import type { Sheet } from './sheet';
+import { STANDS, type Sheet } from './sheet';
 
 /** The accent pushed toward white: a photophore is a light, not a paint colour. */
 export const lamp = (c: RGB): RGB => [lerp(c[0], 255, 0.35), lerp(c[1], 255, 0.35), lerp(c[2], 255, 0.35)];
@@ -32,7 +32,10 @@ export function photophores(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanA
     for (let x = spineAt(0.15, f); x > spineAt(0.9, f); x -= gap * (ri ? 1.6 : 1)) {
       const t = tAt(x, f);
       if (fbm(t * 13, ri, seed + 37, 1) < 0.2) continue;
-      s.light(x, edgeAt(t, f, row), c, (ri ? 0.3 : 0.5) * Math.min(1.2, k + 0.3) * (i++ % 2 ? 0.8 : 1));
+      // drawn, the lens is the photophore's picture, and the light only hangs its bloom on it
+      const y = edgeAt(t, f, row), strength = (ri ? 0.3 : 0.5) * Math.min(1.2, k + 0.3) * (i++ % 2 ? 0.8 : 1);
+      if (s.mark('photophore', x, y, { layer: 'skin', least: STANDS })) s.emit(x, y, c, strength);
+      else s.light(x, y, c, strength);
     }
   });
 }
@@ -63,7 +66,10 @@ export function flankLights(s: Sheet, f: Form, pal: Palette) {
   const c = lamp(pal.accent);
   for (let i = 0; i < 6; i++) {
     const t = 0.2 + i * 0.12;
-    s.light(spineAt(t, f), edgeAt(t, f, -0.05), c, 0.8, true);
+    const x = spineAt(t, f), y = edgeAt(t, f, -0.05);
+    // drawn, the belly's photophore run up the flank
+    if (s.mark('photophore', x, y, { layer: 'skin', least: STANDS })) s.emit(x, y, c, 0.8);
+    else s.light(x, y, c, 0.8, true);
   }
 }
 

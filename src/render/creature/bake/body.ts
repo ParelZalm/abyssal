@@ -7,7 +7,7 @@ import { edgeAt, halfWidth, shoulderAt, spineAt, R, type Form } from '../../../c
 import { fbm, fbmSigned } from '../../../core/noise';
 import { lerp, TAU } from '../../../core/util';
 import type { Palette, RGB } from './palette';
-import { M, type Pt, type Sheet } from './sheet';
+import { BACK, M, STANDS, type Pt, type Sheet } from './sheet';
 
 /** The t of a column's centre, from its x in R units. Inverse of `spineAt`. */
 export const tAt = (x: number, f: Form) => (f.len * 0.52 * R - x) / (f.len * R);
@@ -113,6 +113,8 @@ export function camouflage(s: Sheet, f: Form, pal: Palette, seed: number) {
              dark ? pal.ramp[1] : pal.ramp[4], dark ? 0.7 : 0.45, M.BODY);
     }
   }
+  // drawn, the beard is one fringe under the jaw; the blotches are still painted
+  if (s.mark('beard', spineAt(0.14, f), edgeAt(0.14, f, -BACK), { layer: 'under', least: STANDS })) return;
   for (let i = 0; i < 6; i++) {
     const t = 0.03 + i * 0.045;
     const x = spineAt(t, f), y = edgeAt(t, f, 1);
@@ -166,6 +168,7 @@ export function veins(s: Sheet, f: Form, seed: number) {
 export function ballast(s: Sheet, f: Form) {
   const lead: RGB = [62, 66, 76], sheen: RGB = [148, 152, 164];
   for (let t = 0.2; t < 0.8; t += 0.075) {
+    if (s.mark('lead', spineAt(t, f), edgeAt(t, f, 0.78), { layer: 'skin', least: STANDS })) continue;
     const w = halfWidth(t, f);
     const x = spineAt(t, f), y = edgeAt(t, f, 0.78);
     const r = Math.max(s.texel, w * 0.2);
@@ -212,6 +215,7 @@ export function mantle(s: Sheet, f: Form, pal: Palette) {
     for (let iy = Math.floor(y0); iy <= y1; iy++) s.dotPx(Math.floor(s.px(x)), iy, pal.ramp[1], 0.45);
   }
   const tf = 0.3;
+  if (s.mark('funnel', spineAt(tf, f), edgeAt(tf, f, -BACK), { layer: 'under', least: STANDS })) return;
   const x = spineAt(tf, f), y = edgeAt(tf, f, 1);
   const w = halfWidth(tf, f);
   s.poly([[x - w * 0.5, y - w * 0.2], [x + w * 0.6, y - w * 0.1], [x + w * 0.6, y + w * 0.3],

@@ -11,6 +11,9 @@ plays and a patch is a fix or a balance pass.
 - **The larva's back is drawn.** What stands up off it is drawn now: the Dorsal Spines, the
   Spine Volley's quills (three, five for a Quill Storm), the Brine Gland's rime, the coral's
   knobs and branches, the Inflation's prickles and the Porcupine's quills, the Stonefish's warts.
+- **And its belly.** What hangs under it or sits low on it is drawn: the Pincer Claws (serrated
+  for Vivisect) and the Ballistic club, the Anemone Frill's tentacles, the Brood Pouch's roe, the
+  Leaden Bones' keel, the photophores, the Mantle Pump's funnel and Lie in Wait's beard.
 
 ## [0.3.0] — 2026-10-05
 

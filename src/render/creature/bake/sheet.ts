@@ -198,6 +198,11 @@ export class Sheet {
     const ix = Math.floor(this.px(x)), iy = Math.floor(this.py(y));
     this.dotPx(ix, iy, [255, 255, 255]);
     if (big) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) this.dotPx(ix + dx, iy + dy, c);
+    this.emit(x, y, c, strength);
+  }
+
+  /** A bloom with nothing painted under it: for a drawn lens (`mark`), which is its own hot pixel. */
+  emit(x: number, y: number, c: RGB, strength = 1) {
     this.lights.push({ x, y, color: (c[0] << 16) | (c[1] << 8) | c[2], strength });
   }
 }
