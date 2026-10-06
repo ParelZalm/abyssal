@@ -118,7 +118,7 @@ const SOURCES: Record<string, Sources> = {
            marks: marksFrom('larva') },
   shark: { rest: sharkRest, strike: sharkStrike,
            parts: { tail: sharkTail, back: sharkBack, belly: sharkBelly, pectoral: sharkPectoral, eye: sharkEye },
-           marks: marksFrom(SPRITES.shark.marksFrom ?? 'shark') },
+           marks: { ...marksFrom(SPRITES.shark.marksFrom ?? 'shark'), ...marksFrom('shark') } },
 };
 
 /** A frame shut and open, and the colours both may snap to. */

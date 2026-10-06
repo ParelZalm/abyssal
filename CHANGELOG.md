@@ -10,7 +10,8 @@ plays and a patch is a fix or a balance pass.
 
 - **The Shark is drawn.** Becoming a Shark makes the larva a drawn shark of the same pale glass,
   its first dorsal, tail, pectoral, pelvic and eye drawn apart and grown as the painters grew them,
-  and it wears the larva's drawn mutations, its eyes sized to its own.
+  and it wears the larva's drawn mutations, its eyes sized to its own, with jaws and lures drawn
+  for it: the mouth under its snout, the lure arching from its brow.
 
 ## [0.4.0] — 2026-10-06
 

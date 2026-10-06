@@ -368,7 +368,14 @@ export const SPRITES: Record<string, SpriteArt> = {
   // `node scripts/import-parts.mjs docs/media/reference/shark-parts-sprite.png --body shark
   // --snout 111 --tail 5 --axis 13 --stalk`: its tail sweeps up, so the midline is the stalk's.
   // The larva's palette, so its ramp; its marks are the larva's painters' until drawn for it
-  shark: { w: 116, h: 25, snout: 111, tail: 5, axis: 13, hinge: [101, 17.5], marksFrom: 'larva', marks: LARVA_MARKS,
+  shark: { w: 116, h: 25, snout: 111, tail: 5, axis: 13, hinge: [101, 17.5], marksFrom: 'larva',
+           // its own jaws and lures, drawn for its mouth under the snout and its reach
+           // (`shark-head-sprite.png`, the larva's head sheet's import with `--body shark`), over
+           // the larva's it wears
+           marks: { ...LARVA_MARKS, jaw: { at: [0, 4] }, 'jaw-open': { at: [0, 4] }, fangs: { at: [0, 6] },
+                    'fangs-open': { at: [0, 4] }, saw: { at: [0, 5] }, 'saw-open': { at: [0, 4] },
+                    beak: { at: [0, 3.5] }, 'beak-open': { at: [0, 3.5] },
+                    illicium: { at: [0.5, 27], tip: [42.5, 18.6] }, lantern: { at: [0.5, 36], tip: [50.0, 25.3] } },
            // the larva's eye is 20 across and the Shark's 8: the eyes drawn to it, at its size
            markSize: { tapetum: 0.4, foureye: 0.4 },
            parts: { scale: 1.010, at: { eye: [97.9, 8], tail: [-16.2, -14.3], back: [48.4, -14.3], pectoral: [67.6, 18],
