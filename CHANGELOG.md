@@ -14,6 +14,10 @@ plays and a patch is a fix or a balance pass.
 - **And its belly.** What hangs under it or sits low on it is drawn: the Pincer Claws (serrated
   for Vivisect) and the Ballistic club, the Anemone Frill's tentacles, the Brood Pouch's roe, the
   Leaden Bones' keel, the photophores, the Mantle Pump's funnel and Lie in Wait's beard.
+- **And its flank.** What shows through its side is drawn: the Ink Sac, the Electric Organ (to the
+  tail for the Electric Eel), the Galvanic Cells' wire, the Vent Gland, Cavitation's bladder, the
+  venom gland (ringed for Nematocyst), Blood Lamp's coals, Open Veins, Brittle Frame's cracks,
+  Lie in Wait's mottling and the Mantle Pump's rings.
 
 ## [0.3.0] — 2026-10-05
 

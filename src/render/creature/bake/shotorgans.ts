@@ -50,6 +50,11 @@ export function nares(s: Sheet, f: Form, eye: DrawnEye | null = null) {
 
 /** Galvanic Cells: the lateral line become a crooked live wire, lit where it bends. */
 export function galvanicLine(s: Sheet, f: Form) {
+  // drawn, the wire is one picture from its spark back, and the spark still hangs its bloom
+  if (s.mark('galvanic', spineAt(0.3, f), edgeAt(0.3, f, 0), { layer: 'skin', least: STANDS })) {
+    s.emit(spineAt(0.3, f), edgeAt(0.3, f, 0), LILAC, 0.5);
+    return;
+  }
   let prev: Pt | null = null;
   for (let i = 0, t = 0.3; t <= 0.76; t += 0.065, i++) {
     const at: Pt = [spineAt(t, f), edgeAt(t, f, i % 2 ? 0.18 : -0.18)];
@@ -66,6 +71,12 @@ export function galvanicLine(s: Sheet, f: Form) {
 
 /** Vent Gland: sulphur glands on the gill cover, hot enough to glow. */
 export function ventGlands(s: Sheet, f: Form) {
+  // drawn, just behind the drawn eye, which covers the larva's head back to about t 0.28: there
+  // the painted gill cover's place is under it
+  if (s.mark('vent', spineAt(0.32, f), edgeAt(0.32, f, 0.1), { layer: 'skin', least: STANDS })) {
+    s.emit(spineAt(0.32, f), edgeAt(0.32, f, 0.05), SULPHUR, 0.6);
+    return;
+  }
   const t = 0.24;
   const w = halfWidth(t, f);
   for (const [dt, e] of [[0, -0.2], [0.03, 0.15], [-0.02, 0.4]]) {
@@ -79,6 +90,8 @@ export function ventGlands(s: Sheet, f: Form) {
  * with the body showing through it and a glint on its shoulder.
  */
 export function cavityBladder(s: Sheet, f: Form) {
+  // drawn, clear of the drawn eye's edge, where the pale ring was lost against it
+  if (s.mark('cavity', spineAt(0.4, f), edgeAt(0.4, f, 0.05), { layer: 'skin', least: STANDS })) return;
   const t = 0.33;
   const w = halfWidth(t, f);
   const x = spineAt(t, f), y = edgeAt(t, f, 0.05);

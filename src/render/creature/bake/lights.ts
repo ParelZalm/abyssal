@@ -81,6 +81,7 @@ export function embers(s: Sheet, f: Form, seed: number) {
   for (let i = 0; i < 3; i++) {
     const t = 0.3 + i * 0.18 + (fbm(i, 3, seed + 91, 1) - 0.5) * 0.06;
     const x = spineAt(t, f), y = edgeAt(t, f, -0.55);
+    if (s.mark('coal', x, y, { layer: 'skin', least: STANDS })) { s.emit(x, y, [255, 60, 30], 0.9); continue; }
     s.blot(x, y, s.texel * 1.5, [255, 90, 40], 0.6);
     s.light(x, y, [255, 60, 30], 0.9, true);
   }

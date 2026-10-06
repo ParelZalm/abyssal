@@ -25,7 +25,9 @@ export const enum M { EMPTY, BODY, FIN, GAUZE, MOUTH, TOOTH, LINE }
  * A drawn mark placed by a painter (`Sheet.mark`), for the bake to lay on a drawn body: its
  * anchor at `x`, `y` in R units, stretched by `sx` and `sy`, or so that its tip lands on `to`, or
  * so that it spans `span` R units across. `layer` is where it goes in the picture: `under` the
- * body, on its `skin` under its drawn eye and pectoral, or `over` everything drawn. `flip` turns
+ * body, on its `skin` under its drawn eye and pectoral, or `over` everything drawn; a `coat` is on
+ * the skin too, clipped to the body's own picture, so a patch the size of the trunk need not match
+ * its outline. `flip` turns
  * it upside down about its anchor: what stands on the back, hung under the belly. `least` is the
  * fewest texels an art pixel of it may shrink to: the larva is baked at about a third of its
  * drawing, where a spine 2 pixels thick averages into its own outline and is gone.
@@ -42,7 +44,7 @@ export const STANDS = 0.5;
 
 export interface Placed {
   name: string; x: number; y: number; sx: number; sy: number;
-  to?: [number, number]; span?: number; layer: 'under' | 'skin' | 'over'; flip?: boolean; least?: number;
+  to?: [number, number]; span?: number; layer: 'under' | 'skin' | 'coat' | 'over'; flip?: boolean; least?: number;
 }
 
 /** A point of light the view can hang a bloom on, in R units. */

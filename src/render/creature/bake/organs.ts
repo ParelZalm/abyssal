@@ -124,6 +124,7 @@ export function organs(s: Sheet, f: Form, pal: Palette, g: Genome, club = false)
     const t = 0.6;
     const w = halfWidth(t, f);
     const x = spineAt(t, f), y = edgeAt(t, f, 0.25);
+    if (s.mark(hasSynergy(g, 'nematocyst') ? 'nematocyst' : 'venom', x, y, { layer: 'skin', least: STANDS })) return;
     s.blot(x, y, w * 0.4, TOXIC, 0.4 + Math.min(0.35, g.venom * 0.1), M.BODY);
     if (hasSynergy(g, 'nematocyst')) {
       // capsules round the sac, and a duct forward to the gut: venom out, healing back in
@@ -187,6 +188,12 @@ export function urchinSpines(s: Sheet, f: Form, g: Genome, seed: number) {
  * field runs back to the tail, as the eel's organ fills four fifths of its length.
  */
 export function electroplates(s: Sheet, f: Form, g: Genome) {
+  // drawn, the field is one picture behind the head, and the Electric Eel's laid again to the tail
+  const field = hasSynergy(g, 'electriceel') ? [0.3, 0.55, 0.8] : [0.3];
+  if (s.drawn.has('electric')) {
+    for (const t of field) s.mark('electric', spineAt(t, f), edgeAt(t, f, 0), { layer: 'skin', least: STANDS });
+    return;
+  }
   const pale: RGB = [200, 232, 255];
   const step = Math.max(s.texel * 2, R * 0.08);
   const tail = hasSynergy(g, 'electriceel') ? 0.9 : 0.42;
@@ -252,6 +259,7 @@ const INK: RGB = [8, 6, 14];
 const INK_SHEEN: RGB = [120, 120, 150];
 
 export function inkSac(s: Sheet, f: Form) {
+  if (s.mark('ink', spineAt(0.5, f), edgeAt(0.5, f, 0.3), { layer: 'skin', least: STANDS })) return;
   const t = 0.5;
   const w = halfWidth(t, f);
   const x = spineAt(t, f), y = edgeAt(t, f, 0.3);

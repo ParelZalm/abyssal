@@ -344,9 +344,10 @@ export function drawnBody(id: string, f: Form, back: number, halfH: number, res:
   cv.width = w; cv.height = h;
   const ctx = cv.getContext('2d')!;
   // a picture drawn at the parts' scale, its pixel (`ax`, `ay`) on texel (`tx`, `ty`), stretched
-  const lay = (a: Arm, ax: number, ay: number, tx: number, ty: number, sx: number, sy: number, ring: boolean) => {
+  const lay = (a: Arm, ax: number, ay: number, tx: number, ty: number, sx: number, sy: number, ring: boolean,
+               to = ctx) => {
     const kx = k * sc * sx, ky = k * sc * sy;
-    ctx.drawImage(resample(a.image, a.palette, kx, w, h, ty / ky - ay, ax - tx / kx, ky, ring), 0, 0);
+    to.drawImage(resample(a.image, a.palette, kx, w, h, ty / ky - ay, ax - tx / kx, ky, ring), 0, 0);
   };
   const part = (name: PartName, ring: boolean) => {
     const p = fr.parts?.[name], at = s.parts?.at[name], fit = s.parts?.size?.[name] ?? 1, pose = poses[name];
@@ -358,7 +359,7 @@ export function drawnBody(id: string, f: Form, back: number, halfH: number, res:
     if (swap && its) lay(swap, its.at[0], its.at[1], tx, ty, pose.sx * fit, pose.sy * fit, ring);
     else lay(p, ax, ay, tx, ty, pose.sx * fit, pose.sy * fit, ring);
   };
-  const mark = (m: Placed) => {
+  const mark = (m: Placed, to = ctx) => {
     const name = open && fr.marks?.[`${m.name}-open`] ? `${m.name}-open` : m.name;
     const drawn = fr.marks?.[name], its = s.marks?.[name as MarkName];
     if (!drawn || !its) return;
@@ -373,12 +374,19 @@ export function drawnBody(id: string, f: Form, back: number, halfH: number, res:
     const grow = m.least ? Math.max(1, m.least / (k * sc)) : 1;
     sx *= grow; sy *= grow;
     lay(a, its.at[0], m.flip ? a.image.height - its.at[1] : its.at[1], (m.x - back) * res, (m.y + halfH) * res,
-        sx, sy, m.layer === 'under');
+        sx, sy, m.layer === 'under', to);
   };
   const layer = (l: Placed['layer']) => { for (const m of marks) if (m.layer === l) mark(m); };
   for (const name of UNDER) part(name, true);
   layer('under');
-  ctx.drawImage(resample(open ? fr.strike : fr.rest, fr.palette, k, w, h, oy, ox), 0, 0);
+  const pic = resample(open ? fr.strike : fr.rest, fr.palette, k, w, h, oy, ox);
+  const coats = marks.filter(m => m.layer === 'coat');
+  if (coats.length) {
+    const on = pic.getContext('2d')!;
+    on.globalCompositeOperation = 'source-atop';
+    for (const m of coats) mark(m, on);
+  }
+  ctx.drawImage(pic, 0, 0);
   layer('skin');
   for (const name of OVER) part(name, false);
   layer('over');
