@@ -326,6 +326,10 @@ since the game sizes it by its genome either way and the fins want the pixels.
 larva's sheet, the style the parts are cut in), `cave-room.webp` and `angler.webp`; for sheet 2,
 the parts sheet that came back as well.
 
+**The order flipped:** the bare body came back first, and on size (104 × 22 in both frames, on
+the grid), so it is the target: `docs/media/reference/shark-sprite.png`. The parts sheet is made
+against it, with it attached, the whole shark on it EXACTLY that body with the parts added.
+
 #### Sheet 1: the parts
 
 ```text
@@ -346,6 +350,10 @@ THE GRID (most important)
 - 1-block outline (#79728F) round each silhouette, never thicker.
 
 LAYOUT
+- The whole shark's body must be EXACTLY the attached bare body (its "rest" frame,
+  shark-sprite.png): the same outline, length, depth, snout, gill slits, notochord,
+  gut, second dorsal and anal fin, and the same shading, pixel for pixel, with the
+  eye and the parts added onto it.
 - Top: the WHOLE shark, assembled, as in the reference's "in game" image: facing
   RIGHT, straight and horizontal, 128 art pixels from tail tip to snout and 53 deep
   with its fins. Centred left to right.
