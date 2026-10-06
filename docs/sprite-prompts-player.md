@@ -498,3 +498,59 @@ already. The two eyes drawn to the larva's eye, 20 across to the Shark's 8, are 
 - **Not the marks':** the Dorsal Spines draw nothing on any shark, since the plan has none
   (`PLAN_ART.shark.spines`); and the Barbels card draws no barbels on any body, since it never
   sets `g.barbels`.
+
+### The Shark's jaws and lures
+
+The marks the larva's would not lend it: its jaws, drawn for a snout with the mouth on its
+underside, jutted past the Shark's as an underbite, and its lures, drawn to its own reach, stood
+taller than the arch the bake sizes the canvas to and were cut through at the top. 10 parts,
+`«C»` 4, `«N»` 3, `«W»` × `«H»` 72 × 56, so the sheet is 288 × 168 art pixels; the last two cells
+are empty. On green, with the shared block, and the belly's *mostly fill* block.
+
+The sizes are the Shark's, off its body: the mouth hinges 10 art pixels behind the snout tip, on
+the underside of the head, and the lower jaw runs forward from there along it. The painted lure
+roots on the brow and reaches 42 forward with an arch 26 high, the Deep Lantern 50 with 35; drawn
+to that, the game lays them at their size.
+
+Attach `shark-sprite.png` (its strike frame shows the mouth), `shark-parts-sprite.png`,
+`larva-head-sprite.png` (the larva's jaws and lures, the style), and `items-sheet-1-current.png`,
+`items-sheet-3-current.png` and `items-sheet-5-current.png`.
+
+```text
+PARTS (left to right, top to bottom)
+The jaws belong to the attached pale shark, whose mouth is on the UNDERSIDE of its
+pointed snout: the hinge is at the back corner of the mouth, under the eye, and the
+lower jaw runs forward from it along the underside of the snout, rising slightly toward
+the tip, stopping 1 art pixel short of the snout's tip. Each jaw's hinge is at the
+cell's left margin, at mid-height, cut flat: the game puts it on the hinge.
+1. Hinged Jaw, shut — the shark's lower jaw as a piece: 11 long, 4 deep at the hinge
+   and 3 at the front, pale like the shark's chin (#E8E4F8, shade #B8B0D8), a row of
+   small ivory triangle teeth (#f4ecd8), each 2 tall, along its top edge.
+2. Hinged Jaw, open — the same jaw swung down 30° about its hinge, and above it the dark
+   gape of the open mouth (#2a1e3a) as a wedge from the hinge forward, a row of small
+   ivory teeth along the upper edge of the gape too.
+3. Lunging Bite, shut — the same jaw with three long ivory fangs (#f4ecd8), each 2 wide
+   and 4 tall, standing up from its front half.
+4. Lunging Bite, open — that jaw swung down 30° as in 2, with the gape, the fangs
+   pointing up into it and two more hanging from the upper edge.
+5. Serrated Teeth, shut — the same jaw with a shark's saw edge: many close-set ivory
+   triangle teeth along its whole top, each 2 wide and 3 tall, notched.
+6. Serrated Teeth, open — that jaw swung down 30° as in 2, with the gape, saw teeth along
+   both the jaw and the upper edge of the gape.
+7. Parrot Beak, shut — a parrotfish's fused beak capping the underside and tip of the
+   snout: a slate-blue upper plate (#5a6a8a) over a teal lower one (#3a8a8a), a pale
+   cutting edge where they meet, 12 long and 7 deep, its point at the right.
+8. Parrot Beak, open — the same beak with the lower plate swung down 25° about its back
+   edge, the dark gape (#2a1e3a) between the plates.
+9. Illicium — a lure sized for the shark: a thin dark stalk (#3a3550), 2 thick, rising
+   from its root at the cell's bottom-left, arching up 26 and forward, its end 42 to the
+   right of the root, and a glowing cyan bulb (#3fd8ff, white-cyan centre #e8ffff) 9
+   across hanging from the end, its middle 8 above the root's level.
+10. Deep Lantern — the same lure longer: rising 35 and reaching 50 forward, its bulb 12
+    across, its middle 10 above the root's level. Root again at the bottom-left.
+11, 12. Empty: flat green.
+```
+
+**When it lands:** imported as the larva's head was, with `--body shark`, the jaws `:left` and the
+lures `:bottomleft` (the tip read off the bulb's cyan); the Shark's own marks then come before the
+ones it borrows from the larva.
