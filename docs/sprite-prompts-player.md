@@ -862,6 +862,13 @@ than flat #00FF00, soft glows, painterly texture, noise, sub-pixel detail, text,
 borders, shadows, a second animal.
 ```
 
+The parts sheet came back (`moray-parts-sprite.png`) well drawn but off the grid asked for: 176 ×
+96 art pixels at 9.64 image pixels each, 1697 × 927, where 8× was asked (an 8× try, 1408 × 768,
+came back stair-stepped and blocky, and is not kept). The whole is longer and slimmer than asked,
+168 long and 27 deep, the body about 164 long and 14 deep, 12 times its depth; its fins peak at 8
+behind the head and taper both ways, where an even 5 was asked; its tail is the rounded fin end, a
+paddle 12 long. Kept as drawn: it reads as a moray, and the bare body is drawn to it.
+
 #### Sheet 2: the bare body
 
 ```text
@@ -873,17 +880,18 @@ and the gut — with its eye, its dorsal fin, its anal fin and its tail taken of
 2 frames of the same body, side by side, left to right: "rest", "strike".
 
 THE GRID (most important)
-- Each frame is exactly 168 × 32 art pixels.
+- Each frame is exactly 176 × 28 art pixels.
 - Export scaled up 6× with nearest-neighbour, every art pixel a perfect solid 6 × 6
-  square block, so the image is 2016 × 192.
+  square block, so the image is 2112 × 168.
 - No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
   than one block. No dithering noise. Every block is one flat colour.
 - 1-block outline (#79728F) round the whole silhouette, never thicker.
 
 COMPOSITION
 - Strict side view, facing RIGHT, the body perfectly straight and horizontal.
-- From its pointed end to the snout tip the body is 152 art pixels long and 17 deep at
-  its deepest, as on the parts sheet, tapering to a clean point at the left.
+- From its pointed end to the snout tip the body is 164 art pixels long and 14 deep at
+  its deepest, just behind the head, EXACTLY as on the parts sheet, tapering to a clean
+  point at the left where the tail's rounded fin covered it.
 - Where the eye goes the head is plain body colour, shaded as the rest of the head: no
   socket, no hole, no dotted outline. Where the fins joined, the outline runs smooth
   along the back and the belly.
