@@ -165,3 +165,176 @@ Both rounds' prompts are in the history: `git show 7ed5410:docs/sprite-prompts-p
 mark is placed where its painter put the painted one (`Sheet.mark`), with its anchor read off
 its shape by the import: the middle, a flat edge, a jaw's hinge, a lure's root.
 
+
+### The back, the belly and the flank
+
+What is still painted on the larva after the head and the tail: everything that stands off its
+back, hangs under its belly or shows through its flank. Painted on the drawn larva these came
+out as a few faint pixels each (the coral a row of pink dots, the quills a grey smudge, the
+claws a speck under the jaw), so they are what the board's *Mutations* group says least about.
+
+**A row is one part, placed again and again.** The painters stand one to seven spines along
+the back, five quills, four rime crystals, a keel of eight lead plates, a row of lights; each is
+drawn here once, and the game places it at every point its painter does, along the drawn
+outline, so a row follows the back's curve where one picture of the whole row would stand off it
+in a gap, as the ribbon fin did. Two of the coral, so a crust of them is not a stamp.
+
+**A coat is clipped to the body.** The crazing, the mottling and the mantle's rings cover the
+flank rather than sit on one place in it; each is drawn as a patch the size of the larva's
+trunk, and the game lays it only where the body is, so its edge need not match the outline.
+
+The larva's trunk is 26 art pixels deep behind its head, 16 at two thirds of the way back and
+8 at the tail stalk, which is the room these have.
+
+Also attach `larva-head-sprite.png` and `larva-tail-sprite.png`, the parts already drawn, for
+the style.
+
+### The back
+
+8 parts, `«C»` 4, `«N»` 2, `«W»` × `«H»` 32 × 32, so the sheet is 128 × 64 art pixels. Each
+stands up off the back, its foot cut flat at the cell's bottom margin. Attach
+`items-sheet-1-current.png`, `items-sheet-2-current.png`, `items-sheet-4-current.png` and
+`items-sheet-5-current.png`.
+
+```text
+PARTS (left to right, top to bottom)
+Every part here stands up off the fish's back: its foot is cut flat and sits on the cell's
+bottom margin, in the middle of the cell. The game stands several of each along the back.
+1. Dorsal Spine — one ivory spine (#f4ecd8, shaded #c8bca0 on its back edge), 4 wide at
+   its foot and 10 tall, raked back (its point to the LEFT), a small web of the larva's
+   fin colour (#D6D0ED) behind its foot, 3 long.
+2. Volley Quill — one loose quill, ivory, 2 thick and 16 long, raked back flat, about
+   30° above level (its point up and to the LEFT), a pale point (#fff6e2), and a dark
+   reddish-brown socket (#6a3a2a) 3 across where its foot goes into the back.
+3. Rime Crystal — one shard of ice standing up, 5 wide at its foot and 8 tall, leaning a
+   little forward (its point to the RIGHT), flat facets of icy blue-white (#d8f6ff,
+   #a8d8f0, shade #78a8c8) and a white point.
+4. Coral Knob — a knobbed lump of crusting coral, pink-orange (#f08a78, pale tips
+   #ffd8cc, shade #b85a5a), 8 wide and 6 tall, rounded on top.
+5. Coral Branch — a short branching coral in the same colours, 8 wide and 9 tall, three
+   stubby branches with rounded pale tips.
+6. Prickle — a short ivory thorn, 2 wide at its foot and 4 tall, leaning a little back.
+7. Porcupine Quill — the prickle grown into a quill: ivory, 3 wide at its foot and 10
+   long, raked hard back (about 45°, its point up and to the LEFT), a pale point.
+8. Stone Wart — a rounded knob of grey mottled stone skin (#7a7480, #5a5460, highlight
+   #9a94a0), 7 wide and 5 tall, a barb of yellow-green venom (#ace723) 2 wide poking
+   out of its top. The yellow-green is a yellow-green, never the background's pure green.
+```
+
+### The belly
+
+9 parts, `«C»` 3, `«N»` 3, `«W»` × `«H»` 40 × 24, so the sheet is 120 × 72 art pixels: the
+claws and the club are long and low. Attach `items-sheet-1-current.png`,
+`items-sheet-3-current.png`, `items-sheet-4-current.png` and `items-sheet-5-current.png`.
+
+```text
+PARTS (left to right, top to bottom)
+1. Pincer Claw — a crab's pincer reaching forward from under the head: bright orange
+   (#f08030, highlight #ffb070, shade #b85020), a palm 6 deep, the moving finger over the
+   fixed one with a dark gap (#2a1e3a) between them, 12 long and 6 tall, its points to
+   the RIGHT. Its root is at the left, cut flat, at mid-height.
+2. Vivisect Claw — the same pincer with a saw of small dark teeth (#3a2020) along the
+   inside edge of both fingers.
+3. Mantis Club — a mantis shrimp's striking arm folded flat under the jaw: a mint arm
+   (#7ae0b0, shade #3a9a7a) 3 thick and 22 long, level, ending at the RIGHT in a heavy
+   round orange club (#f08030, highlight #ffb070) 7 across. Its root is at the left, cut
+   flat, at mid-height. The mint is a blue-mint, never the background's pure green.
+4. Frill Tentacle — one short stinging tentacle hanging from the belly: pale pink
+   (#ffd0e0, shade #d8a0c0), 2 thick and 10 long, hanging down and curling back (its tip
+   to the LEFT), from a violet base (#8a5ab8) 4 wide, a bright bead (#f0e0ff) at its tip.
+   Its base is at the cell's top margin, cut flat.
+5. Roe Clutch — five pale pink roe eggs (#f4c8e0, shade #c898b8, highlight #fff0f8), each
+   5 across with a dark eye spot (#2a1e3a), in a row bulging down out of the belly, every
+   other one set a pixel lower: 24 wide and 8 tall. Its top edge is cut flat at the
+   cell's top margin: it sits on the belly line.
+6. Lead Plate — one dull plate of lead seen through the belly: dark grey (#3e424c), its
+   rim darker (#2a2c34), a dim sheen (#9498a4) high on it, 6 wide and 4 tall, rounded.
+   Centred.
+7. Photophore — one light organ: a dark socket (#1a1630) 5 wide and 4 tall, a flat bright
+   cyan lens (#3fd8ff, white-cyan centre #e8ffff) 3 wide and 2 tall in it. Centred.
+8. Mantle Funnel — a squid's funnel under the body, pointing FORWARD: a short muscular
+   cone, the larva's deep shadow and body colours, 14 long, 3 tall at its root on the
+   left and 5 at its open mouth on the right, the mouth dark (#2a1e3a). Its top edge is
+   cut flat at the cell's top margin: it hangs under the belly.
+9. Lie in Wait Beard — tassels of skin hanging under the jaw, a stonefish's fringe: six
+   ragged flaps, the larva's body and shadow colours mottled with grey (#9a94a0), from 3
+   to 7 long, along a strip 20 wide. Their tops are cut flat at the cell's top margin.
+```
+
+### The flank
+
+12 parts, `«C»` 3, `«N»` 4, `«W»` × `«H»` 72 × 32, so the sheet is 216 × 128 art pixels: the
+coats are as long as the trunk. Attach `items-sheet-1-current.png`, `items-sheet-2-current.png`,
+`items-sheet-4-current.png` and `items-sheet-5-current.png`.
+
+```text
+PARTS (left to right, top to bottom)
+Every part here lies on the fish's side, inside its outline, seen through its pale skin.
+Each is centred in its cell unless it says otherwise. None has a joined edge.
+1. Ink Sac — a round dark violet-black sac (#08060e, rim #1a1428, a gloss highlight
+   #787896 high on it), 8 across, and a duct (#14101e) 2 thick running from it forward
+   and a little down, 10 long, to the RIGHT.
+2. Electric Organ — a field of electric cells: five columns of four small pale cells
+   (#c8e8ff), each cell 3 wide and 2 tall, in a slate-blue field (#5a6a8a, shade
+   #3a4a6a), every other column set a pixel lower; 22 wide and 14 tall, its corners
+   rounded, one gold glint (#ffd84a) on a cell.
+3. Galvanic Cells — the fish's lateral line become a crooked live wire: a lilac line
+   (#b8a8ff, bright #e8e0ff at each bend), 2 thick, zigzagging level in seven straight
+   runs, 38 long and 6 tall, a bright white-lilac spark at its front (RIGHT) end.
+4. Vent Gland — three sulphur glands on the gill cover, each a round blister 4 across
+   (#d4f04a, gold core #ffd84a, shade #8aa020), in a loose column 7 wide and 12 tall.
+   Flat bright colour: the game adds the glow. The yellow is a yellow, never the
+   background's pure green.
+5. Cavitation — a bladder of gas seen through the skin as a ring: a pearl ring (#e8f4ff,
+   shade #a8b8d0), 10 across and 2 thick, empty inside (the background shows through it),
+   one white glint high on its left.
+6. Venom Gland — a round violet gland (#8a4ac8, shade #5a2a8a, highlight #b888e8) 10
+   across, a yellow-green core (#ace723) 4 across showing in it.
+7. Nematocyst Gland — the same gland ringed by eight small stinging capsules (#ecffc8),
+   each 2 across, and a duct of the yellow-green (#ace723) 2 thick running from it
+   forward, 12 long, to the RIGHT.
+8. Blood Lamp Coal — one burning coal, 4 across: a deep red rim (#8a1a10), hot red-orange
+   (#ff5a28) inside it, a yellow-white centre (#ffe0a0). Flat bright colour, no glow.
+9. Open Veins — three blue veins under the skin (#4a78c8, dark edge #2a4a8a), 2 thick,
+   each wandering and branching once, from 40 to 50 long, stacked about 4 apart, their
+   front ends together at the RIGHT where they leave the gills; one red drop of blood
+   (#c82030) beading on the lowest.
+10. Brittle Frame — a patch of crazed skin, the fish's side cracked like fired glass:
+    about twelve short pale slivers (#ecf4ea), 1 art pixel wide and from 4 to 8 long,
+    each at its own angle, a few meeting, spread over a patch 56 wide and 18 tall. Only
+    the slivers are drawn; between them is background.
+11. Lie in Wait — a stonefish's disruptive coat: large irregular blotches of grey-violet
+    (#6a6478) and pale grey (#d8d2e0), from 5 to 10 across, spread over a patch 64 wide
+    and 22 tall, some touching, background between them.
+12. Mantle Rings — the rings of muscle round a squid's mantle, seen side-on: five upright
+    bands of the larva's deep shadow (#B8B0D8) darkened to #9890b8, each 2 wide and 28
+    tall, 6 apart, over a patch 28 wide. Only the bands are drawn.
+```
+
+**What to send back:** the three PNGs. Check that the cells are on the grid (the importer cuts
+by position), that no part runs into its neighbour's cell, and that the background is one green
+right up to every outline.
+
+### The code side, when they land
+
+| Part | Anchor | Placed |
+| --- | --- | --- |
+| spine, quill, crystal, coral, prickle, porcupine quill, wart | the middle of the flat bottom edge | each point its painter stands one on the back; a prickle and a porcupine quill mirrored under the belly too |
+| claws, club (Ballistic) | the middle of the flat left edge | under the head, reaching forward; a second Pincer Claws a second claw behind the first |
+| frill, roe, funnel, beard | the middle of the flat top edge | on the belly line |
+| lead plate, photophore, coal, the flank's patches | the middle | where the painter puts its painted one |
+| galvanic line, veins | the middle of the right end | their front ends, behind the gills |
+| ink sac, nematocyst gland | the sac's middle, set by hand | as the open beak's was: the duct moves the middle |
+
+The coats (crazing, mottling, mantle rings) need a layer the bake does not have yet, laid over
+the body and clipped to it (`drawnBody`); the lights (photophores, coals, vent glands, the
+galvanic spark) keep the painter's `s.light`, so the bloom stays where the drawn lens is.
+
+Three marks need no art of their own: Twin Spout's second sac is the Archer Spit's sac drawn
+again behind the first, Flash Sense's flank row is the photophore placed higher, and the
+Electric Eel's organ is the electric field placed again back to the tail.
+
+**Still painted after these:** the Gill Rakers' comb and slits, the Crushing Pharynx's jowl and
+the Moray Jaws' second jaw, which are the head's, missed by its sheet; the Urchin's thorns,
+which radiate from the body's middle and want a mark the game can turn; and the Whale Shark's
+spots.

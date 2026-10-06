@@ -517,7 +517,8 @@ mutations are drawn too (`SpriteArt.marks`): the Tapetum's eye and the Forked Ca
 in the round ones' places, the jaws, the beak, the lures, the second and third eyes, the halo,
 the nares, the pores, the pouch, the barbels, the needle, the siphon and the bloom, each placed
 where its painter put its painted one (`Sheet.mark`). The rest is still painted, placed on the
-drawn outline and shaded in the drawn swatches. Next are the back, the belly and the flank.
+drawn outline and shaded in the drawn swatches. Next are the back, the belly and the flank,
+prompted as three sheets of their own.
 
 ## Later
 
