@@ -399,7 +399,14 @@ export const SPRITES: Record<string, SpriteArt> = {
   // head, so the whole's landmarks are given), and its arm and tentacle, drawn again solid,
   // `node scripts/import-marks.mjs docs/media/reference/squid-arms-sprite.png --body squid --cols 2
   // --rows 1 --names arm:left,tentacle:left`. Its fins are its `tail`; it has no pectoral or pelvic
-  squid: { w: 107, h: 28, snout: 106, tail: 5, axis: 14, marksFrom: 'larva', marks: LARVA_MARKS,
+  // its beaks and lures, `squid-head-sprite.png`, imported as the Shark's head sheet with `--body squid`: its mouth is a beak
+  // where its arms root, so it hinges there, at the head's front edge: further back the dark beak
+  // lay on its eye, which sits only 7 behind it. Every jaw mutation is that beak in its card's look
+  squid: { w: 107, h: 28, snout: 106, tail: 5, axis: 14, hinge: [105, 15.5], marksFrom: 'larva',
+           marks: { ...LARVA_MARKS, jaw: { at: [0, 3.5] }, 'jaw-open': { at: [0, 3.5] }, fangs: { at: [0, 3.5] },
+                    'fangs-open': { at: [0, 3.5] }, saw: { at: [0, 3.5] }, 'saw-open': { at: [0, 3.5] },
+                    beak: { at: [0, 3.5] }, 'beak-open': { at: [0, 3.5] },
+                    illicium: { at: [0.5, 31], tip: [44.5, 22.5] }, lantern: { at: [0.5, 41], tip: [54.0, 30.0] } },
            markSize: { tapetum: 0.7, foureye: 0.7, mantle: 0 },
            parts: { scale: 1.052, at: { eye: [91.3, 8.2], tail: [5, -9.7] } },
            arm: { root: 0, tip: 42, axis: 2.5, at: [106, 14], spread: 10, reach: 44 },

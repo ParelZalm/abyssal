@@ -718,53 +718,20 @@ place (`drawnArms`); its fins are its `tail` though it has arms (`posesFor`), an
 painted plan carries are left to the drawn pectoral it does not have, so none show. It wears the
 larva's marks, its eyes at 0.7, **and not the Mantle Pump's rings**, which its form always has
 and which banded it grey: a squid's mantle is the pump (`markSize` 0). Judged on the board: the
-marks sit as on the Shark, but the jaws show none, since it has no hinge — a squid's mouth is a
-beak among its arms, and wants a mark of its own — and the lure arches high off its head.
+marks sit as on the Shark; its jaws and lures are its own, drawn below.
 
-### The Squid's beak and lures
+### ~~The Squid's beak and lures~~ — done
 
-What the larva's marks could not lend it. Its jaws: a squid has no jaw to hinge, so the larva's
-showed none; a squid's mouth is a beak among its arms, so every jaw mutation is drawn as one, in
-the look of its card. Its lures: drawn to the larva's reach, they arched high off its head; the
-painted lure on the Squid roots on the top of its head behind the eye and reaches 44 forward with
-an arch 30 high, the Deep Lantern 54 with 40. 10 parts, `«C»` 4, `«N»` 3, `«W»` × `«H»` 72 × 56, so
-the sheet is 288 × 168 art pixels, the last two cells empty. With the shared block, the belly's
-*mostly fill* block, and on green.
+`docs/media/reference/squid-head-sprite.png`, 10 parts in a 4 × 3 grid of 72 × 56 cells, at 8×:
 
-Attach `squid-sprite.png`, `squid-parts-sprite.png`, `shark-head-sprite.png` (the Shark's jaws and
-lures, how a form's are cut), and `items-sheet-1-current.png`, `items-sheet-3-current.png`,
-`items-sheet-5-current.png`.
-
-```text
-PARTS (left to right, top to bottom)
-Parts 1–8 are the squid's BEAK: a parrot-like beak of hard chitin that sits at the
-front of its head where the arms root, the upper mandible hooked down over the lower,
-pointing RIGHT. Each beak's back edge is at the cell's left margin, at mid-height, cut
-flat: the game puts it at the root of the arms. Solid dark chitin (#2a1e3a, a lit edge
-#5a4a6a on top, darkest #140e1e below) unless it says, outlined like the squid.
-1. Beak, shut — the plain beak: 9 long and 7 deep, the two mandibles closed, the hook of
-   the upper one curving down past the lower's tip.
-2. Beak, open — the same beak with the lower mandible swung down 30° about its back edge,
-   the inside of the mouth between them a dusky pink (#8a5a7a).
-3. Hooked Beak, shut — for a lunging bite: the same beak with the upper mandible's hook
-   drawn out long, 4 past the lower's tip, its point ivory (#f4ecd8).
-4. Hooked Beak, open — that beak swung open as in 2.
-5. Saw Beak, shut — the same beak with both cutting edges notched into a saw of small
-   ivory teeth (#f4ecd8), each 2 wide and 2 tall.
-6. Saw Beak, open — that beak swung open as in 2, the saw on both edges.
-7. Parrot Beak, shut — the same beak in a parrotfish's colours: a slate-blue upper
-   mandible (#5a6a8a) over a teal lower one (#3a8a8a), a pale cutting edge where they
-   meet.
-8. Parrot Beak, open — that beak swung open as in 2.
-9. Illicium — a lure sized for the squid: a thin dark stalk (#3a3550), 2 thick, rising
-   from its root at the cell's bottom-left, arching up 30 and forward, its end 44 to the
-   right of the root, and a glowing cyan bulb (#3fd8ff, white-cyan centre #e8ffff) 11
-   across hanging from the end, its middle 8 above the root's level.
-10. Deep Lantern — the same lure longer: rising 40 and reaching 54 forward, its bulb 14
-    across, its middle 10 above the root's level. Root again at the bottom-left.
-11, 12. Empty: flat green.
+```bash
+node scripts/import-marks.mjs docs/media/reference/squid-head-sprite.png --body squid --cols 4 --rows 3 --names jaw:left,jaw-open:left,fangs:left,fangs-open:left,saw:left,saw-open:left,beak:left,beak-open:left,illicium:bottomleft,lantern:bottomleft
 ```
 
-**When it lands:** imported as the Shark's head sheet was, with `--body squid`, the beaks under the
-jaw names (`jaw`, `fangs`, `saw`, `beak`, each with `-open`) `:left` and the lures `:bottomleft`; and
-the Squid given a hinge at its arms' root, in front of its eye on its midline.
+As it went: a squid has no jaw to hinge, and its mouth is a beak among its arms, so every jaw
+mutation is that beak in its card's look — plain, hooked for the Lunging Bite, notched for the
+Serrated Teeth, slate and teal for the Parrot Beak — under the jaw names, hinged at the head's
+front edge just under the midline (`SpriteArt.hinge`): set further back, the dark beak lay on its
+eye, 7 behind the front, and could not be told from the pupil. The lures, drawn to its reach, 44
+and 54 forward, arch at the painted lure's height. The prompt is in the history:
+`git show 400ceec:docs/sprite-prompts-player.md`.
