@@ -219,41 +219,56 @@ wants.
 ### The belly
 
 9 parts, `«C»` 3, `«N»` 3, `«W»` × `«H»` 40 × 24, so the sheet is 120 × 72 art pixels: the
-claws and the club are long and low. Attach `items-sheet-1-current.png`,
+claws and the club are long and low. Attach `larva-back-sprite.png` and
+`larva-back-redraw-sprite.png` with the rest, and `items-sheet-1-current.png`,
 `items-sheet-3-current.png`, `items-sheet-4-current.png` and `items-sheet-5-current.png`.
 
+Written again after the back came in: the larva is baked at about a third of its drawing, so
+every part here is at least 3 pixels thick and the smallest are a size larger, and it carries the
+redraw's block for solid fill.
+
 ```text
+MOSTLY FILL, LITTLE OUTLINE (most important)
+The game shows these at about half size. A part that is mostly outline turns into a grey
+smudge there. Each part must be a SOLID shape of its own colours, at least 3 art pixels
+of fill across at its thickest, with the outline only round its edge. No stalks or
+fingers thinner than 3 art pixels including their outline, no single-pixel lines inside
+a part, no gaps or holes except where the item says.
+
 PARTS (left to right, top to bottom)
 1. Pincer Claw — a crab's pincer reaching forward from under the head: bright orange
-   (#f08030, highlight #ffb070, shade #b85020), a palm 6 deep, the moving finger over the
-   fixed one with a dark gap (#2a1e3a) between them, 12 long and 6 tall, its points to
-   the RIGHT. Its root is at the left, cut flat, at mid-height.
+   (#f08030, highlight #ffb070, shade #b85020), a solid palm 7 deep, the moving finger
+   over the fixed one, each finger 3 thick, a dark wedge of gap (#2a1e3a) between them,
+   14 long and 7 tall, its points to the RIGHT. Its root is at the left, cut flat, at
+   mid-height.
 2. Vivisect Claw — the same pincer with a saw of small dark teeth (#3a2020) along the
-   inside edge of both fingers.
-3. Mantis Club — a mantis shrimp's striking arm folded flat under the jaw: a mint arm
-   (#7ae0b0, shade #3a9a7a) 3 thick and 22 long, level, ending at the RIGHT in a heavy
-   round orange club (#f08030, highlight #ffb070) 7 across. Its root is at the left, cut
-   flat, at mid-height. The mint is a blue-mint, never the background's pure green.
+   inside edge of both fingers, the fingers still 3 thick.
+3. Mantis Club — a mantis shrimp's striking arm folded flat under the jaw: a solid mint
+   arm (#7ae0b0, shade #3a9a7a) 4 thick and 22 long, level, ending at the RIGHT in a
+   heavy round orange club (#f08030, highlight #ffb070) 8 across. Its root is at the
+   left, cut flat, at mid-height. The mint is a blue-mint, never the background's pure
+   green.
 4. Frill Tentacle — one short stinging tentacle hanging from the belly: pale pink
-   (#ffd0e0, shade #d8a0c0), 2 thick and 10 long, hanging down and curling back (its tip
-   to the LEFT), from a violet base (#8a5ab8) 4 wide, a bright bead (#f0e0ff) at its tip.
-   Its base is at the cell's top margin, cut flat.
+   (#ffd0e0, shade #d8a0c0), 3 thick and 11 long, hanging down and curling back (its tip
+   to the LEFT), from a violet base (#8a5ab8) 5 wide, a bright bead (#f0e0ff) 3 across at
+   its tip. Its base is at the cell's top margin, cut flat.
 5. Roe Clutch — five pale pink roe eggs (#f4c8e0, shade #c898b8, highlight #fff0f8), each
-   5 across with a dark eye spot (#2a1e3a), in a row bulging down out of the belly, every
-   other one set a pixel lower: 24 wide and 8 tall. Its top edge is cut flat at the
-   cell's top margin: it sits on the belly line.
+   5 across with a dark eye spot (#2a1e3a) 2 across, in a row bulging down out of the
+   belly, touching, every other one set a pixel lower: 25 wide and 8 tall. Its top edge is
+   cut flat at the cell's top margin: it sits on the belly line.
 6. Lead Plate — one dull plate of lead seen through the belly: dark grey (#3e424c), its
-   rim darker (#2a2c34), a dim sheen (#9498a4) high on it, 6 wide and 4 tall, rounded.
+   rim darker (#2a2c34), a dim sheen (#9498a4) high on it, 8 wide and 5 tall, rounded.
    Centred.
-7. Photophore — one light organ: a dark socket (#1a1630) 5 wide and 4 tall, a flat bright
-   cyan lens (#3fd8ff, white-cyan centre #e8ffff) 3 wide and 2 tall in it. Centred.
-8. Mantle Funnel — a squid's funnel under the body, pointing FORWARD: a short muscular
-   cone, the larva's deep shadow and body colours, 14 long, 3 tall at its root on the
-   left and 5 at its open mouth on the right, the mouth dark (#2a1e3a). Its top edge is
-   cut flat at the cell's top margin: it hangs under the belly.
-9. Lie in Wait Beard — tassels of skin hanging under the jaw, a stonefish's fringe: six
-   ragged flaps, the larva's body and shadow colours mottled with grey (#9a94a0), from 3
-   to 7 long, along a strip 20 wide. Their tops are cut flat at the cell's top margin.
+7. Photophore — one light organ: a dark socket (#1a1630) 6 wide and 5 tall, a flat bright
+   cyan lens (#3fd8ff, white-cyan centre #e8ffff) 4 wide and 3 tall in it. Centred.
+8. Mantle Funnel — a squid's funnel under the body, pointing FORWARD: a short solid
+   muscular cone, the larva's deep shadow and body colours, 14 long, 4 tall at its root
+   on the left and 6 at its open mouth on the right, the mouth dark (#2a1e3a). Its top
+   edge is cut flat at the cell's top margin: it hangs under the belly.
+9. Lie in Wait Beard — tassels of skin hanging under the jaw, a stonefish's fringe: five
+   ragged flaps, each 3 wide, the larva's body and shadow colours mottled with grey
+   (#9a94a0), from 4 to 8 long, along a strip 20 wide. Their tops are cut flat at the
+   cell's top margin.
 ```
 
 ### The flank
