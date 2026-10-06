@@ -8,6 +8,8 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-06
+
 - **The larva's back is drawn.** What stands up off it is drawn now: the Dorsal Spines, the
   Spine Volley's quills (three, five for a Quill Storm), the Brine Gland's rime, the coral's
   knobs and branches, the Inflation's prickles and the Porcupine's quills, the Stonefish's warts.
@@ -78,7 +80,8 @@ The column game: one open water column nine kilometres deep, five zones sealed b
 that open to a body big enough, a draft of three mutations at every growth, guardians, the
 Leviathan at the bottom, and the codex. Kept as the tag `v0.1.0`.
 
-[Unreleased]: https://github.com/ParelZalm/abyssal/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/ParelZalm/abyssal/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/ParelZalm/abyssal/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/ParelZalm/abyssal/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/ParelZalm/abyssal/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/ParelZalm/abyssal/releases/tag/v0.1.0
