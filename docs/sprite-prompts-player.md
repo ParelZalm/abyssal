@@ -281,3 +281,106 @@ Electric Eel's organ is the electric field placed again back to the tail.
 the Moray Jaws' second jaw, which are the head's, missed by its sheet; the Urchin's thorns,
 which radiate from the body's middle and want a mark the game can turn; and the Whale Shark's
 spots.
+
+---
+
+## The Shark — Stage A
+
+The first of the five forms (`content/forms.ts`): three different Predator mutations rebuild the
+larva onto the shark's plan, with Frenzy. **It is still the player**, not a shark of the roster:
+the player keeps the larva's see-through body on every form (`Genome.smoke`), so a transformed
+player is unmistakable among real sharks, and it may never wear a guardian's silhouette, so it
+must not read as the Great White. It is the larva grown into a shark's shape: the same pale
+lavender glass, the notochord and the gut showing, the same eye, on a torpedo with a shark's fins.
+
+The shape is the plan's (`PLANS.shark`, `PLAN_ART.shark` in `content/form.ts`): a long torpedo with
+a pointed snout, the mouth under it, a small eye about an eighth of the way back, five gill slits,
+a tall first dorsal at mid-body, big raked pectorals, small pelvics, a small second dorsal and
+anal fin, and a tail whose upper lobe is longer than its lower.
+
+**The parts image is the first draft of how it comes apart**, as the larva's was: the bare body,
+the eye, the first dorsal (the `back` part), the pectoral, the pelvic (the `belly` part) and the
+tail, which are what the bake stretches and swaps (`PartName`). The second dorsal, the anal fin and
+the gill slits stay on the body.
+
+**Attach:** `larva.webp` (the larva it grows from: the style, the colours, the eye),
+`cave-room.webp` and `tank-room.webp` for the world, `angler.webp` for a finished animal, and
+`greatwhite.webp`, the boss, as what it must not look like. Generate each image on its own.
+
+```text
+STYLE (shared by every image)
+Reference sheet for a game creature: the player character of the game, a pale glowing
+fish larva, grown into the shape of a young shark. The attached larva sheet is the same
+creature before it changed: keep its character and its colours exactly — see-through,
+near-white with a cool lavender cast, its spine and gut showing through, glowing softly
+against the dark — on a shark's body. It must NOT look like the attached great white:
+not grey, not white-bellied, no teeth showing, no real shark's skin.
+Match the attached images: dark navy water, side-on, the look of dark underwater pixel
+art. Exactly one creature, nothing else in the frame: no rock, no plants, no bubbles,
+no particles, no text except where asked. Strict lateral profile, facing RIGHT, body
+straight and horizontal, not curved or swimming. Every fin spread open so its outline
+reads. The whole animal fits in the frame with a margin around it. Output as a large
+lossless PNG, at least 2048 px wide.
+
+ANATOMY (must be accurate)
+A young shark's body, about 4.5 times as long as it is deep (fins not counted): a
+smooth torpedo, deepest a third of the way back, tapering to a pointed conical snout in
+front and to a narrow tail stalk behind.
+- Head: the pointed snout; the mouth a closed crescent seam UNDER the snout, set back
+  from its tip, no teeth showing. One round eye about an eighth of the body length back
+  from the snout tip, a little above the middle line: the larva's eye, smaller — a black
+  pupil, a thin pale-silver ring, one small white glint high on its front — about a
+  twelfth of the body length across.
+- Five gill slits: short upright curved seams in a row behind the head, in front of the
+  pectoral fin, a shade darker than the body.
+- First dorsal fin: tall and triangular, raked back, its front edge curved, its trailing
+  edge cut in a shallow notch, rising from the middle of the back; about as tall as the
+  body is deep.
+- Pectoral fins: big, long and sickle-shaped, raked back and down from low behind the
+  gills; one shows, the far one hidden behind the body.
+- Pelvic fin: small, triangular, under the belly two thirds of the way back.
+- Second dorsal and anal fin: small triangles near the tail stalk, top and bottom.
+- Tail: a shark's tail, the upper lobe long and swept up and back, the lower lobe
+  shorter, a notch near the upper lobe's tip; the notochord runs up into the upper lobe.
+- See-through like the larva: the straight notochord runs from behind the head into the
+  tail's upper lobe, and a small darker rounded gut sits low behind the pectoral fin.
+  No scales, no denticles, no stripes or spots.
+Colours, the larva's: body pale near-white with a lavender tint (#e8e4f8 to #b8b0d8),
+fins paler and more see-through (#f4f2ff at their edges), notochord a faint cool grey
+line, gut a muted dusky violet (#6a5a8a), eye black with a pale-silver ring, outline
+#79728f.
+
+IMAGE 1 — "in game"
+The shark fully rendered in the attached images' style, on a flat solid background of
+#071731. It is the brightest thing in the frame: lit pale, with only a small, tight soft
+halo round it.
+
+IMAGE 2 — "flat"
+The same shark, same pose, same outline, flat colour only: no shading, no highlights,
+no glow, no outline stroke, no texture. Each region one solid colour: body, first
+dorsal, pectoral, pelvic, second dorsal, anal fin, tail, gill slits, eye ring, pupil,
+notochord, gut. Flat white background.
+
+IMAGE 3 — "parts"
+The same shark taken apart, like a technical exploded diagram: the bare body (head and
+trunk with the gill slits, the second dorsal and the anal fin still on it, the
+notochord and gut inside it), the eye, the first dorsal fin, the pectoral fin, the
+pelvic fin, and the tail — each drawn separately with a clear gap, in its original
+position and orientation, pulled slightly outward, each with a small plain label. Show
+on the bare body, as faint dotted outlines, where each part sat. Flat white background.
+
+IMAGE 4 — "palette"
+A single row of 8 large square colour swatches taken from image 1, each with its hex
+code under it: outline, deep shadow, body, body highlight, fin, gut, eye ring, pupil.
+
+AVOID
+Three-quarter or front views, curved or bent bodies, a dynamic swimming pose, several
+animals, a scene, grey or white-bellied shark colouring, visible teeth, an open mouth,
+a great white's bulk or face, scales, stripes or spots, smooth gradients, big soft bloom
+or halos, depth of field, cute cartoon features (eyelashes, smile, blush), watermarks,
+frames, borders.
+```
+
+**What to send back:** the four images, or the one you choose if you generate several. Its Stage
+B — the parts sheet first, then the bare body with the parts sheet attached, as the larva went —
+is written from the chosen sheet, so its proportions and its parts are the ones you picked.
