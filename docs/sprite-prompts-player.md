@@ -203,9 +203,18 @@ thick averages into its own outline, so what stands off the body is drawn at no 
 drawing (`Placed.least`), and a prickle at its whole. A Spine Volley is three quills and a Quill
 Storm five, spread along the back: five at the painted spacing crossed each other's outlines into a
 lattice. The prickles and the porcupine quills under the belly are the back's turned over
-(`Placed.flip`). Weakest as drawn: the spine, mostly outline round a sliver of ivory, so it reads
-grey; the knob, a flat cushion; and the branch. The prompt is in the history:
-`git show 3078a75:docs/sprite-prompts-player.md`.
+(`Placed.flip`). The spine, the knob and the branch came back mostly outline, a flat cushion and a
+trophy, and the spine read grey at half size; they were drawn again on a sheet of their own,
+`larva-back-redraw-sprite.png` (3 × 1 cells of 32 × 32, at 8×), asked for solid fill with the
+outline only round it:
+
+```bash
+node scripts/import-marks.mjs docs/media/reference/larva-back-redraw-sprite.png --body larva --cols 3 --rows 1 --names spine:bottom,coral:bottom,coral2:bottom
+```
+
+Both prompts are in the history: `git show 3078a75:docs/sprite-prompts-player.md` for the sheet;
+the redraw's added a block, *mostly fill, little outline*, which every part standing off the body
+wants.
 
 ### The belly
 
