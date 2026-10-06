@@ -513,3 +513,101 @@ from the hinge under the eye. Its lures, drawn to the larva's reach, were stretc
 and stood taller than the arch the bake sizes the canvas to, and were cut through; these are drawn
 to the Shark's own reach, 42 and 50 forward, and lie at their size. The Shark's own marks come
 before the larva's it wears. The prompt is in the history: `git show b652617:docs/sprite-prompts-player.md`.
+
+---
+
+## The Squid — Stage A
+
+The second form (`content/forms.ts`): three different Sprinter mutations rebuild the larva onto the
+squid's plan, with a mantle pump and a siphon. As with the Shark, **it is still the player**: the
+larva's pale lavender glass on a squid's body, the larva's big eye, which suits a squid, and what
+shows through it is a squid's — the pen (gladius) where the larva has its notochord, and the gut.
+It must not read as the Vampire Squid, dark red and webbed, or the Giant Squid, the deep's boss.
+
+The shape is the plan's (`PLANS.squid`, `PLAN_ART.squid`): a torpedo of a mantle with the fins at
+its pointed back end, a head with the eye, and eight arms and two longer feeding tentacles that
+reach forward from it. **The arms are rigged**, as the Vampire Squid's and the Giant Squid's are
+(`grasp`): its picture is the body alone, and one arm and one tentacle are each drawn once, as a
+part of their own, and laid by the game at the head. So the parts image is the bare body, the eye,
+the fins (the `tail` part), one arm and one tentacle; there is no pectoral or pelvic.
+
+**Attach:** `larva.webp` (the larva it grows from), `shark.webp` (the first form, how far the
+larva's look carries), `cave-room.webp` and `tank-room.webp`, and `vampiresquid.webp` and
+`giantsquid.webp` as what it must not look like. Generate each image on its own.
+
+```text
+STYLE (shared by every image)
+Reference sheet for a game creature: the player character of the game, a pale glowing
+fish larva, grown into the shape of a young squid. The attached larva sheet is the same
+creature before it changed, and the attached pale shark is it as another form: keep
+their character and colours exactly — see-through, near-white with a cool lavender
+cast, what is inside showing faintly through, glowing softly against the dark — on a
+squid's body. It must NOT look like the attached vampire squid or giant squid: not red,
+not dark, no web between the arms, no cloak.
+Match the attached images: dark navy water, side-on, the look of dark underwater pixel
+art. Exactly one creature, nothing else in the frame: no rock, no plants, no bubbles,
+no particles, no ink, no text except where asked. Strict lateral profile, the arms
+pointing RIGHT and the mantle's tip to the LEFT, body straight and horizontal, arms
+held straight out forward together, not curling or swimming. Fins spread open so their
+outline reads. The whole animal fits in the frame with a margin around it. Output as a
+large lossless PNG, at least 2048 px wide.
+
+ANATOMY (must be accurate)
+A young squid, side view, the mantle and head about 3 times as long as the mantle is
+deep.
+- Mantle: a smooth torpedo, deepest just behind the head, tapering to a pointed tip at
+  the back (left). Its front edge, the collar, is a slight lip where it meets the head.
+- Fins: a pair of rhomboid fins at the mantle's pointed end, one showing, the far one
+  hidden behind it: a broad diamond about a third of the mantle's length, joined along
+  the mantle's last third, spread up and down from it.
+- Head: short, a little narrower than the mantle, in front of the collar. One big round
+  eye on it, the larva's eye — a black pupil, a thin pale-silver ring, one small white
+  glint high on its front — about a quarter of the mantle's depth across.
+- Arms: eight short arms out of the front of the head, side by side, about 0.6 of the
+  mantle-and-head length, tapering, each with a row of small pale suckers along its
+  underside; together in a straight bundle reaching forward.
+- Tentacles: two longer feeding tentacles among the arms, about as long as the mantle
+  and head, thin, ending in a broader club lined with suckers.
+- Funnel: none on this sheet; the game adds it.
+- See-through like the larva: a faint straight line of the pen (the gladius) along the
+  top of the mantle from the collar to the tip, and a small darker rounded gut inside the
+  mantle behind the head. No chromatophore spots, no stripes, no lights.
+Colours, the larva's: body pale near-white with a lavender tint (#e8e4f8 to #b8b0d8),
+fins and arms paler and more see-through (#f4f2ff at their edges), the pen a faint cool
+grey line, the gut a muted dusky violet (#6a5a8a), the suckers #f4f2ff, eye black with a
+pale-silver ring, outline #79728f.
+
+IMAGE 1 — "in game"
+The squid fully rendered in the attached images' style, on a flat solid background of
+#071731. It is the brightest thing in the frame: lit pale, with only a small, tight soft
+halo round it.
+
+IMAGE 2 — "flat"
+The same squid, same pose, same outline, flat colour only: no shading, no highlights,
+no glow, no outline stroke, no texture. Each region one solid colour: mantle, head,
+fins, arms, tentacles, suckers, pen, gut, eye ring, pupil. Flat white background.
+
+IMAGE 3 — "parts"
+The same squid taken apart, like a technical exploded diagram: the bare body (the
+mantle and the head, with the pen and the gut inside it, no fins, no arms, no eye), the
+eye, the fins, ONE arm and ONE tentacle — each drawn separately with a clear gap, the
+body and fins in their original position, the arm and the tentacle drawn straight and
+level beside it, pointing right, each with a small plain label. Show on the bare body,
+as faint dotted outlines, where the eye and the fins sat, and mark where the arms root
+on the front of the head. Flat white background.
+
+IMAGE 4 — "palette"
+A single row of 8 large square colour swatches taken from image 1, each with its hex
+code under it: outline, deep shadow, body, body highlight, fin, gut, eye ring, pupil.
+
+AVOID
+Three-quarter or front views, curled or tangled arms, a swimming pose, several animals,
+a scene, red, dark or brown colouring, a web or cloak between the arms, ink, lights or
+photophores, chromatophore spots, a beak showing, smooth gradients, big soft bloom or
+halos, depth of field, cute cartoon features (eyelashes, smile, blush), watermarks,
+frames, borders.
+```
+
+**What to send back:** the four images, or the set you choose; tell me the file's name in
+Downloads, since a paste comes through shrunk. Its Stage B is written from the chosen sheet: the
+body sheet, and the parts with the arm and the tentacle on it.
