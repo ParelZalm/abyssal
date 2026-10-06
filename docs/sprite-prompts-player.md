@@ -622,6 +622,27 @@ ink, red or dark colouring, a web between the arms, any background other than fl
 shadows, a second animal.
 ```
 
+#### Sheet 1b: the arm and the tentacle, drawn again
+
+The parts sheet came back (`squid-parts-sprite.png`) clean but for its arms: the arm 84 outline
+pixels to 36 of fill, a grey line at half size, and the eight on the whole a grey grille; the
+tentacle's stalk the same, its club good. The whole's arms do not matter, since the game rigs the
+part, so the two are drawn again alone: 2 cells of 56 × 20, a sheet of 112 × 20 art pixels. With
+the shared block's grid and the belly's *mostly fill* block.
+
+```text
+PARTS (left to right)
+Each lies straight and level, pointing RIGHT, its root cut flat at the cell's left
+margin at mid-height: the game bends it into a curl from there.
+1. Arm — one squid arm: 42 long, a SOLID tapering strip 5 thick at the root and 3 at
+   the rounded tip, body colour (#E8E4F8) lit on top (#F4F2FF) and shaded below
+   (#B8B0D8), a row of round pale suckers (#F4F2FF, a darker pixel #B8B0D8 in each)
+   2 across along its underside, the outline only round its edge.
+2. Tentacle — one feeding tentacle: a solid stalk 3 thick and 30 long, the same colours,
+   swelling into a club 14 long and 7 deep at the right, the club's underside lined with
+   the same round suckers.
+```
+
 #### Sheet 2: the bare body
 
 ```text
