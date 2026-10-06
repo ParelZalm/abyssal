@@ -389,6 +389,10 @@ function posesFor(g: Genome, plan: Plan, f: Form, A: PlanArt, marks: ReadonlySet
   const fan = (x: Genome) => 0.7 + x.finSize * 0.35;
   if (A.tail === 'caudal' && A.arms === 0 && g.tailSplit <= b.tailSplit) {
     poses.tail = { sx: f.fluke / f0.fluke, sy: (2.4 + f.fork * 1.8) / (2.4 + f0.fork * 1.8) };
+  } else if (A.tail === 'caudal' && A.arms === 0 && SPRITES[BODIES[plan] ?? '']?.marksFrom) {
+    // a body wearing the larva's marks keeps its own tail: the Shark's is forked already, and the
+    // larva's fork in its place was the larva's tail on a shark
+    poses.tail = { sx: f.fluke / f0.fluke, sy: f.fluke / f0.fluke };
   } else if (A.tail === 'caudal' && A.arms === 0) {
     // the Forked Caudal Fin's tail in the round one's place, and deeper for a second; its own
     // fork is drawn, so it grows only with the fin

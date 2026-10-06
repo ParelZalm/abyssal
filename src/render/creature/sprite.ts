@@ -118,7 +118,7 @@ const SOURCES: Record<string, Sources> = {
            marks: marksFrom('larva') },
   shark: { rest: sharkRest, strike: sharkStrike,
            parts: { tail: sharkTail, back: sharkBack, belly: sharkBelly, pectoral: sharkPectoral, eye: sharkEye },
-           marks: marksFrom('shark') },
+           marks: marksFrom(SPRITES.shark.marksFrom ?? 'shark') },
 };
 
 /** A frame shut and open, and the colours both may snap to. */
@@ -366,7 +366,8 @@ export function drawnBody(id: string, f: Form, back: number, halfH: number, res:
     const ax = ANCHOR[name][0] * p.image.width, ay = ANCHOR[name][1] * p.image.height;
     const tx = (at[0] + ax * sc - ox) * k, ty = (at[1] + ay * sc + oy) * k;
     const swap = pose.as ? fr.marks?.[pose.as] : undefined, its = pose.as ? s.marks?.[pose.as as MarkName] : undefined;
-    if (swap && its) lay(swap, its.at[0], its.at[1], tx, ty, pose.sx * fit, pose.sy * fit, ring);
+    const z = pose.as ? s.markSize?.[pose.as as MarkName] ?? 1 : 1;
+    if (swap && its) lay(swap, its.at[0], its.at[1], tx, ty, pose.sx * fit * z, pose.sy * fit * z, ring);
     else lay(p, ax, ay, tx, ty, pose.sx * fit, pose.sy * fit, ring);
   };
   const mark = (m: Placed, to = ctx) => {
@@ -381,8 +382,8 @@ export function drawnBody(id: string, f: Form, back: number, halfH: number, res:
       sx = (m.to[0] - m.x) * per / ((its.tip[0] - its.at[0]) * sc);
       sy = (m.to[1] - m.y) * per / ((its.tip[1] - its.at[1]) * sc);
     } else if (m.span) sx = sy = m.span * per / (a.image.width * sc);
-    const grow = m.least ? Math.max(1, m.least / (k * sc)) : 1;
-    sx *= grow; sy *= grow;
+    const grow = m.least ? Math.max(1, m.least / (k * sc)) : 1, z = s.markSize?.[name as MarkName] ?? 1;
+    sx *= grow * z; sy *= grow * z;
     lay(a, its.at[0], m.flip ? a.image.height - its.at[1] : its.at[1], (m.x - back) * res, (m.y + halfH) * res,
         sx, sy, m.layer === 'under', to);
   };

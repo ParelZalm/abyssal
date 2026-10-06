@@ -481,7 +481,20 @@ snout: `--stalk` takes it from the tail stalk (the larva keeps its row, a pixel 
 The bake lays the drawn dorsal where `dorsalRidge` painted one and the pelvic as the belly part,
 grown as the pectorals are (`posesFor`).
 
-**Its marks are the larva's painters' for now**, and on a drawn body the head's painters leave the
-jaw and the teeth to a drawn mark, so a Shark that takes the Hinged Jaw shows none: the larva's
-drawn marks are next, placed on the Shark at its scale (its parts came in at 1.01 to the larva's
-0.94, near the same) with a hinge of its own, and the ones that read wrong drawn again for it.
+**It wears the larva's drawn marks** (`marksFrom`), each placed by its painter on the Shark's
+outline at near the larva's scale (its parts came in at 1.01 to the larva's 0.94), with a hinge of
+its own under the snout and its own tail kept under a Forked Caudal Fin, since a shark's is forked
+already. The two eyes drawn to the larva's eye, 20 across to the Shark's 8, are drawn at 0.4
+(`markSize`). Judged at the board's size, every mutation baked on it:
+
+- **Read as they are:** the parietal eye, the halo, the nares, the pouch, the needle; the volley,
+  rime, coral, prickles, warts; the claws, frill, lead, photophores; every flank part and coat.
+- **To draw for the Shark:** the jaws — the Hinged Jaw, the Lunging Bite, the Serrated Teeth, the
+  Parrot Beak — which are the larva's lower jaw and jut past the Shark's snout as an underbite,
+  where a shark's sits under it; and the lures, which stretch to the painted lure's reach, twice
+  the larva's on this body, until the Deep Lantern's stalk breaks.
+- **To place for it:** the brood pouch's roe hangs where the Shark's big pectoral covers it, and the
+  siphon is pale on pale under its stalk.
+- **Not the marks':** the Dorsal Spines draw nothing on any shark, since the plan has none
+  (`PLAN_ART.shark.spines`); and the Barbels card draws no barbels on any body, since it never
+  sets `g.barbels`.
