@@ -299,6 +299,30 @@ Each is centred in its cell unless it says otherwise. None has a joined edge.
     apart, over a patch 33 wide. Only the bands are drawn.
 ```
 
+### The flank, drawn again: the vent gland and the nematocyst gland
+
+The flank came in clean (`larva-flank-sprite.png`, at 8×). Its cracks were pale on the pale larva,
+the painter's colour for a dark body, and are darkened in the import (`--recolour`). Two cells are
+drawn again, since at half size the vent gland's dark edge outweighed its core and read mustard,
+and the capsules came back as crosses in their edge colour alone and faded to olive dots: 2
+parts, `«C»` 2, `«N»` 1, `«W»` × `«H»` 72 × 32, so the sheet is 144 × 32 art pixels. Attach
+`larva-flank-sprite.png` with the rest.
+
+```text
+PARTS (left to right)
+1. Vent Gland — three hot sulphur glands on the gill cover, each a round blister 6
+   across: a big bright gold core (#ffd84a) 4 across with a white-gold hot centre
+   (#fff4b0) 2 across, ringed by sulphur yellow (#d4f04a), and only a thin 1-pixel edge
+   of olive (#8aa020) on its lower side. In a loose column 9 wide and 17 tall. Mostly
+   bright: the gold and the yellow are most of each blister.
+2. Nematocyst Gland — a round violet gland (#8a4ac8, edge #5a2a8a, highlight #b888e8) 11
+   across with a yellow-green core (#ace723) 5 across, ringed by eight stinging capsules
+   set 2 pixels clear of it: each capsule a SOLID ROUND dot 3 across of bright
+   yellow-green (#ace723) with a white-green centre pixel (#ecffc8), never a cross. A duct
+   of the yellow-green (#ace723) 2 thick runs from the gland forward, 12 long, to the
+   RIGHT.
+```
+
 **What to send back:** the three PNGs. Check that the cells are on the grid (the importer cuts
 by position), that no part runs into its neighbour's cell, and that the background is one green
 right up to every outline.

@@ -4,7 +4,7 @@
  * (`docs/sprite-prompts-player.md`, *The larva's mutations*).
  *
  *   node scripts/import-marks.mjs <sheet.png> --body larva --cols 4 --rows 5
- *        --names tapetum:mid,foureye:bottom,…  [--flip barbels] [--key green] [--pitch 8]
+ *        --names tapetum:mid,foureye:bottom,…  [--flip barbels] [--recolour name:from>to,…] [--key green] [--pitch 8]
  *        [--out src/render/creature/sprites]
  *
  * Unlike the body's own parts (`import-parts.mjs`) there is no whole animal to find these on:
@@ -21,6 +21,10 @@
  * A lure also gets its `tip`, the middle of its bulb's bright cyan, so the game can hang the bulb
  * where the lure's trap fires. `--flip` mirrors a part left to right before its anchor is read:
  * the barbels came back trailing forward, and they trail back.
+ *
+ * `--recolour name:from>to,from>to` swaps a part's colours, hex without the `#`, after it is cut:
+ * the flank's cracks came back pale, the painter's colour for a dark body, and vanished on the
+ * pale larva, so they were darkened here rather than drawn again.
  *
  * Writes `<body>-<name>.png` at one pixel per art pixel and prints `marks` for the body's entry
  * in `content/sprites.ts`.
@@ -43,6 +47,11 @@ if (!sheet || !body || !cols || !rows || names.length === 0) {
   process.exit(1);
 }
 const flip = new Set((opt('flip') ?? '').split(',').filter(Boolean));
+const hex = h => [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16));
+const recolour = new Map((opt('recolour') ?? '').split(';').filter(Boolean).map(r => {
+  const [name, swaps] = r.split(':');
+  return [name, swaps.split(',').map(s => s.split('>').map(hex))];
+}));
 const out = opt('out', 'src/render/creature/sprites');
 const P = Number(opt('pitch', 8));
 const green = opt('key', 'green') === 'green';
@@ -66,6 +75,9 @@ for (let j = 0; j < ch; j++) for (let i = 0; i < cw; i++) {
   const c = [median(r), median(g), median(b)];
   art.push(isBg(c) ? null : c);
 }
+// as drawn, before the fringe is cleaned: a recolour names the sheet's own colours, and a
+// greenish grey (the cracks' #b8c0b8) reads as green bled into the outline and is swapped out
+const raw = art.slice();
 const clean = art.filter(c => c && !bled(c));
 for (let k = 0; k < art.length; k++) {
   const c = art[k];
@@ -81,6 +93,7 @@ names.forEach(([name, rule], n) => {
   // the cell, cropped to what is drawn in it
   let x0 = cellW, y0 = cellH, x1 = -1, y1 = -1;
   const at = (x, y) => art[(cj * cellH + y) * cw + ci * cellW + x];
+  const drawn = (x, y) => raw[(cj * cellH + y) * cw + ci * cellW + x];
   for (let y = 0; y < cellH; y++) for (let x = 0; x < cellW; x++) {
     if (!at(x, y)) continue;
     x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
@@ -88,7 +101,12 @@ names.forEach(([name, rule], n) => {
   if (x1 < 0) throw new Error(`${name}: its cell is empty`);
   const w = x1 - x0 + 1, h = y1 - y0 + 1;
   const img = [];
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) img.push(at(flip.has(name) ? x1 - x : x0 + x, y0 + y));
+  const orig = [];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const sx = flip.has(name) ? x1 - x : x0 + x;
+    img.push(at(sx, y0 + y));
+    orig.push(drawn(sx, y0 + y));
+  }
   const px = (x, y) => img[y * w + x];
   // the middle of the first run of filled pixels along a row or a column
   const run = (cells) => {
@@ -121,7 +139,13 @@ names.forEach(([name, rule], n) => {
     tip = `, tip: [${tx.toFixed(1)}, ${ty.toFixed(1)}]`;
   }
   const buf = new Uint8Array(w * h * 4);
-  img.forEach((c, i) => { if (c) { buf.set(c, i * 4); buf[i * 4 + 3] = 255; } });
+  const swaps = recolour.get(name) ?? [];
+  const same = (a, b) => a.every((v, k) => Math.abs(v - b[k]) <= 2);
+  img.forEach((c, i) => {
+    if (!c) return;
+    buf.set(swaps.find(([from]) => same(orig[i], from))?.[1] ?? c, i * 4);
+    buf[i * 4 + 3] = 255;
+  });
   writeFileSync(join(out, `${body}-${name}.png`), encodePng(w, h, buf));
   lines.push(`'${name}': { at: [${a.join(', ')}]${tip} }`);
   console.log(`${name.padEnd(12)} ${String(w).padStart(2)}×${String(h).padEnd(2)} ${rule.padEnd(10)} at ${a.join(', ')}${tip}`);
