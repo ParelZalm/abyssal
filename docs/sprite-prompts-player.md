@@ -235,51 +235,68 @@ The prompt is in the history: `git show 9cf81c6:docs/sprite-prompts-player.md`.
 ### The flank
 
 12 parts, `«C»` 3, `«N»` 4, `«W»` × `«H»` 72 × 32, so the sheet is 216 × 128 art pixels: the
-coats are as long as the trunk. Attach `items-sheet-1-current.png`, `items-sheet-2-current.png`,
-`items-sheet-4-current.png` and `items-sheet-5-current.png`.
+coats are as long as the trunk. Attach the back's and the belly's sheets with the rest, and
+`items-sheet-1-current.png`, `items-sheet-2-current.png`, `items-sheet-4-current.png` and
+`items-sheet-5-current.png`.
+
+Written again after the back and the belly came in, a size larger and solid, and **with no
+outline**: these lie inside the body, seen through its skin, where the larva's outline round each
+made a sticker of it, and round a line it doubled the line's width into a grey smear at half size.
+Each organ is edged in a darker shade of its own colour instead, and the lines and coats are bare
+colour. So the shared block's outline line is replaced, below.
 
 ```text
+NO OUTLINE (replaces the outline rule above; most important)
+These parts lie on the fish's side, inside its body, seen through its pale skin. Do NOT
+draw the #79728F outline round them. Each organ is edged by a darker shade of its own
+colour, one art pixel wide. Lines and coats are bare colour with no edge at all.
+
+SOLID AT HALF SIZE
+The game shows these at about half size. Every organ is a solid shape of its own colours;
+every line is at least 2 art pixels thick; nothing is a single pixel except a highlight.
+
 PARTS (left to right, top to bottom)
-Every part here lies on the fish's side, inside its outline, seen through its pale skin.
 Each is centred in its cell unless it says otherwise. None has a joined edge.
-1. Ink Sac — a round dark violet-black sac (#08060e, rim #1a1428, a gloss highlight
-   #787896 high on it), 8 across, and a duct (#14101e) 2 thick running from it forward
-   and a little down, 10 long, to the RIGHT.
-2. Electric Organ — a field of electric cells: five columns of four small pale cells
-   (#c8e8ff), each cell 3 wide and 2 tall, in a slate-blue field (#5a6a8a, shade
-   #3a4a6a), every other column set a pixel lower; 22 wide and 14 tall, its corners
-   rounded, one gold glint (#ffd84a) on a cell.
+1. Ink Sac — a round dark violet-black sac (#08060e, edge #2a2240, a gloss highlight
+   #787896 high on it 2 across), 9 across, and a duct (#14101e) 3 thick running from it
+   forward and a little down, 10 long, to the RIGHT.
+2. Electric Organ — a block of electric cells: four columns of three pale cells
+   (#c8e8ff, edge #8ab0d8), each cell 4 wide and 3 tall, with 1 art pixel of slate-blue
+   (#5a6a8a) between them and round them, every other column set a pixel lower; about
+   21 wide and 14 tall, its corners rounded, one gold glint (#ffd84a) on a cell.
 3. Galvanic Cells — the fish's lateral line become a crooked live wire: a lilac line
-   (#b8a8ff, bright #e8e0ff at each bend), 2 thick, zigzagging level in seven straight
-   runs, 38 long and 6 tall, a bright white-lilac spark at its front (RIGHT) end.
-4. Vent Gland — three sulphur glands on the gill cover, each a round blister 4 across
-   (#d4f04a, gold core #ffd84a, shade #8aa020), in a loose column 7 wide and 12 tall.
+   (#b8a8ff), 2 thick, zigzagging level in six straight runs, each bend a brighter pixel
+   (#e8e0ff), 38 long and 7 tall, a bright white-lilac spark (#f4f0ff) 3 across at its
+   front (RIGHT) end.
+4. Vent Gland — three sulphur glands on the gill cover, each a round blister 5 across
+   (#d4f04a, gold core #ffd84a, edge #8aa020), in a loose column 8 wide and 15 tall.
    Flat bright colour: the game adds the glow. The yellow is a yellow, never the
    background's pure green.
 5. Cavitation — a bladder of gas seen through the skin as a ring: a pearl ring (#e8f4ff,
-   shade #a8b8d0), 10 across and 2 thick, empty inside (the background shows through it),
-   one white glint high on its left.
-6. Venom Gland — a round violet gland (#8a4ac8, shade #5a2a8a, highlight #b888e8) 10
-   across, a yellow-green core (#ace723) 4 across showing in it.
-7. Nematocyst Gland — the same gland ringed by eight small stinging capsules (#ecffc8),
-   each 2 across, and a duct of the yellow-green (#ace723) 2 thick running from it
-   forward, 12 long, to the RIGHT.
-8. Blood Lamp Coal — one burning coal, 4 across: a deep red rim (#8a1a10), hot red-orange
-   (#ff5a28) inside it, a yellow-white centre (#ffe0a0). Flat bright colour, no glow.
-9. Open Veins — three blue veins under the skin (#4a78c8, dark edge #2a4a8a), 2 thick,
-   each wandering and branching once, from 40 to 50 long, stacked about 4 apart, their
-   front ends together at the RIGHT where they leave the gills; one red drop of blood
-   (#c82030) beading on the lowest.
+   edge #a8b8d0), 12 across and 3 thick, empty inside (the background shows through it),
+   one white glint (#ffffff) high on its left.
+6. Venom Gland — a round violet gland (#8a4ac8, edge #5a2a8a, highlight #b888e8) 11
+   across, a yellow-green core (#ace723) 5 across showing in it.
+7. Nematocyst Gland — the same gland ringed by eight stinging capsules (#ecffc8, edge
+   #a8c880), each 3 across, and a duct of the yellow-green (#ace723) 2 thick running from
+   it forward, 12 long, to the RIGHT.
+8. Blood Lamp Coal — one burning coal, 5 across: a deep red edge (#8a1a10), hot
+   red-orange (#ff5a28) inside it, a yellow-white centre (#ffe0a0) 2 across. Flat bright
+   colour, no glow.
+9. Open Veins — three blue veins under the skin (#4a78c8, a darker underside #2a4a8a),
+   2 thick, each wandering and branching once, from 40 to 50 long, stacked about 5 apart,
+   their front ends together at the RIGHT where they leave the gills; one red drop of
+   blood (#c82030) 3 across beading on the lowest.
 10. Brittle Frame — a patch of crazed skin, the fish's side cracked like fired glass:
-    about twelve short pale slivers (#ecf4ea), 1 art pixel wide and from 4 to 8 long,
-    each at its own angle, a few meeting, spread over a patch 56 wide and 18 tall. Only
-    the slivers are drawn; between them is background.
+    about ten pale slivers (#ecf4ea, a grey side #b8c0b8), 2 art pixels wide and from 5
+    to 9 long, each at its own angle, a few meeting, spread over a patch 56 wide and 18
+    tall. Only the slivers are drawn; between them is background.
 11. Lie in Wait — a stonefish's disruptive coat: large irregular blotches of grey-violet
-    (#6a6478) and pale grey (#d8d2e0), from 5 to 10 across, spread over a patch 64 wide
+    (#6a6478) and pale grey (#d8d2e0), from 6 to 11 across, spread over a patch 64 wide
     and 22 tall, some touching, background between them.
 12. Mantle Rings — the rings of muscle round a squid's mantle, seen side-on: five upright
-    bands of the larva's deep shadow (#B8B0D8) darkened to #9890b8, each 2 wide and 28
-    tall, 6 apart, over a patch 28 wide. Only the bands are drawn.
+    bands of the larva's deep shadow darkened (#9890b8), each 3 wide and 28 tall, 6
+    apart, over a patch 33 wide. Only the bands are drawn.
 ```
 
 **What to send back:** the three PNGs. Check that the cells are on the grid (the importer cuts
