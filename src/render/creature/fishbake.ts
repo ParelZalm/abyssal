@@ -24,7 +24,7 @@ import { lerp } from '../../core/util';
 import { BLOOM_TRAIL, hasSynergy, synergiesOf } from '../../sim/organs';
 import { artDensity } from '../pixel';
 import { palette, type Palette, type RGB } from './bake/palette';
-import { bakeSprite, drawnBody, drawnEye, drawnHinge, drawnTip, hasParts, hasSprite, hasWounded, marksOf, type Poses } from './sprite';
+import { bakeSprite, drawnArms, drawnBody, drawnEye, drawnHinge, drawnTip, hasParts, hasSprite, hasWounded, marksOf, type Poses } from './sprite';
 import { BODIES, drawnForm, SPRITES, type MarkName } from '../../content/sprites';
 import { M, shade, Sheet, type Emitter } from './bake/sheet';
 import { flank, whaleSpots, camouflage, crazing, veins, ballast, viscera, mantle, cilia, scales } from './bake/body';
@@ -238,7 +238,7 @@ function paint(g: Genome, plan: Plan): Baked {
   return { texture, open: gapingCv ? pixelTexture(cut(gapingCv, crop)) : texture,
            canvas, users: 0, lights: shut.lights, depth,
            back: back + crop.x / res, front: back + (crop.x + crop.w) / res, halfH: crop.h / 2 / res,
-           arm: rigged ? armRig(f, pal, A, g, res) : null, tentacle: null, legs: null, trail: null };
+           ...armsOf(drawn, f, pal, A, g, res, rigged), legs: null, trail: null };
 }
 
 interface Painting {
@@ -392,13 +392,15 @@ function posesFor(g: Genome, plan: Plan, f: Form, A: PlanArt, marks: ReadonlySet
   const b = hatchedGenome(), f0 = formFor(b, plan);
   const poses: Poses = {};
   const fan = (x: Genome) => 0.7 + x.finSize * 0.35;
-  if (A.tail === 'caudal' && A.arms === 0 && g.tailSplit <= b.tailSplit) {
+  // a rigged body's arms are apart from it (`armsOf`), so a squid's fins are its tail as a fish's are
+  const tailed = A.tail === 'caudal' && (A.arms === 0 || A.grasp > 0);
+  if (tailed && g.tailSplit <= b.tailSplit) {
     poses.tail = { sx: f.fluke / f0.fluke, sy: (2.4 + f.fork * 1.8) / (2.4 + f0.fork * 1.8) };
-  } else if (A.tail === 'caudal' && A.arms === 0 && SPRITES[BODIES[plan] ?? '']?.marksFrom) {
+  } else if (tailed && SPRITES[BODIES[plan] ?? '']?.marksFrom) {
     // a body wearing the larva's marks keeps its own tail: the Shark's is forked already, and the
     // larva's fork in its place was the larva's tail on a shark
     poses.tail = { sx: f.fluke / f0.fluke, sy: f.fluke / f0.fluke };
-  } else if (A.tail === 'caudal' && A.arms === 0) {
+  } else if (tailed) {
     // the Forked Caudal Fin's tail in the round one's place, and deeper for a second; its own
     // fork is drawn, so it grows only with the fin
     const fork = g.tailSplit - b.tailSplit > 0.3 && marks.has('fork2') ? 'fork2' : 'fork';
@@ -482,6 +484,13 @@ function cropOf(s: Sheet, drawnOn = (i: number) => s.mat[i] !== M.EMPTY || s.dec
  * eye and then arms, and arms that reach forward are the only arms that can plausibly take
  * hold of something the animal is swimming toward.
  */
+/** A body's rigged arms: the drawn ones where its picture has them (the Squid's), else painted. */
+function armsOf(drawn: string | null, f: Form, pal: Palette, A: PlanArt, g: Genome, res: number, rigged: boolean) {
+  if (!rigged) return { arm: null, tentacle: null };
+  const own = drawn ? drawnArms(drawn, f, res) : null;
+  return own?.arm ? own : { arm: armRig(f, pal, A, g, res), tentacle: null };
+}
+
 function armRig(f: Form, pal: Palette, A: PlanArt, g: Genome, res: number): Rig {
   const len = R * A.armLen * (1 + g.segments * 0.1) * A.armPair;
   const w = Math.max(1 / res, R * A.armWidth * 1.3);

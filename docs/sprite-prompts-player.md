@@ -513,3 +513,225 @@ from the hinge under the eye. Its lures, drawn to the larva's reach, were stretc
 and stood taller than the arch the bake sizes the canvas to, and were cut through; these are drawn
 to the Shark's own reach, 42 and 50 forward, and lie at their size. The Shark's own marks come
 before the larva's it wears. The prompt is in the history: `git show b652617:docs/sprite-prompts-player.md`.
+
+---
+
+## The Squid
+
+- ~~Stage A~~ — done: `docs/media/reference/squid.webp`. Its prompt is in the history:
+  `git show fc798e6:docs/sprite-prompts-player.md`.
+
+The second form (`content/forms.ts`): three different Sprinter mutations rebuild the larva onto the
+squid's plan, with a mantle pump and a siphon. As with the Shark, **it is still the player**: the
+larva's pale lavender glass on a squid's body, the larva's big eye, which suits a squid, and what
+shows through it is a squid's — the pen (gladius) where the larva has its notochord, and the gut.
+It must not read as the Vampire Squid, dark red and webbed, or the Giant Squid, the deep's boss.
+
+The shape is the plan's (`PLANS.squid`, `PLAN_ART.squid`): a torpedo of a mantle with the fins at
+its pointed back end, a head with the eye, and eight arms and two longer feeding tentacles that
+reach forward from it. **The arms are rigged**, as the Vampire Squid's and the Giant Squid's are
+(`grasp`): its picture is the body alone, and one arm and one tentacle are each drawn once, as a
+part of their own, and laid by the game at the head. So the parts image is the bare body, the eye,
+the fins (the `tail` part), one arm and one tentacle; there is no pectoral or pelvic.
+
+### Stage B
+
+The parts sheet first, then the bare body with it attached, as the Shark went. What changes from
+the sheet: **the fins are the whole diamond**, above and below the mantle as on its "in game"
+image, where its "parts" image drew the upper half alone. Kept from it: the eye, half the mantle's
+depth across rather than the quarter asked for, which is the larva's and suits the player; and the
+mantle a little more slender than asked, 3.9 times its depth.
+
+**The sizes**, off the "in game" image with the mantle and head 96 art pixels long: 25 deep at its
+deepest, just behind the head; the fins 38 along the mantle from its tip and 46 tall, tip to tip;
+the eye 14 across, its middle 7 behind the head's front edge; the arms 42 long, 3 thick at the
+root; the tentacles 44 long with a club 17 by 9; the whole squid 141 long and 46 deep.
+
+**On green.** **Attach both:** `squid.webp`, `shark-parts-sprite.png` (the Shark's parts sheet, how
+the form's parts are cut), `larva-parts-sprite.png`, `cave-room.webp`; for sheet 2, the parts
+sheet that came back as well.
+
+#### Sheet 1: the parts
+
+```text
+GOAL
+True pixel-art sprite sheet of the pale squid in the attached reference sheet, for a
+game: the whole squid once, and under it its parts drawn apart. The design and colours
+of the reference's "in game" image — the pale see-through lavender mantle, the diamond
+fins at its tip, the big larva eye, the bundle of arms and the two clubbed tentacles —
+redrawn as clean pixel art on a strict grid, in the style of the attached shark and
+larva parts sheets (the same creature as other forms).
+
+THE GRID (most important)
+- The sheet is exactly 176 × 144 art pixels.
+- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
+  square block, so the image is 1408 × 1152.
+- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
+  than one block. No dithering noise. Every block is one flat colour.
+- 1-block outline (#79728F) round each silhouette, never thicker.
+
+LAYOUT
+- Top: the WHOLE squid, assembled, as in the reference's "in game" image: the arms
+  pointing RIGHT and the mantle's tip LEFT, straight and horizontal, 141 art pixels from
+  the mantle's tip to the tentacle clubs and 46 deep with its fins. Centred left to
+  right.
+  - The mantle and head 96 long, 25 deep at their deepest just behind the head, the
+    mantle tapering to a point at the left; the collar a slight lip where it meets the
+    head.
+  - The fins: one whole diamond, above AND below the mantle, 38 along the mantle from
+    its tip and 46 tall tip to tip, with faint rays.
+  - The eye 14 across, its middle 7 art pixels behind the head's front edge, a pixel
+    below the middle line: black pupil, pale-silver ring, one white glint.
+  - Eight arms out of the front of the head in a straight bundle, 42 long, each 3 thick
+    at the root tapering to 2, a row of pale suckers (#F4F2FF) along its underside.
+  - Two tentacles among them, 44 long, 2 thick, each ending in a club 17 long and 9
+    deep, lined with pale suckers; one angled slightly up, one slightly down, as in
+    the reference.
+  - The pen: a straight line 2 art pixels thick (#B8B0D8) along the top of the mantle
+    from the collar to the tip. The gut: a darker rounded shape (#6A5A8A) low in the
+    mantle behind the head.
+- Bottom rows: its parts, each on its own with at least 8 art pixels of background on
+  every side between it and anything else, each at EXACTLY the size and shape it has
+  on the whole squid above, not rotated, not enlarged:
+  1. the fins (the whole diamond, its inner edge cut where it meets the mantle);
+  2. the eye (the black pupil, the pale-silver ring and the white glint);
+  3. ONE arm, straight and level, pointing right, its root cut flat at the left;
+  4. ONE tentacle with its club, straight and level, pointing right, its root cut
+     flat at the left.
+- Where a part meets the body, finish its edge with the outline like the rest of it.
+- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
+  anywhere on the animal, and do not let the outline pick up a green tint where it
+  meets the background.
+
+PALETTE
+Use these colours, plus at most 8 in-between shades of them: outline #79728F, deep
+shadow #B8B0D8, body #E8E4F8, body highlight #F4F2FF, fin #D6D0ED, gut #6A5A8A, eye
+ring #CDD3E3, pupil #080B16. Light comes from above and slightly in front: lit top,
+darker belly; each part shaded as its own form, the fins and arms paler and more
+see-through than the mantle.
+
+LIGHTS
+The eye's glint is a flat white block. NO glow halo, bloom or light spill, on the
+animal or on the background. The game adds the glow itself.
+
+AVOID
+Labels, leader lines, dotted outlines, parts that differ from the whole squid in size
+or shape, half a fin, a part drawn twice, curled or tangled arms, a funnel, a beak,
+ink, red or dark colouring, a web between the arms, any background other than flat
+#00FF00, soft glows, painterly texture, noise, sub-pixel detail, text, borders,
+shadows, a second animal.
+```
+
+#### ~~Sheet 1b: the arm and the tentacle, drawn again~~ — done
+
+`docs/media/reference/squid-arms-sprite.png`: the tentacle solid, the arm 5 thick over its root half
+and stepping to 3 over the rest, which greys toward the tip at half size and reads as an arm
+tapering.
+
+The parts sheet came back (`squid-parts-sprite.png`) clean but for its arms: the arm 84 outline
+pixels to 36 of fill, a grey line at half size, and the eight on the whole a grey grille; the
+tentacle's stalk the same, its club good. The whole's arms do not matter, since the game rigs the
+part, so the two are drawn again alone: 2 cells of 56 × 20, a sheet of 112 × 20 art pixels. With
+the shared block's grid and the belly's *mostly fill* block.
+
+```text
+PARTS (left to right)
+Each lies straight and level, pointing RIGHT, its root cut flat at the cell's left
+margin at mid-height: the game bends it into a curl from there.
+1. Arm — one squid arm: 42 long, a SOLID tapering strip 5 thick at the root and 3 at
+   the rounded tip, body colour (#E8E4F8) lit on top (#F4F2FF) and shaded below
+   (#B8B0D8), a row of round pale suckers (#F4F2FF, a darker pixel #B8B0D8 in each)
+   2 across along its underside, the outline only round its edge.
+2. Tentacle — one feeding tentacle: a solid stalk 3 thick and 30 long, the same colours,
+   swelling into a club 14 long and 7 deep at the right, the club's underside lined with
+   the same round suckers.
+```
+
+#### Sheet 2: the bare body
+
+```text
+GOAL
+True pixel-art sprite of the pale squid's BARE BODY, for a game: EXACTLY the mantle and
+head of the whole squid at the top of the attached parts sheet — the same outline, the
+same collar, the same taper, the same shading, the pen and the gut — with its eye, its
+fins, its arms and its tentacles taken off.
+2 frames of the same body, side by side, left to right: "rest", "strike".
+
+THE GRID (most important)
+- Each frame is exactly 120 × 40 art pixels.
+- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
+  square block, so the image is 1920 × 320.
+- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
+  than one block. No dithering noise. Every block is one flat colour.
+- 1-block outline (#79728F) round the whole silhouette, never thicker.
+
+COMPOSITION
+- Strict side view, the head RIGHT and the mantle's tip LEFT, body straight and
+  horizontal.
+- From the mantle's tip to the front of the head the body is 96 art pixels long and 25
+  deep, as on the parts sheet. The front of the head is cut clean and rounded where the
+  arms root: the game puts the arms there.
+- Where the eye goes the head is plain body colour, shaded as the rest of the head: no
+  socket, no hole, no dotted outline. Where the fins joined, the outline runs smooth.
+- The body is centred vertically: its midline, tip to head, lies along the frame's
+  horizontal centre line.
+- Everything fits inside the frame with at least 4 art pixels of margin, in both frames.
+- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
+  anywhere on the animal, and do not let the outline pick up a green tint where it
+  meets the background.
+
+PALETTE
+The parts sheet's colours: outline #79728F, deep shadow #B8B0D8, body #E8E4F8, body
+highlight #F4F2FF, fin #D6D0ED, gut #6A5A8A, plus at most 8 in-between shades.
+
+FRAME 1 — "rest"
+The bare body at rest.
+
+FRAME 2 — "strike"
+Identical to frame 1 in every pixel except the front of the head: the mouth open where
+the arms root, a small dark gape (#6A5A8A at its deepest) 4 art pixels tall in the
+middle of the head's front edge. No beak drawn. Same frame size, same position, same
+everything else, so the two can be swapped without the animal moving.
+
+AVOID
+A body shaped differently from the squid on the parts sheet, an eye, an eye socket or a
+dotted outline, fins, arms, tentacles, a funnel, ink, any background other than flat
+#00FF00, soft glows, painterly texture, noise, sub-pixel detail, text, labels, borders,
+shadows, a second animal.
+```
+
+**In** (`BODIES.squid`): `squid-sprite.png`, the eye and fins off `squid-parts-sprite.png`, and the
+arm and tentacle off `squid-arms-sprite.png`.
+
+```bash
+npm run sprite -- docs/media/reference/squid-sprite.png --id squid --key green --fringe --pitch 8
+node scripts/import-parts.mjs docs/media/reference/squid-parts-sprite.png --body squid --snout 106 --tail 5 --axis 14 --whole 0,96,22.5 --only eye,tail
+node scripts/import-marks.mjs docs/media/reference/squid-arms-sprite.png --body squid --cols 2 --rows 1 --names arm:left,tentacle:left
+```
+
+As it went: the parts importer could not read a squid's landmarks — its fins straddle the mantle's
+point rather than join behind it, and its arms run past its head, so the snout it found was a
+tentacle's club — so they are given by hand (`--whole`: the mantle's point, the head's front, the
+fins' middle row), and the arm and tentacle on the parts sheet, taken for fins, are left out
+(`--only`). The drawn arm and tentacle are rigged as a sprite squid's are, in the painted ones'
+place (`drawnArms`); its fins are its `tail` though it has arms (`posesFor`), and the fish fins the
+painted plan carries are left to the drawn pectoral it does not have, so none show. It wears the
+larva's marks, its eyes at 0.7, **and not the Mantle Pump's rings**, which its form always has
+and which banded it grey: a squid's mantle is the pump (`markSize` 0). Judged on the board: the
+marks sit as on the Shark; its jaws and lures are its own, drawn below.
+
+### ~~The Squid's beak and lures~~ — done
+
+`docs/media/reference/squid-head-sprite.png`, 10 parts in a 4 × 3 grid of 72 × 56 cells, at 8×:
+
+```bash
+node scripts/import-marks.mjs docs/media/reference/squid-head-sprite.png --body squid --cols 4 --rows 3 --names jaw:left,jaw-open:left,fangs:left,fangs-open:left,saw:left,saw-open:left,beak:left,beak-open:left,illicium:bottomleft,lantern:bottomleft
+```
+
+As it went: a squid has no jaw to hinge, and its mouth is a beak among its arms, so every jaw
+mutation is that beak in its card's look — plain, hooked for the Lunging Bite, notched for the
+Serrated Teeth, slate and teal for the Parrot Beak — under the jaw names, hinged at the head's
+front edge just under the midline (`SpriteArt.hinge`): set further back, the dark beak lay on its
+eye, 7 behind the front, and could not be told from the pupil. The lures, drawn to its reach, 44
+and 54 forward, arch at the painted lure's height. The prompt is in the history:
+`git show 400ceec:docs/sprite-prompts-player.md`.

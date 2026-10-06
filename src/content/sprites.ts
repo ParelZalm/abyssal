@@ -134,7 +134,8 @@ export interface SpriteArt {
    * Another body whose drawn marks this one wears until its own are drawn: the forms borrow the
    * larva's, drawn to near the same scale. `markSize` draws one of them bigger or smaller on this
    * body, for a mark drawn to the lender's proportions: the larva's eye is two and a half times
-   * the Shark's.
+   * the Shark's. At 0 the body does not wear it, and its painter leaves it off too: a squid's
+   * mantle is the pump, and the Mantle Pump's rings, which its form always has, banded it grey.
    */
   marksFrom?: string;
   markSize?: Partial<Record<MarkName, number>>;
@@ -391,6 +392,28 @@ export const SPRITES: Record<string, SpriteArt> = {
            ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
            hull: [[107.5, 14, 2.5], [95.5, 13.5, 5.5], [82.5, 13.5, 7.2], [70.5, 13.5, 8.9], [58.5, 13, 9.3],
                   [45.5, 13, 8.5], [33.5, 13.5, 6.4], [20.5, 14, 5.1], [8.5, 13.5, 3]] },
+  // The Squid form: `npm run sprite -- docs/media/reference/squid-sprite.png --id squid --key green
+  // --fringe --pitch 8`, its eye and fins `node scripts/import-parts.mjs
+  // docs/media/reference/squid-parts-sprite.png --body squid --snout 106 --tail 5 --axis 14 --whole
+  // 0,96,22.5 --only eye,tail` (its fins straddle the mantle's point and its arms run past its
+  // head, so the whole's landmarks are given), and its arm and tentacle, drawn again solid,
+  // `node scripts/import-marks.mjs docs/media/reference/squid-arms-sprite.png --body squid --cols 2
+  // --rows 1 --names arm:left,tentacle:left`. Its fins are its `tail`; it has no pectoral or pelvic
+  // its beaks and lures, `squid-head-sprite.png`, imported as the Shark's head sheet with `--body squid`: its mouth is a beak
+  // where its arms root, so it hinges there, at the head's front edge: further back the dark beak
+  // lay on its eye, which sits only 7 behind it. Every jaw mutation is that beak in its card's look
+  squid: { w: 107, h: 28, snout: 106, tail: 5, axis: 14, hinge: [105, 15.5], marksFrom: 'larva',
+           marks: { ...LARVA_MARKS, jaw: { at: [0, 3.5] }, 'jaw-open': { at: [0, 3.5] }, fangs: { at: [0, 3.5] },
+                    'fangs-open': { at: [0, 3.5] }, saw: { at: [0, 3.5] }, 'saw-open': { at: [0, 3.5] },
+                    beak: { at: [0, 3.5] }, 'beak-open': { at: [0, 3.5] },
+                    illicium: { at: [0.5, 31], tip: [44.5, 22.5] }, lantern: { at: [0.5, 41], tip: [54.0, 30.0] } },
+           markSize: { tapetum: 0.7, foureye: 0.7, mantle: 0 },
+           parts: { scale: 1.052, at: { eye: [91.3, 8.2], tail: [5, -9.7] } },
+           arm: { root: 0, tip: 42, axis: 2.5, at: [106, 14], spread: 10, reach: 44 },
+           tentacle: { root: 0, tip: 44, axis: 3.5, reach: 52 },
+           ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
+           hull: [[102.5, 16, 5.1], [90.5, 15, 7.6], [79.5, 14, 9.3], [67.5, 14.5, 9.8], [55.5, 14.5, 8.9],
+                  [43.5, 14.5, 8.1], [32.5, 14.5, 6.4], [20.5, 14, 4.3], [8.5, 14.5, 1.3]] },
 };
 
 /**
@@ -399,7 +422,7 @@ export const SPRITES: Record<string, SpriteArt> = {
  * over it and placed on its outline (`drawnForm`), until those are drawn too. A plan not here
  * is painted whole, as every plan was.
  */
-export const BODIES: Partial<Record<Plan, string>> = { wraith: 'larva', shark: 'shark' };
+export const BODIES: Partial<Record<Plan, string>> = { wraith: 'larva', shark: 'shark', squid: 'squid' };
 
 /** How many steps nose to tail a drawn outline is sampled at (`Form.outline`). */
 const OUTLINE = 24;

@@ -75,6 +75,12 @@ import sharkBack from './sprites/shark-back.png';
 import sharkBelly from './sprites/shark-belly.png';
 import sharkPectoral from './sprites/shark-pectoral.png';
 import sharkEye from './sprites/shark-eye.png';
+import squidRest from './sprites/squid.png';
+import squidStrike from './sprites/squid-strike.png';
+import squidTail from './sprites/squid-tail.png';
+import squidEye from './sprites/squid-eye.png';
+import squidArm from './sprites/squid-arm.png';
+import squidTentacle from './sprites/squid-tentacle.png';
 
 /** Every sprite file, by its path: the marks are looked up here by name (`marksFrom`). */
 const FILES = import.meta.glob<string>('./sprites/*.png', { eager: true, import: 'default' });
@@ -119,6 +125,9 @@ const SOURCES: Record<string, Sources> = {
   shark: { rest: sharkRest, strike: sharkStrike,
            parts: { tail: sharkTail, back: sharkBack, belly: sharkBelly, pectoral: sharkPectoral, eye: sharkEye },
            marks: { ...marksFrom(SPRITES.shark.marksFrom ?? 'shark'), ...marksFrom('shark') } },
+  squid: { rest: squidRest, strike: squidStrike, arm: squidArm, tentacle: squidTentacle,
+           parts: { tail: squidTail, eye: squidEye },
+           marks: { ...marksFrom(SPRITES.squid.marksFrom ?? 'squid'), ...marksFrom('squid') } },
 };
 
 /** A frame shut and open, and the colours both may snap to. */
@@ -300,6 +309,18 @@ export function bakeSprite(id: string, g: Genome, plan: Plan, res: number, wound
  * strip from root to tip, held symmetric about the row its flesh runs along, as the body is
  * about its axis, leaving the crown the arms do.
  */
+/**
+ * A drawn player body's arms and feeding pair, rigged from its own pictures as a sprite squid's
+ * are (`SpriteArt.arm`), in place of the painted ones: null where the body has none drawn.
+ */
+export function drawnArms(id: string, f: Form, res: number): { arm: Rig | null; tentacle: Rig | null } {
+  const s = SPRITES[id], all = framesOf(id);
+  if (!s?.arm || !all?.arm) return { arm: null, tentacle: null };
+  const per = spriteScale(s, f);
+  return { arm: armRig(all.arm, s.arm, s, f, per, res),
+           tentacle: all.tentacle && s.tentacle ? armRig(all.tentacle, s.tentacle, s, f, per, res) : null };
+}
+
 function armRig(a: Arm, m: { root: number; tip: number; axis: number; reach: number }, s: SpriteArt,
                 f: Form, per: number, res: number): Rig {
   const crown = s.arm!;
@@ -383,6 +404,7 @@ export function drawnBody(id: string, f: Form, back: number, halfH: number, res:
       sy = (m.to[1] - m.y) * per / ((its.tip[1] - its.at[1]) * sc);
     } else if (m.span) sx = sy = m.span * per / (a.image.width * sc);
     const grow = m.least ? Math.max(1, m.least / (k * sc)) : 1, z = s.markSize?.[name as MarkName] ?? 1;
+    if (z === 0) return;
     sx *= grow * z; sy *= grow * z;
     lay(a, its.at[0], m.flip ? a.image.height - its.at[1] : its.at[1], (m.x - back) * res, (m.y + halfH) * res,
         sx, sy, m.layer === 'under', to);
