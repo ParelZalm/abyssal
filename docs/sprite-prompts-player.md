@@ -738,7 +738,12 @@ and 54 forward, arch at the painted lure's height. The prompt is in the history:
 
 ---
 
-## The Moray — Stage A
+## The Moray
+
+- ~~Stage A~~ — done: `docs/media/reference/moray.webp`, the second try: the first came back a
+  stretched larva, 5 times as long as deep where 10 was asked, deepest at mid-body, with no mouth
+  seam and fins growing taller to a fanned tail. Its prompt, tightened after it, is in the history:
+  `git show c0bf32d:docs/sprite-prompts-player.md`.
 
 The third form (`content/forms.ts`): three different Lurker mutations rebuild the larva onto the
 eel's plan, with stillness that hides it and winds up its next bite. As with the Shark and the
@@ -756,102 +761,156 @@ part) and the tail tip where they meet (the `tail`); there is no pectoral, as on
 mouth is a closed seam on this sheet: the jaws are a sheet of their own after the body, as the
 Shark's and the Squid's were.
 
-**Attach:** `larva.webp` (the larva it grows from), `shark.webp` and `squid.webp` (the forms
-before it, how far the larva's look carries), `cave-room.webp` and `tank-room.webp`, and
-`ribbon.webp` and `gulper.webp` as what it must not look like. Generate each image on its own.
+### Stage B
 
-**The first try came back a stretched larva:** right in its glass, eye, notochord and gut, but 5
-times as long as deep where 10 was asked, deepest at mid-body rather than behind the head, with no
-mouth seam, and fins that grew taller to a fanned tail. The prompt below spells the proportion out
-in pixels and keeps the fin low and even. Do not attach that sheet: it pulls the proportions back.
+The parts sheet first, then the bare body with it attached, as the Shark and the Squid went. The
+"in game" image is the target; its "parts" image drew the body a third deeper. What changes from
+the sheet: **the fins are low and even**, 5 and 4 tall the whole way, where it drew them peaking
+behind the head and tapering to the tail, which made the outline a long wedge rather than an eel;
+**the body is a little fuller toward the tail**, where it tapered straight from the head; **the
+tail is the fin's rounded end** wrapped round the body's point, as on its "in game" image, not the
+small crescent fan of its "parts" image. Kept from it: the eye on the midline close to the snout,
+and the body deepest just behind the head.
+
+**The sizes**, off the "in game" image with the body 152 art pixels from the snout to its point,
+about the texel density of the Shark's on a plan 1.4 times as long (`PLAN_FORMS.eel`): 17 deep at
+its deepest, 30 behind the snout, 15 at the middle, 11 three quarters back; the eye 9 across, its
+middle 12 behind the snout tip on the midline; the gill opening 3 across, 26 behind the snout; the
+gut 17 long and 5 deep, its front 39 behind the snout; the dorsal fin from 26 to 142 behind the
+snout, 5 tall, and the anal fin from the vent, 56 behind, to 142, 4 tall; the tail the fin's end
+over the last 10 of the body and 4 past its point, 10 tall; the whole moray 156 long and 26 deep.
+
+**On green.** **Attach both:** `moray.webp`, `squid-parts-sprite.png` (the Squid's parts sheet, how
+the form's parts are cut), `larva-parts-sprite.png`, `cave-room.webp`; for sheet 2, the parts sheet
+that came back as well.
+
+#### Sheet 1: the parts
 
 ```text
-STYLE (shared by every image)
-Reference sheet for a game creature: the player character of the game, a pale glowing
-fish larva, grown into the shape of a young moray eel. The attached larva sheet is the
-same creature before it changed, and the attached pale shark and pale squid are it as
-other forms: keep their character and colours exactly — see-through, near-white with a
-cool lavender cast, what is inside showing faintly through, glowing softly against the
-dark — on a moray's body. It must NOT look like the attached ribbon eel or gulper eel:
-not blue, not yellow, not dark, no leaf-shaped nostrils, no barbels, no huge mouth or
-pouch, no light on the tail.
-Match the attached images: dark navy water, side-on, the look of dark underwater pixel
-art. Exactly one creature, nothing else in the frame: no rock, no plants, no bubbles,
-no particles, no text except where asked. Strict lateral profile, facing RIGHT, the
-whole body held perfectly STRAIGHT and horizontal from head to tail tip — not wavy, not
-S-curved, not coiled, not swimming. Fins spread so their outline reads. The whole
-animal fits in the frame with a margin around it. Output as a large lossless PNG, at
-least 2048 px wide.
+GOAL
+True pixel-art sprite sheet of the pale moray eel in the attached reference sheet, for
+a game: the whole moray once, and under it its parts drawn apart. The design and
+colours of the reference's "in game" image — the pale see-through lavender body, long
+and slender, deepest behind the head, the big larva eye near the snout, the notochord
+and the gut showing through — redrawn as clean pixel art on a strict grid, in the
+style of the attached squid and larva parts sheets (the same creature as other forms).
 
-ANATOMY (must be accurate)
-A young moray eel, side view: VERY long and slender — an eel, a long ribbon of a body,
-not a fish. The body (fins not counted) is 10 times as long as it is deep: drawn 1800 px
-long, it is only 180 px deep at its deepest. Measure it; the larva's short body must not
-carry over.
-- Body: long and muscular, flattened side to side, deepest right behind the head, at
-  the gill opening, and staying almost that deep for its first two thirds, then tapering
-  through its last third to a narrow pointed tail tip. Smooth thick skin, no scales.
-- Head: heavy and deep, the deepest part of the animal, about an eighth of the body
-  length, its top rising in a gentle hump behind the eye; a blunt rounded snout.
-- Mouth: closed, drawn plainly as a long darker line from the snout tip back past the
-  eye to about the middle of the head, lips together, no teeth showing. Two small short
-  tube nostrils at the tip of the snout, pointing forward.
-- Eye: one round eye low on the head, just above the mouth line, set back from the snout
-  tip by about its own width:
-  the larva's eye — a black pupil, a thin pale-silver ring, one small white glint high
-  on its front — about two fifths of the head's depth across.
-- Gill opening: one small dark round hole on the side, behind the head at mid-height.
-- One continuous fin: the dorsal fin rises just behind the head and runs low along the
-  whole back, round the tail tip, and forward under the belly as the anal fin, which
-  begins at the vent just behind the middle of the body. The fin is a low soft fold,
-  about a fifth of the body's depth tall and the same height all the way along — not
-  taller toward the tail. At the tail it wraps round the pointed end of the body as a
-  small rounded edge, no wider than the body there: no fan, no separate tail fin. NO
-  pectoral fins, NO pelvic fins.
-- See-through like the larva: a faint straight line of the notochord along the middle of
-  the body from behind the head to the tail tip, and a small darker rounded gut low in
-  the body, about a quarter of the way back. No spots, no mottling, no stripes, no
-  lights.
-Colours, the larva's: body pale near-white with a lavender tint (#e8e4f8 to #b8b0d8),
-the fin paler and more see-through (#f4f2ff at its edge), the notochord a faint cool
-grey line, the gut a muted dusky violet (#6a5a8a), the gill opening and the mouth seam
-a shade darker than the body, eye black with a pale-silver ring, outline #79728f.
+THE GRID (most important)
+- The sheet is exactly 176 × 96 art pixels.
+- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
+  square block, so the image is 1408 × 768.
+- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
+  than one block. No dithering noise. Every block is one flat colour.
+- 1-block outline (#79728F) round each silhouette, never thicker.
 
-IMAGE 1 — "in game"
-The moray fully rendered in the attached images' style, on a flat solid background of
-#071731. It is the brightest thing in the frame: lit pale, with only a small, tight soft
-halo round it.
+LAYOUT
+- Top: the WHOLE moray, assembled, as in the reference's "in game" image: facing RIGHT,
+  perfectly straight and horizontal, 156 art pixels from the tail's end to the snout
+  and 26 deep with its fins. Centred left to right.
+  - The body 152 long from the snout tip to its pointed end: 17 deep at its deepest,
+    30 behind the snout, 15 deep at the middle, 11 deep three quarters back, then
+    tapering to the point. A blunt rounded snout; the head's top rising gently behind
+    the eye. Smooth, no scales.
+  - The mouth: closed, a 1-pixel darker line (#9B8DB7) from the snout tip back 20 art
+    pixels, 5 below the midline, just under the eye. Two tiny tube nostrils, 2 pixels
+    each, on the tip of the snout.
+  - The eye 9 across, its middle 12 art pixels behind the snout tip, on the midline:
+    black pupil, pale-silver ring, one white glint.
+  - The gill opening: a dark round hole (#6A5A8A) 3 across, 26 behind the snout, on
+    the midline.
+  - The dorsal fin: a low soft fold along the back from 26 behind the snout to 10
+    before the body's point, EXACTLY 5 art pixels tall the whole way (not taller in
+    the middle, not tapering), with faint slanted rays.
+  - The anal fin: the same fold under the belly from the vent, 56 behind the snout, to
+    10 before the body's point, EXACTLY 4 art pixels tall the whole way.
+  - The tail: the fin's rounded end, wrapped round the body's point: it covers the
+    last 10 pixels of the body and runs 4 past its point, 10 tall, joining the dorsal
+    and anal fins' ends; no fan, no fork.
+  - The notochord: a straight line 2 art pixels thick (#B8B0D8) along the midline from
+    the gill opening to the tail. The gut: a darker rounded shape (#6A5A8A) 17 long and
+    5 deep, its front 39 behind the snout, low in the body.
+- Bottom rows: its parts, each on its own with at least 8 art pixels of background on
+  every side between it and anything else, each at EXACTLY the size and shape it has
+  on the whole moray above, not rotated, not enlarged:
+  1. the dorsal fin (its lower edge cut where it meets the back);
+  2. the anal fin (its upper edge cut where it meets the belly);
+  3. the tail (the fin's rounded end, its front edge cut where the dorsal and anal
+     fins end, the body's point under it left off);
+  4. the eye (the black pupil, the pale-silver ring and the white glint).
+- Where a part meets the body, finish its edge with the outline like the rest of it.
+- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
+  anywhere on the animal, and do not let the outline pick up a green tint where it
+  meets the background.
 
-IMAGE 2 — "flat"
-The same moray, same pose, same outline, flat colour only: no shading, no highlights,
-no glow, no outline stroke, no texture. Each region one solid colour: body, dorsal fin,
-anal fin, tail tip, mouth seam, nostrils, gill opening, notochord, gut, eye ring, pupil.
-Flat white background.
+PALETTE
+Use these colours, plus at most 8 in-between shades of them: outline #79728F, deep
+shadow #B8B0D8, body #E8E4F8, body highlight #F4F2FF, fin #D6D0ED, gut #6A5A8A, eye
+ring #CDD3E3, pupil #080B16. Light comes from above and slightly in front: lit top,
+darker belly; each part shaded as its own form, the fins paler and more see-through
+than the body.
 
-IMAGE 3 — "parts"
-The same moray taken apart, like a technical exploded diagram: the bare body (head and
-trunk with the mouth seam, the nostrils and the gill opening on it, the notochord and
-the gut inside it, no fins, no eye), the eye, the dorsal fin, the anal fin, and the tail
-tip where the two fins meet round the end of the body — each drawn separately with a
-clear gap, in its original position and orientation, pulled slightly outward, each with
-a small plain label. Show on the bare body, as faint dotted outlines, where each part
-sat. Flat white background.
-
-IMAGE 4 — "palette"
-A single row of 8 large square colour swatches taken from image 1, each with its hex
-code under it: outline, deep shadow, body, body highlight, fin, gut, eye ring, pupil.
+LIGHTS
+The eye's glint is a flat white block. NO glow halo, bloom or light spill, on the
+animal or on the background. The game adds the glow itself.
 
 AVOID
-A short, stubby or fish-like body, a body less than 8 times as long as it is deep, tall
-fins, fins that grow taller toward the tail, a fan-shaped tail, a missing mouth line,
-three-quarter or front views, a wavy, S-curved or coiled body, a swimming pose, several
-animals, a scene, a rock or a hole, blue, yellow, green, brown or dark colouring,
-spots, mottling or stripes, an open mouth, visible teeth, barbels, leaf or flared
-nostrils, pectoral or pelvic fins, a separate forked tail fin, lights or photophores,
-smooth gradients, big soft bloom or halos, depth of field, cute cartoon features
-(eyelashes, smile, blush), watermarks, frames, borders.
+Labels, leader lines, dotted outlines, parts that differ from the whole moray in size
+or shape, fins taller in the middle or tapering toward the tail, a fan or crescent
+tail, a short or deep body, a body that bends or waves, a part drawn twice, pectoral
+or pelvic fins, an open mouth, teeth, barbels, spots or mottling, any background other
+than flat #00FF00, soft glows, painterly texture, noise, sub-pixel detail, text,
+borders, shadows, a second animal.
 ```
 
-**What to send back:** the four images, or the set you choose; tell me the file's name in
-Downloads, since a paste comes through shrunk. Its Stage B is written from the chosen sheet: the
-parts sheet first, then the bare body with it attached.
+#### Sheet 2: the bare body
+
+```text
+GOAL
+True pixel-art sprite of the pale moray's BARE BODY, for a game: EXACTLY the body of
+the whole moray at the top of the attached parts sheet — the same outline, the same
+taper, the same shading, the mouth line, the nostrils, the gill opening, the notochord
+and the gut — with its eye, its dorsal fin, its anal fin and its tail taken off.
+2 frames of the same body, side by side, left to right: "rest", "strike".
+
+THE GRID (most important)
+- Each frame is exactly 168 × 32 art pixels.
+- Export scaled up 6× with nearest-neighbour, every art pixel a perfect solid 6 × 6
+  square block, so the image is 2016 × 192.
+- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
+  than one block. No dithering noise. Every block is one flat colour.
+- 1-block outline (#79728F) round the whole silhouette, never thicker.
+
+COMPOSITION
+- Strict side view, facing RIGHT, the body perfectly straight and horizontal.
+- From its pointed end to the snout tip the body is 152 art pixels long and 17 deep at
+  its deepest, as on the parts sheet, tapering to a clean point at the left.
+- Where the eye goes the head is plain body colour, shaded as the rest of the head: no
+  socket, no hole, no dotted outline. Where the fins joined, the outline runs smooth
+  along the back and the belly.
+- The body is centred vertically: its midline, tail to snout, lies along the frame's
+  horizontal centre line.
+- Everything fits inside the frame with at least 4 art pixels of margin, in both frames.
+- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
+  anywhere on the animal, and do not let the outline pick up a green tint where it
+  meets the background.
+
+PALETTE
+The parts sheet's colours: outline #79728F, deep shadow #B8B0D8, body #E8E4F8, body
+highlight #F4F2FF, fin #D6D0ED, gut #6A5A8A, plus at most 8 in-between shades.
+
+FRAME 1 — "rest"
+The bare body at rest, the mouth closed.
+
+FRAME 2 — "strike"
+Identical to frame 1 in every pixel except the mouth: the lower jaw dropped open along
+the mouth line, a long dark gape (#6A5A8A at its deepest) 4 art pixels tall at the
+snout, narrowing back to the mouth's corner. No teeth: the game adds teeth when a
+mutation grows them. Same frame size, same position, same everything else, so the two
+can be swapped without the animal moving.
+
+AVOID
+A body shaped differently from the whole moray on the parts sheet, an eye, an eye
+socket or a dotted outline, fins, a tail fin, teeth, a body that bends or waves, any
+background other than flat #00FF00, soft glows, painterly texture, noise, sub-pixel
+detail, text, labels, borders, shadows, a second animal.
+```
