@@ -7,7 +7,7 @@
 import { edgeAt, halfWidth, spineAt, R, type Form } from '../../../content/form';
 import type { Genome } from '../../../content/genome';
 import type { RGB } from './palette';
-import { M, type Pt, type Sheet } from './sheet';
+import { BACK, M, STANDS, type Pt, type Sheet } from './sheet';
 import { tAt } from './body';
 import type { DrawnEye } from './head';
 
@@ -109,7 +109,10 @@ export function rime(s: Sheet, f: Form, seed: number) {
   for (let i = 0; i < 4; i++) {
     const t = 0.18 + i * 0.075;
     const w = halfWidth(t, f);
-    const len = Math.max(s.texel * 2, w * (0.35 + ((seed + i * 5) % 3) * 0.1));
+    const size = 0.35 + ((seed + i * 5) % 3) * 0.1;
+    const z = size / 0.45;
+    if (s.mark('rime', spineAt(t, f), edgeAt(t, f, BACK), { sx: z, sy: z, layer: 'under', least: STANDS })) continue;
+    const len = Math.max(s.texel * 2, w * size);
     const x = spineAt(t, f), y = edgeAt(t, f, -0.92);
     s.poly([[x - len * 0.25, y + s.texel], [x + len * 0.1, y - len], [x + len * 0.3, y + s.texel]], M.TOOTH);
     s.dot(x + len * 0.1, y - len + s.texel * 0.5, ICE, 1);

@@ -115,6 +115,19 @@ const SOURCES: Record<string, Sources> = {
 interface Pair { rest: ImageData; strike: ImageData; palette: number[][] }
 /** An arm's picture and its own colours (`SpriteArt.arm`). */
 interface Arm { image: ImageData; palette: number[][] }
+
+/** A mark turned upside down (`Placed.flip`), made once per mark: resample takes no negative scale. */
+const flipped = new WeakMap<Arm, Arm>();
+function upsideDown(a: Arm): Arm {
+  let f = flipped.get(a);
+  if (f) return f;
+  const { width: w, height: h, data } = a.image;
+  const img = new ImageData(w, h);
+  for (let y = 0; y < h; y++) img.data.set(data.subarray((h - 1 - y) * w * 4, (h - y) * w * 4), y * w * 4);
+  f = { image: img, palette: a.palette };
+  flipped.set(a, f);
+  return f;
+}
 interface Frames extends Pair {
   wounded?: Pair; arm?: Arm; tentacle?: Arm; parts?: Partial<Record<PartName, Arm>>; marks?: Record<string, Arm>;
 }
@@ -347,8 +360,9 @@ export function drawnBody(id: string, f: Form, back: number, halfH: number, res:
   };
   const mark = (m: Placed) => {
     const name = open && fr.marks?.[`${m.name}-open`] ? `${m.name}-open` : m.name;
-    const a = fr.marks?.[name], its = s.marks?.[name as MarkName];
-    if (!a || !its) return;
+    const drawn = fr.marks?.[name], its = s.marks?.[name as MarkName];
+    if (!drawn || !its) return;
+    const a = m.flip ? upsideDown(drawn) : drawn;
     let { sx, sy } = m;
     // stretched to land its tip where the painter's tip is (a lure's bulb, where its trap fires),
     // or to span what the painter's spans (the bloom's reach, where it stings)
@@ -356,7 +370,10 @@ export function drawnBody(id: string, f: Form, back: number, halfH: number, res:
       sx = (m.to[0] - m.x) * per / ((its.tip[0] - its.at[0]) * sc);
       sy = (m.to[1] - m.y) * per / ((its.tip[1] - its.at[1]) * sc);
     } else if (m.span) sx = sy = m.span * per / (a.image.width * sc);
-    lay(a, its.at[0], its.at[1], (m.x - back) * res, (m.y + halfH) * res, sx, sy, m.layer === 'under');
+    const grow = m.least ? Math.max(1, m.least / (k * sc)) : 1;
+    sx *= grow; sy *= grow;
+    lay(a, its.at[0], m.flip ? a.image.height - its.at[1] : its.at[1], (m.x - back) * res, (m.y + halfH) * res,
+        sx, sy, m.layer === 'under');
   };
   const layer = (l: Placed['layer']) => { for (const m of marks) if (m.layer === l) mark(m); };
   for (const name of UNDER) part(name, true);

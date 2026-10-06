@@ -8,6 +8,10 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+- **The larva's back is drawn.** What stands up off it is drawn now: the Dorsal Spines, the
+  Spine Volley's quills (three, five for a Quill Storm), the Brine Gland's rime, the coral's
+  knobs and branches, the Inflation's prickles and the Porcupine's quills, the Stonefish's warts.
+
 ## [0.3.0] — 2026-10-05
 
 - **The larva is drawn.** It is a hand-drawn picture now, like the enemies': a pale,

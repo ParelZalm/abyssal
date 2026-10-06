@@ -319,7 +319,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, 
   // grows menace, and the board's larva, drawn bigger to be seen, came out spined
   if (A.spines) spines(s, f, g, drawn ? Math.max(0, men - menace({ ...hatchedGenome(), size: g.size })) : men);
   if (g.inflate > 0) prickles(s, f, g, seed);
-  if (g.volley > 0) volleyQuills(s, f);
+  if (g.volley > 0) volleyQuills(s, f, g);
   if (g.frost > 0) rime(s, f, seed);
   if (g.brood > 0) broodPouch(s, f);
   if (g.brooder > 0) broodThroat(s, f);

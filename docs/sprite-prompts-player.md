@@ -189,37 +189,23 @@ The larva's trunk is 26 art pixels deep behind its head, 16 at two thirds of the
 Also attach `larva-head-sprite.png` and `larva-tail-sprite.png`, the parts already drawn, for
 the style.
 
-### The back
+### ~~The back~~ — done
 
-8 parts, `«C»` 4, `«N»` 2, `«W»` × `«H»` 32 × 32, so the sheet is 128 × 64 art pixels. Each
-stands up off the back, its foot cut flat at the cell's bottom margin. Attach
-`items-sheet-1-current.png`, `items-sheet-2-current.png`, `items-sheet-4-current.png` and
-`items-sheet-5-current.png`.
+`docs/media/reference/larva-back-sprite.png`, 8 parts in a 4 × 2 grid of 32 × 32 cells, which came
+back at one image pixel to the art pixel:
 
-```text
-PARTS (left to right, top to bottom)
-Every part here stands up off the fish's back: its foot is cut flat and sits on the cell's
-bottom margin, in the middle of the cell. The game stands several of each along the back.
-1. Dorsal Spine — one ivory spine (#f4ecd8, shaded #c8bca0 on its back edge), 4 wide at
-   its foot and 10 tall, raked back (its point to the LEFT), a small web of the larva's
-   fin colour (#D6D0ED) behind its foot, 3 long.
-2. Volley Quill — one loose quill, ivory, 2 thick and 16 long, raked back flat, about
-   30° above level (its point up and to the LEFT), a pale point (#fff6e2), and a dark
-   reddish-brown socket (#6a3a2a) 3 across where its foot goes into the back.
-3. Rime Crystal — one shard of ice standing up, 5 wide at its foot and 8 tall, leaning a
-   little forward (its point to the RIGHT), flat facets of icy blue-white (#d8f6ff,
-   #a8d8f0, shade #78a8c8) and a white point.
-4. Coral Knob — a knobbed lump of crusting coral, pink-orange (#f08a78, pale tips
-   #ffd8cc, shade #b85a5a), 8 wide and 6 tall, rounded on top.
-5. Coral Branch — a short branching coral in the same colours, 8 wide and 9 tall, three
-   stubby branches with rounded pale tips.
-6. Prickle — a short ivory thorn, 2 wide at its foot and 4 tall, leaning a little back.
-7. Porcupine Quill — the prickle grown into a quill: ivory, 3 wide at its foot and 10
-   long, raked hard back (about 45°, its point up and to the LEFT), a pale point.
-8. Stone Wart — a rounded knob of grey mottled stone skin (#7a7480, #5a5460, highlight
-   #9a94a0), 7 wide and 5 tall, a barb of yellow-green venom (#ace723) 2 wide poking
-   out of its top. The yellow-green is a yellow-green, never the background's pure green.
+```bash
+node scripts/import-marks.mjs docs/media/reference/larva-back-sprite.png --body larva --cols 4 --rows 2 --pitch 1 --names spine:bottom,quill:bottom,rime:bottom,coral:bottom,coral2:bottom,prickle:bottom,porcupine:bottom,wart:bottom
 ```
+
+As it went: the larva is baked at about a third of its drawing in a tank, where a part 2 pixels
+thick averages into its own outline, so what stands off the body is drawn at no less than half its
+drawing (`Placed.least`), and a prickle at its whole. A Spine Volley is three quills and a Quill
+Storm five, spread along the back: five at the painted spacing crossed each other's outlines into a
+lattice. The prickles and the porcupine quills under the belly are the back's turned over
+(`Placed.flip`). Weakest as drawn: the spine, mostly outline round a sliver of ivory, so it reads
+grey; the knob, a flat cushion; and the branch. The prompt is in the history:
+`git show 3078a75:docs/sprite-prompts-player.md`.
 
 ### The belly
 

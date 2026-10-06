@@ -12,7 +12,7 @@ import { hasSynergy } from '../../../sim/organs';
 import { tAt } from './body';
 import { TOXIC, type DrawnEye } from './head';
 import { rgbOf, type Palette, type RGB } from './palette';
-import { M, type Pt, type Sheet } from './sheet';
+import { BACK, M, STANDS, type Pt, type Sheet } from './sheet';
 
 /** Spines standing up out of the back. Count rides menace: evolving grows the weapon. */
 export function spines(s: Sheet, f: Form, g: Genome, men: number) {
@@ -20,7 +20,10 @@ export function spines(s: Sheet, f: Form, g: Genome, men: number) {
   for (let i = 0; i < n; i++) {
     const t = 0.3 + (i / Math.max(1, n)) * 0.4;
     const w = halfWidth(t, f);
-    const len = Math.max(s.texel * 2, w * (0.35 + men * 0.5) * (1 - i * 0.06));
+    // drawn, the count still rides menace and each is smaller toward the tail
+    const k = 1 - i * 0.06;
+    if (s.mark('spine', spineAt(t, f), edgeAt(t, f, BACK), { sx: k, sy: k, layer: 'under', least: STANDS })) continue;
+    const len = Math.max(s.texel * 2, w * (0.35 + men * 0.5) * k);
     const x = spineAt(t, f), y = edgeAt(t, f, -1);
     s.poly([[x + len * 0.18, y + s.texel], [x - len * 0.35, y - len], [x - len * 0.3, y + s.texel]], M.FIN);
     s.dot(x - len * 0.33, y - len + s.texel * 0.5, rgbOf(72, 0.2, 0.8), 0.9);
@@ -36,7 +39,11 @@ export function organs(s: Sheet, f: Form, pal: Palette, g: Genome, club = false)
     for (let k = 0; k < 5; k++) {
       const t = 0.28 + k * 0.1 + i * 0.03;
       const w = halfWidth(t, f);
-      const r = w * (0.18 + ((k * 7 + i * 3) % 4) * 0.05);
+      const size = 0.18 + ((k * 7 + i * 3) % 4) * 0.05;
+      // drawn, a knob and a branch in turn, so a crust is not one stamp
+      const z = size / 0.255;
+      if (s.mark((k + i) % 2 ? 'coral2' : 'coral', spineAt(t, f), edgeAt(t, f, BACK), { sx: z, sy: z, layer: 'under', least: STANDS })) continue;
+      const r = w * size;
       const x = spineAt(t, f), y = edgeAt(t, f, -0.85);
       s.ellipse(x, y, r, r * 0.8, M.BODY);
       s.blot(x, y, r, reef, 0.8);
@@ -195,6 +202,11 @@ export function prickles(s: Sheet, f: Form, g: Genome, seed: number) {
   for (let t = 0.1; t < 0.9; t += quills ? 0.075 : 0.045) {
     for (const k of [-1, 1] as const) {
       if (fbm(t * 41, k, seed + 181, 1) < (quills ? 0.15 : 0.4)) continue;
+      // drawn, one part on the back and the same hung under the belly, thinner toward the tail
+      const z = Math.min(1, Math.max(0.6, halfWidth(t, f) / halfWidth(0.45, f)));
+      if (s.mark(quills ? 'porcupine' : 'prickle', spineAt(t, f), edgeAt(t, f, k * -BACK),
+                 // a prickle is 4 pixels tall, and at half that it is a pixel of outline
+                 { sx: z, sy: z, layer: 'under', flip: k > 0, least: quills ? STANDS : 1 })) continue;
       const x = spineAt(t, f), y = edgeAt(t, f, k);
       const len = Math.max(s.texel * 1.5, halfWidth(t, f) * (quills ? 0.6 : 0.2));
       const tip: Pt = [x - (quills ? len * 0.55 : s.texel), y + k * len];
@@ -212,6 +224,8 @@ export function stoneWarts(s: Sheet, f: Form, seed: number) {
   for (let t = 0.18; t < 0.82; t += 0.07) {
     const w = halfWidth(t, f);
     const n = fbm(t * 17, 5, seed + 331, 1);
+    const z = Math.min(1, Math.max(0.6, w / halfWidth(0.45, f)));
+    if (s.mark('wart', spineAt(t, f), edgeAt(t, f, BACK), { sx: z, sy: z, layer: 'under', least: STANDS })) continue;
     const r = Math.max(s.texel * 1.5, w * (0.18 + n * 0.12));
     const x = spineAt(t, f), y = edgeAt(t, f, -0.9);
     s.ellipse(x, y - r * 0.5, r, r * 0.9, M.BODY);
@@ -273,9 +287,13 @@ export function spitSac(s: Sheet, f: Form, eye: DrawnEye | null = null) {
  * be thrown. Drawn over the ordinary spines, so a volley body reads as the pufferfish's
  * weapon and not as more armour.
  */
-export function volleyQuills(s: Sheet, f: Form) {
-  for (let i = 0; i < 5; i++) {
-    const t = 0.3 + i * 0.075;
+export function volleyQuills(s: Sheet, f: Form, g: Genome) {
+  // drawn, three to a Spine Volley and five to a Quill Storm, as their items fan them: five
+  // drawn quills at the painted spacing crossed each other's outlines into a lattice
+  const drawn = s.drawn.has('quill'), n = drawn ? (g.volley > 1 ? 5 : 3) : 5;
+  for (let i = 0; i < n; i++) {
+    const t = drawn ? 0.3 + i * (0.3 / (n - 1)) : 0.3 + i * 0.075;
+    if (s.mark('quill', spineAt(t, f), edgeAt(t, f, BACK), { layer: 'under', least: STANDS })) continue;
     const w = halfWidth(t, f);
     const x = spineAt(t, f), y = edgeAt(t, f, -0.95);
     const len = Math.max(s.texel * 3, w * 1.05);

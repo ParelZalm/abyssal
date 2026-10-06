@@ -31,7 +31,8 @@ export type PartName = 'tail' | 'back' | 'belly' | 'pectoral' | 'eye';
 export type MarkName =
   | 'tapetum' | 'foureye' | 'parietal' | 'halo' | 'nares' | 'ampullae' | 'spit' | 'brood' | 'barbels'
   | 'needle' | 'illicium' | 'lantern' | 'jaw' | 'jaw-open' | 'fangs' | 'fangs-open' | 'saw' | 'saw-open'
-  | 'beak' | 'beak-open' | 'fork' | 'fork2' | 'siphon' | 'smoke' | 'bloom';
+  | 'beak' | 'beak-open' | 'fork' | 'fork2' | 'siphon' | 'smoke' | 'bloom'
+  | 'spine' | 'quill' | 'rime' | 'coral' | 'coral2' | 'prickle' | 'porcupine' | 'wart';
 
 /** A light organ on the picture: where the view hangs a bloom, its colour and how bright. */
 export interface SpriteLight { at: Pt; color: number; strength: number }
@@ -316,8 +317,8 @@ export const SPRITES: Record<string, SpriteArt> = {
   // `npm run sprite -- larva-sprite.png --id larva --key green --fringe`, then
   // `node scripts/import-parts.mjs docs/media/reference/larva-parts-sprite.png --body larva --snout 87 --tail 4 --axis 15 --pitch 1`
   // its marks: `node scripts/import-marks.mjs docs/media/reference/larva-head-sprite.png --body larva
-  // --cols 4 --rows 5 --flip barbels --names tapetum:mid,…` and the tail sheet's the same, with the
-  // names as below. The barbels came back trailing forward and are mirrored; the open beak's
+  // --cols 4 --rows 5 --flip barbels --names tapetum:mid,…` and the tail and back sheets' the same,
+  // with the names as below (the back's at `--pitch 1`, every part anchored at its foot: `:bottom`). The barbels came back trailing forward and are mirrored; the open beak's
   // anchor is set by hand to the shut one's, since its swung lower plate moved the left edge's
   // middle down it, and the beak jumped on every bite
   larva: { w: 88, h: 30, snout: 87, tail: 4, axis: 15, hinge: [79, 17.5],
@@ -328,7 +329,9 @@ export const SPRITES: Record<string, SpriteArt> = {
                     jaw: { at: [0, 4] }, 'jaw-open': { at: [0, 5] }, fangs: { at: [0, 8] }, 'fangs-open': { at: [0, 5] },
                     saw: { at: [0, 4] }, 'saw-open': { at: [0, 5] }, beak: { at: [0, 7] }, 'beak-open': { at: [0, 7] },
                     fork: { at: [24, 15] }, fork2: { at: [30, 18] }, siphon: { at: [18, 3.5] }, smoke: { at: [18, 3.5] },
-                    bloom: { at: [60, 20] } },
+                    bloom: { at: [60, 20] },
+                    spine: { at: [3.5, 10] }, quill: { at: [13, 12] }, rime: { at: [2.5, 8] }, coral: { at: [4, 6] },
+                    coral2: { at: [5, 9] }, prickle: { at: [2, 4] }, porcupine: { at: [6.5, 8] }, wart: { at: [3.5, 7] } },
            parts: { scale: 0.943, at: { eye: [64.4, 4.2], tail: [-17.7, 4.2], pectoral: [51.2, 20.2], back: [4.9, -4.3],
                                        belly: [4.9, 19.2] } },
            ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
