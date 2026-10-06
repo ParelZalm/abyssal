@@ -490,8 +490,11 @@ already. The two eyes drawn to the larva's eye, 20 across to the Shark's 8, are 
 - **Read as they are:** the parietal eye, the halo, the nares, the pouch, the needle; the volley,
   rime, coral, prickles, warts; the claws, frill, lead, photophores; every flank part and coat.
 - ~~**To draw for the Shark:**~~ the jaws and the lures, drawn below.
-- **To place for it:** the brood pouch's roe hangs where the Shark's big pectoral covers it, and the
-  siphon is pale on pale under its stalk.
+- ~~**To place for it:**~~ the brood pouch's roe hung where the Shark's big pectoral covers it, and
+  the siphon behind the anal fin its body keeps, half inside its slim stalk; both are moved on it
+  (`SpriteArt.place`). And every mark sat a pixel or two up and in on it: a drawn outline still
+  took the plan's arched spine and back-heavy depth (`up`, `arch`) over the picture's own shape,
+  which the larva's plan has none of (`drawnForm`).
 - **Not the marks':** the Dorsal Spines draw nothing on any shark, since the plan has none
   (`PLAN_ART.shark.spines`); and the Barbels card draws no barbels on any body, since it never
   sets `g.barbels`.

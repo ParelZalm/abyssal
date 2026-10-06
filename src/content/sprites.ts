@@ -139,6 +139,13 @@ export interface SpriteArt {
   marksFrom?: string;
   markSize?: Partial<Record<MarkName, number>>;
   /**
+   * Where a mark sits along this body, as `t` (0 the snout, 1 the tail), and optionally how far
+   * out from the spine, as `edgeAt`'s side, where its painter's place is under one of the body's
+   * own fins: on the Shark the roe hung under its big pectoral, and the siphon behind the anal fin
+   * its body keeps, half inside its slim stalk, where its pale tube read as more belly.
+   */
+  place?: Partial<Record<MarkName, number | [number, number]>>;
+  /**
    * Where a drawn jaw hinges on a player's body: on the larva at the drawn eye's front edge, on
    * the mouth's line, so the jaw juts from the snout. Hinged behind the mouth, as a jaw is, it ran
    * under the eye, which fills the larva's head down to the mouth.
@@ -378,6 +385,7 @@ export const SPRITES: Record<string, SpriteArt> = {
                     illicium: { at: [0.5, 27], tip: [42.5, 18.6] }, lantern: { at: [0.5, 36], tip: [50.0, 25.3] } },
            // the larva's eye is 20 across and the Shark's 8: the eyes drawn to it, at its size
            markSize: { tapetum: 0.4, foureye: 0.4 },
+           place: { roe: 0.52, siphon: [0.72, 1.4], smoke: [0.72, 1.4] },
            parts: { scale: 1.010, at: { eye: [97.9, 8], tail: [-16.2, -14.3], back: [48.4, -14.3], pectoral: [67.6, 18],
                                        belly: [39.3, 21.1] } },
            ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
@@ -407,7 +415,9 @@ export function drawnForm(id: string, f: Form): Form {
   const per = spriteScale(s, f);
   const outline = Array.from({ length: OUTLINE + 1 }, (_, i) =>
     hullAt(s.hull!, s.snout + (s.tail - s.snout) * i / OUTLINE)[1] / 0.85 / per);
-  return { ...f, outline };
+  // the picture has its own shape: the plan's arched spine and its back-heavy depth (`up`) on top
+  // of it put everything placed on the Shark's a pixel or two up and in, and its roe under its belly
+  return { ...f, outline, up: 0.5, arch: 0 };
 }
 
 /**

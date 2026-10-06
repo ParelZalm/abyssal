@@ -210,7 +210,8 @@ function paint(g: Genome, plan: Plan): Baked {
   const eye = drawn && poses.eye ? drawnEye(drawn, f, poses.eye.sx) : null;
   const own = drawn ? { eye, hinge: drawnHinge(drawn, f),
                        tip: (n: MarkName, x0: number, y0: number, x1: number) => drawnTip(drawn, f, n, x0, y0, x1) } : null;
-  const at = { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn: !!drawn, poses, own, marks };
+  const at = { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn: !!drawn, poses, own, marks,
+              place: (drawn && SPRITES[drawn].place) || {} };
 
   // Two pictures of the same animal on identical sheets: the mouth shut, and the mouth
   // open for an attack. Cropped to their union, so the view can swap one texture for the
@@ -251,6 +252,8 @@ interface Painting {
   own: DrawnHead | null;
   /** The marks the drawn body has, which its painters place instead of painting (`Sheet.mark`). */
   marks: ReadonlySet<string>;
+  /** Where the drawn body moves a mark off its painter's place (`SpriteArt.place`). */
+  place: Readonly<Record<string, number | [number, number]>>;
 }
 
 /**
@@ -258,8 +261,10 @@ interface Painting {
  * body is made of. `gape` opens the mouth, 0 shut to 1 wide. Returns whether the body was
  * big enough to have a head worth drawing.
  */
-function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, poses, own, marks }: Painting, gape: number) {
+function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, poses, own, marks, place }: Painting,
+              gape: number) {
   s.drawn = marks;
+  s.place = place;
   const eye = own?.eye ?? null;
   // --- behind the body ---------------------------------------------------
   const jellyArms = A.arms > 0 && !rigged;

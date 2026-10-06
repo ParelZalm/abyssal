@@ -95,9 +95,8 @@ export function organs(s: Sheet, f: Form, pal: Palette, g: Genome, club = false)
 
   // jet: a siphon under the peduncle, the only organ that points backwards. Drawn, it is rooted
   // where the painted one is, and inked for a Smoke Screen
-  const jt = 0.84;
-  if (g.jet > 0 && !s.mark(hasSynergy(g, 'smokescreen') ? 'smoke' : 'siphon', spineAt(jt, f) + halfWidth(jt, f),
-                           edgeAt(jt, f, 0.9), { layer: 'under' })) {
+  const jt = 0.84, ink = hasSynergy(g, 'smokescreen') ? 'smoke' : 'siphon', [dt, dk] = s.placed(ink, jt, 0.9);
+  if (g.jet > 0 && !s.mark(ink, spineAt(dt, f) + halfWidth(dt, f), edgeAt(dt, f, dk), { layer: 'under' })) {
     const t = jt;
     const w = halfWidth(t, f);
     const x = spineAt(t, f), y = edgeAt(t, f, 0.9);

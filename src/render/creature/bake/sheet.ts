@@ -73,6 +73,8 @@ export class Sheet {
   skin: [number, number] = [0, 0];
   /** The marks drawn for the body this sheet paints over (`SpriteArt.marks`); empty for a painted body. */
   drawn: ReadonlySet<string> = new Set();
+  /** Where a drawn mark sits on this body when its painter's place is under the body's fins (`SpriteArt.place`). */
+  place: Readonly<Record<string, number | [number, number]>> = {};
   /** The drawn marks the painters placed instead of painting, for the bake to lay (`drawnBody`). */
   readonly marks: Placed[] = [];
   private shapes = 0;
@@ -113,6 +115,12 @@ export class Sheet {
    * Place drawn mark `name` with its anchor at `x`, `y`, if this body has it drawn; returns whether
    * it did, so a painter places its mark or paints, never both.
    */
+  /** Where mark `name` goes on this body, as `t` and an `edgeAt` side, where not its painter's `t`, `k`. */
+  placed(name: string, t: number, k: number): [number, number] {
+    const p = this.place[name];
+    return p === undefined ? [t, k] : typeof p === 'number' ? [p, k] : p;
+  }
+
   mark(name: string, x: number, y: number, o: Partial<Omit<Placed, 'name' | 'x' | 'y'>> = {}) {
     if (!this.drawn.has(name)) return false;
     this.marks.push({ name, x, y, sx: 1, sy: 1, layer: 'over', ...o });

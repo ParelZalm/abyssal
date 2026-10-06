@@ -107,7 +107,8 @@ export function cavityBladder(s: Sheet, f: Form) {
 /** Brood Pouch: a clutch of roe bulging the belly behind the throat, a seahorse's pouch. */
 export function broodPouch(s: Sheet, f: Form) {
   // drawn, the clutch is one picture hung from the belly where the painted eggs bulge
-  if (s.mark('roe', spineAt(0.4, f), edgeAt(0.4, f, -BACK), { layer: 'under', least: STANDS })) return;
+  const [t, k] = s.placed('roe', 0.4, -BACK);
+  if (s.mark('roe', spineAt(t, f), edgeAt(t, f, k), { layer: 'under', least: STANDS })) return;
   for (let i = 0; i < 5; i++) {
     const t = 0.33 + i * 0.035;
     const w = halfWidth(t, f);
