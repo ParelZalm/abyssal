@@ -285,8 +285,9 @@ The one active slot fires on Space and recharges by **rooms cleared**, not by ti
 charges (`Organ.active.charge`): the Electric Organ every room, Ink Sac and Inflation every
 other. A new active arrives charged. `PlayerController` holds the charge, `TankMap`'s
 `cleared` hook gives it one, and the HUD draws a pip a room (`ActiveSlot`). Against a room's
-hostiles: ink hides the player, so they abandon a wind-up and hold their fire while it
-lasts; the shock stuns them; and Inflation, on the player, turns every hit aside while
+hostiles: ink confuses every one in the room for 4 s, whatever the player does next — a
+question mark over each, plain to see through the dark, none winding up, charging or firing —
+and hides the player inside the cloud; the shock stuns them; and Inflation, on the player, turns every hit aside while
 swollen (`Organ.guard`) — a third of a hit cannot be taken off hearts.
 
 ## Primaries

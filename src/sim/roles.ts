@@ -442,6 +442,7 @@ export class Roles {
     if (!t) return;
     if (this.flowOf !== t) { this.flowOf = t; this.flow = new Flow(t); this.elsewhere = null; }
     c.roleCd = Math.max(0, c.roleCd - dt);
+    c.confused = Math.max(0, c.confused - dt);
     // a body in the rock does not swim: a drive levels it out, and an eel standing in the
     // floor levelled would swing through the rock round its middle
     const rock = inRock(c);
@@ -464,10 +465,12 @@ export class Roles {
     // a bouncing pufferfish aims at nothing, so ink has nothing to hide from it
     if (c.wounded && c.species.moves === 'balloon') { this.bounce(c); return; }
     // in ink the player is not there to be found: whatever was not already under way is
-    // abandoned, and the room's hostiles drift where they were until it thins. An eel in its
-    // hole stays in it, and `lurk` asks the same before it lunges
-    if (this.inked(p) && c.attack !== 'strike' && !rock) {
-      if (c.attack === 'windup') c.attack = 'none';
+    // abandoned, and the room's hostiles drift where they were until it thins. Confused by it,
+    // a hostile drops even a charge under way, wherever the player is. An eel in its hole stays
+    // in it, and `lurk` asks the same before it lunges
+    const lost = c.confused > 0;
+    if ((lost || (this.inked(p) && c.attack !== 'strike')) && !rock) {
+      if (c.attack === 'windup' || lost) c.attack = 'none';
       c.swell = 1;
       c.drive(dt, this.steer(c, dt, clearHeading(t, c, c.angle + Math.sin(c.wander * 0.8) * 0.8)), 0.25);
       return;
@@ -733,7 +736,7 @@ export class Roles {
         return;
       }
       c.salvoT = 0;
-      if (c.roleCd <= 0 && !this.inked(p) && this.free(c)) {
+      if (c.roleCd <= 0 && !this.inked(p) && c.confused <= 0 && this.free(c)) {
         c.volley = 0;
         c.aimA = a;
         this.begin(c, 'windup', CHARGE_WIND(c.genome.size) + CHARGE_LOCK);

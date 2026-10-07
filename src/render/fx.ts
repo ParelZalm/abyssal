@@ -26,6 +26,12 @@ interface P {
 export class Fx {
   layer = new Container();
   /**
+   * Under the bodies (`Game.reset`): what the water holds that the eye must see through. The
+   * player's ink went over them, and buried the room's hostiles in the one moment they had
+   * to be found.
+   */
+  under = new Container();
+  /**
    * What is light rather than lit: above the lighting pass, additive, as the blooms are
    * (`Game.reset`). Under the dark a streak went out where nothing lit the water round it.
    */
@@ -40,7 +46,7 @@ export class Fx {
   private dots: Sprite[] = [];
   private rings: Graphics[] = [];
 
-  private takeDot(size: number, color: number, alpha: number): Sprite {
+  private takeDot(size: number, color: number, alpha: number, into = this.layer): Sprite {
     const s = this.dots.pop() ?? new Sprite(dotTexture());
     s.anchor.set(0.5);
     s.visible = true;
@@ -48,7 +54,7 @@ export class Fx {
     s.tint = color;
     s.alpha = alpha;
     s.rotation = 0;
-    this.layer.addChild(s);
+    into.addChild(s);
     return s;
   }
 
@@ -108,12 +114,12 @@ export class Fx {
    * seconds (`Behaviour.smell`), and a cue that vanishes before the thing it warned about
    * arrives is not a cue. Barely any drag and barely any buoyancy: it hangs and widens.
    */
-  blood(x: number, y: number, color: number, size: number) {
+  blood(x: number, y: number, color: number, size: number, under = false) {
     // scaled off the body: a krill leaves a couple of specks, a guardian leaves a cloud.
     // A flat count turns a school being eaten into a wall of particles
     const count = 3 + Math.round(Math.min(6, size / 12)) + Math.floor(Math.random() * 3);
     for (let i = 0; i < count; i++) {
-      const s = this.takeDot(size * (0.5 + Math.random() * 0.8), color, 0);
+      const s = this.takeDot(size * (0.5 + Math.random() * 0.8), color, 0, under ? this.under : this.layer);
       s.x = x + (Math.random() - 0.5) * size;
       s.y = y + (Math.random() - 0.5) * size;
       const a = Math.random() * TAU;

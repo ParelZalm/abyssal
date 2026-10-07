@@ -5,6 +5,8 @@ import { O, type Organ } from './types';
 
 /** Seconds an ink cloud hides you in. */
 const INK_LIFE = 3.5;
+/** Seconds the ink leaves the room's hostiles confused, out of the cloud or in it. */
+export const CONFUSED = 4;
 /** Seconds a body stays inflated. */
 export const PUFF_TIME = 3;
 
@@ -21,12 +23,16 @@ export const ACTIVES: Organ[] = [
   O({ id: 'ink', when: g => g.ink > 0,
     // a cloud where you were: nothing that hunts can find a body inside it (`Behaviour.nearest`
     // skips the player there), and whatever was already on you loses the thread. The cloud
-    // stays put, so it is somewhere to hide or a screen to break away behind, not both
+    // stays put, so it is somewhere to hide or a screen to break away behind, not both. And
+    // every hostile in the room is confused (`Creature.confused`), in the cloud or out of it:
+    // hidden only while it stayed in the cloud, the player had paid a charge to sit still in
+    // the dark while the room went on firing at the edge of it. A boss's fight is its own
     active: { name: 'Ink Sac', icon: 'ink', charge: 2, fire: (c, world) => {
       const r = c.genome.size * 3 + 200;
       world.inks.push({ x: c.x, y: c.y, r, t: INK_LIFE });
       world.pulses.push({ x: c.x, y: c.y, r, kind: 'ink' });
       for (const o of world.creatures) {
+        if (o.alive && o.hostile && !o.species.boss) o.confused = CONFUSED;
         if (!o.alive || !o.preysOn(c) || dist2(o.x, o.y, c.x, c.y) > (r * 2) ** 2) continue;
         o.chase = 0;
         o.quarry = null;

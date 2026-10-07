@@ -62,7 +62,7 @@ export class Impacts {
       } else if (f.kind === 'ink') {
         for (let i = 0; i < 5; i++) {
           const a = Math.random() * Math.PI * 2, d = Math.random() * f.r * 0.5;
-          fx.blood(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d, 0x0a0710, f.r * 0.45);
+          fx.blood(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d, 0x0a0710, f.r * 0.45, true);
         }
       } else if (f.kind === 'discharge') {
         fx.ring(f.x, f.y, 0xb8d4ff, f.r);
