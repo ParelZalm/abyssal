@@ -40,7 +40,8 @@ plays and a patch is a fix or a balance pass.
   gut rather than under its eye like a tear. Before, it was painted as the deep's anglerfish: dark,
   scaled, a comb of spines and a lamp of an eye.
 - **The Angler's glow dazes.** A hostile that comes too close to the Angler, into its glow, is dazed
-  for 4.5 s: greyed out, stars circling over its head, and at a third of its speed. It comes round
+  for 4.5 s: greyed out, stars circling over its head, and at 0.4 of its pace — its swim, its
+  charge and the shots it fires, which still reach as far. It comes round
   and is spared for 2 s before the glow can daze it again; bosses keep their own fights.
 - **A glowing body is no longer white-hot.** The player's light organs widen its glow instead of
   burning a white blob over its middle, so the body reads under its own light.
