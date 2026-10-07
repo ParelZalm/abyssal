@@ -151,6 +151,11 @@ const FRY_ON = 1.4;
  */
 const CHILL_DRAG = DRAG_FWD;
 /**
+ * The water in the Angler's glow: half a body's forward drag again, so a hostile in it tops out
+ * at two thirds of its speed. Lighter than a chill, since it holds as long as the body stays lit.
+ */
+const DAZZLE_DRAG = DRAG_FWD * 0.5;
+/**
  * Seconds a hostile's shot flies before it can land on the player. Fired at a player close
  * by, a shot landed on the step it was fired — hit and spent before it was ever drawn — so
  * the larva took hits from a turret's ring out of nothing. This is long enough to be seen
@@ -929,6 +934,12 @@ export class World {
     if (c.chillT > 0) {
       c.chillT = Math.max(0, c.chillT - dt);
       const k = Math.exp(-CHILL_DRAG * dt);
+      c.vx *= k;
+      c.vy *= k;
+    }
+    if (c.dazzled > 0) {
+      c.dazzled = Math.max(0, c.dazzled - dt);
+      const k = Math.exp(-DAZZLE_DRAG * dt);
       c.vx *= k;
       c.vy *= k;
     }

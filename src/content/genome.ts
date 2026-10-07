@@ -33,6 +33,7 @@ export interface Genome {
   mantle: number;      // mantle pump: swims in hard pulses with a glide between
   lurk: number;        // lie in wait: stillness hides you and winds up the next bite
   frenzy: number;      // the shark's: bites on the wounded hit harder. Only a form grants it
+  dazzle: number;      // the angler's: its glow slows the hostiles in it. Only a form grants it
   // senses — a second way of perceiving, beside the eye that `sense` is
   electro: number;     // ampullae: feel the living at short range, whatever the light
   // curses — organs that are all cost, carried by a card whose gift is worth it
@@ -117,7 +118,7 @@ export function baseGenome(): Genome {
     regen: 0.6, metabolism: 1, stealth: 0, gulp: 1, lifesteal: 0, pen: 0, ram: 0,
     tears: 1, reach: 0, velocity: 1,
     venom: 0, lure: 0, claws: 0, jet: 0, coral: 0, frill: 0, filter: 0, crush: 0,
-    eel: 0, mantle: 0, lurk: 0, frenzy: 0, electro: 0, glare: 0, brittle: 0, veins: 0, lead: 0,
+    eel: 0, mantle: 0, lurk: 0, frenzy: 0, dazzle: 0, electro: 0, glare: 0, brittle: 0, veins: 0, lead: 0,
     ink: 0, discharge: 0, inflate: 0, spit: 0, volley: 0, fangs: 0, brooder: 0,
     parietal: 0, twin: 0, foureye: 0,
     blast: 0, scald: 0, halo: 0, arc: 0, pierce: 0, seek: 0, brood: 0, frost: 0,
@@ -141,6 +142,16 @@ export function larvaGenome(): Genome {
  * rather than by quietly adding to `armor` when the mutation is taken — an organ that
  * does not appear in the rule it changes is a stat wearing a costume.
  */
+/**
+ * The light a body throws of its own round its middle (`FishView.shine`): how strong it is, and
+ * how far it reaches in world units. A pale body glows at least as a lit one at 0.6 does. The
+ * Angler's glow slows what swims into it (`dazzle`), so the circle it acts in is this one.
+ */
+export function ownLight(g: Genome) {
+  const own = Math.max(g.glow, g.pale * 0.6);
+  return { own, r: g.size * 0.62 * (3 + own * 5) };
+}
+
 export function armourOf(g: Genome) {
   return g.armor + g.coral * 4;
 }

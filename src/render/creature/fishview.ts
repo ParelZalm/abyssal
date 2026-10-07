@@ -23,7 +23,7 @@ import { bakeFish, releaseFish, type Baked, type Rig } from './fishbake';
 import { SPRITES, spritePoint } from '../../content/sprites';
 import type { Species } from '../../content/species';
 import { drawnAngle, formFor, PLAN_ART, quintic, R, type Plan } from '../../content/form';
-import { menace, type Genome } from '../../content/genome';
+import { menace, ownLight, type Genome } from '../../content/genome';
 import { glowTexture } from '../textures';
 import type { Light } from '../lighting';
 import { angleDelta, clamp, hsl, lerp } from '../../core/util';
@@ -124,6 +124,8 @@ const SIDE_ON = 0.45;
  */
 const KNOCK = 0.18;
 const HURT_WHITE = 0.72;
+/** The most a pale body's halo shows, however its organs glow: its glow widens past this, not brightens. */
+const PALE_HALO = 0.7;
 
 /**
  * A thud against rock (`bump`): seconds it rings for, and how many half-swings it makes in
@@ -406,9 +408,8 @@ export class FishView extends Container {
       out.push({ x: this.glow.x, y: this.glow.y, r: R * 3, color: EMBER, a: this.ember.alpha * a });
       return;
     }
-    const own = Math.max(this.g.glow, this.g.pale * 0.6);
-    if (own > 0.05) out.push({ x: this.glow.x, y: this.glow.y, r: R * (3 + own * 5),
-      color: this.halo.tint as number, a: Math.min(1, own) * a });
+    const { own, r } = ownLight(this.g);
+    if (own > 0.05) out.push({ x: this.glow.x, y: this.glow.y, r, color: this.halo.tint as number, a: Math.min(1, own) * a });
     for (const { s, e, lure } of this.lamps) {
       out.push({ x: this.glow.x + s.x, y: this.glow.y + s.y,
         r: R * (1.4 + e.strength * 2.2) * (lure ? 1 + this.flare * 1.2 : 1), color: e.color, a: s.alpha * a });
@@ -561,13 +562,17 @@ export class FishView extends Container {
     // the floor is lower than it was before the pixel outline and rim: those carry the
     // silhouette in dark water now, and a disc of light round every animal reads as a
     // spotlight on each of them rather than as bioluminescence
-    // a pale body is lit from within, so it carries a real halo whatever its organs
-    this.halo.alpha = Math.min(0.95, 0.13 + g.glow * 0.65 + g.pale * 0.3);
+    // a pale body is lit from within, so it carries a real halo whatever its organs; its light
+    // organs widen it rather than brighten its heart, which at the full 0.95 over a glowing
+    // Angler washed the body out under its own light
+    this.halo.alpha = Math.min(g.pale > 0 ? PALE_HALO : 0.95, 0.13 + g.glow * 0.65 + g.pale * 0.3);
     // the core sits inside the body's own width, so it lifts the animal's value rather
     // than spilling a second disc of light around it
     // and only a real light organ gets one: on an unlit animal it lands as a hot white
     // spot in the middle of the body, which reads as a bug rather than as bioluminescence
-    this.core.visible = g.glow > 0.05;
+    // nor on a pale body, which is its own light already: there the core was a white-hot blob
+    // over the fish's middle, and the body could not be made out under it
+    this.core.visible = g.glow > 0.05 && g.pale <= 0;
     const cr = R * (1.5 + g.glow * 1.6);
     this.core.width = this.core.height = cr * 2;
     this.core.tint = own ?? hsl(lerp(g.accentHue, g.accentHue > 180 ? 22 : 8, heat),

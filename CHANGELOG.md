@@ -36,8 +36,14 @@ plays and a patch is a fix or a balance pass.
   glass, a deep egg of a body under its lure, its fins, its fan of a tail and its eye drawn apart,
   its mouth a long upturned seam that opens wide to bite, and it wears the larva's drawn mutations,
   with jaws and lures drawn for it: its jaws along that upturned mouth, its lure arching from its
-  brow at its own reach. Before, it was painted as the deep's anglerfish: dark, scaled, a comb of
-  spines and a lamp of an eye.
+  brow at its own reach. Its eye looks ahead of it, and the hatchling's spit sac sits low by its
+  gut rather than under its eye like a tear. Before, it was painted as the deep's anglerfish: dark,
+  scaled, a comb of spines and a lamp of an eye.
+- **The Angler's glow slows.** Hostiles that swim into the Angler's glow are held in it, at two
+  thirds of their speed and cast its lavender, for as long as they stay lit; bosses keep their own
+  fights.
+- **A glowing body is no longer white-hot.** The player's light organs widen its glow instead of
+  burning a white blob over its middle, so the body reads under its own light.
 - **Fixed**: the Parrot Beak's lower plate is teal again, on the larva, the Shark and the Squid; the
   larva's had come out wholly the outline's grey.
 - **Fixed**: taking the Deep Lantern, the Lunging Bite or the Parrot Beak could leave the body

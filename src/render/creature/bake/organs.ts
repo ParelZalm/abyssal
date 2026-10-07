@@ -283,7 +283,14 @@ export function spitSac(s: Sheet, f: Form, eye: DrawnEye | null = null) {
   const t = 0.17;
   const w = halfWidth(t, f);
   const r = eye ? eye.r * 0.38 : w * 0.36;
-  const x = eye ? eye.x - eye.r * 1.55 : spineAt(t, f), y = eye ? eye.y + eye.r * 0.7 : edgeAt(t, f, 0.5);
+  let x = eye ? eye.x - eye.r * 1.55 : spineAt(t, f), y = eye ? eye.y + eye.r * 0.7 : edgeAt(t, f, 0.5);
+  // a body whose eye sits high and round puts it elsewhere (`SpriteArt.place`): under the
+  // Angler's, the sac hung like a tear
+  if (s.place.spit !== undefined) {
+    const [pt, pk] = s.placed('spit', t, 0.5);
+    x = spineAt(pt, f);
+    y = edgeAt(pt, f, pk);
+  }
   if (s.mark('spit', x, y, { layer: 'skin' })) return;
   s.blot(x, y, r, WATER, 0.85, M.BODY);
   s.dot(x + r * 0.33, y - r * 0.4, WATER_SHEEN, 0.9);

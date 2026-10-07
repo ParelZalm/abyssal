@@ -479,6 +479,9 @@ export const SPRITES: Record<string, SpriteArt> = {
                      illicium: { at: [1.5, 35], tip: [38.7, 25.8] }, lantern: { at: [1.5, 45], tip: [48.0, 33.7] } },
             // the larva's eye is 20 across and the Angler's 13
             markSize: { tapetum: 0.65, foureye: 0.65 },
+            // the Archer Spit's sac low beside the gut, an organ inside the glass: off the eye, under
+            // its round high eye it hung like a tear, and alone on the flank it read as a second eye
+            place: { spit: [0.62, 0.3] },
             art: { maw: false, crest: false, scales: false, eyeLamp: false, sparkle: false, fan: false,
                    finHue: 0, paleEyes: false },
             parts: { scale: 1.027, at: { eye: [58.4, 7.1], tail: [-16.5, 10.2], back: [12.2, -3.2], pectoral: [46.1, 26.6],
