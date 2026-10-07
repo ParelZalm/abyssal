@@ -326,6 +326,12 @@ export class Creature {
   inked = 0;
   /** Seconds left dazzled: no steering, no bite. Flash Sense's, and held here for any other. */
   stun = 0;
+  /**
+   * Seconds left confused by the player's ink (`ACTIVES.ink`): a hostile that has lost the
+   * player drifts where it is, and neither winds up, charges nor fires until it is over. Shown
+   * over it as a question mark (`TellView`), and it is drawn plain through the ink (`Scene`).
+   */
+  confused = 0;
   /** Seconds left inflated (the Inflation organ): too big to swallow, slow, prickly. */
   puffT = 0;
   /**

@@ -8,6 +8,10 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+- **The Ink Sac confuses.** Its ink leaves every hostile in the room confused for 4 s — a
+  question mark over each, lit plain through the dark, none winding up, charging or firing —
+  where before it only hid you while you stayed in the cloud. The cloud is drawn under the
+  bodies now, so it no longer buries the room's hostiles; bosses keep their own fights.
 - **Music.** Each tank has its own track — the Nursery, the Reef and the Deep — looped and
   crossfaded as the body goes down the drain; the title plays the Nursery's, and Hatch carries
   it on into the first tank. M mutes it with the heartbeat, and it stops while the tab is hidden.

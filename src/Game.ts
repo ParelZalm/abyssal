@@ -289,7 +289,8 @@ export class Game {
     this.camera.root.addChild(
       // what grows on the rock stands behind the bodies; the rock itself is drawn over them
       this.ocean.world, layers.decor, this.scene.focus,
-      this.drain.root, this.pedestals.root, this.pots.root, world.fog, world.layer, this.pickups.root, this.shots.root, this.fx.layer,
+      this.drain.root, this.pedestals.root, this.pots.root, world.fog, this.fx.under, world.layer, this.pickups.root,
+      this.shots.root, this.fx.layer,
       // the rock over the bodies, so a nose pressed into a wall goes into it
       layers.rock,
     );

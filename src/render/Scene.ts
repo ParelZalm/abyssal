@@ -40,6 +40,11 @@ const POOL = 11;
 const PRESENCE = { r: 2.4, a: 0.3, color: [0x9f, 0xb4, 0xd8] };
 const TELL = { r: 2, a: 0.95, color: [0xff, 0x7a, 0x4a] };
 /**
+ * The light on a hostile confused by the player's ink (`Creature.confused`): pale, and wider than
+ * its presence, so the room it was hiding in shows every body in it while the ink lasts.
+ */
+const LOST = { r: 3, a: 0.75, color: 0xe8ecff };
+/**
  * How much of a waned moon jelly is gone (`Creature.wane`): its body all but, and its light
  * only half, so it is followed by the glow it leaves while it cannot be seen or hit.
  */
@@ -128,6 +133,9 @@ export class Scene {
       // then snaps across the screen — worst along a seal, where band-holding bodies bob
       // across the frame edge all the time
       if (seen && !c.view.visible) c.syncView();
+      // confused by the ink, it is in plain sight whatever the dark and its own stealth: the
+      // ink is the player's, and what it buys is a clear look at the room
+      if (c.confused > 0) alpha = 1;
       c.view.show(seen, alpha * c.emergence * (1 - c.wane * WANED) * (1 - c.gone), tint);
     }
 
@@ -157,6 +165,9 @@ export class Scene {
       const at = c.burrow ? noseOf(c) : c;
       lit.add({ x: at.x, y: at.y, r: c.radius * (PRESENCE.r + TELL.r * k), color: (r << 16) | (g << 8) | b,
         a: (PRESENCE.a + TELL.a * k) * c.emergence * (1 - c.wane * WANED_LIGHT) * (1 - c.gone) });
+      if (c.confused > 0) {
+        lit.add({ x: at.x, y: at.y, r: c.radius * LOST.r, color: LOST.color, a: LOST.a * Math.min(1, c.confused) });
+      }
     }
     for (const l of lights) lit.add(l);
     // a tank has no thermocline: the shader's seal is put below the floor of the world, open.

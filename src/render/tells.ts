@@ -66,13 +66,58 @@ function bar() {
 }
 
 /**
+ * A hostile confused by the player's ink (`Creature.confused`): a question mark over it, pale on
+ * a one-pixel dark rim, bobbing, and blinking through its last second so the player sees the
+ * window close. A glyph rather than a colour, since the room's hostiles are every colour.
+ */
+const QUESTION = [
+  '.###.',
+  '#...#',
+  '....#',
+  '..##.',
+  '..#..',
+  '.....',
+  '..#..',
+];
+const MARK = 0xfff2b8;
+/** How far the mark bobs, in art pixels, and how fast, a second. */
+const BOB = 1;
+const BOB_RATE = 2.2;
+/** Blinks a second through the confusion's last second. */
+const WEARING = 8;
+
+let question: Texture | null = null;
+/** The glyph on its rim, one texel to the art pixel, made once. */
+function questionTexture() {
+  if (question) return question;
+  const h = QUESTION.length, w = QUESTION[0].length;
+  const cv = document.createElement('canvas');
+  cv.width = w + 2; cv.height = h + 2;
+  const ctx = cv.getContext('2d')!;
+  const on = (x: number, y: number) => QUESTION[y]?.[x] === '#';
+  const hex = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
+  for (let y = -1; y <= h; y++) for (let x = -1; x <= w; x++) {
+    let rim = false;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) rim ||= on(x + dx, y + dy);
+    if (!on(x, y) && !rim) continue;
+    ctx.fillStyle = hex(on(x, y) ? MARK : FRAME);
+    ctx.fillRect(x + 1, y + 1, 1, 1);
+  }
+  question = Texture.from(cv);
+  question.source.scaleMode = 'nearest';
+  return question;
+}
+
+/**
  * The tells a room's hostiles show over their bodies, drawn in the layer over the lighting,
  * since a warning the dark could swallow is no warning: the charger's bar through its wind-up
- * (`Roles.charger`, `chargeOf`), and the Great White's through its breach (`lockOf`). Sized in art pixels, as the pickups are.
+ * (`Roles.charger`, `chargeOf`), the Great White's through its breach (`lockOf`), and the
+ * question mark of one the ink has confused. Sized in art pixels, as the pickups are.
  */
 export class TellView {
   readonly root = new Container();
   private readonly bars: ChargeBar[] = [];
+  private readonly marks: Sprite[] = [];
 
   update(creatures: readonly Creature[], zoom: number, t: number) {
     const px = 2 / zoom;
@@ -93,6 +138,25 @@ export class TellView {
       b.set(at.x, at.y - c.genome.size * BAR_OVER, charge.fill, charge.locked, px, t);
     }
     for (let i = n; i < this.bars.length; i++) this.bars[i].root.visible = false;
+
+    let m = 0;
+    for (const c of creatures) {
+      if (!c.alive || !c.hostile || c.confused <= 0) continue;
+      if (m === this.marks.length) {
+        const s = new Sprite(questionTexture());
+        s.anchor.set(0.5, 1);
+        this.root.addChild(s);
+        this.marks.push(s);
+      }
+      const s = this.marks[m++];
+      s.visible = c.confused > 1 || Math.sin(t * WEARING * Math.PI * 2) > 0;
+      s.scale.set(px);
+      const at = c.burrow ? noseOf(c) : c;
+      // the bob in whole art pixels, so the mark steps on the grid rather than sliding off it
+      const bob = Math.round(Math.sin((t + c.x * 0.01) * BOB_RATE * Math.PI) * BOB);
+      s.position.set(at.x, at.y - c.genome.size * BAR_OVER - (LIFT + bob) * px);
+    }
+    for (let i = m; i < this.marks.length; i++) this.marks[i].visible = false;
   }
 
   destroy() {

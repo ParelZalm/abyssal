@@ -230,7 +230,7 @@ export const TRAITS: Trait[] = [
   // replaces whichever the body already had, so the card is a choice of escape and not a
   // collection.
   T({ id: 'inksac', tank: 'deep', name: 'Ink Sac', rarity: 'rare', icon: 'ink', families: ['lurker'],
-    tagline: 'Active: vanish', desc: 'Space: a cloud of ink. Nothing can find you inside it for 3.5 s — hostiles lose you and hold their fire. Recharges over 2 rooms. Replaces your active organ.',
+    tagline: 'Active: confuse', desc: 'Space: a cloud of ink. Every hostile in the room is confused for 4 s — it loses you and cannot charge or fire — and nothing finds you inside the cloud for 3.5 s. Recharges over 2 rooms. Replaces your active organ.',
     maxStacks: 1,
     apply: g => { g.ink = 1; g.discharge = 0; g.inflate = 0; } }),
 
