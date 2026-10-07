@@ -947,3 +947,67 @@ Squid's Mantle Pump rings). Anguilliform Body keeps its drawn fins, which are a 
 rather than painting a grey one round them, and the eel plan grows no spines: menace stood one up
 on its back with every jaw. The jaws and lures are the larva's until its own are drawn; at its
 reach the larva's lure stands tall over its head.
+
+### The Moray's jaws and lures
+
+What the larva's marks cannot lend it. Its jaws: the larva's are drawn for a snout with the mouth
+on its tip, 18 long, nearly twice the Moray's mouth, which is a seam along the side of its blunt
+head, 10 from the snout tip back to the corner, a pixel under the midline (`hinge` [146, 14] on its
+157 × 24 body). A moray's jaws are its look, a long gape and fangs that curve back, so the open
+ones drop wider than the Shark's. Its lures: drawn to the larva's reach, they stand tall over its
+head; the painted lure on the Moray roots on the brow 25 behind the snout tip and reaches 54
+forward with an arch 31 high, the Deep Lantern 64 with 42 (measured off `lureBulb` and `lureArch`
+on the form, the same sum that gives the Shark's 42 and 26). 10 parts, `«C»` 4, `«N»` 3, `«W»` ×
+`«H»` 80 × 56, so the sheet is 320 × 168 art pixels, wider than the Shark's for the lantern's
+reach; the last two cells are empty. With the shared block, the belly's *mostly fill* block, and
+on green.
+
+Attach `moray-sprite.png` (its strike frame shows the mouth), `moray-parts-sprite.png`,
+`shark-head-sprite.png` (the Shark's jaws and lures, how a form's are cut), and
+`items-sheet-1-current.png`, `items-sheet-3-current.png`, `items-sheet-5-current.png`.
+
+```text
+MOSTLY FILL, LITTLE OUTLINE (most important)
+The game shows these at about half size. A part that is mostly outline turns into a grey
+smudge there. Each part must be a SOLID shape of its own colours, at least 3 art pixels
+of fill across at its thickest, with the outline only round its edge. No stalks or
+fingers thinner than 3 art pixels including their outline, no single-pixel lines inside
+a part, no gaps or holes except where the item says.
+
+PARTS (left to right, top to bottom)
+The jaws belong to the attached pale moray, whose mouth is a long seam along the side
+of its blunt head, just under the middle: the hinge is at the back corner of the mouth,
+10 art pixels behind the snout tip, and the lower jaw runs forward from it to the tip,
+stopping 1 art pixel short of it. Each jaw's hinge is at the cell's left margin, at
+mid-height, cut flat: the game puts it on the hinge. An open jaw drops WIDE, as a
+moray's does.
+1. Hinged Jaw, shut — the moray's lower jaw as a piece: 10 long, 4 deep at the hinge
+   and 3 at the front, pale like the moray's chin (#E8E4F8, shade #B8B0D8), a row of
+   small ivory teeth (#f4ecd8), each 2 tall, along its top edge, leaning back.
+2. Hinged Jaw, open — the same jaw swung down 40° about its hinge, and above it the
+   dark gape of the open mouth (#2a1e3a) as a wedge from the hinge forward, a row of
+   small ivory teeth along the upper edge of the gape too.
+3. Lunging Bite, shut — the same jaw with three long ivory fangs (#f4ecd8), each 2 wide
+   and 4 tall, standing up from its front half and curving back toward the hinge.
+4. Lunging Bite, open — that jaw swung down 40° as in 2, with the gape, the fangs
+   pointing up into it, curved back, and two more hanging from the upper edge.
+5. Serrated Teeth, shut — the same jaw with a saw edge: many close-set ivory triangle
+   teeth along its whole top, each 2 wide and 3 tall.
+6. Serrated Teeth, open — that jaw swung down 40° as in 2, with the gape, saw teeth
+   along both the jaw and the upper edge of the gape.
+7. Parrot Beak, shut — a parrotfish's fused beak capping the moray's blunt snout: a
+   slate-blue upper plate (#5a6a8a) over a teal lower one (#3a8a8a), a pale cutting edge
+   where they meet, 11 long and 7 deep, rounded at the right as the snout is.
+8. Parrot Beak, open — the same beak with the lower plate swung down 30° about its back
+   edge, the dark gape (#2a1e3a) between the plates.
+9. Illicium — a lure sized for the moray: a thin dark stalk (#3a3550), 3 thick, rising
+   from its root at the cell's bottom-left, arching up 31 and forward, its end 54 to the
+   right of the root, and a glowing cyan bulb (#3fd8ff, white-cyan centre #e8ffff) 11
+   across hanging from the end, its middle 8 above the root's level.
+10. Deep Lantern — the same lure longer: rising 42 and reaching 64 forward, its bulb 14
+    across, its middle 10 above the root's level. Root again at the bottom-left.
+11, 12. Empty: flat green.
+```
+
+**When it lands:** imported as the Shark's head sheet was, with `--body moray`, the jaws `:left` and the lures `:bottomleft`; the Moray's own marks then come before the
+larva's it wears, its `hinge` kept where the seam ends.
