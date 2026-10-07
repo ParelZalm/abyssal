@@ -23,7 +23,8 @@ plays and a patch is a fix or a balance pass.
 - **The Moray is drawn.** Becoming a Moray makes the larva a drawn moray of the same pale glass, a
   long eel with one low fin round its body and a paddle of a tail, its eye near its snout, and it
   wears the larva's drawn mutations; Anguilliform Body keeps its own fin instead of painting a
-  second one round it, and no jaw grows a spike on its back.
+  second one round it, and no jaw grows a spike on its back. It is a little shorter than the eels
+  of the roster, and its spit leaves its mouth rather than the middle of its body.
 - **For development**: the lab opens with a shelf for each form, its family's mutations, so three
   taken from one are the metamorphosis a run makes; `/?lab=1&shelf=moray` opens on the Moray's.
 

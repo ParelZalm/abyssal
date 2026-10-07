@@ -561,6 +561,13 @@ export function spineAt(t: number, f: Form) {
  * change its profile too — a bigger jaw is a wider head, more fin is a longer fluke — so a
  * build is legible from the silhouette before any of its organs are visible.
  */
+/**
+ * How long the player is on a plan it has become, against the roster's animals on it: `smoke` is
+ * the player's alone (`Genome.smoke`), so the eels it shares the plan with keep their length. The
+ * Moray at the eel's full 4.2 was a long reach of body behind a short head, twice the larva's span.
+ */
+const FORM_LEN: Partial<Record<Plan, number>> = { eel: 0.88 };
+
 export function formFor(g: Genome, plan: Plan): Form {
   const base = PLAN_FORMS[plan];
   // 150 is the hatchling's cruise and 1 its metabolism, so both of these are deviations
@@ -571,7 +578,7 @@ export function formFor(g: Genome, plan: Plan): Form {
   return {
     ...base,
     // segments stretch the trunk; armour and jaw thicken it
-    len: base.len * (1 + g.segments * 0.06 + Math.min(1, g.eel) * 0.3),
+    len: base.len * (1 + g.segments * 0.06 + Math.min(1, g.eel) * 0.3) * (g.smoke > 0 ? FORM_LEN[plan] ?? 1 : 1),
     // and speed thins it: a fast fish is a slender fish, because drag goes with frontal
     // area. Every `drive` term below is 1 at the hatchling's cruise, so a base genome
     // comes out of here with exactly its plan's own proportions.

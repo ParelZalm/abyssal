@@ -1,5 +1,5 @@
 import { drawnAngle, edgeAt, formFor, R, spineAt } from '../content/form';
-import { SPRITES, spritePoint, spriteScale, type Pt } from '../content/sprites';
+import { BODIES, SPRITES, spritePoint, spriteScale, type Pt } from '../content/sprites';
 import type { Creature } from './creature';
 import type { Terrain } from './terrain';
 
@@ -130,6 +130,20 @@ function toWorld(c: Creature, x: number, y: number, k: number, angle = c.angle) 
 export function noseOf(c: Creature, angle = c.angle): { x: number; y: number } {
   const h = hullOf(c);
   const o = toWorld(c, h.x[0], h.y[0], c.drawnSize / R, angle);
+  return { x: c.x + o.x, y: c.y + o.y };
+}
+
+/**
+ * Where the player's shots leave its body: its drawn body's mouth (`SpriteArt.spout`) where the
+ * body says, or the bite point. The Moray's bite point, half a size ahead of its middle, was a
+ * fifth of the way to its nose, and its spit came out of its flank.
+ */
+export function spoutOf(c: Creature): { x: number; y: number } {
+  const id = c.isPlayer ? BODIES[c.species.plan] : undefined;
+  const s = id ? SPRITES[id] : undefined;
+  if (!s?.spout) return { x: c.biteX, y: c.biteY };
+  const p = spritePoint(s, formFor(c.genome, c.species.plan), s.spout);
+  const o = toWorld(c, p.x, p.y, c.drawnSize / R);
   return { x: c.x + o.x, y: c.y + o.y };
 }
 

@@ -152,6 +152,12 @@ export interface SpriteArt {
    * under the eye, which fills the larva's head down to the mouth.
    */
   hinge?: Pt;
+  /**
+   * Where a player's shots leave this body (`spoutOf`), where the bite point would not be its
+   * mouth: that is half a size ahead of the middle on every body, inside the larva's round head,
+   * and a long way back down the Moray's.
+   */
+  spout?: Pt;
 }
 
 /** The larva's drawn marks (`SpriteArt.marks`), which the forms wear too (`marksFrom`). */
@@ -427,7 +433,7 @@ export const SPRITES: Record<string, SpriteArt> = {
   // as deep to its 12, so the fins' roots lie under it and they stand lower, as a moray's do. It
   // wears the larva's marks, its eyes at 0.7, and not the camouflage's coat and beard, which its
   // form's lurk always has and which blotched it grey from snout to tail: the moray is the lurker
-  moray: { w: 157, h: 24, snout: 156, tail: 2, axis: 13, hinge: [146, 14], marksFrom: 'larva',
+  moray: { w: 157, h: 24, snout: 156, tail: 2, axis: 13, hinge: [146, 14], spout: [151, 14], marksFrom: 'larva',
            marks: { ...LARVA_MARKS },
            markSize: { tapetum: 0.7, foureye: 0.7, mottle: 0, beard: 0 },
            parts: { scale: 0.945, at: { back: [30.3, -1.6], belly: [31.3, 15.4], tail: [-4.6, 5], eye: [137.1, 5] } },
