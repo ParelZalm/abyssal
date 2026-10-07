@@ -1113,5 +1113,69 @@ mouth, teeth, spines, scales, spots, a long or slender body, a part drawn twice,
 painterly texture, noise, sub-pixel detail, text, borders, shadows, a second animal.
 ```
 
-**What to send back:** the sheet as a file (tell me its name in Downloads; a paste comes through
-shrunk). Sheet 2, the bare body rest and strike, is written from it, with it attached.
+The second try came back (`angler-form-parts-sprite.png`) on the grid asked for, 1408 × 768 with
+every block flat, and in the shape asked for: an egg 98 long from the tail's tip to the snout, the
+body about 79 by 37, the mouth's corner 20 behind the snout and 12 below the midline. Kept, with
+what is off: a speckle through the fins and the body, against "no dithering", which the bake's
+third averages out; the pectoral reaching within 2 or 3 of the mouth's corner; and of the parts
+drawn apart, only the eye and the dorsal match the whole — the tail, the pectoral and the anal fin
+are drawn differently, and the dorsal trails a stray stub — so those are cut from the whole.
+
+#### Sheet 2: the bare body
+
+```text
+GOAL
+True pixel-art sprite of the pale anglerfish's BARE BODY, for a game: EXACTLY the body
+of the whole angler at the top of the attached parts sheet — the same egg-shaped
+outline, the same shading and speckle, the mouth line, the notochord and the gut — with
+its eye, its dorsal fin, its anal fin, its pectoral fin and its tail fan taken off. 2
+frames of the same body, side by side, left to right: "rest", "strike".
+
+THE GRID (most important)
+- Each frame is exactly 104 × 56 art pixels.
+- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
+  square block, so the image is 1664 × 448.
+- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
+  than one block. Every block is one flat colour.
+- 1-block outline (#79728F) round the whole silhouette, never thicker.
+
+COMPOSITION
+- Strict side view, facing RIGHT, level.
+- From the tail stalk, cut flat where the tail fan joined it, to the snout tip the body
+  is 80 art pixels long and 37 deep at its deepest, EXACTLY as on the parts sheet: the
+  egg, the rounded face, the dome of the back.
+- Where the eye goes the head is plain body colour, shaded as the rest of the head: no
+  socket, no hole, no dotted outline. Where the fins joined, the outline runs smooth
+  along the back and the belly, and the whole gut shows where the pectoral covered it.
+- The body is centred vertically: its midline, stalk to snout, lies along the frame's
+  horizontal centre line.
+- Everything fits inside the frame with at least 4 art pixels of margin, in both frames.
+- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
+  anywhere on the animal, and do not let the outline pick up a green tint where it
+  meets the background.
+
+PALETTE
+The parts sheet's colours: outline #79728F, deep shadow #B8B0D8, body #E8E4F8, body
+highlight #F4F2FF, fin #D6D0ED, gut #6A5A8A, plus at most 8 in-between shades.
+
+FRAME 1 — "rest"
+The bare body at rest, the mouth closed: the long upturned mouth line from the snout
+tip down and back to its corner, as on the parts sheet.
+
+FRAME 2 — "strike"
+Identical to frame 1 in every pixel except the mouth: the lower jaw swung down about
+its corner, the mouth wide open — an angler's whole face is its mouth — a big dark gape
+(#2A1E3A at its deepest, #6A5A8A at its edges) 10 art pixels tall at the front,
+narrowing back to the corner, the lower jaw's lip still jutting a little past the upper.
+No teeth: the game adds teeth when a mutation grows them. Same frame size, same
+position, same everything else, so the two can be swapped without the animal moving.
+
+AVOID
+A body shaped differently from the whole angler on the parts sheet, a box shape or a
+flat face, an eye, an eye socket or a dotted outline, fins, a tail fan, a lure, teeth,
+any background other than flat #00FF00, soft glows, painterly texture, sub-pixel
+detail, text, labels, borders, shadows, a second animal.
+```
+
+**Attach:** `angler-form-parts-sprite.png` and `angler-form.webp`. **What to send back:** the
+sheet as a file; tell me its name in Downloads.
