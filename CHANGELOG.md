@@ -34,12 +34,16 @@ plays and a patch is a fix or a balance pass.
   third smaller, so the mouth shows from under it.
 - **The Angler is drawn.** Becoming an Angler makes the larva a drawn anglerfish of the same pale
   glass, a deep egg of a body under its lure, its fins, its fan of a tail and its eye drawn apart,
-  its mouth a long upturned seam that opens wide to bite, and it wears the larva's drawn mutations.
-  Before, it was painted as the deep's anglerfish: dark, scaled, a comb of spines and a lamp of an eye.
+  its mouth a long upturned seam that opens wide to bite, and it wears the larva's drawn mutations,
+  with jaws and lures drawn for it: its jaws along that upturned mouth, its lure arching from its
+  brow at its own reach. Before, it was painted as the deep's anglerfish: dark, scaled, a comb of
+  spines and a lamp of an eye.
+- **Fixed**: the Parrot Beak's lower plate is teal again, on the larva, the Shark and the Squid; the
+  larva's had come out wholly the outline's grey.
 - **Fixed**: taking the Deep Lantern, the Lunging Bite or the Parrot Beak could leave the body
   drawn as it was before, the lantern still the first lure and the jaw still the last one.
 - **For development**: `scripts/import-marks.mjs` reads a sheet whose pitch is not whole, and
-  `--fit` finds each cell's grid on its own.
+  `--fit` finds each cell's grid on its own; `--drawn` names colours it never takes for bleed.
 - **For development**: the lab opens with a shelf for each form, its family's mutations, so three
   taken from one are the metamorphosis a run makes; `/?lab=1&shelf=moray` opens on the Moray's.
 

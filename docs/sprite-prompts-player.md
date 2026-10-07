@@ -1195,112 +1195,23 @@ whole's are fans, which the bake's third does not show. Its id is `angler`; the 
 `anglerfish`. The angler plan's art is the roster's anglerfish — a maw, a comb of spines, scales,
 a lamp of an eye, sparkles — and a drawn body now takes over what it replaces (`SpriteArt.art`).
 It wears the larva's marks, its eyes at 0.65; its jaws hinge at the mouth's corner, 17 behind the
-snout and 10 below the axis. Its jaws and lures are the larva's until its own are drawn: the
-larva's lure stands tall over its head.
+snout and 10 below the axis. Its jaws and lures are its own, drawn below; the larva's lure stood
+tall over its head like a periscope.
 
-### The Angler's jaws and lures
+### ~~The Angler's jaws and lures~~ — done
 
-What the larva's marks cannot lend it. Its jaws: the larva's are drawn level for a mouth on its
-snout's tip, and the Angler's mouth is a long upturned seam, from its corner 17 behind the snout
-tip and 10 below its axis (`hinge` [64, 32] on its 83 × 40 body) forward and up to the tip, rising
-11 over those 17: its lower jaw is drawn at that slant. Its lures: the larva's, drawn to the larva's
-reach, stand tall over its head like a periscope; the painted lure on the Angler roots on its brow
-12 behind the snout tip and reaches 38 forward with an arch 28 high, the Deep Lantern 47 with 37
-(`lureBulb` and `lureArch` on its drawn outline, the sum that gives the Shark's 42 and 26). 10
-parts, `«C»` 4, `«N»` 3, `«W»` × `«H»` 72 × 56, so the sheet is 288 × 168 art pixels; the last two
-cells are empty. The Moray's jaws came back two and a half times the size asked, so the sizes are
-said twice. On green.
+`docs/media/reference/angler-form-head-sprite.png`, 10 parts in a 4 × 3 grid, at about 6.95 image
+pixels to the art pixel (2000 × 1167, as pasted):
 
-Attach `angler-form-sprite.png` (its strike frame shows the gape), `angler-form-parts-sprite.png`,
-`moray-head-sprite.png` and `shark-head-sprite.png` (how a form's jaws and lures are cut), and
-`items-sheet-1-current.png`, `items-sheet-3-current.png`, `items-sheet-5-current.png`.
-
-```text
-GOAL
-True pixel-art sprite sheet of body parts for the pale anglerfish in the attached
-sheets, for a game: each part a separate piece that the game lays onto the angler. Same
-style, same outline, same light and the same scale as the angler and its parts in the
-attached sheets: these are added to that angler. A grid of cells, one part per cell, in
-the order listed.
-
-THE GRID (most important)
-- 4 columns and 3 rows of cells, each exactly 72 × 56 art pixels, so the sheet is
-  288 × 168 art pixels. No gaps between cells and no lines drawn between them.
-- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
-  square block, so the image is 2304 × 1344.
-- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
-  than one block. No dithering noise. Every block is one flat colour.
-- 1-block outline (#79728F) round each part, never thicker, as on the angler.
-
-EACH PART
-- Side view, facing RIGHT like the angler: forward is right, up is up.
-- Drawn at the angler's scale: its bare body is 80 art pixels long and 37 deep, its
-  eye 13 across. The parts are SMALL against their cells: a jaw is about 20 art
-  pixels long in a cell 72 wide.
-- Where a part joins the body, its edge is cut clean and outlined like the rest of it.
-- Thin parts (stalks) are at least 3 art pixels thick.
-- Background: flat pure green #00FF00, one colour, in every cell. Do not use green on
-  any part, and do not let an outline pick up a green tint.
-
-MOSTLY FILL, LITTLE OUTLINE (most important)
-The game shows these at about half size. A part that is mostly outline turns into a grey
-smudge there. Each part must be a SOLID shape of its own colours, at least 3 art pixels
-of fill across at its thickest, with the outline only round its edge. No stalks or
-fingers thinner than 3 art pixels including their outline, no single-pixel lines inside
-a part, no gaps or holes except where the item says.
-
-PALETTE
-The angler's colours where a part is its own flesh: outline #79728F, deep shadow
-#B8B0D8, body #E8E4F8, body highlight #F4F2FF, fin #D6D0ED, gut #6A5A8A. Each item's
-own colours where it says, plus at most 8 in-between shades. Light from above and
-slightly in front: lit top, darker below.
-
-LIGHTS
-Lit things (a lure's bulb) are flat bright pixels. NO glow halo, bloom or light spill,
-on the part or on the background. The game adds the glow itself.
-
-PARTS (left to right, top to bottom)
-The jaws belong to the attached pale angler, whose mouth is a long UPTURNED seam: the
-hinge is at the back corner of the mouth, low on the face, and the lower jaw runs from
-it forward and UP to the tip of the snout, rising 11 art pixels over 17 forward, a
-slant of about 33°. Each jaw's hinge is at the cell's left margin, at mid-height, cut
-flat: the game puts it on the hinge. The jaw rises to the right from there.
-1. Hinged Jaw, shut — the angler's lower jaw as a piece: 20 art pixels long along its
-   slant, 5 deep at the hinge and 3 at its tip, pale like the angler's chin (#E8E4F8,
-   shade #B8B0D8), a row of small ivory teeth (#f4ecd8), each 2 tall, along its top
-   edge, leaning back into the mouth.
-2. Hinged Jaw, open — the same jaw swung down 35° about its hinge, so it lies about
-   level, and above it the dark gape of the open mouth (#2a1e3a) as a wedge from the
-   hinge forward, a row of small ivory teeth along the upper edge of the gape too.
-3. Lunging Bite, shut — the same jaw with four long ivory needle fangs (#f4ecd8), each 2
-   wide and 5 tall, standing up from it and curving back into the mouth, as an
-   anglerfish's do.
-4. Lunging Bite, open — that jaw swung down 35° as in 2, with the gape, the needle fangs
-   pointing up into it, curved back, and three more hanging from the upper edge.
-5. Serrated Teeth, shut — the same jaw with a saw edge: many close-set ivory triangle
-   teeth along its whole top, each 2 wide and 3 tall.
-6. Serrated Teeth, open — that jaw swung down 35° as in 2, with the gape, saw teeth
-   along both the jaw and the upper edge of the gape.
-7. Parrot Beak, shut — a parrotfish's fused beak capping the angler's upturned mouth: a
-   slate-blue upper plate (#5a6a8a) over a teal lower one (#3a8a8a), a pale cutting edge
-   where they meet along the slant, 18 long and 8 deep, its point at the upper right.
-8. Parrot Beak, open — the same beak with the lower plate swung down 30° about its back
-   edge, the dark gape (#2a1e3a) between the plates.
-9. Illicium — a lure sized for the angler: a thin dark stalk (#3a3550), 3 thick, rising
-   from its root at the cell's bottom-left, arching up 28 and forward, its end 38 to the
-   right of the root, and a glowing cyan bulb (#3fd8ff, white-cyan centre #e8ffff) 10
-   across hanging from the end, its middle 8 above the root's level.
-10. Deep Lantern — the same lure longer: rising 37 and reaching 47 forward, its bulb 13
-    across, its middle 10 above the root's level. Root again at the bottom-left.
-11, 12. Empty: flat green.
-
-AVOID
-The angler itself or any part of its body that the item does not name, jaws longer
-than 20 art pixels or filling their cells, level jaws in the shut parts, labels, text,
-numbers, cell borders, any background other than flat #00FF00, soft glows, painterly
-texture, noise, sub-pixel detail, shadows.
+```bash
+node scripts/import-marks.mjs docs/media/reference/angler-form-head-sprite.png --body angler --cols 4 --rows 3 --pitch 6.95 --fit --drawn 3a8a8a --names jaw:left,jaw-open:left,fangs:left,fangs-open:left,saw:left,saw-open:left,beak:left,beak-open:left,illicium:bottomleft,lantern:bottomleft
 ```
 
-**When it lands:** imported as the Moray's head sheet was, with `--body angler` (and `--pitch`,
-`--fit` if it comes back off the 8× grid), the jaws `:left` and the lures `:bottomleft`; the
-Angler's own marks then come before the larva's it wears.
+As it went: at the sizes asked, the Moray's lesson said twice — the shut jaws 20 along the mouth's
+slant, the open ones level under a tall gape, the lures at their reach with arches a few pixels
+taller than asked. The import greyed the Parrot Beak's teal plate: the bleed rule takes a colour as
+green as it is blue for the key run into an outline, and had done so on every beak since the
+larva's, the larva's lower plate wholly outline grey. `--drawn` names a sheet's colours that are
+never bleed; the larva's, the Shark's and the Squid's beaks were imported again with it, and nothing
+else changes (every recorded marks import, run again without it, is byte for byte what the game
+has). The prompt is in the history: `git show 721a3eb:docs/sprite-prompts-player.md`.

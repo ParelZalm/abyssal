@@ -467,9 +467,16 @@ export const SPRITES: Record<string, SpriteArt> = {
   // docs/media/reference/angler-form-parts-sprite.png --body angler --snout 81 --tail 4 --axis 22`.
   // The body came back a lens, the face a little shallower and the rear fuller than the whole on its
   // parts sheet. Its mouth is its own, the seam from the snout down to the corner it hinges at, and
-  // its look is the larva's glass, not the roster anglerfish's its plan paints (`art`)
+  // its look is the larva's glass, not the roster anglerfish's its plan paints (`art`). Its jaws and
+  // lures `node scripts/import-marks.mjs docs/media/reference/angler-form-head-sprite.png --body angler
+  // --cols 4 --rows 3 --pitch 6.95 --fit --drawn 3a8a8a --names …`, the names as the Shark's
   angler: { w: 83, h: 40, snout: 81, tail: 4, axis: 22, hinge: [64, 32], marksFrom: 'larva',
-            marks: { ...LARVA_MARKS },
+            // its own jaws and lures (`angler-form-head-sprite.png`), over the larva's it wears: the
+            // jaws drawn at the slant of its upturned mouth, the lures to its reach
+            marks: { ...LARVA_MARKS, jaw: { at: [0, 11.5] }, 'jaw-open': { at: [0, 13.5] }, fangs: { at: [0, 13.5] },
+                     'fangs-open': { at: [0, 13.5] }, saw: { at: [0, 11.5] }, 'saw-open': { at: [0, 13.5] },
+                     beak: { at: [0, 12] }, 'beak-open': { at: [0, 12] },
+                     illicium: { at: [1.5, 35], tip: [38.7, 25.8] }, lantern: { at: [1.5, 45], tip: [48.0, 33.7] } },
             // the larva's eye is 20 across and the Angler's 13
             markSize: { tapetum: 0.65, foureye: 0.65 },
             art: { maw: false, crest: false, scales: false, eyeLamp: false, sparkle: false, fan: false,

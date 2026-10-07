@@ -5,7 +5,7 @@
  *
  *   node scripts/import-marks.mjs <sheet.png> --body larva --cols 4 --rows 5
  *        --names tapetum:mid,foureye:bottom,…  [--flip barbels] [--recolour name:from>to,…] [--key green] [--pitch 8]
- *        [--fit] [--out src/render/creature/sprites]
+ *        [--fit] [--drawn 3a8a8a,…] [--out src/render/creature/sprites]
  *
  * Unlike the body's own parts (`import-parts.mjs`) there is no whole animal to find these on:
  * each sits alone in its cell, and the game puts it on the body by its anchor, the point it
@@ -25,6 +25,10 @@
  * `--recolour name:from>to,from>to` swaps a part's colours, hex without the `#`, after it is cut:
  * the flank's cracks came back pale, the painter's colour for a dark body, and vanished on the
  * pale larva, so they were darkened here rather than drawn again.
+ *
+ * Green bled into an outline is swapped for the nearest clean colour, and a drawn colour as green
+ * as it is blue reads the same: the Parrot Beak's teal plate (#3a8a8a) was greyed on every beak.
+ * `--drawn` names the sheet's own colours, hex without the `#`, that are never taken for bleed.
  *
  * A pitch need not be whole, and `--fit` finds each cell's grid on its own: the Moray's head
  * sheet came back at about 6.75 image pixels to the art pixel, drifting by a pixel or two from
@@ -69,7 +73,10 @@ const lum = c => c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
 const isBg = c => green
   ? c[1] > 170 && c[1] - Math.max(c[0], c[2]) > 100
   : c[0] > 170 && c[2] > 170 && c[0] - c[1] > 100;
-const bled = c => green ? c[1] > c[0] + 6 && c[1] > c[2] - 4 && lum(c) < 200 : c[0] > c[1] + 30 && c[2] > c[1] + 30;
+const drawnColours = (opt('drawn') ?? '').split(',').filter(Boolean).map(hex);
+const near = (a, b) => a.every((v, k) => Math.abs(v - b[k]) <= 12);
+const bled = c => !drawnColours.some(d => near(c, d)) &&
+  (green ? c[1] > c[0] + 6 && c[1] > c[2] - 4 && lum(c) < 200 : c[0] > c[1] + 30 && c[2] > c[1] + 30);
 const median = a => a.sort((x, y) => x - y)[a.length >> 1];
 const step = (a, b) => Math.abs(D[a] - D[b]) + Math.abs(D[a + 1] - D[b + 1]) + Math.abs(D[a + 2] - D[b + 2]) > 60;
 // the offset along one axis that puts the most of a cell's colour edges on its grid lines
