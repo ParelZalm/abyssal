@@ -643,4 +643,7 @@ draft are gone.
 - **Hostiles** fight by their role (`sim/roles.ts`, and *Hostile roles* in `simulation.md`).
 
 The heartbeat is `audio/sound.ts`, two synthesised sine thumps, woken on the first key or
-press since a browser will not start audio before one, and muted with M.
+press since a browser will not start audio before one, and muted with M. Under it each tank
+has a looped track (`audio/music.ts`, the tracks beside it as 128 kbps AAC), crossfaded at a
+descent; the title plays the nursery's, so Hatch carries on into the same music. `Game.frame`
+names the cue every frame, so a launch, a warp and a restart need no call of their own.

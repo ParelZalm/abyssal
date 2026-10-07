@@ -60,7 +60,7 @@ src/
 │       ├── fishview.ts      one deforming mesh per creature; swims it
 │       ├── fishbake.ts      the bake cache, and paint(): the order a body is painted in
 │       └── bake/            the painters, one file per region of the body
-├── audio/sound.ts   the heartbeat, synthesised
+├── audio/          sound.ts the heartbeat, synthesised; music.ts a track a tank, crossfaded
 ├── dev/             dev only: launches (`launch.ts`, a run started in any tank and room)
 │                    and the in-game dev panel (`panel.ts`)
 ├── design/          the design board (dev only, never imported by the game)
