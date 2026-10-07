@@ -922,3 +922,28 @@ socket or a dotted outline, fins, a tail fin, teeth, a body that bends or waves,
 background other than flat #00FF00, soft glows, painterly texture, noise, sub-pixel
 detail, text, labels, borders, shadows, a second animal.
 ```
+
+**In** (`BODIES.eel`): `moray-sprite.png`, the second try at the bare body (the first came back as
+the parts sheet again, unchanged), and the eye, fins and tail off `moray-parts-sprite.png`.
+
+```bash
+npm run sprite -- docs/media/reference/moray-sprite.png --id moray --key green --fringe --pitch 5.75 --keep 143,10,157,21
+node scripts/import-parts.mjs docs/media/reference/moray-parts-sprite.png --body moray --snout 156 --tail 2 --axis 13 --pitch 9.64 --whole 4,167,14.5 --pick 'back:60,58;belly:60,78;tail:136,74' --place 'tail:-3,6'
+```
+
+As it went: the body sheet's grid search found half the grid, 3.97, and speckled the outline; the
+grid holds still at 157 × 24 from 5.63 to 5.9. Its mouth's seam, drawn a pixel thin, fell between
+the cells and was drawn back in by hand, a row of the snout's outline 10 back from its tip. The
+parts importer takes a pitch that is not whole now, for the parts sheet's 9.64; it read the parts
+by where they land, and a moray's fins run its length, so the dorsal was taken for the tail and the
+anal fin for the pectoral: they are named by a cell of the sheet (`--pick`), and the tail paddle,
+drawn bigger apart than on the whole, is placed by hand (`--place`). The body came back deeper than
+the whole on the parts sheet, 7 times as long as deep to its 12, so the fins' roots lie under it and
+they stand low, as a moray's do.
+
+On the body it wears the larva's marks, its eyes at 0.7, and not the camouflage's coat and beard,
+which the form's lurk always has: they blotched it grey from snout to tail (`markSize` 0, as the
+Squid's Mantle Pump rings). Anguilliform Body keeps its drawn fins, which are a ribbon fin already,
+rather than painting a grey one round them, and the eel plan grows no spines: menace stood one up
+on its back with every jaw. The jaws and lures are the larva's until its own are drawn; at its
+reach the larva's lure stands tall over its head.

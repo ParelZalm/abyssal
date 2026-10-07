@@ -414,6 +414,26 @@ export const SPRITES: Record<string, SpriteArt> = {
            ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
            hull: [[102.5, 16, 5.1], [90.5, 15, 7.6], [79.5, 14, 9.3], [67.5, 14.5, 9.8], [55.5, 14.5, 8.9],
                   [43.5, 14.5, 8.1], [32.5, 14.5, 6.4], [20.5, 14, 4.3], [8.5, 14.5, 1.3]] },
+  // The Moray form: `npm run sprite -- docs/media/reference/moray-sprite.png --id moray --key green
+  // --fringe --pitch 5.75 --keep 143,10,157,21` (the grid holds at 157 × 24 from 5.63 to 5.9; the
+  // search found half of it, 3.97, and speckled the outline), its mouth's seam drawn back in by
+  // hand, a row of the snout's outline from its tip 10 back: drawn a pixel thin, the import's
+  // cells lost it. Its parts `node scripts/import-parts.mjs docs/media/reference/moray-parts-sprite.png
+  // --body moray --snout 156 --tail 2 --axis 13 --pitch 9.64 --whole 4,167,14.5 --pick
+  // 'back:60,58;belly:60,78;tail:136,74' --place 'tail:-3,6'`: its fins run the body's length, so
+  // the rules took the dorsal for its tail and the anal fin for its pectoral, and the tail paddle,
+  // drawn bigger apart than on the whole, fitted best along a fin. It has no pectoral or pelvic,
+  // as a moray has none. The body came back deeper than the parts sheet's whole, 7 times as long
+  // as deep to its 12, so the fins' roots lie under it and they stand lower, as a moray's do. It
+  // wears the larva's marks, its eyes at 0.7, and not the camouflage's coat and beard, which its
+  // form's lurk always has and which blotched it grey from snout to tail: the moray is the lurker
+  moray: { w: 157, h: 24, snout: 156, tail: 2, axis: 13, hinge: [146, 14], marksFrom: 'larva',
+           marks: { ...LARVA_MARKS },
+           markSize: { tapetum: 0.7, foureye: 0.7, mottle: 0, beard: 0 },
+           parts: { scale: 0.945, at: { back: [30.3, -1.6], belly: [31.3, 15.4], tail: [-4.6, 5], eye: [137.1, 5] } },
+           ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
+           hull: [[151.5, 12, 5.1], [133.5, 11, 7.6], [116.5, 12, 9.3], [98.5, 12, 8.5], [81.5, 12.5, 7.2],
+                  [64.5, 12.5, 6.4], [46.5, 12.5, 5.5], [29.5, 13, 4.3], [11.5, 13, 2.5]] },
 };
 
 /**
@@ -422,7 +442,7 @@ export const SPRITES: Record<string, SpriteArt> = {
  * over it and placed on its outline (`drawnForm`), until those are drawn too. A plan not here
  * is painted whole, as every plan was.
  */
-export const BODIES: Partial<Record<Plan, string>> = { wraith: 'larva', shark: 'shark', squid: 'squid' };
+export const BODIES: Partial<Record<Plan, string>> = { wraith: 'larva', shark: 'shark', squid: 'squid', eel: 'moray' };
 
 /** How many steps nose to tail a drawn outline is sampled at (`Form.outline`). */
 const OUTLINE = 24;

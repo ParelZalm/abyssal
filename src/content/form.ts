@@ -361,7 +361,9 @@ export const PLAN_ART: Record<Plan, PlanArt> = {
                     mottle: 0.25, tone: 0.8, shade: 0.3, finRays: false,
                     fins: [{ at: 0.42, len: 1.34, rake: 0.55, chord: 0.45, taper: 0.9 },
                            { at: 0.63, len: 0.36, rake: 0.7, chord: 0.55, taper: 0.5 }] }),
-  eel:        art({ samples: 120 }),
+  // no blades on an eel: a moray's back is one low fin from its nape to its tail, and the spike
+  // menace grew on the drawn Moray with every jaw stood up out of it alone
+  eel:        art({ samples: 120, spines: false }),
   // a bell and its trailing arms. Nothing on a jellyfish is a fin.
   jelly:      art({ arms: 1.15, armCount: 9, armLen: 1.1, armWidth: 0.07, armReach: 0.6,
                     spines: false, gills: false, caudal: 0.6, fins: [] }),

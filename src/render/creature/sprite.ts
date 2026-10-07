@@ -81,6 +81,12 @@ import squidTail from './sprites/squid-tail.png';
 import squidEye from './sprites/squid-eye.png';
 import squidArm from './sprites/squid-arm.png';
 import squidTentacle from './sprites/squid-tentacle.png';
+import morayRest from './sprites/moray.png';
+import morayStrike from './sprites/moray-strike.png';
+import morayTail from './sprites/moray-tail.png';
+import morayBack from './sprites/moray-back.png';
+import morayBelly from './sprites/moray-belly.png';
+import morayEye from './sprites/moray-eye.png';
 
 /** Every sprite file, by its path: the marks are looked up here by name (`marksFrom`). */
 const FILES = import.meta.glob<string>('./sprites/*.png', { eager: true, import: 'default' });
@@ -128,6 +134,9 @@ const SOURCES: Record<string, Sources> = {
   squid: { rest: squidRest, strike: squidStrike, arm: squidArm, tentacle: squidTentacle,
            parts: { tail: squidTail, eye: squidEye },
            marks: { ...marksFrom(SPRITES.squid.marksFrom ?? 'squid'), ...marksFrom('squid') } },
+  moray: { rest: morayRest, strike: morayStrike,
+           parts: { tail: morayTail, back: morayBack, belly: morayBelly, eye: morayEye },
+           marks: { ...marksFrom(SPRITES.moray.marksFrom ?? 'moray'), ...marksFrom('moray') } },
 };
 
 /** A frame shut and open, and the colours both may snap to. */

@@ -17,6 +17,10 @@ plays and a patch is a fix or a balance pass.
   its fins and its eye drawn apart, its arms and tentacles drawn and rigged at its head, and it
   wears the larva's drawn mutations; its jaws are a squid's beak at the root of its arms, in each
   card's look, and its lures arch from its head at its own reach.
+- **The Moray is drawn.** Becoming a Moray makes the larva a drawn moray of the same pale glass, a
+  long eel with one low fin round its body and a paddle of a tail, its eye near its snout, and it
+  wears the larva's drawn mutations; Anguilliform Body keeps its own fin instead of painting a
+  second one round it, and no jaw grows a spike on its back.
 
 ## [0.4.0] — 2026-10-06
 
