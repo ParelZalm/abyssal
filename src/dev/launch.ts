@@ -28,6 +28,8 @@ export interface Launch {
    * time, free and restocking, with targets to shoot. God and calm come with it.
    */
   lab: boolean;
+  /** The lab's shelf to open on, by the start of its name: `moray` is the Moray's mutations. */
+  shelf?: string;
 }
 
 export const ROOM_TYPES: RoomType[] = ['start', 'fight', 'treasure', 'shop', 'deal', 'boss'];
@@ -47,6 +49,7 @@ export function parseLaunch(q: URLSearchParams): Launch | null {
     start: q.get('start') ?? 'hatchling',
     traits: (q.get('traits') ?? '').split(',').filter(Boolean),
     seed: Number.isFinite(seed) && seed > 0 ? seed : undefined,
+    shelf: lab ? q.get('shelf') ?? undefined : undefined,
   };
 }
 
@@ -60,5 +63,6 @@ export function launchUrl(l: Partial<Launch>): string {
   if (l.start && l.start !== 'hatchling') q.set('start', l.start);
   if (l.traits?.length) q.set('traits', l.traits.join(','));
   if (l.seed) q.set('seed', String(l.seed));
+  if (l.lab && l.shelf) q.set('shelf', l.shelf);
   return `/?${q}`;
 }

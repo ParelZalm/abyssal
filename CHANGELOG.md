@@ -24,6 +24,8 @@ plays and a patch is a fix or a balance pass.
   long eel with one low fin round its body and a paddle of a tail, its eye near its snout, and it
   wears the larva's drawn mutations; Anguilliform Body keeps its own fin instead of painting a
   second one round it, and no jaw grows a spike on its back.
+- **For development**: the lab opens with a shelf for each form, its family's mutations, so three
+  taken from one are the metamorphosis a run makes; `/?lab=1&shelf=moray` opens on the Moray's.
 
 ## [0.4.0] — 2026-10-06
 
