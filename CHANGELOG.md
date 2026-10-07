@@ -28,7 +28,14 @@ plays and a patch is a fix or a balance pass.
   long eel with one low fin round its body and a paddle of a tail, its eye near its snout, and it
   wears the larva's drawn mutations; Anguilliform Body keeps its own fin instead of painting a
   second one round it, and no jaw grows a spike on its back. It is a little shorter than the eels
-  of the roster, and its spit leaves its mouth rather than the middle of its body.
+  of the roster, and its spit leaves its mouth rather than the middle of its body. Its jaws and
+  lures are drawn for it: a moray's jaw that drops wide under its eye, with fangs, a saw or a
+  parrot's beak, and the lure arching from its brow at its own reach. Its eye is a moray's, a
+  third smaller, so the mouth shows from under it.
+- **Fixed**: taking the Deep Lantern, the Lunging Bite or the Parrot Beak could leave the body
+  drawn as it was before, the lantern still the first lure and the jaw still the last one.
+- **For development**: `scripts/import-marks.mjs` reads a sheet whose pitch is not whole, and
+  `--fit` finds each cell's grid on its own.
 - **For development**: the lab opens with a shelf for each form, its family's mutations, so three
   taken from one are the metamorphosis a run makes; `/?lab=1&shelf=moray` opens on the Moray's.
 

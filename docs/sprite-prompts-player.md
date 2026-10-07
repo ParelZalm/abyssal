@@ -945,5 +945,24 @@ On the body it wears the larva's marks, its eyes at 0.7, and not the camouflage'
 which the form's lurk always has: they blotched it grey from snout to tail (`markSize` 0, as the
 Squid's Mantle Pump rings). Anguilliform Body keeps its drawn fins, which are a ribbon fin already,
 rather than painting a grey one round them, and the eel plan grows no spines: menace stood one up
-on its back with every jaw. The jaws and lures are the larva's until its own are drawn; at its
-reach the larva's lure stands tall over its head.
+on its back with every jaw. Its jaws and lures are its own, drawn below; the larva's lure, at its
+reach, stood tall over its head.
+
+### ~~The Moray's jaws and lures~~ — done
+
+`docs/media/reference/moray-head-sprite.png`, 10 parts in a 4 × 3 grid, at about 6.75 image
+pixels to the art pixel where 8 was asked (1697 × 927, the size the Moray's parts sheet came back
+at), its grid drifting a pixel or two from cell to cell:
+
+```bash
+node scripts/import-marks.mjs docs/media/reference/moray-head-sprite.png --body moray --cols 4 --rows 3 --pitch 6.75 --fit --names jaw:left,jaw-open:left,fangs:left,fangs-open:left,saw:left,saw-open:left,beak:left,beak-open:left,illicium:bottomleft,lantern:bottomleft
+```
+
+As it went: the marks importer takes a pitch that is not whole now, as the parts importer does,
+and `--fit` finds each cell's grid on its own. The lures came back at their size; the jaws two and
+a half times the 10 asked, and are drawn at half (`markSize`), a pixel past the snout shut, since
+at the 0.4 that fits the seam their teeth thinned to specks. They showed only their tips at first:
+the Moray's drawn eye came back 14 across where its parts prompt asked for 9, took the head's depth
+over the back half of the mouth, and the jaws are laid under it. The eye is drawn at 0.65 now
+(`parts.size`), the 9 asked for, as the first larva's was trimmed. The prompt is in the history:
+`git show 080c810:docs/sprite-prompts-player.md`.

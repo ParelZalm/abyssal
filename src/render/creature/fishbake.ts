@@ -107,7 +107,10 @@ function key(g: Genome, plan: Plan) {
           q(g.bulk, 0.2), q(g.barbels, 0.3), Math.min(2, g.serrate), Math.min(2, g.electro),
           g.glare > 0 ? 1 : 0, g.brittle > 0 ? 1 : 0, g.veins > 0 ? 1 : 0, g.lead > 0 ? 1 : 0,
           g.ink > 0 ? 1 : 0, g.discharge > 0 ? 1 : 0, g.inflate > 0 ? 1 : 0,
-          g.lure > 0 ? 1 : 0, Math.min(3, g.claws),
+          // the lure by its count and the jaw by its kind: the Deep Lantern is a second lure, and
+          // the fangs and the beak are drawn jaws of their own (`jawOf`), so a body that took one
+          // kept the texture it had before it whenever the accent stayed in its bucket
+          Math.round(g.lure), g.fangs > 0 ? 1 : 0, g.pen > 0 ? 1 : 0, Math.min(3, g.claws),
           Math.min(3, g.coral), Math.min(3, g.frill), g.jet > 0 ? 1 : 0,
           g.venom > 0 ? 1 : 0, Math.min(2, g.filter), g.crush > 0 ? 1 : 0,
           g.eel > 0 ? 1 : 0, g.mantle > 0 ? 1 : 0, g.lurk > 0 ? 1 : 0, g.smoke > 0 ? 1 : 0,
