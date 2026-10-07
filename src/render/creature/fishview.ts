@@ -126,6 +126,8 @@ const KNOCK = 0.18;
 const HURT_WHITE = 0.72;
 /** The most a pale body's halo shows, however its organs glow: its glow widens past this, not brightens. */
 const PALE_HALO = 0.7;
+/** How far a dazed body is drained toward grey: most of the way, so it still has a little of its colour. */
+const DAZED_GREY = 0.8;
 
 /**
  * A thud against rock (`bump`): seconds it rings for, and how many half-swings it makes in
@@ -376,6 +378,11 @@ export class FishView extends Container {
    * Culling, fog and the danger tint are decided per creature by `main`, and the bloom
    * has to take all three: it is the same animal, lit from inside.
    */
+  /** Dazed by the Angler's glow (`Creature.dazzled`), 0 to 1: the skin drains it toward grey. */
+  dazed = 0;
+  /** Whether the arms are drawn from their grey copies (`greyed`): the skin does not reach them. */
+  private armsGrey = false;
+
   show(visible: boolean, alpha: number, tint: number) {
     if (this.deathT >= 0) return;
     this.visible = this.glow.visible = visible;
@@ -1004,7 +1011,15 @@ export class FishView extends Container {
       u.uFlip = this.flipT;
       u.uFlash = Math.max(this.ghosted ? GHOST_PALE : 0,
         this.hurtT > HURT_WHITE ? 0.9 * ((this.hurtT - HURT_WHITE) / (1 - HURT_WHITE)) ** 0.5 : 0);
+      u.uGrey = this.dazed * DAZED_GREY;
       this.skin.uniforms.update();
+    }
+    // the arms are meshes of their own, out of the skin's reach, so a dazed body's are swapped for
+    // grey copies of their pictures, as a ghost's are for pale ones
+    const grey = this.dazed > 0.5 && !this.ghosted;
+    if (grey !== this.armsGrey) {
+      this.armsGrey = grey;
+      for (const a of this.arms) a.mesh.texture = grey ? greyed(a.rig.texture) : a.rig.texture;
     }
     // a strike is thrown straight: the charge drove the wave to its widest, so a gulper's
     // dash wriggled harder than its cruise when it should go like a thrown spear. Held
@@ -1075,5 +1090,28 @@ function paled(t: Texture): Texture {
   const out = Texture.from(c);
   out.source.scaleMode = 'nearest';
   pale.set(t, out);
+  return out;
+}
+
+const grey = new WeakMap<Texture, Texture>();
+/** An arm's picture drained toward grey as the skin drains a dazed body (`DAZED_GREY`), made once. */
+function greyed(t: Texture): Texture {
+  const had = grey.get(t);
+  if (had) return had;
+  const src = t.source.resource as HTMLCanvasElement;
+  const c = document.createElement('canvas');
+  c.width = src.width;
+  c.height = src.height;
+  const ctx = c.getContext('2d')!;
+  ctx.drawImage(src, 0, 0);
+  const img = ctx.getImageData(0, 0, c.width, c.height), d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const l = (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11) * 0.85;
+    for (let k = 0; k < 3; k++) d[i + k] = d[i + k] + (l - d[i + k]) * DAZED_GREY;
+  }
+  ctx.putImageData(img, 0, 0);
+  const out = Texture.from(c);
+  out.source.scaleMode = 'nearest';
+  grey.set(t, out);
   return out;
 }

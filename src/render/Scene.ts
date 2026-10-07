@@ -17,8 +17,6 @@ const FELT_TINT = 0x9fc4ff;
 /** A chilled body, frosted pale, and a burning one, gone the vent's sulphur. */
 const CHILL_TINT = 0xc8ecff;
 const BURN_TINT = 0xf0ffa8;
-/** A body held in the Angler's glow (`Creature.dazzled`), cast the glow's cold lavender. */
-const DAZZLE_TINT = 0xc8c4ff;
 /**
  * How much of a hidden animal's stealth the player's eyes lose it by, at a distance. Under
  * 1 on purpose: a lurking ribbon eel at the reef can swallow a hatchling, and one that was
@@ -94,7 +92,9 @@ export class Scene {
       const d = Math.sqrt(dist2(c.x, c.y, p.x, p.y));
       // a chill frosts the body over and a burn yellows it, so a struck hostile says what is
       // still working on it after the flinch is gone
-      let tint = c.chillT > 0 ? CHILL_TINT : c.burnT > 0 ? BURN_TINT : c.dazzled > 0 ? DAZZLE_TINT : 0xffffff;
+      let tint = c.chillT > 0 ? CHILL_TINT : c.burnT > 0 ? BURN_TINT : 0xffffff;
+      // dazed by the Angler's glow: drained grey through the skin, eased in and out over a fifth of a second
+      c.view.dazed = Math.min(1, c.dazzled * 5);
       if (c.hostile) {
         // nothing swallows the player now, so the frame no longer closes on whatever could:
         // it closes on a hostile with its body nearly on the player's, gap not centres, and

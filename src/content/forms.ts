@@ -54,7 +54,7 @@ export const TRANSFORMS: Record<Family, Transformation> = {
     desc: 'You lie in wait: stillness hides you and winds up the next bite. +20% stealth. Eels take you for one of their own while you are whole.',
     apply: g => { g.lurk = 1; g.stealth += 0.2; } },
   luminous: { family: 'luminous', name: 'Angler', plan: 'angler',
-    desc: 'A lure grows from your brow and draws prey to you, your gape widens, and hostiles that swim into your glow slow down. Anglers leave you be while you are whole, lights and all.',
+    desc: 'A lure grows from your brow and draws prey to you, your gape widens, and hostiles that come too close are dazed by your glow. Anglers leave you be while you are whole, lights and all.',
     apply: g => { g.lure += 1; g.gape += 0.4; g.dazzle = 1; } },
   grazer: { family: 'grazer', name: 'Bloom', plan: 'jelly',
     desc: 'A drifting bell: your mouth sieves small prey from afar, and a stinging fringe guards you.',

@@ -39,9 +39,9 @@ plays and a patch is a fix or a balance pass.
   brow at its own reach. Its eye looks ahead of it, and the hatchling's spit sac sits low by its
   gut rather than under its eye like a tear. Before, it was painted as the deep's anglerfish: dark,
   scaled, a comb of spines and a lamp of an eye.
-- **The Angler's glow slows.** Hostiles that swim into the Angler's glow are held in it, at two
-  thirds of their speed and cast its lavender, for as long as they stay lit; bosses keep their own
-  fights.
+- **The Angler's glow dazes.** A hostile that comes too close to the Angler, into its glow, is dazed
+  for 4.5 s: greyed out, stars circling over its head, and at a third of its speed. It comes round
+  and is spared for 2 s before the glow can daze it again; bosses keep their own fights.
 - **A glowing body is no longer white-hot.** The player's light organs widen its glow instead of
   burning a white blob over its middle, so the body reads under its own light.
 - **Fixed**: the Parrot Beak's lower plate is teal again, on the larva, the Shark and the Squid; the

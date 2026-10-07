@@ -14,6 +14,8 @@
  * - **The hit flash.** A wound turns the body white for a few frames (`uFlash`). A tint only
  *   multiplies, so it can darken a body toward red but never lift it, and the red flash it
  *   was is barely a change on a dark animal in a dark room.
+ * - **The daze.** A hostile held in the Angler's glow is drained toward grey (`uGrey`), for the
+ *   same reason: its red could not be tinted out of it.
  * - **The carcass rim.** A body left dead is ringed with one texel of hot red just outside
  *   its silhouette (`uRim`), where the texel is empty and one beside it is not. Outside, not
  *   on, the art's own outline: a dead body is tinted down, and red laid over a dim edge read
@@ -74,6 +76,7 @@ uniform float uRipple;
 uniform float uSoft;
 uniform float uFlip;
 uniform float uFlash;
+uniform float uGrey;
 uniform float uRim;
 uniform vec3 uRimColor;
 uniform vec4 uLegs;
@@ -171,6 +174,9 @@ void main() {
   vec4 c = mix(mix(texel(b), texel(b + vec2(1.0, 0.0)), w.x),
                mix(texel(b + vec2(0.0, 1.0)), texel(b + vec2(1.0, 1.0)), w.x), w.y);
   finalColor = c * vColor;
+  // dazed (the Angler's glow): the body drained toward its own grey, a little dimmed. A tint only
+  // multiplies, so it could darken a red animal but never take the red out of it
+  finalColor.rgb = mix(finalColor.rgb, vec3(dot(finalColor.rgb, vec3(0.3, 0.59, 0.11)) * 0.85), uGrey);
   // a hit: the body goes white for a few frames. Premultiplied, so white is the alpha
   finalColor.rgb = mix(finalColor.rgb, vec3(finalColor.a), uFlash);
   // a carcass's rim, decided per texel like the nubs, and never tinted: the tint is what dims
@@ -214,6 +220,8 @@ export function livingSkin(texture: Texture, body: number, legs: Baked['legs'] =
     uFlip: { value: 0, type: 'f32' },
     // a hit's white flash, 0..1 (`FishView.hurt`)
     uFlash: { value: 0, type: 'f32' },
+    // dazed, drained toward grey, 0..1 (`FishView.dazed`)
+    uGrey: { value: 0, type: 'f32' },
     // a carcass's red outline, 0 off to 1 full (`FishView.lie`)
     uRim: { value: 0, type: 'f32' },
     uRimColor: { value: new Float32Array([1, 0.16, 0.12]), type: 'vec3<f32>' },

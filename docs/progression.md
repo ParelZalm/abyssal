@@ -442,7 +442,7 @@ Shark, then an Angler". `Run.forms` holds them, and `Run.form` is the latest, th
 | predator | Shark | `shark` | `frenzy` +1 (bites on bodies below half health × 1.4), +10% speed |
 | sprinter | Squid | `squid` | `mantle` = 1 and `jet` +1 |
 | lurker | Moray | `eel` | `lurk` = 1, +0.2 stealth |
-| luminous | Angler | `angler` | `lure` +1, `gape` +0.4, `dazzle` = 1 (hostiles in its glow swim at two thirds) |
+| luminous | Angler | `angler` | `lure` +1, `gape` +0.4, `dazzle` = 1 (a hostile that comes into its glow is dazed 4.5 s, at a third of its speed) |
 | grazer | Bloom | `jelly` | `filter` +1, `frill` +1 |
 
 - **Only plans the roster already draws, never a guardian's**, which is why there is no
@@ -465,11 +465,14 @@ Shark, then an Angler". `Run.forms` holds them, and `Run.form` is the latest, th
   eel for the Moray; anglerfish and dragonfish for the Angler; the vampire squid for the
   Squid; none for the Bloom, since jellies do not hunt. Guardians have plans of their own
   and are never fooled. Each form's text says so.
-- **The Angler's glow holds what swims into it** (`dazzle`, `sim/organs/body.ts`): every hostile
-  inside six tenths of its own light's reach (`ownLight`, the circle the view lights the room
-  with, where it is still bright) swims through water half again as thick, two thirds of its
-  speed, while it is in it and 0.3 s after, cast the glow's lavender (`Creature.dazzled`). Bosses
-  keep their own fights, as with the ink. A pale body's glow widens with its organs rather than
+- **The Angler's glow dazes what comes too close** (`dazzle`, `sim/organs/body.ts`): a hostile
+  that comes inside six tenths of its own light's reach (`ownLight`, the circle the view lights
+  the room with, where it is still bright) is dazed for 4.5 s (`Creature.dazzled`), in water three
+  times as thick, a third of its speed, a dash included; drained grey through the skin (`uGrey`,
+  its arms from grey copies) with stars circling over it (`render/tells.ts`). It is spared 2 s
+  after it comes round (`dazzleRest`), so one kept close is dazed again and again rather than
+  held. Bosses keep their own fights, as with the ink. A first cut held a hostile only while it
+  was lit, two thirds of its speed under a faint lavender tint, and could not be seen working. A pale body's glow widens with its organs rather than
   burning its middle: no hot core, and a halo capped at 0.7 (`PALE_HALO`), since at the full
   0.95 under a glowing Angler the body could not be made out.
 - A trait of two families that completes both transforms into the one it lists first.
