@@ -1177,5 +1177,23 @@ any background other than flat #00FF00, soft glows, painterly texture, sub-pixel
 detail, text, labels, borders, shadows, a second animal.
 ```
 
-**Attach:** `angler-form-parts-sprite.png` and `angler-form.webp`. **What to send back:** the
-sheet as a file; tell me its name in Downloads.
+**In** (`BODIES.angler`): `angler-form-sprite.png`, the bare body, and the eye, fins and tail off
+`angler-form-parts-sprite.png`.
+
+```bash
+npm run sprite -- docs/media/reference/angler-form-sprite.png --id angler --key green --fringe --pitch 8 --keep 60,16,84,34
+node scripts/import-parts.mjs docs/media/reference/angler-form-parts-sprite.png --body angler --snout 81 --tail 4 --axis 22
+```
+
+As it went: the body sheet came back on its grid at 8×, a lens more than an egg — the face 4 or 5
+shallower over its first 15 and the rear fuller than the whole on the parts sheet — and the strike
+a dark wedge cut into the face, 8 tall, the lower lip jutting as a strip. The strike's gape lies
+inside the rest's silhouette, so the import took nothing from it until the mouth's box was given
+(`--keep`). The parts were found on the whole by their shapes, the tail at 97%, the fins at 88%,
+the pectoral at 84%, the eye at 77%; the ones drawn apart are what is laid, octagons where the
+whole's are fans, which the bake's third does not show. Its id is `angler`; the roster's is
+`anglerfish`. The angler plan's art is the roster's anglerfish — a maw, a comb of spines, scales,
+a lamp of an eye, sparkles — and a drawn body now takes over what it replaces (`SpriteArt.art`).
+It wears the larva's marks, its eyes at 0.65; its jaws hinge at the mouth's corner, 17 behind the
+snout and 10 below the axis. Its jaws and lures are the larva's until its own are drawn: the
+larva's lure stands tall over its head.

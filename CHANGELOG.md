@@ -32,6 +32,10 @@ plays and a patch is a fix or a balance pass.
   lures are drawn for it: a moray's jaw that drops wide under its eye, with fangs, a saw or a
   parrot's beak, and the lure arching from its brow at its own reach. Its eye is a moray's, a
   third smaller, so the mouth shows from under it.
+- **The Angler is drawn.** Becoming an Angler makes the larva a drawn anglerfish of the same pale
+  glass, a deep egg of a body under its lure, its fins, its fan of a tail and its eye drawn apart,
+  its mouth a long upturned seam that opens wide to bite, and it wears the larva's drawn mutations.
+  Before, it was painted as the deep's anglerfish: dark, scaled, a comb of spines and a lamp of an eye.
 - **Fixed**: taking the Deep Lantern, the Lunging Bite or the Parrot Beak could leave the body
   drawn as it was before, the lantern still the first lure and the jaw still the last one.
 - **For development**: `scripts/import-marks.mjs` reads a sheet whose pitch is not whole, and

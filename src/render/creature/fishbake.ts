@@ -177,7 +177,8 @@ function paint(g: Genome, plan: Plan): Baked {
   const drawn = body && hasSprite(body) ? body : null;
   const f = drawn ? drawnForm(drawn, formFor(g, plan)) : formFor(g, plan);
   const men = menace(g);
-  const A = PLAN_ART[plan];
+  // the picture replaces some of its plan's painted look (`SpriteArt.art`)
+  const A = drawn && SPRITES[drawn].art ? { ...PLAN_ART[plan], ...SPRITES[drawn].art } : PLAN_ART[plan];
   const seed = Math.round(g.hue * 7 + g.accentHue * 3 + g.spikes * 11) % 9973;
   const pal = palette(g, men, A, seed);
   const shades = drawn && SPRITES[drawn].ramp;
