@@ -1,5 +1,6 @@
 import { Application, Container } from 'pixi.js';
 import { toggleMute } from './audio/sound';
+import { music } from './audio/music';
 import { Rng } from './core/util';
 import { familyCounts } from './content/forms';
 import { larvaGenome, type Genome } from './content/genome';
@@ -466,6 +467,9 @@ export class Game {
     // a couple of frames of slow motion on a landed bite, so the hit registers
     dt = this.camera.slow(dt);
     this.fx.update(dt);
+    // asked every frame rather than at each place the tank changes: a descent, a launch, a
+    // warp, a restart and the title all land here
+    music(this.phase === 'title' ? 'title' : this.run.tank.id);
     const { W, H } = this.camera;
     // the title is opaque, so the stage under it is not drawn: rendering the tank, its water
     // and its frame pass every frame behind it was the costliest thing on the title screen

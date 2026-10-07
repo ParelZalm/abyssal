@@ -1,13 +1,20 @@
 /**
- * The game's one sound: a heartbeat for hunger. Synthesised, not sampled — two short low
- * sine thumps, lub and dub — because a warning has to be heard over nothing else and one
+ * The game's one sound effect: a heartbeat for hunger. Synthesised, not sampled — two short
+ * low sine thumps, lub and dub — because a warning has to be heard over the music and one
  * voice needs no asset pipeline. The context is made on the first user gesture, since a
- * browser will not start audio before one, and a stored mute outlives the page.
+ * browser will not start audio before one, and a stored mute outlives the page. The music
+ * (`music.ts`) plays through the same context.
  */
 const MUTE_KEY = 'abyssal.mute';
 
 let ctx: AudioContext | null = null;
 let muted = (() => { try { return localStorage.getItem(MUTE_KEY) === '1'; } catch { return false; } })();
+
+// the loop stops in a hidden tab, so the music would play on over a game that is not moving
+addEventListener('visibilitychange', () => {
+  if (document.hidden) void ctx?.suspend();
+  else void ctx?.resume();
+});
 
 /** Call from inside a user gesture; later calls are free. */
 export function wakeAudio() {
@@ -22,6 +29,9 @@ export function toggleMute() {
 }
 
 export const isMuted = () => muted;
+
+/** The context once a gesture has made it, else null. */
+export const audioContext = () => ctx;
 
 function thump(at: number, freq: number, gain: number) {
   if (!ctx) return;
