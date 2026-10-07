@@ -432,11 +432,25 @@ export const SPRITES: Record<string, SpriteArt> = {
   // as a moray has none. The body came back deeper than the parts sheet's whole, 7 times as long
   // as deep to its 12, so the fins' roots lie under it and they stand lower, as a moray's do. It
   // wears the larva's marks, its eyes at 0.7, and not the camouflage's coat and beard, which its
-  // form's lurk always has and which blotched it grey from snout to tail: the moray is the lurker
+  // form's lurk always has and which blotched it grey from snout to tail: the moray is the lurker.
+  // Its jaws and lures `node scripts/import-marks.mjs docs/media/reference/moray-head-sprite.png
+  // --body moray --cols 4 --rows 3 --pitch 6.75 --fit --names …`, the names as the Shark's
   moray: { w: 157, h: 24, snout: 156, tail: 2, axis: 13, hinge: [146, 14], spout: [151, 14], marksFrom: 'larva',
-           marks: { ...LARVA_MARKS },
-           markSize: { tapetum: 0.7, foureye: 0.7, mottle: 0, beard: 0 },
-           parts: { scale: 0.945, at: { back: [30.3, -1.6], belly: [31.3, 15.4], tail: [-4.6, 5], eye: [137.1, 5] } },
+           marks: { ...LARVA_MARKS, jaw: { at: [0, 7] }, 'jaw-open': { at: [0, 6] }, fangs: { at: [0, 9] },
+                    'fangs-open': { at: [0, 7] }, saw: { at: [0, 7] }, 'saw-open': { at: [0, 7] },
+                    beak: { at: [0, 10] }, 'beak-open': { at: [0, 10] },
+                    illicium: { at: [3.5, 25], tip: [39.0, 9.0] }, lantern: { at: [3.5, 33], tip: [45.0, 11.1] } },
+           // its own jaws and lures (`moray-head-sprite.png`), over the larva's it wears. The jaws came
+           // back two and a half times the 10 its mouth runs back from the snout tip, the lures at
+           // their size: the jaws are drawn at half, a pixel past the snout shut, since at the 0.4
+           // that fits the seam their teeth thinned to specks
+           markSize: { tapetum: 0.7, foureye: 0.7, mottle: 0, beard: 0, jaw: 0.5, 'jaw-open': 0.5, fangs: 0.5,
+                       'fangs-open': 0.5, saw: 0.5, 'saw-open': 0.5, beak: 0.5, 'beak-open': 0.5 },
+           // the eye at the 9 across its prompt asked for, from the 14 it came back: drawn whole it
+           // took the head's depth over the back half of the mouth, and the jaws, laid under it,
+           // showed only their tips in front of it
+           parts: { scale: 0.945, at: { back: [30.3, -1.6], belly: [31.3, 15.4], tail: [-4.6, 5], eye: [137.1, 5] },
+                    size: { eye: 0.65 } },
            ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
            hull: [[151.5, 12, 5.1], [133.5, 11, 7.6], [116.5, 12, 9.3], [98.5, 12, 8.5], [81.5, 12.5, 7.2],
                   [64.5, 12.5, 6.4], [46.5, 12.5, 5.5], [29.5, 13, 4.3], [11.5, 13, 2.5]] },

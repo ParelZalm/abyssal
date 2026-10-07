@@ -5,7 +5,7 @@
  *
  *   node scripts/import-marks.mjs <sheet.png> --body larva --cols 4 --rows 5
  *        --names tapetum:mid,foureye:bottom,…  [--flip barbels] [--recolour name:from>to,…] [--key green] [--pitch 8]
- *        [--out src/render/creature/sprites]
+ *        [--fit] [--out src/render/creature/sprites]
  *
  * Unlike the body's own parts (`import-parts.mjs`) there is no whole animal to find these on:
  * each sits alone in its cell, and the game puts it on the body by its anchor, the point it
@@ -25,6 +25,11 @@
  * `--recolour name:from>to,from>to` swaps a part's colours, hex without the `#`, after it is cut:
  * the flank's cracks came back pale, the painter's colour for a dark body, and vanished on the
  * pale larva, so they were darkened here rather than drawn again.
+ *
+ * A pitch need not be whole, and `--fit` finds each cell's grid on its own: the Moray's head
+ * sheet came back at about 6.75 image pixels to the art pixel, drifting by a pixel or two from
+ * cell to cell, so one grid laid over the whole sheet cut its blocks in two at one end or the
+ * other. A cell's offset is where the most colour edges fall on its grid lines.
  *
  * Writes `<body>-<name>.png` at one pixel per art pixel and prints `marks` for the body's entry
  * in `content/sprites.ts`.
@@ -57,23 +62,54 @@ const P = Number(opt('pitch', 8));
 const green = opt('key', 'green') === 'green';
 
 const { w: W, h: H, px: D } = decodePng(readFileSync(sheet));
-const cw = Math.floor(W / P), ch = Math.floor(H / P);
+const fit = argv.includes('--fit');
+const cellW = Math.floor(W / cols / P), cellH = Math.floor(H / rows / P);
+const cw = cellW * cols, ch = cellH * rows;
 const lum = c => c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
 const isBg = c => green
   ? c[1] > 170 && c[1] - Math.max(c[0], c[2]) > 100
   : c[0] > 170 && c[2] > 170 && c[0] - c[1] > 100;
 const bled = c => green ? c[1] > c[0] + 6 && c[1] > c[2] - 4 && lum(c) < 200 : c[0] > c[1] + 30 && c[2] > c[1] + 30;
 const median = a => a.sort((x, y) => x - y)[a.length >> 1];
-// each art pixel its median colour over its middle, as `import-parts.mjs` reads a sheet
-const art = [];
-for (let j = 0; j < ch; j++) for (let i = 0; i < cw; i++) {
-  const r = [], g = [], b = [], m = P >= 3 ? 1 : 0;
-  for (let y = j * P + m; y < (j + 1) * P - m; y++) for (let x = i * P + m; x < (i + 1) * P - m; x++) {
-    const o = (y * W + x) * 4;
-    r.push(D[o]); g.push(D[o + 1]); b.push(D[o + 2]);
+const step = (a, b) => Math.abs(D[a] - D[b]) + Math.abs(D[a + 1] - D[b + 1]) + Math.abs(D[a + 2] - D[b + 2]) > 60;
+// the offset along one axis that puts the most of a cell's colour edges on its grid lines
+const offset = (from, to, edgeAt) => {
+  const e = [];
+  for (let v = from + 1; v < to; v++) e.push([v, edgeAt(v)]);
+  let best = 0, score = -1;
+  for (let o = 0; o < P; o += 0.1) {
+    let s = 0;
+    for (const [v, n] of e) { const f = ((v - from - o) / P) % 1; if (Math.min(f, 1 - f) * P < 0.5) s += n; }
+    if (s > score) { score = s; best = o; }
   }
-  const c = [median(r), median(g), median(b)];
-  art.push(isBg(c) ? null : c);
+  return best;
+};
+// each art pixel its median colour over its middle, as `import-parts.mjs` reads a sheet, cell by
+// cell: a pitch that is not whole has each block's bounds rounded rather than the pitch
+const art = new Array(cw * ch).fill(null);
+for (let cj = 0; cj < rows; cj++) for (let ci = 0; ci < cols; ci++) {
+  const X0 = Math.round(ci * W / cols), X1 = Math.round((ci + 1) * W / cols);
+  const Y0 = Math.round(cj * H / rows), Y1 = Math.round((cj + 1) * H / rows);
+  let ox = 0, oy = 0;
+  if (fit) {
+    ox = offset(X0, X1, x => { let n = 0; for (let y = Y0; y < Y1; y++) n += step((y * W + x) * 4, (y * W + x - 1) * 4); return n; });
+    oy = offset(Y0, Y1, y => { let n = 0; for (let x = X0; x < X1; x++) n += step((y * W + x) * 4, ((y - 1) * W + x) * 4); return n; });
+    // a grid shifted right or down by most of a block loses a block at that end: start one earlier
+    if (ox > P / 2) ox -= P;
+    if (oy > P / 2) oy -= P;
+  }
+  for (let j = 0; j < cellH; j++) for (let i = 0; i < cellW; i++) {
+    const r = [], g = [], b = [], m = P >= 3 ? 1 : 0;
+    const y0 = Math.max(0, Math.round(Y0 + oy + j * P) + m), y1 = Math.min(H, Math.round(Y0 + oy + (j + 1) * P) - m);
+    const x0 = Math.max(0, Math.round(X0 + ox + i * P) + m), x1 = Math.min(W, Math.round(X0 + ox + (i + 1) * P) - m);
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const o = (y * W + x) * 4;
+      r.push(D[o]); g.push(D[o + 1]); b.push(D[o + 2]);
+    }
+    if (!r.length) continue;
+    const c = [median(r), median(g), median(b)];
+    art[(cj * cellH + j) * cw + ci * cellW + i] = isBg(c) ? null : c;
+  }
 }
 // as drawn, before the fringe is cleaned: a recolour names the sheet's own colours, and a
 // greenish grey (the cracks' #b8c0b8) reads as green bled into the outline and is swapped out
@@ -84,7 +120,6 @@ for (let k = 0; k < art.length; k++) {
   if (c && bled(c)) art[k] = clean.reduce((a, z) => Math.abs(lum(z) - lum(c)) < Math.abs(lum(a) - lum(c)) ? z : a);
 }
 
-const cellW = Math.floor(cw / cols), cellH = Math.floor(ch / rows);
 const cyan = c => c[2] > 200 && c[1] > 170 && c[0] < 200;
 const lines = [];
 names.forEach(([name, rule], n) => {
