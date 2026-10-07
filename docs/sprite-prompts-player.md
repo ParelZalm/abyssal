@@ -969,7 +969,10 @@ over the back half of the mouth, and the jaws are laid under it. The eye is draw
 
 ---
 
-## The Angler — Stage A
+## The Angler
+
+- ~~Stage A~~ — done: `docs/media/reference/angler-form.webp` (the roster's anglerfish is
+  `angler.webp`). Its prompt is in the history: `git show 8758da9:docs/sprite-prompts-player.md`.
 
 The fourth form (`content/forms.ts`): three different Luminous mutations rebuild the larva onto the
 angler's plan, with a lure that grows from its brow and draws prey to it, and a wider gape. As with
@@ -989,92 +992,103 @@ tail. **The form always has a lure** (its grant is `lure` +1), but the lure is a
 every body by the game, so it is a part of its own here and not on the bare body; the Angler's own
 jaws and lures are a sheet after the body, as each form's were.
 
-**Attach:** `larva.webp` (the larva it grows from), `shark.webp`, `squid.webp` and `moray.webp`
-(the forms before it, how far the larva's look carries), `cave-room.webp` and `tank-room.webp`, and
-`angler.webp` as what it must not look like. Generate each image on its own.
+### Stage B
+
+The parts sheet first, then the bare body with it attached, as each form went. The "in game" image
+is the target; its "parts" image drew the body longer and slimmer. Its body is twice as long as it
+is deep, as asked. What changes from the sheet: **the notochord** a 2-pixel line, where it drew a
+thick bar that read as a stripe, as the Shark's first sheet did; **the pectoral moved back** off
+the mouth's back corner onto the gut, since the jaws hinge at that corner and a part laid over it
+hides them, as the Moray's eye hid its jaws. Kept from it: the eye, 12 across where 7 was asked,
+since it sits above the mouth rather than on it; the dome of the back; the face. **The lure is
+left off**: it is a mark the game places, drawn with the Angler's jaws after the body.
+
+**The sizes**, off the "in game" image at 96 art pixels from the tail's tip to the snout, about the
+texel density of the Shark's on a plan 0.7 times as long (`PLANS.angler`): the body, tail stalk to
+snout, 74 long and 37 deep at its deepest, the stalk 10 deep; the tail a rounded fan 22 long and 24
+tall; the dorsal fin on the back from 46 to 66 behind the snout, 9 tall, and the anal fin under it
+from 46 to 66, 7 tall; the pectoral 13 wide and 14 tall, its root 24 behind the snout, 6 below the
+midline; the eye 12 across, its middle 17 behind the snout and 6 above the midline; the mouth a seam
+from the snout tip down and back to its corner 19 behind the snout and 10 below the midline; the gut
+15 long and 8 deep, from 26 to 41 behind the snout, low in the body; the whole angler 96 long and 46
+deep with its fins. The sheet is 176 × 96, the shape the generator gave the Moray's parts sheet.
+
+**On green.** **Attach:** `angler-form.webp`, `moray-parts-sprite.png` and `squid-parts-sprite.png`
+(how a form's parts are cut), `larva-parts-sprite.png`, `cave-room.webp`; for sheet 2, the parts
+sheet that came back as well.
+
+#### Sheet 1: the parts
 
 ```text
-STYLE (shared by every image)
-Reference sheet for a game creature: the player character of the game, a pale glowing
-fish larva, grown into the shape of a young anglerfish. The attached larva sheet is the
-same creature before it changed, and the attached pale shark, pale squid and pale moray
-are it as other forms: keep their character and colours exactly — see-through,
-near-white with a cool lavender cast, what is inside showing faintly through, glowing
-softly against the dark — on an anglerfish's body. It must NOT look like the attached
-dark anglerfish: not navy, not violet, not dark, no open mouth, no fangs, no comb of
-spines on the back, no scales, no sparkles or lights on the body.
-Match the attached images: dark navy water, side-on, the look of dark underwater pixel
-art. Exactly one creature, nothing else in the frame: no rock, no plants, no bubbles,
-no particles, no text except where asked. Strict lateral profile, facing RIGHT, the
-body held level and still — not swimming, not tilted. Fins spread so their outline
-reads. The whole animal fits in the frame with a margin around it. Output as a large
-lossless PNG, at least 2048 px wide.
+GOAL
+True pixel-art sprite sheet of the pale anglerfish in the attached reference sheet, for
+a game: the whole angler once, and under it its parts drawn apart. The design and
+colours of the reference's "in game" image — the pale see-through lavender body, a deep
+dome twice as long as it is deep, the big larva eye high on the head, the long closed
+upturned mouth, the gut showing through — redrawn as clean pixel art on a strict grid,
+in the style of the attached moray, squid and larva parts sheets (the same creature as
+other forms).
 
-ANATOMY (must be accurate)
-A young anglerfish, side view: a deep, rounded body like an egg on a short wrist. The
-body (fins and lure not counted) is about TWICE as long as it is deep: drawn 1400 px
-long, it is 720 px deep at its deepest. Measure it.
-- Body: deepest a third of the way back from the face, nearly full depth right to a
-  blunt rounded face; the back stays convex, a smooth dome, all the way down to a
-  short narrow tail stalk. Smooth soft skin, no scales, no spines.
-- Mouth: big and CLOSED, the face is mostly mouth: a long upturned seam from the front
-  of the face down and back to below the eye, the lower jaw jutting forward a little
-  past the upper, lips together, no teeth showing. Drawn plainly as a darker line.
-- Eye: one round eye high on the head, above the back corner of the mouth: the larva's
-  eye — a black pupil, a thin pale-silver ring, one small white glint high on its front
-  — about a fifth of the body's depth across.
-- Lure: a thin stalk rising from the top of the head just in front of the eye, arching
-  up and forward over the mouth, with a small round glowing bulb at its end, cyan
-  (#3fd8ff, white-cyan centre #e8ffff), hanging a little ahead of the face. The bulb is
-  the only light on the animal.
-- Fins: one round paddle of a pectoral fin on the side, behind and below the eye; NO
-  pelvic fins. One soft dorsal fin set far back on the dome of the back, low and
-  rounded, and an anal fin under it, the same size, mirroring it. The tail a rounded
-  fan on the short stalk, about a third of the body's depth tall. All fins soft and
-  see-through, with faint rays, no spines.
-- See-through like the larva: a faint line of the notochord along the middle of the
-  body from behind the head into the tail, and a darker rounded gut low in the body,
-  under the pectoral. No spots, no stripes, no lights but the lure.
-Colours, the larva's: body pale near-white with a lavender tint (#e8e4f8 to #b8b0d8),
-the fins paler and more see-through (#f4f2ff at their edges), the notochord a faint
-cool grey line, the gut a muted dusky violet (#6a5a8a), the mouth seam a shade darker
-than the body, the lure's stalk a darker lavender grey (#9b8db7), eye black with a
-pale-silver ring, outline #79728f.
+THE GRID (most important)
+- The sheet is exactly 176 × 96 art pixels.
+- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
+  square block, so the image is 1408 × 768.
+- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
+  than one block. No dithering noise. Every block is one flat colour.
+- 1-block outline (#79728F) round each silhouette, never thicker.
 
-IMAGE 1 — "in game"
-The angler fully rendered in the attached images' style, on a flat solid background of
-#071731. It is the brightest thing in the frame: lit pale, with only a small, tight soft
-halo round it and a small glow round the lure's bulb.
+LAYOUT
+- Top: the WHOLE angler, assembled, as in the reference's "in game" image but WITHOUT
+  its lure: facing RIGHT, level, 96 art pixels from the tail's tip to the snout and 46
+  deep with its fins. Centred left to right.
+  - The body 74 long from the tail stalk to the snout and 37 deep at its deepest, a
+    smooth dome of a back down to a tail stalk 10 deep, the face rounded. Smooth, no
+    scales, no spines.
+  - The mouth: closed, a 1-pixel darker line (#9B8DB7) from the snout tip down and
+    back to its corner, 19 art pixels behind the snout and 10 below the midline, the
+    lower jaw jutting 1 pixel past the upper at the front.
+  - The eye 12 across, its middle 17 art pixels behind the snout and 6 above the
+    midline: black pupil, pale-silver ring, one white glint.
+  - The dorsal fin: a soft rounded fin on the back from 46 to 66 behind the snout, 9
+    art pixels tall, with faint rays. The anal fin under it, from 46 to 66, 7 tall.
+  - The pectoral fin: a round paddle 13 wide and 14 tall, its root 24 behind the snout
+    and 6 below the midline, over the gut, BEHIND the mouth's corner, not on it.
+  - The tail: a rounded fan 22 long and 24 tall on the stalk, with faint rays.
+  - The notochord: a straight line 2 art pixels thick (#B8B0D8) along the midline from
+    26 behind the snout into the tail stalk, not a thick bar. The gut: a darker rounded
+    shape (#6A5A8A) 15 long and 8 deep, from 26 to 41 behind the snout, low in the
+    body.
+- Bottom rows: its parts, each on its own with at least 8 art pixels of background on
+  every side between it and anything else, each at EXACTLY the size and shape it has
+  on the whole angler above, not rotated, not enlarged:
+  1. the dorsal fin (its lower edge cut where it meets the back);
+  2. the anal fin (its upper edge cut where it meets the belly);
+  3. the pectoral fin (its root edge cut where it meets the body);
+  4. the tail (its front edge cut where it meets the stalk);
+  5. the eye (the black pupil, the pale-silver ring and the white glint).
+- Where a part meets the body, finish its edge with the outline like the rest of it.
+- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
+  anywhere on the animal, and do not let the outline pick up a green tint where it
+  meets the background.
 
-IMAGE 2 — "flat"
-The same angler, same pose, same outline, flat colour only: no shading, no highlights,
-no glow, no outline stroke, no texture. Each region one solid colour: body, dorsal fin,
-anal fin, pectoral fin, tail, mouth seam, notochord, gut, eye ring, pupil, lure stalk,
-lure bulb. Flat white background.
+PALETTE
+Use these colours, plus at most 8 in-between shades of them: outline #79728F, deep
+shadow #B8B0D8, body #E8E4F8, body highlight #F4F2FF, fin #D6D0ED, gut #6A5A8A, eye
+ring #CDD3E3, pupil #080B16. Light comes from above and slightly in front: lit top,
+darker belly; each part shaded as its own form, the fins paler and more see-through
+than the body.
 
-IMAGE 3 — "parts"
-The same angler taken apart, like a technical exploded diagram: the bare body (head and
-trunk with the mouth seam on it, the notochord and the gut inside it, no fins, no eye,
-no lure), the eye, the dorsal fin, the anal fin, the pectoral fin, the tail, and the
-lure (stalk and bulb together) — each drawn separately with a clear gap, in its
-original position and orientation, pulled slightly outward, each with a small plain
-label. Show on the bare body, as faint dotted outlines, where each part sat. Flat white
-background.
-
-IMAGE 4 — "palette"
-A single row of 8 large square colour swatches taken from image 1, each with its hex
-code under it: outline, deep shadow, body, body highlight, fin, gut, eye ring, pupil.
+LIGHTS
+The eye's glint is a flat white block. NO glow halo, bloom or light spill, on the
+animal or on the background. The game adds the glow itself.
 
 AVOID
-A long or slender body, a body more than two and a half times as long as it is deep, a
-pointed snout, an open mouth, visible teeth or fangs, a comb or row of spines on the
-back, pelvic fins, a forked tail, scales, spots, stripes, sparkles or photophores on
-the body, navy, violet, blue, brown or dark colouring, a second light, three-quarter or
-front views, a swimming or tilted pose, several animals, a scene, smooth gradients, big
-soft bloom or halos, depth of field, cute cartoon features (eyelashes, smile, blush),
-watermarks, frames, borders.
+Labels, leader lines, dotted outlines, parts that differ from the whole angler in size
+or shape, a lure or any light, a thick bar or stripe along the body, a pectoral fin on
+the mouth's corner, pelvic fins, an open mouth, teeth, spines, scales, spots, a long or
+slender body, a part drawn twice, any background other than flat #00FF00, soft glows,
+painterly texture, noise, sub-pixel detail, text, borders, shadows, a second animal.
 ```
 
-**What to send back:** the four images, or the set you choose; tell me the file's name in
-Downloads, since a paste comes through shrunk. Its Stage B is written from the chosen sheet: the
-parts sheet first, then the bare body with it attached.
+**What to send back:** the sheet as a file (tell me its name in Downloads; a paste comes through
+shrunk). Sheet 2, the bare body rest and strike, is written from it, with it attached.
