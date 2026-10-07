@@ -833,7 +833,8 @@ LAYOUT
   every side between it and anything else, each at EXACTLY the size and shape it has
   on the whole moray above, not rotated, not enlarged:
   1. the dorsal fin (its lower edge cut where it meets the back);
-  2. the anal fin (its upper edge cut where it meets the belly);
+  2. the anal fin (its upper edge cut where it meets the belly), the same shape as on
+     the whole angler, a mirror of the dorsal fin;
   3. the tail (the fin's rounded end, its front edge cut where the dorsal and anal
      fins end, the body's point under it left off);
   4. the eye (the black pupil, the pale-silver ring and the white glint).
@@ -1019,6 +1020,12 @@ sheet that came back as well.
 
 #### Sheet 1: the parts
 
+**The first try came back** on the grid asked for, at 8×, and at its sizes, but it lost the shape:
+a flat-topped box with a vertical wall of a face 17 deep, a hexagon of a tail with a pale stripe
+through it, a plain disc for a pectoral, and its anal fin drawn apart a different shape from the
+one on the whole. Not kept. The prompt below gives the outline as the reference's own heights above
+and below the midline, measured off its "in game" image, as the Moray's spelled out its proportion.
+
 ```text
 GOAL
 True pixel-art sprite sheet of the pale anglerfish in the attached reference sheet, for
@@ -1041,9 +1048,20 @@ LAYOUT
 - Top: the WHOLE angler, assembled, as in the reference's "in game" image but WITHOUT
   its lure: facing RIGHT, level, 96 art pixels from the tail's tip to the snout and 46
   deep with its fins. Centred left to right.
-  - The body 74 long from the tail stalk to the snout and 37 deep at its deepest, a
-    smooth dome of a back down to a tail stalk 10 deep, the face rounded. Smooth, no
-    scales, no spines.
+  - The body 74 long from the tail stalk to the snout and 37 deep at its deepest: an
+    EGG or a lemon on its side, NOT a box. Its outline, in art pixels above and below
+    its midline, at each distance behind the snout tip:
+      1 behind: 6 above, 4 below (the front of the face)
+      5 behind: 13 above, 10 below
+      8 behind: 16 above, 13 below
+      15 behind: 18 above, 17 below
+      25 to 45 behind: 19 above, 18 below (the deepest)
+      58 behind: 15 above, 15 below
+      68 behind: 12 above, 11 below
+      74 behind, the tail stalk: 5 above, 5 below
+    A smooth curve through those points: the face rounds off to the snout like the end
+    of an egg, never a flat vertical wall; the back one continuous curve, never flat on
+    top. Smooth, no scales, no spines.
   - The mouth: closed, a 1-pixel darker line (#9B8DB7) from the snout tip down and
     back to its corner, 19 art pixels behind the snout and 10 below the midline, the
     lower jaw jutting 1 pixel past the upper at the front.
@@ -1051,9 +1069,12 @@ LAYOUT
     midline: black pupil, pale-silver ring, one white glint.
   - The dorsal fin: a soft rounded fin on the back from 46 to 66 behind the snout, 9
     art pixels tall, with faint rays. The anal fin under it, from 46 to 66, 7 tall.
-  - The pectoral fin: a round paddle 13 wide and 14 tall, its root 24 behind the snout
-    and 6 below the midline, over the gut, BEHIND the mouth's corner, not on it.
-  - The tail: a rounded fan 22 long and 24 tall on the stalk, with faint rays.
+  - The pectoral fin: a round fan 13 wide and 14 tall, its rays spreading from its root
+    like the reference's, not a plain disc; its root 24 behind the snout and 6 below the
+    midline, over the gut, BEHIND the mouth's corner, not on it.
+  - The tail: a rounded fan 22 long and 24 tall on the stalk, its edge one smooth curve
+    (not a hexagon), its rays spreading from the stalk, no stripe through it: the
+    notochord stops at the stalk.
   - The notochord: a straight line 2 art pixels thick (#B8B0D8) along the midline from
     26 behind the snout into the tail stalk, not a thick bar. The gut: a darker rounded
     shape (#6A5A8A) 15 long and 8 deep, from 26 to 41 behind the snout, low in the
@@ -1062,7 +1083,8 @@ LAYOUT
   every side between it and anything else, each at EXACTLY the size and shape it has
   on the whole angler above, not rotated, not enlarged:
   1. the dorsal fin (its lower edge cut where it meets the back);
-  2. the anal fin (its upper edge cut where it meets the belly);
+  2. the anal fin (its upper edge cut where it meets the belly), the same shape as on
+     the whole angler, a mirror of the dorsal fin;
   3. the pectoral fin (its root edge cut where it meets the body);
   4. the tail (its front edge cut where it meets the stalk);
   5. the eye (the black pupil, the pale-silver ring and the white glint).
@@ -1084,7 +1106,9 @@ animal or on the background. The game adds the glow itself.
 
 AVOID
 Labels, leader lines, dotted outlines, parts that differ from the whole angler in size
-or shape, a lure or any light, a thick bar or stripe along the body, a pectoral fin on
+or shape, a box-shaped body, a flat or vertical face, a flat top, a hexagonal tail, a
+stripe through the tail, a disc of a pectoral, a lure or any light, a thick bar or
+stripe along the body, a pectoral fin on
 the mouth's corner, pelvic fins, an open mouth, teeth, spines, scales, spots, a long or
 slender body, a part drawn twice, any background other than flat #00FF00, soft glows,
 painterly texture, noise, sub-pixel detail, text, borders, shadows, a second animal.
