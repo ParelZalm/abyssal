@@ -8,6 +8,9 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+- **Music.** Each tank has its own track — the Nursery, the Reef and the Deep — looped and
+  crossfaded as the body goes down the drain; the title plays the Nursery's, and Hatch carries
+  it on into the first tank. M mutes it with the heartbeat, and it stops while the tab is hidden.
 - **The Shark is drawn.** Becoming a Shark makes the larva a drawn shark of the same pale glass,
   its first dorsal, tail, pectoral, pelvic and eye drawn apart and grown as the painters grew them,
   and it wears the larva's drawn mutations, its eyes sized to its own, with jaws and lures drawn
