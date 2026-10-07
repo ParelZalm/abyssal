@@ -1215,3 +1215,124 @@ larva's, the larva's lower plate wholly outline grey. `--drawn` names a sheet's 
 never bleed; the larva's, the Shark's and the Squid's beaks were imported again with it, and nothing
 else changes (every recorded marks import, run again without it, is byte for byte what the game
 has). The prompt is in the history: `git show 721a3eb:docs/sprite-prompts-player.md`.
+
+---
+
+## The Bloom — Stage A
+
+The fifth and last form (`content/forms.ts`): three different Grazer mutations rebuild the larva
+onto the jelly's plan, a drifting bell whose mouth sieves small prey from afar (`filter` +1) and
+whose stinging fringe guards it (`frill` +1). As with every form, **it is still the player**: the
+larva's pale lavender glass, the larva's eye, and the gut showing through. It must not read as
+either of the roster's jellies, which are the closest thing in the game to it: the moon jelly
+(`moonjelly.webp`), a blue bell with four violet horseshoes in it, a fringe of many fine rim
+tentacles and long frilled oral arms; and the sea nettle (`nettle.webp`), an amber bell striped
+red, trailing long red tentacles. Next to the moon jelly it is near white, not blue, with nothing
+in the bell but the eye and the gut, a few tentacles where it has dozens, and a shorter trail.
+
+The shape is the plan's (`PLANS.jelly`, `PLAN_ART.jelly`): a bell swimming bell-first, facing
+right, everything else trailing behind it. Side-on the bell is a dome a little deeper than it is
+long, widest at its open rim, and the arms hang off the rim behind: nine fine marginal tentacles
+and three thick frilled oral arms down the middle, the tentacles about one and a quarter times the
+bell's length. Nothing on it is a fin. Two things from the other forms do not carry over:
+**the notochord**, since a bell with a spine through it reads as a fish wearing a hat, so what
+shows through is the gut alone, a stomach at the root of the oral arms; and **the face**, since a
+jelly's mouth is under the bell among the oral arms, not at its front. **The eye stays**, the
+larva's own, set in the glass of the bell's front: it is the one thing every body the player has
+been shares, and without it the Bloom is a pale moon jelly. Where the bite and the sieve sit, and
+the strike frame — the bell squeezed in a hard pulse, since a jelly does not open a jaw — are for
+Stage B and the Bloom's own marks after it, as the Angler's jaws and lures were.
+
+**The fringe is the arms.** The grant's frill is a mark the game places (`organs.ts`, the larva's
+stinging tentacles along the belly); on the Bloom the marginal tentacles are where the sting
+already is, so here they carry its look — beaded with small pale stinging cells — and Stage B
+decides whether the frill's mark is drawn onto them or is them.
+
+**Attach:** `larva.webp` (the larva it grows from), `shark.webp`, `squid.webp`, `moray.webp` and
+`angler-form.webp` (the forms before it, how far the larva's look carries), `cave-room.webp` and
+`tank-room.webp`, and `moonjelly.webp` and `nettle.webp` as what it must not look like. Generate
+each image on its own.
+
+```text
+STYLE (shared by every image)
+Reference sheet for a game creature: the player character of the game, a pale glowing
+fish larva, grown into the shape of a small jellyfish. The attached larva sheet is the
+same creature before it changed, and the attached pale shark, pale squid, pale moray
+and pale anglerfish are it as other forms: keep their character and colours exactly —
+see-through, near-white with a cool lavender cast, what is inside showing faintly
+through, the same big round eye, glowing softly against the dark — on a jellyfish's
+body. It must NOT look like the attached blue moon jelly or the attached amber striped
+jellyfish: not blue, not amber, not orange, no stripes, no four horseshoe shapes in the
+bell, no dense fringe of dozens of hair-fine tentacles, no long trailing veil.
+Match the attached images: dark navy water, side-on, the look of dark underwater pixel
+art. Exactly one creature, nothing else in the frame: no rock, no plants, no bubbles,
+no particles, no text except where asked. Strict lateral profile: the bell's dome
+facing RIGHT, its open rim facing left, the tentacles trailing out to the LEFT behind
+it, as if it were swimming to the right; held level, not tilted, not upside down. The
+whole animal fits in the frame with a margin around it. Output as a large lossless
+PNG, at least 2048 px wide.
+
+ANATOMY (must be accurate)
+A small jellyfish, side view, swimming bell-first to the right.
+- Bell: a smooth rounded dome, a little DEEPER than it is long: drawn 800 px from the
+  top of the dome (the right end) to the rim (the left end), it is 1000 px deep at the
+  rim. Measure it. The dome one smooth curve, never pointed, never flat at the front.
+  The rim, on the left, a slightly scalloped edge with a narrow lip. Smooth glassy
+  skin; faint radial canals, a few thin lines fanning from the dome's top to the rim,
+  barely darker than the bell.
+- Eye: one round eye in the front of the bell, a third of the way from the dome's top
+  to the rim and a little above the middle line: the larva's eye — a black pupil, a
+  thin pale-silver ring, one small white glint high on its front — about a fifth of the
+  bell's depth across. Seen through the glass, not on a stalk.
+- Gut: a darker rounded stomach in the middle of the bell near the rim, where the oral
+  arms leave it, seen through the glass. No gonads, no horseshoes, no rings.
+- Oral arms: THREE thick ribbon-like arms from the middle of the rim, trailing left,
+  each gently wavy, its edges frilled, about as long as the bell, the middle one a
+  little longer.
+- Marginal tentacles: NINE fine tentacles from the rim, spread evenly from the top of
+  the rim to the bottom, trailing left in loose slow waves, about one and a quarter
+  times the bell's length, each beaded along its length with a few small paler dots
+  (stinging cells). Thin, but each one clearly drawn: a few, not a curtain.
+- No fins, no tail, no spine or notochord, no face, no mouth at the front.
+Colours, the larva's: bell pale near-white with a lavender tint (#e8e4f8 to #b8b0d8),
+see-through, paler and clearer at the rim (#f4f2ff), the radial canals a faint cool
+grey line, the gut a muted dusky violet (#6a5a8a), the oral arms and tentacles the
+fins' paler lavender (#d6d0ed), their stinging cells near-white, eye black with a
+pale-silver ring, outline #79728f.
+
+IMAGE 1 — "in game"
+The jellyfish fully rendered in the attached images' style, on a flat solid background
+of #071731. It is the brightest thing in the frame: lit pale, with only a small, tight
+soft halo round it.
+
+IMAGE 2 — "flat"
+The same jellyfish, same pose, same outline, flat colour only: no shading, no
+highlights, no glow, no outline stroke, no texture. Each region one solid colour: bell,
+rim, radial canals, gut, oral arms, tentacles, stinging cells, eye ring, pupil. Flat
+white background.
+
+IMAGE 3 — "parts"
+The same jellyfish taken apart, like a technical exploded diagram: the bare bell (with
+the rim, the radial canals and the gut inside it, no eye, no arms), the eye, the three
+oral arms together, and the nine marginal tentacles together — each drawn separately
+with a clear gap, in its original position and orientation, pulled slightly outward,
+each with a small plain label. Show on the bare bell, as faint dotted outlines, where
+each part sat. Flat white background.
+
+IMAGE 4 — "palette"
+A single row of 8 large square colour swatches taken from image 1, each with its hex
+code under it: outline, deep shadow, bell, bell highlight, arm, gut, eye ring, pupil.
+
+AVOID
+Blue, amber, orange, red, brown or dark colouring, stripes, gonads or horseshoe shapes,
+dozens of hair-fine tentacles, a curtain or veil of tentacles, tentacles more than twice
+the bell's length, a pointed or flat-fronted bell, a bell longer than it is deep, the
+bell facing up or down, a mouth or face at the front, a spine or notochord, fins, a
+tail, a second eye, lights, sparkles or photophores, three-quarter or front views, a
+tilted pose, several animals, a scene, smooth gradients, big soft bloom or halos, depth
+of field, cute cartoon features (eyelashes, smile, blush), watermarks, frames, borders.
+```
+
+**What to send back:** the four images, or the set you choose; tell me the file's name in
+Downloads, since a paste comes through shrunk. Its Stage B is written from the chosen sheet: the
+parts sheet first, then the bare body with it attached.
