@@ -32,10 +32,25 @@ plays and a patch is a fix or a balance pass.
   lures are drawn for it: a moray's jaw that drops wide under its eye, with fangs, a saw or a
   parrot's beak, and the lure arching from its brow at its own reach. Its eye is a moray's, a
   third smaller, so the mouth shows from under it.
+- **The Angler is drawn.** Becoming an Angler makes the larva a drawn anglerfish of the same pale
+  glass, a deep egg of a body under its lure, its fins, its fan of a tail and its eye drawn apart,
+  its mouth a long upturned seam that opens wide to bite, and it wears the larva's drawn mutations,
+  with jaws and lures drawn for it: its jaws along that upturned mouth, its lure arching from its
+  brow at its own reach. Its eye looks ahead of it, and the hatchling's spit sac sits low by its
+  gut rather than under its eye like a tear. Before, it was painted as the deep's anglerfish: dark,
+  scaled, a comb of spines and a lamp of an eye.
+- **The Angler's glow dazes.** A hostile that comes too close to the Angler, into its glow, is dazed
+  for 4.5 s: greyed out, stars circling over its head, and at 0.4 of its pace — its swim, its
+  charge and the shots it fires, which still reach as far. It comes round
+  and is spared for 2 s before the glow can daze it again; bosses keep their own fights.
+- **A glowing body is no longer white-hot.** The player's light organs widen its glow instead of
+  burning a white blob over its middle, so the body reads under its own light.
+- **Fixed**: the Parrot Beak's lower plate is teal again, on the larva, the Shark and the Squid; the
+  larva's had come out wholly the outline's grey.
 - **Fixed**: taking the Deep Lantern, the Lunging Bite or the Parrot Beak could leave the body
   drawn as it was before, the lantern still the first lure and the jaw still the last one.
 - **For development**: `scripts/import-marks.mjs` reads a sheet whose pitch is not whole, and
-  `--fit` finds each cell's grid on its own.
+  `--fit` finds each cell's grid on its own; `--drawn` names colours it never takes for bleed.
 - **For development**: the lab opens with a shelf for each form, its family's mutations, so three
   taken from one are the metamorphosis a run makes; `/?lab=1&shelf=moray` opens on the Moray's.
 

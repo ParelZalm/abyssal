@@ -86,15 +86,34 @@ const BOB_RATE = 2.2;
 /** Blinks a second through the confusion's last second. */
 const WEARING = 8;
 
-let question: Texture | null = null;
-/** The glyph on its rim, one texel to the art pixel, made once. */
-function questionTexture() {
-  if (question) return question;
-  const h = QUESTION.length, w = QUESTION[0].length;
+/**
+ * A hostile dazed by the Angler's glow (`Creature.dazzled`): stars circling over its head, the
+ * dizzy mark, in the question mark's colour on the same rim, blinking out over the daze's last
+ * second as the ink's mark does.
+ */
+const STAR = [
+  '..#..',
+  '.###.',
+  '#####',
+  '.###.',
+  '..#..',
+];
+/** Stars round a dazed head, the ellipse they circle on in art pixels, and turns a second. */
+const STARS = 3;
+const ORBIT_X = 7;
+const ORBIT_Y = 2;
+const ORBIT_RATE = 0.7;
+
+const glyphs = new Map<string[], Texture>();
+/** A glyph on its rim, one texel to the art pixel, made once. */
+function glyphTexture(rows: string[]) {
+  const made = glyphs.get(rows);
+  if (made) return made;
+  const h = rows.length, w = rows[0].length;
   const cv = document.createElement('canvas');
   cv.width = w + 2; cv.height = h + 2;
   const ctx = cv.getContext('2d')!;
-  const on = (x: number, y: number) => QUESTION[y]?.[x] === '#';
+  const on = (x: number, y: number) => rows[y]?.[x] === '#';
   const hex = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
   for (let y = -1; y <= h; y++) for (let x = -1; x <= w; x++) {
     let rim = false;
@@ -103,21 +122,24 @@ function questionTexture() {
     ctx.fillStyle = hex(on(x, y) ? MARK : FRAME);
     ctx.fillRect(x + 1, y + 1, 1, 1);
   }
-  question = Texture.from(cv);
-  question.source.scaleMode = 'nearest';
-  return question;
+  const tex = Texture.from(cv);
+  tex.source.scaleMode = 'nearest';
+  glyphs.set(rows, tex);
+  return tex;
 }
 
 /**
  * The tells a room's hostiles show over their bodies, drawn in the layer over the lighting,
  * since a warning the dark could swallow is no warning: the charger's bar through its wind-up
  * (`Roles.charger`, `chargeOf`), the Great White's through its breach (`lockOf`), and the
- * question mark of one the ink has confused. Sized in art pixels, as the pickups are.
+ * question mark of one the ink has confused, and the stars round one the Angler's glow has dazed.
+ * Sized in art pixels, as the pickups are.
  */
 export class TellView {
   readonly root = new Container();
   private readonly bars: ChargeBar[] = [];
   private readonly marks: Sprite[] = [];
+  private readonly stars: Sprite[] = [];
 
   update(creatures: readonly Creature[], zoom: number, t: number) {
     const px = 2 / zoom;
@@ -143,7 +165,7 @@ export class TellView {
     for (const c of creatures) {
       if (!c.alive || !c.hostile || c.confused <= 0) continue;
       if (m === this.marks.length) {
-        const s = new Sprite(questionTexture());
+        const s = new Sprite(glyphTexture(QUESTION));
         s.anchor.set(0.5, 1);
         this.root.addChild(s);
         this.marks.push(s);
@@ -157,6 +179,31 @@ export class TellView {
       s.position.set(at.x, at.y - c.genome.size * BAR_OVER - (LIFT + bob) * px);
     }
     for (let i = m; i < this.marks.length; i++) this.marks[i].visible = false;
+
+    let k = 0;
+    for (const c of creatures) {
+      if (!c.alive || !c.hostile || c.dazzled <= 0) continue;
+      const shown = c.dazzled > 1 || Math.sin(t * WEARING * Math.PI * 2) > 0;
+      const at = c.burrow ? noseOf(c) : c;
+      // a little over the question mark's place: they circle, and their low side dipped into a
+      // tall body's top
+      const top = at.y - c.genome.size * BAR_OVER - (LIFT + ORBIT_Y + 3) * px;
+      for (let i = 0; i < STARS; i++) {
+        if (k === this.stars.length) {
+          const s = new Sprite(glyphTexture(STAR));
+          s.anchor.set(0.5);
+          this.root.addChild(s);
+          this.stars.push(s);
+        }
+        const s = this.stars[k++];
+        s.visible = shown;
+        s.scale.set(px);
+        const a = (t * ORBIT_RATE + i / STARS) * Math.PI * 2;
+        // on the grid, in whole art pixels, as the question mark bobs
+        s.position.set(at.x + Math.round(Math.cos(a) * ORBIT_X) * px, top + Math.round(Math.sin(a) * ORBIT_Y) * px);
+      }
+    }
+    for (let i = k; i < this.stars.length; i++) this.stars[i].visible = false;
   }
 
   destroy() {

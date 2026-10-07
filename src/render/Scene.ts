@@ -93,6 +93,8 @@ export class Scene {
       // a chill frosts the body over and a burn yellows it, so a struck hostile says what is
       // still working on it after the flinch is gone
       let tint = c.chillT > 0 ? CHILL_TINT : c.burnT > 0 ? BURN_TINT : 0xffffff;
+      // dazed by the Angler's glow: drained grey through the skin, eased in and out over a fifth of a second
+      c.view.dazed = Math.min(1, c.dazzled * 5);
       if (c.hostile) {
         // nothing swallows the player now, so the frame no longer closes on whatever could:
         // it closes on a hostile with its body nearly on the player's, gap not centres, and

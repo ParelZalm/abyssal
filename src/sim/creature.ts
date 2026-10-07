@@ -283,6 +283,12 @@ export class Creature {
   burnByPlayer = false;
   /** Seconds of a chill (Brine Gland) left: the body swims through water gone thick. */
   chillT = 0;
+  /**
+   * Seconds left dazed by the Angler's glow (`dazzle`), and seconds before its glow can daze this
+   * body again: the rest runs on past the daze, so a hostile kept close comes round between them.
+   */
+  dazzled = 0;
+  dazzleRest = 0;
   /** What this animal's tentacles are holding, and what is holding this one. */
   holding: Creature | null = null;
   heldBy: Creature | null = null;

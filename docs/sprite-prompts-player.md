@@ -833,7 +833,8 @@ LAYOUT
   every side between it and anything else, each at EXACTLY the size and shape it has
   on the whole moray above, not rotated, not enlarged:
   1. the dorsal fin (its lower edge cut where it meets the back);
-  2. the anal fin (its upper edge cut where it meets the belly);
+  2. the anal fin (its upper edge cut where it meets the belly), the same shape as on
+     the whole angler, a mirror of the dorsal fin;
   3. the tail (the fin's rounded end, its front edge cut where the dorsal and anal
      fins end, the body's point under it left off);
   4. the eye (the black pupil, the pale-silver ring and the white glint).
@@ -966,3 +967,251 @@ the Moray's drawn eye came back 14 across where its parts prompt asked for 9, to
 over the back half of the mouth, and the jaws are laid under it. The eye is drawn at 0.65 now
 (`parts.size`), the 9 asked for, as the first larva's was trimmed. The prompt is in the history:
 `git show 080c810:docs/sprite-prompts-player.md`.
+
+---
+
+## The Angler
+
+- ~~Stage A~~ — done: `docs/media/reference/angler-form.webp` (the roster's anglerfish is
+  `angler.webp`). Its prompt is in the history: `git show 8758da9:docs/sprite-prompts-player.md`.
+
+The fourth form (`content/forms.ts`): three different Luminous mutations rebuild the larva onto the
+angler's plan, with a lure that grows from its brow and draws prey to it, and a wider gape. As with
+the Shark, the Squid and the Moray, **it is still the player**: the larva's pale lavender glass on
+an anglerfish's body, the larva's eye, and what shows through it — the notochord and the gut. It
+must not read as the roster's anglerfish (`angler.webp`), the deep's hostile: navy under violet
+fins, a jaw held open on long fangs, a comb of spines down its back, scales and cold sparkles.
+
+The shape is the plan's (`PLANS.angler`, `PLAN_ART.angler`): an egg on a short wrist — a deep,
+rounded body about twice as long as it is deep, nearly full depth right to a blunt rounded face,
+deepest a third of the way back, its back staying convex down to a short tail stalk under a
+rounded fan of a tail. One round pectoral, no pelvics. The mouth is big and closed, a long upturned
+seam with the lower jaw jutting a little: the face is the mouth, and an angler's mouth shut to a
+plain seam read as a cliff with an eye. So the parts are the bare body, the eye, the soft dorsal
+fin set far back (the `back` part), the pectoral, the anal fin under it (the `belly` part) and the
+tail. **The form always has a lure** (its grant is `lure` +1), but the lure is a mark, placed on
+every body by the game, so it is a part of its own here and not on the bare body; the Angler's own
+jaws and lures are a sheet after the body, as each form's were.
+
+### Stage B
+
+The parts sheet first, then the bare body with it attached, as each form went. The "in game" image
+is the target; its "parts" image drew the body longer and slimmer. Its body is twice as long as it
+is deep, as asked. What changes from the sheet: **the notochord** a 2-pixel line, where it drew a
+thick bar that read as a stripe, as the Shark's first sheet did; **the pectoral moved back** off
+the mouth's back corner onto the gut, since the jaws hinge at that corner and a part laid over it
+hides them, as the Moray's eye hid its jaws. Kept from it: the eye, 12 across where 7 was asked,
+since it sits above the mouth rather than on it; the dome of the back; the face. **The lure is
+left off**: it is a mark the game places, drawn with the Angler's jaws after the body.
+
+**The sizes**, off the "in game" image at 96 art pixels from the tail's tip to the snout, about the
+texel density of the Shark's on a plan 0.7 times as long (`PLANS.angler`): the body, tail stalk to
+snout, 74 long and 37 deep at its deepest, the stalk 10 deep; the tail a rounded fan 22 long and 24
+tall; the dorsal fin on the back from 46 to 66 behind the snout, 9 tall, and the anal fin under it
+from 46 to 66, 7 tall; the pectoral 13 wide and 14 tall, its root 24 behind the snout, 6 below the
+midline; the eye 12 across, its middle 17 behind the snout and 6 above the midline; the mouth a seam
+from the snout tip down and back to its corner 19 behind the snout and 10 below the midline; the gut
+15 long and 8 deep, from 26 to 41 behind the snout, low in the body; the whole angler 96 long and 46
+deep with its fins. The sheet is 176 × 96, the shape the generator gave the Moray's parts sheet.
+
+**On green.** **Attach:** `angler-form.webp`, `moray-parts-sprite.png` and `squid-parts-sprite.png`
+(how a form's parts are cut), `larva-parts-sprite.png`, `cave-room.webp`; for sheet 2, the parts
+sheet that came back as well.
+
+#### Sheet 1: the parts
+
+**The first try came back** on the grid asked for, at 8×, and at its sizes, but it lost the shape:
+a flat-topped box with a vertical wall of a face 17 deep, a hexagon of a tail with a pale stripe
+through it, a plain disc for a pectoral, and its anal fin drawn apart a different shape from the
+one on the whole. Not kept. The prompt below gives the outline as the reference's own heights above
+and below the midline, measured off its "in game" image, as the Moray's spelled out its proportion.
+
+```text
+GOAL
+True pixel-art sprite sheet of the pale anglerfish in the attached reference sheet, for
+a game: the whole angler once, and under it its parts drawn apart. The design and
+colours of the reference's "in game" image — the pale see-through lavender body, a deep
+dome twice as long as it is deep, the big larva eye high on the head, the long closed
+upturned mouth, the gut showing through — redrawn as clean pixel art on a strict grid,
+in the style of the attached moray, squid and larva parts sheets (the same creature as
+other forms).
+
+THE GRID (most important)
+- The sheet is exactly 176 × 96 art pixels.
+- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
+  square block, so the image is 1408 × 768.
+- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
+  than one block. No dithering noise. Every block is one flat colour.
+- 1-block outline (#79728F) round each silhouette, never thicker.
+
+LAYOUT
+- Top: the WHOLE angler, assembled, as in the reference's "in game" image but WITHOUT
+  its lure: facing RIGHT, level, 96 art pixels from the tail's tip to the snout and 46
+  deep with its fins. Centred left to right.
+  - The body 74 long from the tail stalk to the snout and 37 deep at its deepest: an
+    EGG or a lemon on its side, NOT a box. Its outline, in art pixels above and below
+    its midline, at each distance behind the snout tip:
+      1 behind: 6 above, 4 below (the front of the face)
+      5 behind: 13 above, 10 below
+      8 behind: 16 above, 13 below
+      15 behind: 18 above, 17 below
+      25 to 45 behind: 19 above, 18 below (the deepest)
+      58 behind: 15 above, 15 below
+      68 behind: 12 above, 11 below
+      74 behind, the tail stalk: 5 above, 5 below
+    A smooth curve through those points: the face rounds off to the snout like the end
+    of an egg, never a flat vertical wall; the back one continuous curve, never flat on
+    top. Smooth, no scales, no spines.
+  - The mouth: closed, a 1-pixel darker line (#9B8DB7) from the snout tip down and
+    back to its corner, 19 art pixels behind the snout and 10 below the midline, the
+    lower jaw jutting 1 pixel past the upper at the front.
+  - The eye 12 across, its middle 17 art pixels behind the snout and 6 above the
+    midline: black pupil, pale-silver ring, one white glint.
+  - The dorsal fin: a soft rounded fin on the back from 46 to 66 behind the snout, 9
+    art pixels tall, with faint rays. The anal fin under it, from 46 to 66, 7 tall.
+  - The pectoral fin: a round fan 13 wide and 14 tall, its rays spreading from its root
+    like the reference's, not a plain disc; its root 24 behind the snout and 6 below the
+    midline, over the gut, BEHIND the mouth's corner, not on it.
+  - The tail: a rounded fan 22 long and 24 tall on the stalk, its edge one smooth curve
+    (not a hexagon), its rays spreading from the stalk, no stripe through it: the
+    notochord stops at the stalk.
+  - The notochord: a straight line 2 art pixels thick (#B8B0D8) along the midline from
+    26 behind the snout into the tail stalk, not a thick bar. The gut: a darker rounded
+    shape (#6A5A8A) 15 long and 8 deep, from 26 to 41 behind the snout, low in the
+    body.
+- Bottom rows: its parts, each on its own with at least 8 art pixels of background on
+  every side between it and anything else, each at EXACTLY the size and shape it has
+  on the whole angler above, not rotated, not enlarged:
+  1. the dorsal fin (its lower edge cut where it meets the back);
+  2. the anal fin (its upper edge cut where it meets the belly), the same shape as on
+     the whole angler, a mirror of the dorsal fin;
+  3. the pectoral fin (its root edge cut where it meets the body);
+  4. the tail (its front edge cut where it meets the stalk);
+  5. the eye (the black pupil, the pale-silver ring and the white glint).
+- Where a part meets the body, finish its edge with the outline like the rest of it.
+- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
+  anywhere on the animal, and do not let the outline pick up a green tint where it
+  meets the background.
+
+PALETTE
+Use these colours, plus at most 8 in-between shades of them: outline #79728F, deep
+shadow #B8B0D8, body #E8E4F8, body highlight #F4F2FF, fin #D6D0ED, gut #6A5A8A, eye
+ring #CDD3E3, pupil #080B16. Light comes from above and slightly in front: lit top,
+darker belly; each part shaded as its own form, the fins paler and more see-through
+than the body.
+
+LIGHTS
+The eye's glint is a flat white block. NO glow halo, bloom or light spill, on the
+animal or on the background. The game adds the glow itself.
+
+AVOID
+Labels, leader lines, dotted outlines, parts that differ from the whole angler in size
+or shape, a box-shaped body, a flat or vertical face, a flat top, a hexagonal tail, a
+stripe through the tail, a disc of a pectoral, a lure or any light, a thick bar or
+stripe along the body, a pectoral fin on the mouth's corner, pelvic fins, an open
+mouth, teeth, spines, scales, spots, a long or slender body, a part drawn twice, any background other than flat #00FF00, soft glows,
+painterly texture, noise, sub-pixel detail, text, borders, shadows, a second animal.
+```
+
+The second try came back (`angler-form-parts-sprite.png`) on the grid asked for, 1408 × 768 with
+every block flat, and in the shape asked for: an egg 98 long from the tail's tip to the snout, the
+body about 79 by 37, the mouth's corner 20 behind the snout and 12 below the midline. Kept, with
+what is off: a speckle through the fins and the body, against "no dithering", which the bake's
+third averages out; the pectoral reaching within 2 or 3 of the mouth's corner; and of the parts
+drawn apart, only the eye and the dorsal match the whole — the tail, the pectoral and the anal fin
+are drawn differently, and the dorsal trails a stray stub — so those are cut from the whole.
+
+#### Sheet 2: the bare body
+
+```text
+GOAL
+True pixel-art sprite of the pale anglerfish's BARE BODY, for a game: EXACTLY the body
+of the whole angler at the top of the attached parts sheet — the same egg-shaped
+outline, the same shading and speckle, the mouth line, the notochord and the gut — with
+its eye, its dorsal fin, its anal fin, its pectoral fin and its tail fan taken off. 2
+frames of the same body, side by side, left to right: "rest", "strike".
+
+THE GRID (most important)
+- Each frame is exactly 104 × 56 art pixels.
+- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
+  square block, so the image is 1664 × 448.
+- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
+  than one block. Every block is one flat colour.
+- 1-block outline (#79728F) round the whole silhouette, never thicker.
+
+COMPOSITION
+- Strict side view, facing RIGHT, level.
+- From the tail stalk, cut flat where the tail fan joined it, to the snout tip the body
+  is 80 art pixels long and 37 deep at its deepest, EXACTLY as on the parts sheet: the
+  egg, the rounded face, the dome of the back.
+- Where the eye goes the head is plain body colour, shaded as the rest of the head: no
+  socket, no hole, no dotted outline. Where the fins joined, the outline runs smooth
+  along the back and the belly, and the whole gut shows where the pectoral covered it.
+- The body is centred vertically: its midline, stalk to snout, lies along the frame's
+  horizontal centre line.
+- Everything fits inside the frame with at least 4 art pixels of margin, in both frames.
+- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
+  anywhere on the animal, and do not let the outline pick up a green tint where it
+  meets the background.
+
+PALETTE
+The parts sheet's colours: outline #79728F, deep shadow #B8B0D8, body #E8E4F8, body
+highlight #F4F2FF, fin #D6D0ED, gut #6A5A8A, plus at most 8 in-between shades.
+
+FRAME 1 — "rest"
+The bare body at rest, the mouth closed: the long upturned mouth line from the snout
+tip down and back to its corner, as on the parts sheet.
+
+FRAME 2 — "strike"
+Identical to frame 1 in every pixel except the mouth: the lower jaw swung down about
+its corner, the mouth wide open — an angler's whole face is its mouth — a big dark gape
+(#2A1E3A at its deepest, #6A5A8A at its edges) 10 art pixels tall at the front,
+narrowing back to the corner, the lower jaw's lip still jutting a little past the upper.
+No teeth: the game adds teeth when a mutation grows them. Same frame size, same
+position, same everything else, so the two can be swapped without the animal moving.
+
+AVOID
+A body shaped differently from the whole angler on the parts sheet, a box shape or a
+flat face, an eye, an eye socket or a dotted outline, fins, a tail fan, a lure, teeth,
+any background other than flat #00FF00, soft glows, painterly texture, sub-pixel
+detail, text, labels, borders, shadows, a second animal.
+```
+
+**In** (`BODIES.angler`): `angler-form-sprite.png`, the bare body, and the eye, fins and tail off
+`angler-form-parts-sprite.png`.
+
+```bash
+npm run sprite -- docs/media/reference/angler-form-sprite.png --id angler --key green --fringe --pitch 8 --keep 60,16,84,34
+node scripts/import-parts.mjs docs/media/reference/angler-form-parts-sprite.png --body angler --snout 81 --tail 4 --axis 22
+```
+
+As it went: the body sheet came back on its grid at 8×, a lens more than an egg — the face 4 or 5
+shallower over its first 15 and the rear fuller than the whole on the parts sheet — and the strike
+a dark wedge cut into the face, 8 tall, the lower lip jutting as a strip. The strike's gape lies
+inside the rest's silhouette, so the import took nothing from it until the mouth's box was given
+(`--keep`). The parts were found on the whole by their shapes, the tail at 97%, the fins at 88%,
+the pectoral at 84%, the eye at 77%; the ones drawn apart are what is laid, octagons where the
+whole's are fans, which the bake's third does not show. Its id is `angler`; the roster's is
+`anglerfish`. The angler plan's art is the roster's anglerfish — a maw, a comb of spines, scales,
+a lamp of an eye, sparkles — and a drawn body now takes over what it replaces (`SpriteArt.art`).
+It wears the larva's marks, its eyes at 0.65; its jaws hinge at the mouth's corner, 17 behind the
+snout and 10 below the axis. Its jaws and lures are its own, drawn below; the larva's lure stood
+tall over its head like a periscope.
+
+### ~~The Angler's jaws and lures~~ — done
+
+`docs/media/reference/angler-form-head-sprite.png`, 10 parts in a 4 × 3 grid, at about 6.95 image
+pixels to the art pixel (2000 × 1167, as pasted):
+
+```bash
+node scripts/import-marks.mjs docs/media/reference/angler-form-head-sprite.png --body angler --cols 4 --rows 3 --pitch 6.95 --fit --drawn 3a8a8a --names jaw:left,jaw-open:left,fangs:left,fangs-open:left,saw:left,saw-open:left,beak:left,beak-open:left,illicium:bottomleft,lantern:bottomleft
+```
+
+As it went: at the sizes asked, the Moray's lesson said twice — the shut jaws 20 along the mouth's
+slant, the open ones level under a tall gape, the lures at their reach with arches a few pixels
+taller than asked. The import greyed the Parrot Beak's teal plate: the bleed rule takes a colour as
+green as it is blue for the key run into an outline, and had done so on every beak since the
+larva's, the larva's lower plate wholly outline grey. `--drawn` names a sheet's colours that are
+never bleed; the larva's, the Shark's and the Squid's beaks were imported again with it, and nothing
+else changes (every recorded marks import, run again without it, is byte for byte what the game
+has). The prompt is in the history: `git show 721a3eb:docs/sprite-prompts-player.md`.

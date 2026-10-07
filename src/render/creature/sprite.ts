@@ -87,6 +87,13 @@ import morayTail from './sprites/moray-tail.png';
 import morayBack from './sprites/moray-back.png';
 import morayBelly from './sprites/moray-belly.png';
 import morayEye from './sprites/moray-eye.png';
+import anglerFormRest from './sprites/angler.png';
+import anglerFormStrike from './sprites/angler-strike.png';
+import anglerFormTail from './sprites/angler-tail.png';
+import anglerFormBack from './sprites/angler-back.png';
+import anglerFormBelly from './sprites/angler-belly.png';
+import anglerFormPectoral from './sprites/angler-pectoral.png';
+import anglerFormEye from './sprites/angler-eye.png';
 
 /** Every sprite file, by its path: the marks are looked up here by name (`marksFrom`). */
 const FILES = import.meta.glob<string>('./sprites/*.png', { eager: true, import: 'default' });
@@ -137,6 +144,10 @@ const SOURCES: Record<string, Sources> = {
   moray: { rest: morayRest, strike: morayStrike,
            parts: { tail: morayTail, back: morayBack, belly: morayBelly, eye: morayEye },
            marks: { ...marksFrom(SPRITES.moray.marksFrom ?? 'moray'), ...marksFrom('moray') } },
+  angler: { rest: anglerFormRest, strike: anglerFormStrike,
+            parts: { tail: anglerFormTail, back: anglerFormBack, belly: anglerFormBelly, pectoral: anglerFormPectoral,
+                     eye: anglerFormEye },
+            marks: { ...marksFrom(SPRITES.angler.marksFrom ?? 'angler'), ...marksFrom('angler') } },
 };
 
 /** A frame shut and open, and the colours both may snap to. */

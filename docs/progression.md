@@ -442,7 +442,7 @@ Shark, then an Angler". `Run.forms` holds them, and `Run.form` is the latest, th
 | predator | Shark | `shark` | `frenzy` +1 (bites on bodies below half health × 1.4), +10% speed |
 | sprinter | Squid | `squid` | `mantle` = 1 and `jet` +1 |
 | lurker | Moray | `eel` | `lurk` = 1, +0.2 stealth |
-| luminous | Angler | `angler` | `lure` +1, `gape` +0.4 |
+| luminous | Angler | `angler` | `lure` +1, `gape` +0.4, `dazzle` = 1 (a hostile that comes into its glow is dazed 4.5 s: it, its dash and its shots at 0.4) |
 | grazer | Bloom | `jelly` | `filter` +1, `frill` +1 |
 
 - **Only plans the roster already draws, never a guardian's**, which is why there is no
@@ -465,6 +465,18 @@ Shark, then an Angler". `Run.forms` holds them, and `Run.form` is the latest, th
   eel for the Moray; anglerfish and dragonfish for the Angler; the vampire squid for the
   Squid; none for the Bloom, since jellies do not hunt. Guardians have plans of their own
   and are never fooled. Each form's text says so.
+- **The Angler's glow dazes what comes too close** (`dazzle`, `sim/organs/body.ts`): a hostile
+  that comes inside six tenths of its own light's reach (`ownLight`, the circle the view lights
+  the room with, where it is still bright) is dazed for 4.5 s (`Creature.dazzled`): it goes 0.4 of
+  the way its swim, its dash or a kick would take it, and what it fires flies at 0.4 of its speed
+  over the same reach (`DAZED_PACE` in `sim/world.ts`, on the step and on the shot, since a dash
+  holds its speed by setting it and drag on top took off next to nothing); drained grey through the skin (`uGrey`,
+  its arms from grey copies) with stars circling over it (`render/tells.ts`). It is spared 2 s
+  after it comes round (`dazzleRest`), so one kept close is dazed again and again rather than
+  held. Bosses keep their own fights, as with the ink. A first cut held a hostile only while it
+  was lit, two thirds of its speed under a faint lavender tint, and could not be seen working. A pale body's glow widens with its organs rather than
+  burning its middle: no hot core, and a halo capped at 0.7 (`PALE_HALO`), since at the full
+  0.95 under a glowing Angler the body could not be made out.
 - A trait of two families that completes both transforms into the one it lists first.
 - `FishView.setPlan` swaps the plan in place; the player's `Species` is a per-run copy of
   `PLAYER_SPECIES`, since the plan lives on it.

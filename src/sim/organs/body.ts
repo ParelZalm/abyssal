@@ -1,5 +1,6 @@
 import { drawnAngle, formFor, lureBulb, R } from '../../content/form';
 import { spriteBulb } from '../../content/sprites';
+import { ownLight } from '../../content/genome';
 import { dist2 } from '../../core/util';
 import { envenom, sting } from './effects';
 import { O, type Fry, type Organ } from './types';
@@ -9,6 +10,15 @@ const RAM_DRAIN = 6;
 
 /** An NPC lure's strike on whatever touches its bulb, as a multiple of a bite. */
 const LURE_STRIKE = 2.5;
+
+/**
+ * How much of the glow's reach holds a hostile: its light falls off squared, so past six tenths
+ * of the way out it is too faint to see, and a slow from there would come out of the dark.
+ */
+const DAZZLE_REACH = 0.6;
+/** Seconds a hostile stays dazed once the glow has caught it, and seconds it is spared after. */
+const DAZE = 4.5;
+const DAZE_REST = 2;
 
 /** What a body fights with: plate-piercing, spines, venom, claws, the lure, the jet, gills and gut. */
 export const BODY: Organ[] = [
@@ -68,6 +78,27 @@ export const BODY: Organ[] = [
       world.hit(c, p, LURE_STRIKE);
       c.biteCd = 2.5;
       c.lunge = 1.6;
+    } }),
+
+  O({ id: 'dazzle', when: g => g.dazzle > 0,
+    // the Angler's glow dazes what comes too close: a hostile that swims into the light is
+    // stunned slow for seconds, greyed and starred (`render/tells.ts`), and after it comes round
+    // it cannot be dazed again for a moment. Its reach is the light's own (`ownLight`) where it
+    // is still bright, so what the room shows lit is what dazes. A boss's fight is its own, as
+    // with the ink
+    onTick: (c, _dt, world) => {
+      if (!c.isPlayer) return;
+      const reach = ownLight(c.genome).r * DAZZLE_REACH;
+      let dazed = false;
+      for (const o of world.creatures) {
+        if (!o.alive || !o.hostile || o.species.boss || o.dazzleRest > 0) continue;
+        const d = reach + o.radius;
+        if (dist2(o.x, o.y, c.x, c.y) > d * d) continue;
+        o.dazzled = DAZE;
+        o.dazzleRest = DAZE + DAZE_REST;
+        dazed = true;
+      }
+      return dazed;
     } }),
 
   O({ id: 'jet', when: g => g.jet > 0,

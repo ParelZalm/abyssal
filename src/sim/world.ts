@@ -151,6 +151,13 @@ const FRY_ON = 1.4;
  */
 const CHILL_DRAG = DRAG_FWD;
 /**
+ * A body dazed by the Angler's glow goes at this share of its pace: it moves this much of the way
+ * its velocity says, and what it fires flies this fast over the same reach. On the step and on the
+ * shot rather than as drag, since a charger's dash holds its speed by setting it every frame, and
+ * drag on top of that took off next to nothing.
+ */
+const DAZED_PACE = 0.4;
+/**
  * Seconds a hostile's shot flies before it can land on the player. Fired at a player close
  * by, a shot landed on the step it was fired — hit and spent before it was ever drawn — so
  * the larva took hits from a turret's ring out of nothing. This is long enough to be seen
@@ -445,10 +452,12 @@ export class World {
        range = speed * SHOT_LIFE, mult = 1, cvx = 0, cvy = 0) {
     const t = this.terrain;
     if (!t) return;
-    const v = speed * t.tile;
+    // a dazed body's shots crawl, over the reach they would have had
+    const pace = by.dazzled > 0 ? DAZED_PACE : 1;
+    const v = speed * pace * t.tile;
     const m = shotModsOf(by);
     const s: Shot = { kind, x, y, vx: Math.cos(a) * v + cvx, vy: Math.sin(a) * v + cvy, r: SHOT_R * t.tile,
-      t: 0, life: range / speed, mult, by,
+      t: 0, life: range / (speed * pace), mult, by,
       ...(m.marks.length ? { marks: m.marks, pierce: m.pierce, seek: m.seek } : {}),
       ...(m.hunt ? { hunt: true } : {}) };
     this.shots.push(s);
@@ -670,8 +679,9 @@ export class World {
     const at = lureOf(h.by);
     if (s.t >= h.hold || !h.by.alive) {
       const a = Math.atan2(p.y - s.y, p.x - s.x);
-      s.vx = Math.cos(a) * h.speed;
-      s.vy = Math.sin(a) * h.speed;
+      const v = h.speed * (h.by.dazzled > 0 ? DAZED_PACE : 1);
+      s.vx = Math.cos(a) * v;
+      s.vy = Math.sin(a) * v;
       s.hang = undefined;
       this.pulses.push({ x: s.x, y: s.y, r: h.by.radius * 0.4, kind: 'shot', shot: s.kind, hostile: true });
       return false;
@@ -901,18 +911,20 @@ export class World {
     // carry it through the rock, which is not there to hold it
     if (c.burrow === 'home' || c.burrow === 'back') c.vx = c.vy = 0;
     const t = this.terrain;
+    // dazed, it goes a share of the way its swim, its dash or a kick would take it
+    const go = c.dazzled > 0 ? dt * DAZED_PACE : dt;
     if (c.species.boss || c.burrow || !t) {
-      c.x += c.vx * dt;
-      c.y = clamp(c.y + c.vy * dt, 30, DEPTH_MAX);
+      c.x += c.vx * go;
+      c.y = clamp(c.y + c.vy * go, 30, DEPTH_MAX);
       if (c.species.boss && t) this.meetRock(c, t, dt);
     } else {
       // in steps of half a cell: a barracuda's dash goes most of a tile a frame, its middle
       // landed inside the rock, and the rock let it out by its nearest face — the far one, out
       // of the room through the corner of a door
-      const n = clamp(Math.ceil(Math.hypot(c.vx, c.vy) * dt / (t.cell * 0.5)), 1, 8);
+      const n = clamp(Math.ceil(Math.hypot(c.vx, c.vy) * go / (t.cell * 0.5)), 1, 8);
       for (let k = 0; k < n; k++) {
-        c.x += c.vx * dt / n;
-        c.y = clamp(c.y + c.vy * dt / n, 30, DEPTH_MAX);
+        c.x += c.vx * go / n;
+        c.y = clamp(c.y + c.vy * go / n, 30, DEPTH_MAX);
         t.collide(c, wallR(c));
       }
     }
@@ -932,6 +944,8 @@ export class World {
       c.vx *= k;
       c.vy *= k;
     }
+    c.dazzleRest = Math.max(0, c.dazzleRest - dt);
+    if (c.dazzled > 0) c.dazzled = Math.max(0, c.dazzled - dt);
     if (c.fade < 1) c.fade = Math.min(1, c.fade + dt / FADE_IN);
     // in a hole in the floor the eel stands near straight up, where every sway of its head
     // would mirror it: its brain keeps the facing there

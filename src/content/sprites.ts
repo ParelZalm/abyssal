@@ -11,7 +11,7 @@
  * form (`sim/hull.ts`) lies inside the drawn body; `axis` is the line the swim bends about;
  * `bulb` is where a lure's trap fires, so the light you see is the trigger.
  */
-import { formFor, spineAt, R, type Form, type Plan } from './form';
+import { formFor, spineAt, R, type Form, type Plan, type PlanArt } from './form';
 import type { Genome } from './genome';
 import type { Species } from './species';
 
@@ -158,6 +158,13 @@ export interface SpriteArt {
    * and a long way back down the Moray's.
    */
   spout?: Pt;
+  /**
+   * What a player's drawn body takes over from its plan's art (`PLAN_ART`): the painted look the
+   * picture replaces, which would otherwise be painted over it. The angler plan is the roster's
+   * anglerfish — a maw held open, a comb of spines, scales, a lamp of an eye, sparkles — and the
+   * Angler form is the larva's glass on that shape, its mouth and its fins in the picture.
+   */
+  art?: Partial<PlanArt>;
 }
 
 /** The larva's drawn marks (`SpriteArt.marks`), which the forms wear too (`marksFrom`). */
@@ -454,6 +461,34 @@ export const SPRITES: Record<string, SpriteArt> = {
            ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
            hull: [[151.5, 12, 5.1], [133.5, 11, 7.6], [116.5, 12, 9.3], [98.5, 12, 8.5], [81.5, 12.5, 7.2],
                   [64.5, 12.5, 6.4], [46.5, 12.5, 5.5], [29.5, 13, 4.3], [11.5, 13, 2.5]] },
+  // The Angler form: `npm run sprite -- docs/media/reference/angler-form-sprite.png --id angler --key
+  // green --fringe --pitch 8 --keep 60,16,84,34` (the strike's gape is cut into the face, inside the
+  // rest's silhouette, so the box is given), its parts `node scripts/import-parts.mjs
+  // docs/media/reference/angler-form-parts-sprite.png --body angler --snout 81 --tail 4 --axis 22`.
+  // The body came back a lens, the face a little shallower and the rear fuller than the whole on its
+  // parts sheet. Its mouth is its own, the seam from the snout down to the corner it hinges at, and
+  // its look is the larva's glass, not the roster anglerfish's its plan paints (`art`). Its jaws and
+  // lures `node scripts/import-marks.mjs docs/media/reference/angler-form-head-sprite.png --body angler
+  // --cols 4 --rows 3 --pitch 6.95 --fit --drawn 3a8a8a --names …`, the names as the Shark's
+  angler: { w: 83, h: 40, snout: 81, tail: 4, axis: 22, hinge: [64, 32], marksFrom: 'larva',
+            // its own jaws and lures (`angler-form-head-sprite.png`), over the larva's it wears: the
+            // jaws drawn at the slant of its upturned mouth, the lures to its reach
+            marks: { ...LARVA_MARKS, jaw: { at: [0, 11.5] }, 'jaw-open': { at: [0, 13.5] }, fangs: { at: [0, 13.5] },
+                     'fangs-open': { at: [0, 13.5] }, saw: { at: [0, 11.5] }, 'saw-open': { at: [0, 13.5] },
+                     beak: { at: [0, 12] }, 'beak-open': { at: [0, 12] },
+                     illicium: { at: [1.5, 35], tip: [38.7, 25.8] }, lantern: { at: [1.5, 45], tip: [48.0, 33.7] } },
+            // the larva's eye is 20 across and the Angler's 13
+            markSize: { tapetum: 0.65, foureye: 0.65 },
+            // the Archer Spit's sac low beside the gut, an organ inside the glass: off the eye, under
+            // its round high eye it hung like a tear, and alone on the flank it read as a second eye
+            place: { spit: [0.62, 0.3] },
+            art: { maw: false, crest: false, scales: false, eyeLamp: false, sparkle: false, fan: false,
+                   finHue: 0, paleEyes: false },
+            parts: { scale: 1.027, at: { eye: [58.4, 7.1], tail: [-16.5, 10.2], back: [12.2, -3.2], pectoral: [46.1, 26.6],
+                                        belly: [12.2, 30.7] } },
+            ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
+            hull: [[78.5, 23.5, 3.8], [69.5, 22.5, 9.8], [60.5, 22, 12.8], [51.5, 21, 15.3], [42.5, 20.5, 15.7],
+                   [33.5, 21.5, 14.9], [24.5, 21.5, 12.3], [15.5, 22, 9.3], [6.5, 22.5, 5.5]] },
 };
 
 /**
@@ -462,7 +497,8 @@ export const SPRITES: Record<string, SpriteArt> = {
  * over it and placed on its outline (`drawnForm`), until those are drawn too. A plan not here
  * is painted whole, as every plan was.
  */
-export const BODIES: Partial<Record<Plan, string>> = { wraith: 'larva', shark: 'shark', squid: 'squid', eel: 'moray' };
+export const BODIES: Partial<Record<Plan, string>> = { wraith: 'larva', shark: 'shark', squid: 'squid', eel: 'moray',
+                                                       angler: 'angler' };
 
 /** How many steps nose to tail a drawn outline is sampled at (`Form.outline`). */
 const OUTLINE = 24;
