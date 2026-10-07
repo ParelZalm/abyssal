@@ -1108,9 +1108,8 @@ AVOID
 Labels, leader lines, dotted outlines, parts that differ from the whole angler in size
 or shape, a box-shaped body, a flat or vertical face, a flat top, a hexagonal tail, a
 stripe through the tail, a disc of a pectoral, a lure or any light, a thick bar or
-stripe along the body, a pectoral fin on
-the mouth's corner, pelvic fins, an open mouth, teeth, spines, scales, spots, a long or
-slender body, a part drawn twice, any background other than flat #00FF00, soft glows,
+stripe along the body, a pectoral fin on the mouth's corner, pelvic fins, an open
+mouth, teeth, spines, scales, spots, a long or slender body, a part drawn twice, any background other than flat #00FF00, soft glows,
 painterly texture, noise, sub-pixel detail, text, borders, shadows, a second animal.
 ```
 
