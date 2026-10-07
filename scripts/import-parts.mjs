@@ -5,6 +5,7 @@
  *
  *   node scripts/import-parts.mjs <sheet.png> --body larva --snout 90 --tail 4 --axis 17
  *                                 [--stalk] [--whole joint,snout,axis] [--only eye,tail]
+ *                                 [--pick back:60,58;belly:60,78] [--place tail:-3,7]
  *                                 [--key green] [--pitch 8] [--out src/render/creature/sprites]
  *
  * The sheet is the whole animal once, assembled, and each part apart from it at its size on
@@ -62,8 +63,12 @@ const cells = [];
 for (let j = 0; j < ch; j++) for (let i = 0; i < cw; i++) {
   // the middle of the cell, a pixel in from each edge, so the seam's blur does not count; a
   // sheet at one image pixel to the art pixel, as the redrawn larva's came, has no seam
+  // A pitch need not be whole: the Moray's sheet came back at 9.64 image pixels to the art pixel
+  // (176 cells across 1697), so each cell's bounds are rounded rather than its pitch.
   const r = [], g = [], b = [], m = P >= 3 ? 1 : 0;
-  for (let y = j * P + m; y < (j + 1) * P - m; y++) for (let x = i * P + m; x < (i + 1) * P - m; x++) {
+  const y0 = Math.round(j * P) + m, y1 = Math.round((j + 1) * P) - m;
+  const x0 = Math.round(i * P) + m, x1 = Math.round((i + 1) * P) - m;
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
     const o = (y * W + x) * 4;
     r.push(D[o]); g.push(D[o + 1]); b.push(D[o + 2]);
   }
@@ -134,6 +139,14 @@ function place(p) {
   }
   return best;
 }
+// `--place tail:-3,7` sets where a part sits on the whole by hand, in the whole's pixels, where
+// its shape cannot find it: the Moray's tail was drawn bigger apart than on the whole, and the
+// best fit for it lay along a fin
+const placeBy = new Map((opt('place') ?? '').split(';').filter(Boolean).map(s => {
+  const [name, xy] = s.split(':');
+  const [dx, dy] = xy.split(',').map(Number);
+  return [name, { dx, dy }];
+}));
 const placed = pieces.map(p => ({ ...p, ...place(p) }));
 
 // ------------------------------------------------------------------ which part is which
@@ -147,13 +160,23 @@ const take = (name, pick) => {
   left.splice(left.indexOf(p), 1);
   named.set(name, p);
 };
-take('eye', l => l.reduce((a, p) => dark(p) > dark(a) ? p : a));
-take('tail', l => l.reduce((a, p) => p.dx < a.dx ? p : a));
+// `--pick back:60,57;belly:60,78` names a part by a cell of the sheet inside it, before the
+// rules below: they read a part off where it lands, and a moray's fins run the body's length,
+// so the dorsal was taken for its tail, the furthest back, and the anal fin for its pectoral
+for (const s of (opt('pick') ?? '').split(';').filter(Boolean)) {
+  const [name, xy] = s.split(':');
+  const [i, j] = xy.split(',').map(Number);
+  take(name, l => l.find(p => i >= p.x0 && i < p.x0 + p.w && j >= p.y0 && j < p.y0 + p.h));
+}
+for (const [name, at] of placeBy) if (named.has(name)) Object.assign(named.get(name), at, { score: NaN });
+const rule = (name, pick) => { if (!named.has(name) && left.length) take(name, pick); };
+rule('eye', l => l.reduce((a, p) => dark(p) > dark(a) ? p : a));
+rule('tail', l => l.reduce((a, p) => p.dx < a.dx ? p : a));
 // the back's is the highest, and the pectoral the furthest forward of the two under it: the
 // larva's pectoral was also its smallest, but a shark's pelvic is smaller than its pectoral
-take('back', l => l.reduce((a, p) => p.dy < a.dy ? p : a));
-take('pectoral', l => l.reduce((a, p) => p.dx + p.w > a.dx + a.w ? p : a));
-take('belly', l => l[0]);
+rule('back', l => l.reduce((a, p) => p.dy < a.dy ? p : a));
+rule('pectoral', l => l.reduce((a, p) => p.dx + p.w > a.dx + a.w ? p : a));
+rule('belly', l => l[0]);
 if (left.length) console.warn(`${left.length} piece(s) left over, not written`);
 
 // ------------------------------------------------------------------ onto the body
@@ -193,7 +216,7 @@ for (const [name, p] of named) {
   p.img.forEach((c, i) => { if (c) { px.set(c, i * 4); px[i * 4 + 3] = 255; } });
   writeFileSync(join(out, fileOf(name)), encodePng(p.w, p.h, px));
   lines.push(`${name}: [${toBody(p.dx, p.dy).join(', ')}]`);
-  console.log(`${name.padEnd(9)} ${p.w}×${p.h} at ${p.dx},${p.dy} on the whole (${Math.round(p.score / p.n * 100)}% agree)`);
+  console.log(`${name.padEnd(9)} ${p.w}×${p.h} at ${p.dx},${p.dy} on the whole (${Number.isNaN(p.score) ? 'placed by hand' : `${Math.round(p.score / p.n * 100)}% agree`})`);
 }
 
 // the parts laid on the whole, each in a colour of its own, beside the whole as drawn

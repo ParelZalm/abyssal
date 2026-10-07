@@ -270,7 +270,8 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, 
   const jellyArms = A.arms > 0 && !rigged;
   if (jellyArms) tentacles(s, f, A, g);
   if (g.veil > 0) veil(s, f, g, seed);
-  if (g.eel > 0) ribbonFin(s, f, seed);
+  // a drawn moray's fins are the ribbon already (`posesFor`)
+  if (g.eel > 0 && !poses.back) ribbonFin(s, f, seed);
   if (bloom) bloomTrail(s, f, pal, g, seed);
   if (!jellyArms) {
     if (A.tail === 'fluke') fluke(s, f, A);
@@ -406,7 +407,10 @@ function posesFor(g: Genome, plan: Plan, f: Form, A: PlanArt, marks: ReadonlySet
     const fork = g.tailSplit - b.tailSplit > 0.3 && marks.has('fork2') ? 'fork2' : 'fork';
     if (marks.has(fork)) poses.tail = { sx: f.fluke / f0.fluke, sy: f.fluke / f0.fluke, as: fork };
   }
-  if (A.dorsalFin === 0 && foldsOf(g, A)) {
+  // a moray's one fin, round its body from its nape to its vent, is the ribbon fin already, so
+  // Anguilliform Body keeps its drawn fins: the painted ribbon in their place was a grey fringe
+  // round a drawing it did not belong to
+  if (A.dorsalFin === 0 && (foldsOf(g, A) || plan === 'eel')) {
     const k = (0.7 + g.finSize * 0.3) / (0.7 + b.finSize * 0.3);
     poses.back = poses.belly = { sx: 1, sy: k };
   }

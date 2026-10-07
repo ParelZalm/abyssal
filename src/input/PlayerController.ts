@@ -4,6 +4,7 @@ import type { Fx } from '../render/fx';
 import { activeOf, boostModsOf, fire, organsOf, POISE_MAX, primaryOf, PUFF_TIME, strikeEveryOf,
   strikeOf } from '../sim/organs';
 import { DRAG_FWD, shrugChance, type Creature } from '../sim/creature';
+import { spoutOf } from '../sim/hull';
 import type { World } from '../sim/world';
 import type { Input } from './Input';
 
@@ -378,9 +379,9 @@ export class PlayerController {
       p.kick(STRIKE);
       const a = Math.atan2(ay, ax);
       const speed = shotSpeedOf(p) * prim.speed;
-      const out = [];
+      const out = [], at = spoutOf(p);
       for (const off of prim.fan) {
-        const s = this.world.fire(p, prim.shot, p.biteX, p.biteY, a + off, speed, rangeOf(p.genome), prim.mult,
+        const s = this.world.fire(p, prim.shot, at.x, at.y, a + off, speed, rangeOf(p.genome), prim.mult,
           p.vx * SHOT_CARRY, p.vy * SHOT_CARRY);
         if (!s) continue;
         if (prim.fry) this.world.brood(s, prim.fry.bites, prim.fry.every, prim.fry.seek);

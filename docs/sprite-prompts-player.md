@@ -735,3 +735,215 @@ front edge just under the midline (`SpriteArt.hinge`): set further back, the dar
 eye, 7 behind the front, and could not be told from the pupil. The lures, drawn to its reach, 44
 and 54 forward, arch at the painted lure's height. The prompt is in the history:
 `git show 400ceec:docs/sprite-prompts-player.md`.
+
+---
+
+## The Moray
+
+- ~~Stage A~~ — done: `docs/media/reference/moray.webp`, the second try: the first came back a
+  stretched larva, 5 times as long as deep where 10 was asked, deepest at mid-body, with no mouth
+  seam and fins growing taller to a fanned tail. Its prompt, tightened after it, is in the history:
+  `git show c0bf32d:docs/sprite-prompts-player.md`.
+
+The third form (`content/forms.ts`): three different Lurker mutations rebuild the larva onto the
+eel's plan, with stillness that hides it and winds up its next bite. As with the Shark and the
+Squid, **it is still the player**: the larva's pale lavender glass on a moray's body, the larva's
+eye, and what shows through it — the notochord and the gut. It must not read as an eel of the
+roster: the Ribbon Eel, blue and yellow with leaf nostrils and barbels, or the Gulper, dark with a
+pouch of a mouth and a light on its whip of a tail.
+
+The shape is the plan's (`PLANS.eel`, `PLAN_ART.eel`), bent by the form's `lurk`, which deepens and
+blunts the head (`formFor`): a long, evenly deep body, deepest just behind a heavy head, about ten
+times as long as it is deep. A moray has **no pectoral and no pelvic fins**: one fin runs from
+behind the head along the back, round the tail tip and forward under the belly to the vent. So the
+parts are the bare body, the eye, the dorsal fin (the `back` part), the anal fin (the `belly`
+part) and the tail tip where they meet (the `tail`); there is no pectoral, as on the Squid. The
+mouth is a closed seam on this sheet: the jaws are a sheet of their own after the body, as the
+Shark's and the Squid's were.
+
+### Stage B
+
+The parts sheet first, then the bare body with it attached, as the Shark and the Squid went. The
+"in game" image is the target; its "parts" image drew the body a third deeper. What changes from
+the sheet: **the fins are low and even**, 5 and 4 tall the whole way, where it drew them peaking
+behind the head and tapering to the tail, which made the outline a long wedge rather than an eel;
+**the body is a little fuller toward the tail**, where it tapered straight from the head; **the
+tail is the fin's rounded end** wrapped round the body's point, as on its "in game" image, not the
+small crescent fan of its "parts" image. Kept from it: the eye on the midline close to the snout,
+and the body deepest just behind the head.
+
+**The sizes**, off the "in game" image with the body 152 art pixels from the snout to its point,
+about the texel density of the Shark's on a plan 1.4 times as long (`PLAN_FORMS.eel`): 17 deep at
+its deepest, 30 behind the snout, 15 at the middle, 11 three quarters back; the eye 9 across, its
+middle 12 behind the snout tip on the midline; the gill opening 3 across, 26 behind the snout; the
+gut 17 long and 5 deep, its front 39 behind the snout; the dorsal fin from 26 to 142 behind the
+snout, 5 tall, and the anal fin from the vent, 56 behind, to 142, 4 tall; the tail the fin's end
+over the last 10 of the body and 4 past its point, 10 tall; the whole moray 156 long and 26 deep.
+
+**On green.** **Attach both:** `moray.webp`, `squid-parts-sprite.png` (the Squid's parts sheet, how
+the form's parts are cut), `larva-parts-sprite.png`, `cave-room.webp`; for sheet 2, the parts sheet
+that came back as well.
+
+#### Sheet 1: the parts
+
+```text
+GOAL
+True pixel-art sprite sheet of the pale moray eel in the attached reference sheet, for
+a game: the whole moray once, and under it its parts drawn apart. The design and
+colours of the reference's "in game" image — the pale see-through lavender body, long
+and slender, deepest behind the head, the big larva eye near the snout, the notochord
+and the gut showing through — redrawn as clean pixel art on a strict grid, in the
+style of the attached squid and larva parts sheets (the same creature as other forms).
+
+THE GRID (most important)
+- The sheet is exactly 176 × 96 art pixels.
+- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
+  square block, so the image is 1408 × 768.
+- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
+  than one block. No dithering noise. Every block is one flat colour.
+- 1-block outline (#79728F) round each silhouette, never thicker.
+
+LAYOUT
+- Top: the WHOLE moray, assembled, as in the reference's "in game" image: facing RIGHT,
+  perfectly straight and horizontal, 156 art pixels from the tail's end to the snout
+  and 26 deep with its fins. Centred left to right.
+  - The body 152 long from the snout tip to its pointed end: 17 deep at its deepest,
+    30 behind the snout, 15 deep at the middle, 11 deep three quarters back, then
+    tapering to the point. A blunt rounded snout; the head's top rising gently behind
+    the eye. Smooth, no scales.
+  - The mouth: closed, a 1-pixel darker line (#9B8DB7) from the snout tip back 20 art
+    pixels, 5 below the midline, just under the eye. Two tiny tube nostrils, 2 pixels
+    each, on the tip of the snout.
+  - The eye 9 across, its middle 12 art pixels behind the snout tip, on the midline:
+    black pupil, pale-silver ring, one white glint.
+  - The gill opening: a dark round hole (#6A5A8A) 3 across, 26 behind the snout, on
+    the midline.
+  - The dorsal fin: a low soft fold along the back from 26 behind the snout to 10
+    before the body's point, EXACTLY 5 art pixels tall the whole way (not taller in
+    the middle, not tapering), with faint slanted rays.
+  - The anal fin: the same fold under the belly from the vent, 56 behind the snout, to
+    10 before the body's point, EXACTLY 4 art pixels tall the whole way.
+  - The tail: the fin's rounded end, wrapped round the body's point: it covers the
+    last 10 pixels of the body and runs 4 past its point, 10 tall, joining the dorsal
+    and anal fins' ends; no fan, no fork.
+  - The notochord: a straight line 2 art pixels thick (#B8B0D8) along the midline from
+    the gill opening to the tail. The gut: a darker rounded shape (#6A5A8A) 17 long and
+    5 deep, its front 39 behind the snout, low in the body.
+- Bottom rows: its parts, each on its own with at least 8 art pixels of background on
+  every side between it and anything else, each at EXACTLY the size and shape it has
+  on the whole moray above, not rotated, not enlarged:
+  1. the dorsal fin (its lower edge cut where it meets the back);
+  2. the anal fin (its upper edge cut where it meets the belly);
+  3. the tail (the fin's rounded end, its front edge cut where the dorsal and anal
+     fins end, the body's point under it left off);
+  4. the eye (the black pupil, the pale-silver ring and the white glint).
+- Where a part meets the body, finish its edge with the outline like the rest of it.
+- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
+  anywhere on the animal, and do not let the outline pick up a green tint where it
+  meets the background.
+
+PALETTE
+Use these colours, plus at most 8 in-between shades of them: outline #79728F, deep
+shadow #B8B0D8, body #E8E4F8, body highlight #F4F2FF, fin #D6D0ED, gut #6A5A8A, eye
+ring #CDD3E3, pupil #080B16. Light comes from above and slightly in front: lit top,
+darker belly; each part shaded as its own form, the fins paler and more see-through
+than the body.
+
+LIGHTS
+The eye's glint is a flat white block. NO glow halo, bloom or light spill, on the
+animal or on the background. The game adds the glow itself.
+
+AVOID
+Labels, leader lines, dotted outlines, parts that differ from the whole moray in size
+or shape, fins taller in the middle or tapering toward the tail, a fan or crescent
+tail, a short or deep body, a body that bends or waves, a part drawn twice, pectoral
+or pelvic fins, an open mouth, teeth, barbels, spots or mottling, any background other
+than flat #00FF00, soft glows, painterly texture, noise, sub-pixel detail, text,
+borders, shadows, a second animal.
+```
+
+The parts sheet came back (`moray-parts-sprite.png`) well drawn but off the grid asked for: 176 ×
+96 art pixels at 9.64 image pixels each, 1697 × 927, where 8× was asked (an 8× try, 1408 × 768,
+came back stair-stepped and blocky, and is not kept). The whole is longer and slimmer than asked,
+168 long and 27 deep, the body about 164 long and 14 deep, 12 times its depth; its fins peak at 8
+behind the head and taper both ways, where an even 5 was asked; its tail is the rounded fin end, a
+paddle 12 long. Kept as drawn: it reads as a moray, and the bare body is drawn to it.
+
+#### Sheet 2: the bare body
+
+```text
+GOAL
+True pixel-art sprite of the pale moray's BARE BODY, for a game: EXACTLY the body of
+the whole moray at the top of the attached parts sheet — the same outline, the same
+taper, the same shading, the mouth line, the nostrils, the gill opening, the notochord
+and the gut — with its eye, its dorsal fin, its anal fin and its tail taken off.
+2 frames of the same body, side by side, left to right: "rest", "strike".
+
+THE GRID (most important)
+- Each frame is exactly 176 × 28 art pixels.
+- Export scaled up 6× with nearest-neighbour, every art pixel a perfect solid 6 × 6
+  square block, so the image is 2112 × 168.
+- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
+  than one block. No dithering noise. Every block is one flat colour.
+- 1-block outline (#79728F) round the whole silhouette, never thicker.
+
+COMPOSITION
+- Strict side view, facing RIGHT, the body perfectly straight and horizontal.
+- From its pointed end to the snout tip the body is 164 art pixels long and 14 deep at
+  its deepest, just behind the head, EXACTLY as on the parts sheet, tapering to a clean
+  point at the left where the tail's rounded fin covered it.
+- Where the eye goes the head is plain body colour, shaded as the rest of the head: no
+  socket, no hole, no dotted outline. Where the fins joined, the outline runs smooth
+  along the back and the belly.
+- The body is centred vertically: its midline, tail to snout, lies along the frame's
+  horizontal centre line.
+- Everything fits inside the frame with at least 4 art pixels of margin, in both frames.
+- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
+  anywhere on the animal, and do not let the outline pick up a green tint where it
+  meets the background.
+
+PALETTE
+The parts sheet's colours: outline #79728F, deep shadow #B8B0D8, body #E8E4F8, body
+highlight #F4F2FF, fin #D6D0ED, gut #6A5A8A, plus at most 8 in-between shades.
+
+FRAME 1 — "rest"
+The bare body at rest, the mouth closed.
+
+FRAME 2 — "strike"
+Identical to frame 1 in every pixel except the mouth: the lower jaw dropped open along
+the mouth line, a long dark gape (#6A5A8A at its deepest) 4 art pixels tall at the
+snout, narrowing back to the mouth's corner. No teeth: the game adds teeth when a
+mutation grows them. Same frame size, same position, same everything else, so the two
+can be swapped without the animal moving.
+
+AVOID
+A body shaped differently from the whole moray on the parts sheet, an eye, an eye
+socket or a dotted outline, fins, a tail fin, teeth, a body that bends or waves, any
+background other than flat #00FF00, soft glows, painterly texture, noise, sub-pixel
+detail, text, labels, borders, shadows, a second animal.
+```
+
+**In** (`BODIES.eel`): `moray-sprite.png`, the second try at the bare body (the first came back as
+the parts sheet again, unchanged), and the eye, fins and tail off `moray-parts-sprite.png`.
+
+```bash
+npm run sprite -- docs/media/reference/moray-sprite.png --id moray --key green --fringe --pitch 5.75 --keep 143,10,157,21
+node scripts/import-parts.mjs docs/media/reference/moray-parts-sprite.png --body moray --snout 156 --tail 2 --axis 13 --pitch 9.64 --whole 4,167,14.5 --pick 'back:60,58;belly:60,78;tail:136,74' --place 'tail:-3,6'
+```
+
+As it went: the body sheet's grid search found half the grid, 3.97, and speckled the outline; the
+grid holds still at 157 × 24 from 5.63 to 5.9. Its mouth's seam, drawn a pixel thin, fell between
+the cells and was drawn back in by hand, a row of the snout's outline 10 back from its tip. The
+parts importer takes a pitch that is not whole now, for the parts sheet's 9.64; it read the parts
+by where they land, and a moray's fins run its length, so the dorsal was taken for the tail and the
+anal fin for the pectoral: they are named by a cell of the sheet (`--pick`), and the tail paddle,
+drawn bigger apart than on the whole, is placed by hand (`--place`). The body came back deeper than
+the whole on the parts sheet, 7 times as long as deep to its 12, so the fins' roots lie under it and
+they stand low, as a moray's do.
+
+On the body it wears the larva's marks, its eyes at 0.7, and not the camouflage's coat and beard,
+which the form's lurk always has: they blotched it grey from snout to tail (`markSize` 0, as the
+Squid's Mantle Pump rings). Anguilliform Body keeps its drawn fins, which are a ribbon fin already,
+rather than painting a grey one round them, and the eel plan grows no spines: menace stood one up
+on its back with every jaw. The jaws and lures are the larva's until its own are drawn; at its
+reach the larva's lure stands tall over its head.
