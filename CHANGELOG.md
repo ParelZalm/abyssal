@@ -8,6 +8,10 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+- **The first fight is any fight.** Every tank's first fight room held one vampire squid alone,
+  scaled to the tank, left on from testing it; it is dealt from the tank's own animals now, like
+  every room after it. The switch that dealt only drawn enemies is gone, since every enemy is.
+
 ## [0.5.1] — 2026-10-09
 
 - **The column's background is gone.** The parallax props and fields the open column drew

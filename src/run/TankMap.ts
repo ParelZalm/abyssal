@@ -137,7 +137,7 @@ export interface MapCell { gx: number; gy: number; type: MapRoom['type']; visite
 export class TankMap {
   readonly cells: Cell[];
   private current = 0;
-  /** Whether a fight room has been dealt its hostiles yet: the first is dealt `NEWEST`. */
+  /** Whether a fight room has been dealt its hostiles yet: the first is dealt `NEWEST`, when one is set. */
   private fought = false;
   /** Seconds since the room the player is in was won; unbounded for one entered already won. */
   private calm = Infinity;

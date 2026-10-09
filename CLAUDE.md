@@ -168,9 +168,7 @@ Read `docs/decisions.md` before rebuilding anything that looks missing.
   painted over them, placed on its outline (`drawnForm`); the rest of its plans stay painted.
   The whole workflow — the prompts for whoever makes the art, `npm run sprite` to import a
   sheet, the wiring and the checks — is `docs/sprites.md`; which enemies are done and which
-  are next is `docs/roadmap-enemies-rework.md`. Until the roster is through, only reworked
-  enemies are dealt into fights (`REWORKED_ONLY`), so the nursery's and reef's fights are
-  empty for now.
+  are next is `docs/roadmap-enemies-rework.md`. The roster is through: every enemy is drawn.
 - **Nothing on a creature is stroked.** A contour has a position of its own, so it draws
   twice wherever parts cross. Painters set what a pixel is; `bake/sheet.ts` shades it, and
   the outline and rim are read off the finished silhouette. See `docs/decisions.md`.
