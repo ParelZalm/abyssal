@@ -8,6 +8,8 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-10-09
+
 - **The column's background is gone.** The parallax props and fields the open column drew
   behind the action (`render/scenery.ts`, `props.ts`, `fields.ts`), out of play since the
   tank rework, are deleted with the design board's archived *Column era* section that alone
@@ -147,7 +149,8 @@ The column game: one open water column nine kilometres deep, five zones sealed b
 that open to a body big enough, a draft of three mutations at every growth, guardians, the
 Leviathan at the bottom, and the codex. Kept as the tag `v0.1.0`.
 
-[Unreleased]: https://github.com/ParelZalm/abyssal/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/ParelZalm/abyssal/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/ParelZalm/abyssal/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/ParelZalm/abyssal/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/ParelZalm/abyssal/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/ParelZalm/abyssal/compare/v0.2.0...v0.3.0
