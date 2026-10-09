@@ -1365,54 +1365,14 @@ lower edges and a few lumps, stacked edge to edge, which read as planks, not fri
 roots sit 6 above, 6 below and 17 below the midline, round the gut. A speckle runs through the bell
 and the arms, against "no dithering", which the bake's third averages out.
 
-#### Sheet 1b: the oral arms, drawn again
+#### ~~Sheet 1b: the oral arms, drawn again~~ — done
 
-The three oral arms alone, as one part, their roots where the parts sheet put them, since the arms
-are laid into the bake by those roots and not found on the whole. One cell of 64 × 44 art pixels.
-
-```text
-GOAL
-True pixel-art sprite of the three oral arms of the pale jellyfish on the attached parts
-sheet, for a game, drawn again: on that sheet they came out as flat-topped slabs with
-straight edges. Here they are soft, wavy, frilled ribbons, the arms of a jellyfish.
-Same colours, same style as the rest of the attached sheet.
-
-THE GRID (most important)
-- The sheet is exactly 64 × 44 art pixels.
-- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
-  square block, so the image is 512 × 352.
-- No anti-aliasing, no blur, no soft edges, no gradients, no dithering or speckle, and
-  no colour change smaller than one block. Every block is one flat colour.
-- 1-block outline (#79728F) round each arm, never thicker, and none inside it.
-
-THE ARMS
-Three oral arms together, as they hang from the bell, trailing to the LEFT from their
-roots. Their roots are cut flat in one vertical line 2 art pixels from the sheet's
-RIGHT edge, the root ends finished with the outline: the top arm's root centred 10
-art pixels from the sheet's top, the middle one's 12 below that, the bottom one's 11
-below that.
-- Each arm a ribbon 9 art pixels deep at its root, tapering to a rounded tip 3 deep.
-  Lengths: top 46, middle 52, bottom 44 art pixels.
-- Each sways in one slow, gentle S-wave along its length, 3 or 4 art pixels high, the
-  three swaying together, never crossing or touching, with at least 1 art pixel of
-  background between them.
-- Both edges of each ribbon frilled: small rounded lobes 3 or 4 art pixels apart,
-  bulging 1 art pixel out of the edge. Not straight edges, not flat tops, not boxes.
-- Shading: a paler band down the middle of each ribbon (#F4F2FF), the arm colour either
-  side of it (#D6D0ED), the frilled edges a shade darker (#B8B0D8), lit from above.
-- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
-  anywhere on the arms.
-
-PALETTE
-Outline #79728F, deep shadow #B8B0D8, arm #D6D0ED, highlight #F4F2FF, plus at most 4
-in-between shades of them.
-
-AVOID
-Rectangles, slabs or planks, straight or flat edges, arms touching or stacked edge to
-edge, arms crossing, more or fewer than three arms, a bell, tentacles, an eye, any
-background other than flat #00FF00, speckle or noise, soft glows, painterly texture,
-sub-pixel detail, text, labels, borders, shadows.
-```
+`docs/media/reference/bloom-form-arms-sprite.png`: three frilled ribbons on the grid asked for, 512 ×
+352 with every block flat and 5 colours, 45, 52 and 44 long, their roots in one column at the right
+and centred 10, 22 and 33 from the top. Mostly the highlight, with the arm colour and the shadow at
+their frilled edges. The parts sheet's arms were three flat-topped slabs; these are laid into the
+bake by their roots, which sit as the parts sheet's did, round the gut. The prompt is in the history:
+`git show 98581df:docs/sprite-prompts-player.md`.
 
 #### Sheet 2: the bare body
 
