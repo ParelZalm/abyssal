@@ -12,10 +12,6 @@ const ORDER: readonly BombFrame[] = ['token', 'calm', 'swelling', 'blown'];
 const SIZE = 32;
 /** The body's middle in every frame, in art pixels: what a lit frame is hung from. */
 export const BOMB_CENTRE = [16, 18] as const;
-/** The middle of the spark on the fuse spine, in art pixels, a frame at a time. */
-export const BOMB_SPARK: Record<BombFrame, readonly [number, number]> = {
-  token: [16, 9], calm: [16, 7], swelling: [16, 6], blown: [16, 5],
-};
 
 const canvases = new Map<BombFrame, HTMLCanvasElement>();
 const textures = new Map<BombFrame, Texture>();

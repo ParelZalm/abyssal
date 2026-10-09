@@ -154,3 +154,10 @@ The strip is cut into its four frames and keyed off green. The token replaces `S
 three in place of `SWELL`'s scaling — calm, then swelling, then blown in the last third of the
 fuse — with its red blink still the game's tint. The board's *Shop & deals* has both cells to
 judge it by.
+
+**The fuse spine was taken off once it was in the game.** Drawn as asked, it came back a
+straight two-pixel post with an orange cap: on the token it was half the picture, and on the
+lit fish it read as a stick stood in it rather than a spine. The strip has it cleared (the
+body's top outline was already under it), and the bloom that sat on the spark is centred on
+the body, wide and faint, so the fish glows from inside as the larva does. The fuse is told by
+the swelling and the blink alone. A new Stage B should leave the spine out.

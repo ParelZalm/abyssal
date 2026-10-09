@@ -2,7 +2,7 @@ import { Container, Sprite } from 'pixi.js';
 import type { Bomb } from '../sim/bombs';
 import { FUSE } from '../sim/bombs';
 import type { Light } from './lighting';
-import { BOMB_CENTRE, BOMB_SPARK, bombTexture, type BombFrame } from './bombfish';
+import { BOMB_CENTRE, bombTexture, type BombFrame } from './bombfish';
 import { PICKUP_GLOW } from './pickups';
 import { glowTexture } from './textures';
 
@@ -22,7 +22,7 @@ const HOT_TINT = 0xff6a4a;
 
 /**
  * The bomb fish the player has released (`World.bombs`), drawn (`render/bombfish.ts`): calm,
- * then swelling, then blown over its fuse, its spine's spark pooling light round it, blinking
+ * then swelling, then blown over its fuse, glowing from inside, blinking
  * red in its last `HOT` seconds. Sized in art pixels like a pickup (`PickupView`).
  */
 export class BombView {
@@ -61,12 +61,13 @@ export class BombView {
       const on = hot && Math.floor(k.t * rate * 2) % 2 === 0;
       s.tint = on ? HOT_TINT : 0xffffff;
       const colour = on ? HOT_TINT : PICKUP_GLOW.bomb;
-      const spark = BOMB_SPARK[frame];
-      b.position.set(k.x + (spark[0] - BOMB_CENTRE[0]) * px, k.y + (spark[1] - BOMB_CENTRE[1]) * px);
-      b.width = b.height = px * (16 + 12 * lit);
+      // lit from inside, as the larva is: the bloom wider than the body and faint, so it haloes
+      // the fish and does not wash its bands out
+      b.position.set(k.x, k.y);
+      b.width = b.height = px * (34 + 14 * lit);
       b.tint = colour;
-      b.alpha = 0.5 + 0.3 * lit;
-      // its own light, pale, and red on each blink, so the fish is lit and not only its spark
+      b.alpha = 0.12 + 0.2 * lit;
+      // its own light, pale, and red on each blink
       this.lights.push({ x: k.x, y: k.y, r: px * (32 + 20 * lit), color: on ? HOT_TINT : 0xdde8ff, a: 0.6 });
     }
   }
