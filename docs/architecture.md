@@ -55,7 +55,7 @@ src/
 │   ├── lighting.ts      the light map the world is multiplied by; `Camera.over` above it
 │   ├── decor.ts         what grows on the rock: placement, painters, swaying ropes
 │   ├── pickups.ts       hearts and shells, in the water and as the HUD's pixel maps
-│   ├── ocean.ts  scenery.ts  fields.ts  props.ts  fx.ts  textures.ts  view.ts
+│   ├── ocean.ts  fx.ts  textures.ts  view.ts
 │   └── creature/
 │       ├── fishview.ts      one deforming mesh per creature; swims it
 │       ├── fishbake.ts      the bake cache, and paint(): the order a body is painted in
@@ -66,10 +66,6 @@ src/
 ├── design/          the design board (dev only, never imported by the game)
 └── ui/              DOM UI — UI.ts facade, hud/*, screens/*, icons.ts
 ```
-
-`render/scenery.ts`, `props.ts` and `fields.ts` are the column's parallax background. They
-are not in play since the tank rework (roadmap stage 1). Only the design board still draws
-them, in its archived *Column era* section.
 
 The run is being rebuilt as tanks of rooms — [adr/0003](adr/0003-tanks-of-rooms-replace-the-column.md)
 and [roadmap.md](roadmap.md). Until it is finished, a run is the nursery tank's map.

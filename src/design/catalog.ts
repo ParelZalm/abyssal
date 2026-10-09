@@ -12,7 +12,6 @@ import { FishView, REST, type Pose } from '../render/creature/fishview';
 import { GHOST_TINT } from '../render/ghosts';
 import { FAMILY_NAMES, TRANSFORMS, type Family } from '../content/forms';
 import { baseGenome, type Genome } from '../content/genome';
-import { PROP_SIZE, propTexture, type PropKind } from '../render/props';
 import { genomeFor, rangeOf, SPECIES } from '../content/species';
 import { TRAITS, type Rarity, type Trait } from '../content/traits';
 import { BANDS, zoneOf } from '../content/zones';
@@ -60,7 +59,6 @@ import { speciesById } from '../content/species';
 import type { IconName } from '../ui/icons';
 import { angleDelta, clamp, lerp, rgb, Rng } from '../core/util';
 import { waterColor } from '../render/water';
-import { fieldKinds, Fields } from '../render/fields';
 
 export interface DesignItem {
   id: string;
@@ -761,44 +759,6 @@ function guardianGroup(): DesignGroup {
   };
 }
 
-// ------------------------------------------------------------------ background props
-
-const KINDS: PropKind[] = ['disc', 'blob', 'mass', 'wisp'];
-
-/**
- * The parallax props, one row per blur level. Level is how far away the band reads as,
- * and it is baked into the texture at boot — it is not a runtime filter, so the only
- * honest way to compare them is side by side like this.
- */
-function propGroup(): DesignGroup {
-  const items: DesignItem[] = [];
-  for (const kind of KINDS) {
-    for (let level = 0; level < 3; level++) {
-      items.push({
-        id: `${kind}-${level}`,
-        name: `${kind} · blur ${level}`,
-        note: level === 2 ? 'far band and foreground' : level === 1 ? 'mid band' : 'near',
-        source: 'src/render/props.ts',
-        span: 90 * PROP_SIZE[kind],
-        depth: 2400,
-        facts: { kind, level, relativeSize: PROP_SIZE[kind] },
-        make: () => {
-          const s = new Sprite(propTexture(kind, level));
-          s.anchor.set(0.5);
-          s.width = s.height = 90 * PROP_SIZE[kind];
-          return s;
-        },
-      });
-    }
-  }
-  return {
-    id: 'props',
-    name: 'Background props',
-    note: 'The parallax shapes, per kind and per blur level. Tinted by the band, not by themselves.',
-    items,
-  };
-}
-
 // ------------------------------------------------------------------ the water itself
 
 /** A depth ramp for one tier: the water colour every 1/8 of the band, plus its accent. */
@@ -816,42 +776,6 @@ function tierSwatch(top: number, bottom: number, accent: [number, number, number
   ramp.rect(-w / 2, h * 0.26, w, h * 0.24).fill({ color: rgb(...accent) });
   c.addChild(ramp);
   return c;
-}
-
-/**
- * One band's field each: the structure the background plane stands in that band's water,
- * built and animated by `Fields` itself. The plane scatters these half a screen apart with
- * open water between; here each is alone, which is the question the board can answer — does
- * the structure name the band — and not how often they come.
- */
-function fieldGroup(): DesignGroup {
-  return {
-    id: 'fields',
-    name: 'Fields',
-    note: 'The structure each band\'s background is built around, one per band, over its own water.',
-    items: BANDS.map((band, i) => {
-      let clock = 0;
-      return {
-        id: `field-${band.id}`,
-        name: band.name,
-        note: fieldKinds(i),
-        source: 'src/render/fields.ts',
-        // a field is a patch of water, so it is framed to fill its cell
-        span: 820,
-        depth: (band.top + band.bottom) / 2,
-        facts: { parts: fieldKinds(i) },
-        make: () => {
-          const fields = new Fields();
-          const step = fields.patch(i);
-          return Object.assign(fields.root, { step });
-        },
-        animate: (view: Container, dt: number) => {
-          clock += dt;
-          (view as Container & { step(t: number): void }).step(clock);
-        },
-      };
-    }),
-  };
 }
 
 function waterGroup(): DesignGroup {
@@ -872,7 +796,7 @@ function waterGroup(): DesignGroup {
         facts: {
           world: `${band.top}–${band.bottom}`,
           turbid: w.turbid, rays: w.rays, shimmer: w.shimmer,
-          ambient: w.ambient, scenery: w.scenery.kinds.join(' '),
+          ambient: w.ambient,
         },
         make: () => tierSwatch(band.top, band.bottom, w.accent),
       };
@@ -2256,11 +2180,6 @@ function bossGroup(): DesignGroup {
  */
 export interface DesignSection {
   name: string;
-  /**
-   * Drawing from the open column that the tanks no longer show, kept to compare against and
-   * closed in the sidebar until asked for.
-   */
-  archived?: boolean;
   groups: DesignGroup[];
 }
 
@@ -2270,6 +2189,5 @@ export function catalog(): DesignSection[] {
     { name: 'Animals', groups: [speciesGroup(), roleGroup(), bossGroup(), guardianGroup()] },
     { name: 'The run', groups: [healthGroup(), powerGroup(), itemGroup(), shotOrganGroup(), economyGroup()] },
     { name: 'The body', groups: [planGroup(), motionGroup(), morphGroup(), statGroup(), buildGroup(), mutationGroup()] },
-    { name: 'Column era', archived: true, groups: [propGroup(), fieldGroup()] },
   ];
 }
