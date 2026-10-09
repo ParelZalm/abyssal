@@ -27,9 +27,8 @@ browser pane attaches to it.
 water colour at its own depth. Its sidebar sorts the groups into sections (`DesignSection`
 in `catalog.ts`): the tanks (rooms, decoration, water), the animals (creatures, hostile
 roles, bosses), the run (health, pedestals, shop and deals), and the body (plans, motion,
-morphology, stats, builds, mutations). The column's parallax props and fields sit under an
-archived *Column era* section, since the game no longer draws them. A new group goes into
-the section it belongs to. The board opens on Body plans and fills a group's cells a slice a
+morphology, stats, builds, mutations). A new group goes into the
+section it belongs to. The board opens on Body plans and fills a group's cells a slice a
 frame, with the count in the header. An item too slow for one frame (a room is ~1 s at play
 density) gives `DesignItem.prepare` and keeps what it baked. The rooms bake the grid at a
 third of their density (`ROOM_PREVIEW`), and at full density once focused. It imports the shipping drawing code and is never imported by it,
@@ -182,7 +181,7 @@ Read `docs/decisions.md` before rebuilding anything that looks missing.
   folds in `sim/organs/query.ts`.
 - **Use `waterColor(y)` and `lightAt(y)` from `render/water.ts`** for anything that needs to
   know what the water looks like at a depth. `waterAt(y)` (`content/zones.ts`) blends
-  across thermoclines; `bandWater(y)` is the unblended profile for anything discrete.
+  across thermoclines.
 - **New sprites should batch** against the shared textures in `render/textures.ts`, and
   additive things belong in their own container — an interleaved blend-mode change
   breaks the batch.

@@ -319,12 +319,8 @@ style.textContent = `
 .dm-title a { margin-left: auto; font-size: 11px; letter-spacing: .04em; text-transform: none;
   color: var(--ink); text-decoration: none; border: 1px solid var(--edge); border-radius: 4px; padding: 2px 7px; }
 .dm-title a:hover { color: var(--accent); border-color: var(--accent); }
-#dm-side h3, #dm-side summary { margin: 14px 0 4px; font-size: 10px; letter-spacing: .2em;
+#dm-side h3 { margin: 14px 0 4px; font-size: 10px; letter-spacing: .2em;
   text-transform: uppercase; color: var(--accent); font-weight: 600; }
-#dm-side summary { cursor: pointer; color: var(--dim); list-style: none; }
-#dm-side summary::before { content: '▸ '; }
-#dm-side details[open] summary::before { content: '▾ '; }
-#dm-side details p { margin: 0 0 4px; font-size: 10.5px; color: var(--dim); line-height: 1.4; }
 .dm-groups button { display: flex; width: 100%; align-items: baseline; gap: 6px; font: inherit;
   color: var(--dim); cursor: pointer; text-align: left; background: none; border: 0;
   border-radius: 4px; padding: 3px 8px; }
@@ -415,7 +411,7 @@ function pickGroup(id: string) {
 
 /**
  * The sidebar is built once — each section's groups — and only marked on a
- * change after, so its scroll and an opened archive stay where they were.
+ * change after, so its scroll stays where it was.
  */
 const groupButtons = new Map<string, HTMLButtonElement>();
 function buildSide() {
@@ -435,18 +431,9 @@ function buildSide() {
       groupButtons.set(g.id, b);
       list.appendChild(b);
     }
-    if (s.archived) {
-      const d = document.createElement('details');
-      d.open = s.groups.some(g => g.id === groupId);
-      d.innerHTML = `<summary>${s.name}</summary>
-        <p>From the open column, and no longer drawn by the game: kept to compare against.</p>`;
-      d.appendChild(list);
-      side.appendChild(d);
-    } else {
-      const h = document.createElement('h3');
-      h.textContent = s.name;
-      side.append(h, list);
-    }
+    const h = document.createElement('h3');
+    h.textContent = s.name;
+    side.append(h, list);
   }
   const keys = document.createElement('div');
   keys.className = 'dm-keys';

@@ -8,6 +8,11 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+- **The column's background is gone.** The parallax props and fields the open column drew
+  behind the action (`render/scenery.ts`, `props.ts`, `fields.ts`), out of play since the
+  tank rework, are deleted with the design board's archived *Column era* section that alone
+  still drew them, and with the bands' `scenery` tables and `bandWater` that only they read.
+
 ## [0.5.0] — 2026-10-09
 
 - **The Ink Sac confuses.** Its ink leaves every hostile in the room confused for 4 s — a

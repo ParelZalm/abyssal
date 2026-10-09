@@ -16,6 +16,10 @@ part. Decisions large enough to have their own files live in [adr/](adr/):
 
 ## Parallax background (`scenery.ts`, `props.ts`)
 
+The column's background, out of play since the tank rework and deleted after it with its
+board section; the last of it is `git show v0.5.0:src/render/scenery.ts` (and `props.ts`,
+`fields.ts`, the *Column era* groups in `design/catalog.ts`). What it taught is kept below.
+
 Third try. The placement machinery (bands at 0.3 / 0.58 / 1.35, `1/zoom` sizing, depth
 contrast flip, hashed cells, lissajous wander) survived the first two passes; the art
 did not. Hand-drawn props and blurred body-plan silhouettes both read as mush at
