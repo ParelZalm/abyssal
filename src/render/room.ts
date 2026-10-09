@@ -64,6 +64,20 @@ const LIGHT = (() => {
  */
 /** A door that takes a key, and the deal room's sealed door, as tints on the iron grate. */
 const KEY_TINT = 0xffd27a;
+/**
+ * A secret door's plug of rock, in tiles round the door's opening: baked this far out, and
+ * shown this far, which covers the opening's rounded corners and meets the room's own bake in
+ * solid rock and open water, where the two agree.
+ */
+const PLUG_BAKE = 3;
+const PLUG_SHOWN = 1.25;
+/**
+ * The crack across a plug: its shadow, and the pale lip beside it. The lip is what reads — the
+ * plug is deep in the wall's shadow, where a dark line on dark rock was nothing — so it is the
+ * cap's lit stone and over, and two pixels wide.
+ */
+const CRACK: Rgb = [0.02, 0.03, 0.05];
+const CRACK_LIT: Rgb = [0.62, 0.72, 0.9];
 const SEAL_TINT = 0xff6a5a;
 
 const gateCache: Partial<Record<'v' | 'h', Texture>> = {};
@@ -171,6 +185,8 @@ export class RoomView {
   private readonly sprite = new Sprite();
   /** A grate across each door, shown while it is shut, and which door each is. */
   private readonly gates: { side: Side; sprite: Sprite }[] = [];
+  /** The rock over each secret door, baked with the room, shown while its crack holds. */
+  private readonly plugs: { side: Side; sprite: Sprite }[] = [];
   private baked = -1;
 
   /**
@@ -192,6 +208,10 @@ export class RoomView {
       g.visible = false;
       this.root.addChild(g);
       this.gates.push({ side, sprite: g });
+      if (terrain.shut.get(side) !== 'crack') continue;
+      const plug = new Sprite();
+      this.root.addChild(plug);
+      this.plugs.push({ side, sprite: plug });
     }
   }
 
@@ -215,9 +235,11 @@ export class RoomView {
     // for the deal room's seal. A fight's gates are the plain iron
     for (const { side, sprite } of this.gates) {
       const own = this.terrain.shut.get(side);
-      sprite.visible = this.terrain.closed(side);
+      // a secret door shut is its plug of rock, not a gate
+      sprite.visible = this.terrain.closed(side) && own !== 'crack';
       sprite.tint = this.terrain.locked ? 0xffffff : own === 'key' ? KEY_TINT : SEAL_TINT;
     }
+    for (const { side, sprite } of this.plugs) sprite.visible = this.terrain.shut.get(side) === 'crack';
   }
 
   /**
@@ -253,130 +275,187 @@ export class RoomView {
     const d = this.density ?? artDensity();
     const m = this.margin;
     const worldW = (t.cols + m * 2) * t.tile, worldH = (t.rows + m * 2) * t.tile;
-    const w = Math.ceil(worldW * d), h = Math.ceil(worldH * d);
     const ox = t.x0 - m * t.tile, oy = t.y0 - m * t.tile;
-    const px2w = 1 / d;
-
-    // the kind of every pixel, read off the terrain's own field so the edge drawn is the
-    // edge collided with: 0 water, 1 rock, 2 sand, 3 boulder
-    const kind = new Uint8Array(w * h);
-    for (let py = 0; py < h; py++) {
-      for (let px = 0; px < w; px++) {
-        const wx = ox + px * px2w, wy = oy + py * px2w;
-        if (t.field(wx, wy) <= 0.5) continue;
-        const tile = t.kindAt(wx, wy);
-        kind[py * w + px] = tile === 'sand' ? 2 : tile === 'boulder' ? 3 : 1;
-      }
-      if ((py & 7) === 7) yield;
+    show(this.sprite, yield* paint(t, d, ox, oy, worldW, worldH), ox, oy, worldW, worldH);
+    for (const plug of this.plugs) {
+      // baked wider than it is shown, so the light reaching into the rock round it is measured
+      // from the water it is measured from in the room's own bake, and the two meet unseen
+      const r = t.doorRect(plug.side), bake = t.tile * PLUG_BAKE, shown = t.tile * PLUG_SHOWN;
+      const bx = r.x - bake, by = r.y - bake, bw = r.w + bake * 2, bh = r.h + bake * 2;
+      const img = yield* paint(t.plugged(plug.side), d, bx, by, bw, bh);
+      const cut = crop(img, Math.round((bake - shown) * d), Math.round((bake - shown) * d),
+        Math.round((r.w + shown * 2) * d), Math.round((r.h + shown * 2) * d));
+      crack(cut, plug.side, Math.round(shown * d), Math.round(shown * d), Math.round(r.w * d), Math.round(r.h * d),
+        t.x0 + t.y0);
+      show(plug.sprite, cut, r.x - shown, r.y - shown, r.w + shown * 2, r.h + shown * 2);
     }
-    const at = (x: number, y: number) =>
-      x < 0 || y < 0 || x >= w || y >= h ? 1 : kind[y * w + x];
-    // how deep into the rock each solid pixel is, and how far from the rock each water one
-    const intoRock = distance(i => kind[i] === 0, w, h);
-    yield;
-    const fromRock = distance(i => kind[i] !== 0, w, h);
-    yield;
-
-    const [wr, wg, wb] = waterColor(this.terrain.cy);
-    const light = lightAt(this.terrain.cy);
-    const lit = 0.35 + 0.65 * light;
-    const reach = REACH * t.tile * d, shadow = SHADOW * t.tile * d;
-    const img = new ImageData(w, h);
-    const out = img.data;
-    // a lip a couple of art pixels deep reads at any density; a fixed share of a tile would
-    // swell into a band at the hatchling's zoom
-    const lip = 2;
-    const cap = Math.max(lip, Math.round(CAP_DEPTH * t.tile * d));
-    for (let py = 0; py < h; py++) {
-      for (let px = 0; px < w; px++) {
-        const i = py * w + px;
-        const k = kind[i];
-        const o = i * 4;
-        const wx = ox + px * px2w, wy = oy + py * px2w;
-        // away from the room everything sinks into the dark, so the frame reads as a cave
-        const ex = Math.max(0, t.x0 - wx, wx - (t.x0 + t.width));
-        const ey = Math.max(0, t.y0 - wy, wy - (t.y0 + t.height));
-        const far = clamp(Math.hypot(ex, ey) / (t.tile * 3), 0, 1);
-
-        if (k === 0) {
-          // the wall's shadow on the water beside it, stepped so it bands like the rest
-          const s = fromRock[i];
-          if (s >= shadow) { out[o + 3] = 0; continue; }
-          const a = stepped(((1 - s / shadow) ** 2) * SHADOW_ALPHA / 0.6, 4, px, py) * 0.6;
-          out[o] = Math.round(wr * 0.15 * 255);
-          out[o + 1] = Math.round(wg * 0.15 * 255);
-          out[o + 2] = Math.round(wb * 0.15 * 255);
-          out[o + 3] = Math.round(a * 255);
-          continue;
-        }
-
-        // exposure: water straight above is a lit lip, water anywhere beside is the outline
-        let above = 0;
-        for (let s = 1; s <= cap; s++) if (at(px, py - s) === 0) { above = s; break; }
-        const edge = intoRock[i] <= 1;
-        // light that reaches in from the face, and nothing past it
-        const depth = clamp(intoRock[i] / reach, 0, 1);
-        const inner = 1 - 0.9 * depth ** 1.2;
-
-        let base = k === 2 ? SAND : k === 3 ? BOULDER : ROCK;
-        let v: number;
-        if (k === 2) {
-          // sand: fine grain and the odd pebble, lighter toward its top, shadowed less deep
-          const grain = fbm(wx * 1.6, wy * 1.6, 21, 2);
-          v = (0.62 + grain * 0.35 + (above && above <= lip ? 0.25 : 0)) * (1 - 0.55 * depth);
-        } else {
-          // warped before it is looked up, so the seams curve: straight cellular noise draws
-          // a wall of polygon cobbles
-          const warp = (sz: number, k2: number) => [
-            wx + fbmSigned(wx / (sz * 0.45), wy / (sz * 0.45), k2, 2) * sz * 0.3,
-            wy + fbmSigned(wx / (sz * 0.45), wy / (sz * 0.45), k2 + 6, 2) * sz * 0.3,
-          ];
-          const ms = t.tile * MASS, ps = t.tile * PEBBLE;
-          const [mx, my] = warp(ms, 51);
-          const mass = cells(mx / ms, my / ms, k * 7);
-          const [bx, by] = warp(ps, 61);
-          const peb = cells(bx / ps, by / ps, k * 7 + 3);
-          const massLit = dome(mass.dx, mass.dy, 0.62);
-          const pebLit = dome(peb.dx, peb.dy, 0.6);
-          // a crevice is a soft shadow a couple of pixels wide; between masses, wider
-          const seam = clamp((mass.f2 - mass.f1) * ms * d / 5, 0, 1) ** 0.7;
-          const gap = clamp((peb.f2 - peb.f1) * ps * d / 2, 0, 1);
-          if (above) {
-            // the cap: flatter, lighter, only the pebbles' texture, brightest at its lip
-            base = CAP;
-            v = (0.7 + pebLit * 0.35 + (above <= lip ? 0.35 : 0)) * (0.6 + 0.4 * gap);
-          } else {
-            // the pebbles' crowns catch the light as a highlight, which is what makes the
-            // texture read at a distance in water this dark
-            const crown = pebLit > 0.88 && gap > 0.8 ? 0.22 : 0;
-            v = (0.28 + massLit * 0.38 + pebLit * 0.42 + crown + (peb.id - 0.5) * 0.12) *
-              (0.45 + 0.55 * seam) * (0.55 + 0.45 * gap) * inner;
-          }
-        }
-        if (edge && !above) v *= 0.5;
-        v *= 1 - far * 0.9;
-
-        v = stepped(clamp(v, 0, 1.2) / 1.2, 6, px, py) * 1.2;
-        // lit from above by the tank's light and sat in its water; far off, fogged to black
-        const fog = 0.1 * (1 - far);
-        out[o] = Math.round(clamp(lerp(base[0] * v * lit, wr, fog), 0, 1) * 255);
-        out[o + 1] = Math.round(clamp(lerp(base[1] * v * lit, wg, fog), 0, 1) * 255);
-        out[o + 2] = Math.round(clamp(lerp(base[2] * v * lit, wb, fog), 0, 1) * 255);
-        out[o + 3] = 255;
-      }
-      if ((py & 7) === 7) yield;
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
-    canvas.getContext('2d')!.putImageData(img, 0, 0);
-    const tex = Texture.from(canvas);
-    tex.source.scaleMode = 'nearest';
-    const old = this.sprite.texture;
-    this.sprite.texture = tex;
-    if (old !== Texture.EMPTY) old.destroy(true);
-    this.sprite.position.set(ox, oy);
-    this.sprite.width = worldW;
-    this.sprite.height = worldH;
   }
+}
+
+/** A baked picture onto a sprite, its old texture let go, laid over `w` × `h` of the world from (`x`, `y`). */
+function show(sprite: Sprite, img: ImageData, x: number, y: number, w: number, h: number) {
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width; canvas.height = img.height;
+  canvas.getContext('2d')!.putImageData(img, 0, 0);
+  const tex = Texture.from(canvas);
+  tex.source.scaleMode = 'nearest';
+  const old = sprite.texture;
+  sprite.texture = tex;
+  if (old !== Texture.EMPTY) old.destroy(true);
+  sprite.position.set(x, y);
+  sprite.width = w;
+  sprite.height = h;
+}
+
+/** `w` × `h` pixels of a picture from (`x`, `y`). */
+function crop(img: ImageData, x: number, y: number, w: number, h: number) {
+  const out = new ImageData(w, h);
+  for (let j = 0; j < h; j++) {
+    out.data.set(img.data.subarray(((y + j) * img.width + x) * 4, ((y + j) * img.width + x + w) * 4), j * w * 4);
+  }
+  return out;
+}
+
+/**
+ * The secret door's one hint: a crack across the rock that seals it, wandering along the door's
+ * long side through the middle of its band (`x`, `y`, `w` × `h` of the picture), a pixel of
+ * shadow between two of pale lit edge. Only on rock, so it stops where the stone
+ * does; `seed` wanders it differently on every wall.
+ */
+function crack(img: ImageData, side: Side, x: number, y: number, w: number, h: number, seed: number) {
+  const along = side === 'left' || side === 'right' ? h : w;
+  const set = (px: number, py: number, c: Rgb) => {
+    if (px < 0 || py < 0 || px >= img.width || py >= img.height) return;
+    const o = (py * img.width + px) * 4;
+    if (img.data[o + 3] < 255) return;
+    img.data[o] = Math.round(c[0] * 255); img.data[o + 1] = Math.round(c[1] * 255); img.data[o + 2] = Math.round(c[2] * 255);
+  };
+  for (let k = Math.round(along * 0.12); k < along * 0.88; k++) {
+    const off = Math.round(fbmSigned(k / 5, 3, seed, 2) * 3);
+    const [px, py] = side === 'left' || side === 'right' ? [x + (w >> 1) + off, y + k] : [x + k, y + (h >> 1) + off];
+    set(px, py, CRACK);
+    if (side === 'left' || side === 'right') { set(px + 1, py, CRACK_LIT); set(px - 1, py, CRACK_LIT); }
+    else { set(px, py + 1, CRACK_LIT); set(px, py - 1, CRACK_LIT); }
+  }
+}
+
+/**
+ * The rock of the world rectangle `worldW` × `worldH` from (`ox`, `oy`), at `d` pixels a world
+ * unit: a room's whole bake, or a secret door's plug (`RoomView.bake`). A generator that yields
+ * every few rows, a room being half a second of it.
+ */
+function* paint(t: Terrain, d: number, ox: number, oy: number, worldW: number, worldH: number): Generator<void, ImageData> {
+  const w = Math.ceil(worldW * d), h = Math.ceil(worldH * d);
+  const px2w = 1 / d;
+
+  // the kind of every pixel, read off the terrain's own field so the edge drawn is the
+  // edge collided with: 0 water, 1 rock, 2 sand, 3 boulder
+  const kind = new Uint8Array(w * h);
+  for (let py = 0; py < h; py++) {
+    for (let px = 0; px < w; px++) {
+      const wx = ox + px * px2w, wy = oy + py * px2w;
+      if (t.field(wx, wy) <= 0.5) continue;
+      const tile = t.kindAt(wx, wy);
+      kind[py * w + px] = tile === 'sand' ? 2 : tile === 'boulder' ? 3 : 1;
+    }
+    if ((py & 7) === 7) yield;
+  }
+  const at = (x: number, y: number) =>
+    x < 0 || y < 0 || x >= w || y >= h ? 1 : kind[y * w + x];
+  // how deep into the rock each solid pixel is, and how far from the rock each water one
+  const intoRock = distance(i => kind[i] === 0, w, h);
+  yield;
+  const fromRock = distance(i => kind[i] !== 0, w, h);
+  yield;
+
+  const [wr, wg, wb] = waterColor(t.cy);
+  const light = lightAt(t.cy);
+  const lit = 0.35 + 0.65 * light;
+  const reach = REACH * t.tile * d, shadow = SHADOW * t.tile * d;
+  const img = new ImageData(w, h);
+  const out = img.data;
+  // a lip a couple of art pixels deep reads at any density; a fixed share of a tile would
+  // swell into a band at the hatchling's zoom
+  const lip = 2;
+  const cap = Math.max(lip, Math.round(CAP_DEPTH * t.tile * d));
+  for (let py = 0; py < h; py++) {
+    for (let px = 0; px < w; px++) {
+      const i = py * w + px;
+      const k = kind[i];
+      const o = i * 4;
+      const wx = ox + px * px2w, wy = oy + py * px2w;
+      // away from the room everything sinks into the dark, so the frame reads as a cave
+      const ex = Math.max(0, t.x0 - wx, wx - (t.x0 + t.width));
+      const ey = Math.max(0, t.y0 - wy, wy - (t.y0 + t.height));
+      const far = clamp(Math.hypot(ex, ey) / (t.tile * 3), 0, 1);
+
+      if (k === 0) {
+        // the wall's shadow on the water beside it, stepped so it bands like the rest
+        const s = fromRock[i];
+        if (s >= shadow) { out[o + 3] = 0; continue; }
+        const a = stepped(((1 - s / shadow) ** 2) * SHADOW_ALPHA / 0.6, 4, px, py) * 0.6;
+        out[o] = Math.round(wr * 0.15 * 255);
+        out[o + 1] = Math.round(wg * 0.15 * 255);
+        out[o + 2] = Math.round(wb * 0.15 * 255);
+        out[o + 3] = Math.round(a * 255);
+        continue;
+      }
+
+      // exposure: water straight above is a lit lip, water anywhere beside is the outline
+      let above = 0;
+      for (let s = 1; s <= cap; s++) if (at(px, py - s) === 0) { above = s; break; }
+      const edge = intoRock[i] <= 1;
+      // light that reaches in from the face, and nothing past it
+      const depth = clamp(intoRock[i] / reach, 0, 1);
+      const inner = 1 - 0.9 * depth ** 1.2;
+
+      let base = k === 2 ? SAND : k === 3 ? BOULDER : ROCK;
+      let v: number;
+      if (k === 2) {
+        // sand: fine grain and the odd pebble, lighter toward its top, shadowed less deep
+        const grain = fbm(wx * 1.6, wy * 1.6, 21, 2);
+        v = (0.62 + grain * 0.35 + (above && above <= lip ? 0.25 : 0)) * (1 - 0.55 * depth);
+      } else {
+        // warped before it is looked up, so the seams curve: straight cellular noise draws
+        // a wall of polygon cobbles
+        const warp = (sz: number, k2: number) => [
+          wx + fbmSigned(wx / (sz * 0.45), wy / (sz * 0.45), k2, 2) * sz * 0.3,
+          wy + fbmSigned(wx / (sz * 0.45), wy / (sz * 0.45), k2 + 6, 2) * sz * 0.3,
+        ];
+        const ms = t.tile * MASS, ps = t.tile * PEBBLE;
+        const [mx, my] = warp(ms, 51);
+        const mass = cells(mx / ms, my / ms, k * 7);
+        const [bx, by] = warp(ps, 61);
+        const peb = cells(bx / ps, by / ps, k * 7 + 3);
+        const massLit = dome(mass.dx, mass.dy, 0.62);
+        const pebLit = dome(peb.dx, peb.dy, 0.6);
+        // a crevice is a soft shadow a couple of pixels wide; between masses, wider
+        const seam = clamp((mass.f2 - mass.f1) * ms * d / 5, 0, 1) ** 0.7;
+        const gap = clamp((peb.f2 - peb.f1) * ps * d / 2, 0, 1);
+        if (above) {
+          // the cap: flatter, lighter, only the pebbles' texture, brightest at its lip
+          base = CAP;
+          v = (0.7 + pebLit * 0.35 + (above <= lip ? 0.35 : 0)) * (0.6 + 0.4 * gap);
+        } else {
+          // the pebbles' crowns catch the light as a highlight, which is what makes the
+          // texture read at a distance in water this dark
+          const crown = pebLit > 0.88 && gap > 0.8 ? 0.22 : 0;
+          v = (0.28 + massLit * 0.38 + pebLit * 0.42 + crown + (peb.id - 0.5) * 0.12) *
+            (0.45 + 0.55 * seam) * (0.55 + 0.45 * gap) * inner;
+        }
+      }
+      if (edge && !above) v *= 0.5;
+      v *= 1 - far * 0.9;
+
+      v = stepped(clamp(v, 0, 1.2) / 1.2, 6, px, py) * 1.2;
+      // lit from above by the tank's light and sat in its water; far off, fogged to black
+      const fog = 0.1 * (1 - far);
+      out[o] = Math.round(clamp(lerp(base[0] * v * lit, wr, fog), 0, 1) * 255);
+      out[o + 1] = Math.round(clamp(lerp(base[1] * v * lit, wg, fog), 0, 1) * 255);
+      out[o + 2] = Math.round(clamp(lerp(base[2] * v * lit, wb, fog), 0, 1) * 255);
+      out[o + 3] = 255;
+    }
+    if ((py & 7) === 7) yield;
+  }
+  return img;
 }

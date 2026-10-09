@@ -12,6 +12,7 @@ import { primaryOf, shotHit, shotModsOf, shotSpent, tick as tickOrgans, type Org
          type ShotMark } from './organs';
 import { Patterns } from './patterns';
 import { ghostly, lureOf, Roles } from './roles';
+import { type Bomb, Bombs } from './bombs';
 import { Spawner } from './spawn';
 import type { Terrain } from './terrain';
 import { collideHull, surfaceGap, WALL_R, wallR } from './hull';
@@ -88,6 +89,8 @@ export interface Shot {
   marks?: readonly ShotMark[];
   /** Passes through bodies, breaking only on rock or at the end of its flight (Needle Jet). */
   pierce?: boolean;
+  /** The bomb fish a piercing shot has knocked already, so it knocks each once going through. */
+  knocked?: Bomb[];
   /** Radians a second it bends toward a hostile ahead of it (Hunting Nares). */
   seek?: number;
   /**
@@ -171,9 +174,9 @@ const SET = 0.3;
 
 /**
  * Something loose in a room that the player collects by swimming into it: a half heart, a
- * shell, a key, a chest (opened by touch with a key), or an item for the pocket.
+ * shell, a key, a bomb fish, a chest (opened by touch with a key), or an item for the pocket.
  */
-export type PickupKind = 'heart' | 'shell' | 'key' | 'chest' | ItemId;
+export type PickupKind = 'heart' | 'shell' | 'key' | 'bomb' | 'chest' | ItemId;
 export interface Pickup { kind: PickupKind; x: number; y: number; vx: number; vy: number; t: number }
 
 /**
@@ -274,8 +277,12 @@ export class World {
   readonly broken: Pot[] = [];
   /** Where fauna the player killed this frame died, for what it may drop. An event. */
   readonly felled: { x: number; y: number }[] = [];
+  /** Bomb fish that burst this frame, where and how far they reached: the tank breaks a secret door's rock on them. */
+  readonly blasts: { x: number; y: number; r: number }[] = [];
 
   readonly spawner: Spawner;
+  /** The bomb fish the player has released, hanging lit (`sim/bombs.ts`). */
+  readonly bombs: Bombs;
   /** The hostiles' brains, here rather than in `Behaviour` because a death calls on them too (`Combat.slay`). */
   readonly roles: Roles;
   private readonly combat: Combat;
@@ -286,6 +293,7 @@ export class World {
     this.roles = new Roles(this);
     this.behaviour = new Behaviour(this, this.combat, new Patterns(this, this.combat), this.roles);
     this.spawner = new Spawner(this, rng);
+    this.bombs = new Bombs(this);
     this.layer.addChild(player.view);
     this.glow.addChild(player.view.glow);
     this.fog.addChild(player.view.fog);
@@ -408,6 +416,7 @@ export class World {
     this.collected.length = 0;
     this.broken.length = 0;
     this.felled.length = 0;
+    this.blasts.length = 0;
     this.player.shrugged = false;
     this.glanced = false;
     this.tellBy = null;
@@ -437,6 +446,7 @@ export class World {
     this.combat.resolveContacts(dt, p);
     this.smash();
     this.fly(dt);
+    this.bombs.update(dt);
     this.playDeaths(dt);
     this.settle(dt);
   }
@@ -621,6 +631,7 @@ export class World {
         const pot = this.potAt(s.x, s.y, s.r);
         if (pot) { this.breakPot(pot); spent = struck = !s.pierce; }
       }
+      if (!spent && s.by.isPlayer && this.bombs.live.length && this.bombs.knock(s)) spent = struck = true;
       if (!spent && s.by.isPlayer) {
         for (const c of this.creatures) {
           if (!this.canHit(c) || s.hit?.includes(c)) continue;
@@ -780,6 +791,8 @@ export class World {
     this.inks.length = 0;
     this.shots.length = 0;
     this.ghosts.length = 0;
+    // a bomb fish left lit goes out with the room: it was laid against this room's rock
+    this.bombs.clear();
     return this.pickups.splice(0);
   }
 

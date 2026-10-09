@@ -44,6 +44,8 @@ import { BAR_OVER, ChargeBar } from '../render/tells';
 import { BREACH_LOCK, GHOST_LOCK, GHOST_TELL, GHOSTS, GHOSTS_HURT, INK_FADE, LOB_WIND, LURK, PUNCH_WIND, SNAGGED, RING_SPOKES,
          RING_WIND, SPACING, WEDGED } from '../sim/bosses';
 import { PickupView } from '../render/pickups';
+import { BombView } from '../render/bombs';
+import { FUSE, type Bomb } from '../sim/bombs';
 import type { Pickup } from '../sim/world';
 import {
   BOUNCE, CHARGE_LOCK, CHARGE_RECOVER, CHARGE_WIND, DASH_TIME, FAN, FRENZY_WIND, GLIDE, HEAD_OUT, HERD, HERD_GAP,
@@ -827,59 +829,66 @@ function roomGroup(): DesignGroup {
     id: 'rooms',
     name: 'Rooms',
     note: 'Every room template, as the fixed camera frames it. Rock, sand and boulders block; water is swum.',
-    items: [...ROOMS.map(t => {
-      const tank = tankById(t.tank);
-      const cols = t.rows[0].length, rows = t.rows.length;
-      const width = cols * tank.tile, height = rows * tank.tile;
-      const zoom = Math.min(REF_SCREEN.w / width, REF_SCREEN.h / height);
-      // built on the first prepare and kept, the preview and the focused bake apart: the board
-      // opens on another group, and a room is only baked once someone asks for the Rooms
-      const bakes = new Map<boolean, { terrain: Terrain; view: RoomView; cell?: Container & { decor: DecorView } }>();
-      const density = (focused: boolean) => zoom / PIXEL * (focused ? 1 : ROOM_PREVIEW);
-      return {
-        id: `room-${t.id}`,
-        name: t.id,
-        note: tank.name,
-        source: 'src/content/tanks.ts',
-        // the board frames a cell on its short side, and a room is wider than it is tall:
-        // framed on a little over half its width it fills the cell with the room whole
-        span: width * 0.55,
-        depth: tank.depth,
-        facts: { tank: tank.name, tiles: `${cols} × ${rows}`,
-          tile: `${tank.tile} cm`, types: t.types.join(' '), fauna: tank.fauna.join(' ') },
-        prepare: (deadline: number, focused: boolean) => {
-          let bake = bakes.get(focused);
-          if (!bake) {
-            // every side doored and shut, so the carving and the gates show on every template
-            const terrain = new Terrain(t, tank, 1, 0, tank.depth, ['left', 'right', 'up', 'down']);
-            terrain.locked = true;
-            bakes.set(focused, bake = { terrain, view: new RoomView(terrain, density(focused)) });
-          }
-          bake.view.prepare(deadline);
-          return bake.view.ready;
-        },
-        make: (focused = false) => {
-          const bake = bakes.get(focused)!;
-          if (bake.cell) return bake.cell;
-          const { terrain, view } = bake;
-          view.update();
-          const decor = new DecorView(placeDecor(terrain, 1, tank.id), terrain.cy, density(focused));
-          decor.update(0);
-          // a room sits at its tank's depth in the world; the cell wants it about the origin
-          const world = new Container();
-          world.y = -terrain.cy;
-          world.addChild(decor.root, view.root);
-          bake.cell = Object.assign(new Container(), { decor });
-          bake.cell.addChild(world);
-          return bake.cell;
-        },
-        animate: (view: Container, dt: number) => {
-          const v = view as Container & { decor: DecorView; t?: number };
-          v.t = (v.t ?? 0) + dt;
-          v.decor.update(v.t);
-        },
-      };
-    }), mapItem()],
+    items: [...ROOMS.map(t => roomItem(t)), roomItem(ROOMS.find(t => t.types.includes('secret'))!, true), mapItem()],
+  };
+}
+
+/**
+ * One template as a cell, every side doored and shut. `secret` cracks its right door instead,
+ * the rock a bomb fish breaks into a secret room (`TankMap.blast`).
+ */
+function roomItem(t: (typeof ROOMS)[number], secret = false): DesignItem {
+  const tank = tankById(t.tank);
+  const cols = t.rows[0].length, rows = t.rows.length;
+  const width = cols * tank.tile, height = rows * tank.tile;
+  const zoom = Math.min(REF_SCREEN.w / width, REF_SCREEN.h / height);
+  // built on the first prepare and kept, the preview and the focused bake apart: the board
+  // opens on another group, and a room is only baked once someone asks for the Rooms
+  const bakes = new Map<boolean, { terrain: Terrain; view: RoomView; cell?: Container & { decor: DecorView } }>();
+  const density = (focused: boolean) => zoom / PIXEL * (focused ? 1 : ROOM_PREVIEW);
+  return {
+    id: secret ? `room-${t.id}-secret` : `room-${t.id}`,
+    name: secret ? `${t.id}, secret door` : t.id,
+    note: secret ? 'the right door sealed by cracked rock, which a bomb fish breaks' : tank.name,
+    source: 'src/content/tanks.ts',
+    // the board frames a cell on its short side, and a room is wider than it is tall:
+    // framed on a little over half its width it fills the cell with the room whole
+    span: width * 0.55,
+    depth: tank.depth,
+    facts: { tank: tank.name, tiles: `${cols} × ${rows}`,
+      tile: `${tank.tile} cm`, types: t.types.join(' '), fauna: tank.fauna.join(' ') },
+    prepare: (deadline: number, focused: boolean) => {
+      let bake = bakes.get(focused);
+      if (!bake) {
+        // every side doored and shut, so the carving and the gates show on every template
+        const terrain = new Terrain(t, tank, 1, 0, tank.depth, ['left', 'right', 'up', 'down']);
+        terrain.locked = true;
+        if (secret) terrain.shut.set('right', 'crack');
+        bakes.set(focused, bake = { terrain, view: new RoomView(terrain, density(focused)) });
+      }
+      bake.view.prepare(deadline);
+      return bake.view.ready;
+    },
+    make: (focused = false) => {
+      const bake = bakes.get(focused)!;
+      if (bake.cell) return bake.cell;
+      const { terrain, view } = bake;
+      view.update();
+      const decor = new DecorView(placeDecor(terrain, 1, tank.id), terrain.cy, density(focused));
+      decor.update(0);
+      // a room sits at its tank's depth in the world; the cell wants it about the origin
+      const world = new Container();
+      world.y = -terrain.cy;
+      world.addChild(decor.root, view.root);
+      bake.cell = Object.assign(new Container(), { decor });
+      bake.cell.addChild(world);
+      return bake.cell;
+    },
+    animate: (view: Container, dt: number) => {
+      const v = view as Container & { decor: DecorView; t?: number };
+      v.t = (v.t ?? 0) + dt;
+      v.decor.update(v.t);
+    },
   };
 }
 
@@ -1854,9 +1863,12 @@ function shotOrganGroup(): DesignGroup {
 
 // ------------------------------------------------------------------ the economy
 
+/** A bomb fish `t` seconds into its fuse, hanging at the cell's middle. */
+const litBomb = (t: number): Bomb => ({ x: 0, y: 0, vx: 0, vy: 0, t, free: true, struck: false });
+
 /**
  * What a run buys and finds: a shop's shelf and a deal room as they stand, every item and
- * the pickups that are not health — the key and the chest — the pot they may come out of,
+ * the pickups that are not health — the key, the chest and the bomb fish, lit as well — the pot they may come out of,
  * and the price tags in both
  * currencies. The shelf's mutation and the deal's pair are fixed picks, so the cells hold still.
  */
@@ -1869,7 +1881,7 @@ function economyGroup(): DesignGroup {
   });
   return {
     id: 'economy', name: 'Shop & deals',
-    note: 'A shop\'s shelf and a deal room, every item, the key and the chest, the pot, and the price tags.',
+    note: 'A shop\'s shelf and a deal room, every item, the key, the chest and the bomb fish, the pot, and the price tags.',
     items: [
       pedestalsItem('shop', 'shop', 'three goods for 3–5 shells, and a mutation for 15', [
         { good: { kind: 'pickup', pickup: 'pellet' }, price: { shells: 4 } },
@@ -1884,6 +1896,21 @@ function economyGroup(): DesignGroup {
       ...ITEM_IDS.map(id => sprite(id, ITEMS[id].name, ITEMS[id].desc)),
       sprite('key', 'key', 'opens a locked door or a chest'),
       sprite('chest', 'chest', 'takes a key; spills two or three pickups'),
+      sprite('bomb', 'bomb fish', 'one carried, as it lies loose and on the HUD'),
+      { id: 'bomb-lit', name: 'bomb fish, lit', note: 'released on F: it swells, blinks red, and bursts; looped over its fuse',
+        source: 'src/render/bombs.ts', span: 48, depth: tank.depth,
+        make: () => {
+          const view = new BombView(), c = Object.assign(new Container(), { view, t: 0 });
+          c.addChild(view.glow, view.root);
+          view.update([litBomb(0)], 2);
+          return c;
+        },
+        animate: (cell: Container, dt: number) => {
+          const c = cell as Container & { view: BombView; t: number };
+          // a pause past the burst, so the loop reads as one fuse and not a pulse
+          c.t = (c.t + dt) % (FUSE + 0.5);
+          c.view.update(c.t < FUSE ? [litBomb(c.t)] : [], 2);
+        } },
       { id: 'pot', name: 'pot', note: 'breaks to a strike or a shot; one in three holds a shell, a heart or a key',
         source: 'src/render/pots.ts', span: 18, depth: tank.depth,
         make: () => spriteCell(paintMap(POT_MAP, POT_COLOURS), 1) },

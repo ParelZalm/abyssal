@@ -32,7 +32,7 @@ export interface Launch {
   shelf?: string;
 }
 
-export const ROOM_TYPES: RoomType[] = ['start', 'fight', 'treasure', 'shop', 'deal', 'boss'];
+export const ROOM_TYPES: RoomType[] = ['start', 'fight', 'treasure', 'shop', 'deal', 'boss', 'secret'];
 
 /** Any of these in the address starts a launch; `?seed=` alone is still the title's. */
 const KEYS = ['play', 'tank', 'room', 'lab'];

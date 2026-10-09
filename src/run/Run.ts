@@ -14,6 +14,8 @@ export const comboMult = (n: number) => Math.min(3, 1 + Math.max(0, n - 1) * 0.2
 export const START_CONTAINERS = 3;
 /** Keys a run starts with: one, so the first shop is not a locked door. */
 export const START_KEYS = 1;
+/** Bomb fish a run starts with: one, so the first tank's secret room can be looked for. */
+export const START_BOMBS = 1;
 
 export interface TakenName {
   name: string; desc: string; icon: Trait['icon']; rarity: Trait['rarity']; stacks: number;
@@ -34,6 +36,8 @@ export class Run {
   shells = 0;
   /** Keys, spent one a lock (`run/Pockets.ts`), and the one item held, used on E. */
   keys = START_KEYS;
+  /** Bomb fish, released one at a time on F (`run/Pockets.ts`). */
+  bombs = START_BOMBS;
   item: ItemId | null = null;
   readonly taken = new Map<string, number>();
   readonly takenNames: TakenName[] = [];

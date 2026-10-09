@@ -120,6 +120,7 @@ const PICKUP_TEXT: Record<Exclude<PickupKind, ItemId>, { name: string; desc: str
   heart: { name: 'Half Heart', desc: 'Mends half a heart.' },
   shell: { name: 'Shell', desc: 'What a shop takes.' },
   key: { name: 'Key', desc: 'Opens a locked door, or a chest.' },
+  bomb: { name: 'Bomb Fish', desc: 'Released on F, it bursts: it hurts everything near it, you too, and breaks cracked rock.' },
   chest: { name: 'Chest', desc: 'Takes a key; spills what is inside.' },
 };
 

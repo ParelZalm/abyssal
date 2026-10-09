@@ -32,6 +32,7 @@ export interface HudState {
   belly: number;
   shells: number;
   keys: number;
+  bombs: number;
   /** The item in the pocket, used on E. */
   item: ItemId | null;
   stage: number; size: number;

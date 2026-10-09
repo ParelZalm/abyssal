@@ -57,7 +57,7 @@ export interface Tank {
 }
 
 /** What a room is for; see *Room type* in `CONTEXT.md`. */
-export type RoomType = 'start' | 'fight' | 'treasure' | 'shop' | 'deal' | 'boss';
+export type RoomType = 'start' | 'fight' | 'treasure' | 'shop' | 'deal' | 'boss' | 'secret';
 
 export interface RoomTemplate {
   id: string;
@@ -150,7 +150,7 @@ export const ROOMS: RoomTemplate[] = [
     ],
   },
   {
-    id: 'nursery-pillar', tank: 'nursery', types: ['fight', 'treasure', 'shop', 'deal'],
+    id: 'nursery-pillar', tank: 'nursery', types: ['fight', 'treasure', 'shop', 'deal', 'secret'],
     rows: [
       '################################',
       '################################',
@@ -219,7 +219,7 @@ export const ROOMS: RoomTemplate[] = [
     ],
   },
   {
-    id: 'nursery-overhang', tank: 'nursery', types: ['fight', 'treasure', 'shop', 'deal'],
+    id: 'nursery-overhang', tank: 'nursery', types: ['fight', 'treasure', 'shop', 'deal', 'secret'],
     rows: [
       '################################',
       '################################',
@@ -387,7 +387,7 @@ export const ROOMS: RoomTemplate[] = [
   },
   // a sandy basin between rock rims, its floor flat for a pedestal or a shop's shelf
   {
-    id: 'reef-lagoon', tank: 'reef', types: ['fight', 'treasure', 'shop', 'deal'],
+    id: 'reef-lagoon', tank: 'reef', types: ['fight', 'treasure', 'shop', 'deal', 'secret'],
     rows: [
       '################################',
       '################################',
@@ -531,7 +531,7 @@ export const ROOMS: RoomTemplate[] = [
   },
   // a low grotto, rock hanging from its roof, a flat floor across
   {
-    id: 'deep-grotto', tank: 'deep', types: ['fight', 'treasure', 'shop', 'deal'],
+    id: 'deep-grotto', tank: 'deep', types: ['fight', 'treasure', 'shop', 'deal', 'secret'],
     rows: [
       '################################',
       '################################',

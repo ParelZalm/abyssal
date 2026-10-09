@@ -3,6 +3,9 @@ import { SOLID, tilesOf, type RoomTemplate, type Tank, type Tile } from '../cont
 import { cells, fbmSigned } from '../core/noise';
 import { clamp, type Rng } from '../core/util';
 
+/** Why a door is shut on its own: it takes a key, it is the deal room's seal, or it is a secret room's cracked rock. */
+export type Shut = 'key' | 'seal' | 'crack';
+
 /** A body that can meet a wall: where it is and how it is moving. */
 interface Body { x: number; y: number; vx: number; vy: number }
 
@@ -89,10 +92,11 @@ export class Terrain {
    */
   locked = false;
   /**
-   * Doors shut on their own, whatever the fight: one that takes a key, and the deal room's,
-   * sealed until the boss room is cleared. The same gate band as `locked`, one side at a time.
+   * Doors shut on their own, whatever the fight: one that takes a key, the deal room's, sealed
+   * until the boss room is cleared, and a secret room's, cracked rock a bomb fish breaks. The
+   * same gate band as `locked`, one side at a time.
    */
-  readonly shut = new Map<Side, 'key' | 'seal'>();
+  readonly shut = new Map<Side, Shut>();
   /** Each door's gate band, in collision cells, running out past the room's edge. */
   private readonly gates: { side: Side; i0: number; i1: number; j0: number; j1: number }[];
 
@@ -100,8 +104,9 @@ export class Terrain {
    * `cx`, `cy` place the room's middle in the world: rooms of one tank sit edge to edge, so
    * a door on one side opens straight into the next room's.
    */
-  constructor(template: RoomTemplate, tank: Tank, seed = 0, cx = 0, cy = tank.depth,
-              doors: readonly Side[] = [], mirror = false) {
+  constructor(private readonly template: RoomTemplate, private readonly tank: Tank, seed = 0, cx = 0,
+              cy = tank.depth, doors: readonly Side[] = [], private readonly mirror = false,
+              private readonly plugs: readonly Side[] = []) {
     this.tiles = tilesOf(template, mirror);
     this.doors = doors;
     this.rows = template.rows.length;
@@ -114,6 +119,7 @@ export class Terrain {
     this.fineCols = this.cols * SUB;
     this.fineRows = this.rows * SUB;
     for (const side of doors) this.carve(side);
+    for (const side of plugs) this.plug(side);
     this.gates = doors.map(side => {
       const [r0, r1] = DOOR_ROWS, [c0, c1] = DOOR_COLS;
       // a tile's depth of cells at the edge and a tile past it, a tile wider than the door
@@ -124,8 +130,9 @@ export class Terrain {
       return { side, i0: (c0 - 1) * SUB, i1: (c1 + 2) * SUB - 1, j0: this.fineRows - SUB,
         j1: this.fineRows + SUB - 1 };
     });
-    this.fine = new Uint8Array(this.fineCols * this.fineRows);
-    for (let j = 0; j < this.fineRows; j++) {
+    // a plugged room is only ever drawn (`plugged`), and the grid is most of a room's build
+    this.fine = new Uint8Array(plugs.length ? 0 : this.fineCols * this.fineRows);
+    for (let j = 0; !plugs.length && j < this.fineRows; j++) {
       for (let i = 0; i < this.fineCols; i++) {
         const x = this.x0 + (i + 0.5) * this.cell, y = this.y0 + (j + 0.5) * this.cell;
         this.fine[j * this.fineCols + i] = this.field(x, y) > 0.5 ? 1 : 0;
@@ -151,10 +158,29 @@ export class Terrain {
   private beyond(i: number, j: number) {
     const [r0, r1] = DOOR_ROWS, [c0, c1] = DOOR_COLS;
     const rows = j >= r0 && j <= r1, cols = i >= c0 && i <= c1;
-    return (i < 0 && rows && this.doors.includes('left')) ||
-      (i >= this.cols && rows && this.doors.includes('right')) ||
-      (j < 0 && cols && this.doors.includes('up')) ||
-      (j >= this.rows && cols && this.doors.includes('down'));
+    const open = (s: Side) => this.doors.includes(s) && !this.plugs.includes(s);
+    return (i < 0 && rows && open('left')) || (i >= this.cols && rows && open('right')) ||
+      (j < 0 && cols && open('up')) || (j >= this.rows && cols && open('down'));
+  }
+
+  /**
+   * This room with the door through `side` stopped by rock at the room's edge, the tunnel behind
+   * it still carved: a secret room's cracked seal as it is drawn (`RoomView`), an alcove in the
+   * wall ending in rock. Drawn only; it has no collision of its own.
+   */
+  plugged(side: Side) {
+    return new Terrain(this.template, this.tank, this.seed, this.cx, this.cy, this.doors, this.mirror, [side]);
+  }
+
+  /** Put back the rock of a carved door's first tile, at the room's edge (`plugged`). */
+  private plug(side: Side) {
+    const [r0, r1] = DOOR_ROWS, [c0, c1] = DOOR_COLS;
+    const set = (i: number, j: number) => { this.tiles[j * this.cols + i] = 'rock'; };
+    if (side === 'left' || side === 'right') {
+      for (let j = r0; j <= r1; j++) set(side === 'left' ? 0 : this.cols - 1, j);
+    } else {
+      for (let i = c0; i <= c1; i++) set(i, side === 'up' ? 0 : this.rows - 1);
+    }
   }
 
   /**
