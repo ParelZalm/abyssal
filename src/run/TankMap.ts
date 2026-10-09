@@ -7,7 +7,7 @@ import type { Fx } from '../render/fx';
 import { RoomView } from '../render/room';
 import type { Container } from 'pixi.js';
 import type { Creature } from '../sim/creature';
-import { Terrain } from '../sim/terrain';
+import { Terrain, type Shut } from '../sim/terrain';
 import type { Pickup, PickupKind, Pot, World } from '../sim/world';
 import type { UI } from '../ui/UI';
 import type { Trait } from '../content/traits';
@@ -67,9 +67,20 @@ export interface Pedestal { x: number; y: number; good: Good | null; price: Pric
  * ones a room drops anyway, the dear ones the answers. Three are dealt a shop.
  */
 const SHOP_GOODS: [PickupKind, number][] = [
-  ['heart', 3], ['snail', 3], ['pellet', 4], ['airstone', 5], ['key', 5],
+  ['heart', 3], ['snail', 3], ['pellet', 4], ['airstone', 5], ['key', 5], ['bomb', 5],
 ];
 const SHOP_MUTATION = 15;
+/**
+ * What a secret room holds, lying loose, Isaac's: a few shells, one thing more by weight, and now
+ * and then a chest. Worth a bomb fish and a little over, since the bomb fish was a guess.
+ */
+const SECRET_SHELLS: [number, number] = [3, 5];
+const SECRET_EXTRA: [PickupKind, number][] = [['bomb', 40], ['key', 30], ['heart', 30]];
+const SECRET_CHEST = 0.3;
+/** How far past a bomb fish's blast a secret door still breaks, in tiles: its rock is a tile deep. */
+const CRACK_REACH = 0.8;
+/** How far the faint light on a secret door's crack reaches, in tiles: enough to show the rock round it, not to light the room. */
+const CRACK_GLOW = 2.2;
 /** The map's own stream off the run's seed, apart from every room's. */
 const MAP_SALT = 0x51ed270b;
 
@@ -108,8 +119,8 @@ interface Cell {
   pickups: Pickup[];
   /** What the room offers on plinths — pedestal, shop, deal — dealt the first time it is entered. */
   pedestals: Pedestal[] | null;
-  /** Its doors shut on their own: taking a key, or the deal room's seal. */
-  shut: Map<Side, 'key' | 'seal'>;
+  /** Its doors shut on their own: taking a key, the deal room's seal, or a secret room's crack. */
+  shut: Map<Side, Shut>;
   /** The drain a boss room opens in its floor when the boss is dead. */
   drain: { x: number; y: number } | null;
   /**
@@ -177,12 +188,21 @@ export class TankMap {
     // meets it from the room outside
     const keyed = (c: Cell) => c.map.type === 'shop' ||
       (c.map.type === 'treasure' && tankIndex(tank.id) > 0);
+    // a secret room's doors are cracked rock on both sides, whatever the room beside it would
+    // have shut them with, so they go last
     this.cells.forEach((c, i) => {
       const why = c.map.type === 'deal' ? 'seal' : keyed(c) ? 'key' : null;
       if (!why) return;
       for (const side of c.map.doors) {
         c.shut.set(side, why);
         this.cells[this.neighbour(i, side)].shut.set(OPPOSITE[side], why);
+      }
+    });
+    this.cells.forEach((c, i) => {
+      if (c.map.type !== 'secret') return;
+      for (const side of c.map.doors) {
+        c.shut.set(side, 'crack');
+        this.cells[this.neighbour(i, side)].shut.set(OPPOSITE[side], 'crack');
       }
     });
   }
@@ -236,8 +256,9 @@ export class TankMap {
   begin(type: RoomType = 'start') {
     const at = this.cells.findIndex(c => c.map.type === type);
     if (at >= 0) this.current = at;
-    if (type === 'deal') {
-      for (const [side, why] of this.cell.shut) if (why === 'seal') this.open(this.current, side);
+    // a launch into the deal room or the secret room comes in through a door it could not have
+    if (type === 'deal' || type === 'secret') {
+      for (const [side, why] of this.cell.shut) if (why === 'seal' || why === 'crack') this.open(this.current, side);
     }
     const t = this.room;
     const side = type === 'start' ? undefined : this.cell.map.doors[0];
@@ -282,11 +303,14 @@ export class TankMap {
     this.world.pickups.push(...c.pickups);
     c.pickups = [];
     this.current = i;
+    if (!c.visited && c.map.type === 'secret') this.cache(c, t);
     c.visited = true;
     c.seen = true;
-    // a sealed door is not seen through: the deal room is found when it opens
+    // a sealed door is not seen through: the deal room is found when it opens, and a secret
+    // room when its rock is broken
     for (const side of c.map.doors) {
-      if (c.shut.get(side) !== 'seal') this.cells[this.neighbour(i, side)].seen = true;
+      const why = c.shut.get(side);
+      if (why !== 'seal' && why !== 'crack') this.cells[this.neighbour(i, side)].seen = true;
     }
     this.version = ++TankMap.versions;
 
@@ -431,6 +455,41 @@ export class TankMap {
     if (!at) return false;
     c.pedestals = [{ x: at.x, y: at.y, good: { kind: 'mutation', trait }, price: null }];
     return true;
+  }
+
+  /** A secret room's hoard, lying loose, the first time it is entered: shells, one thing more, now and then a chest. */
+  private cache(c: Cell, t: Terrain) {
+    const rng = new Rng(c.seed ^ 0x5ec2_e7ed);
+    const kinds: PickupKind[] = Array(rng.int(SECRET_SHELLS[0], SECRET_SHELLS[1])).fill('shell');
+    let total = 0;
+    for (const [, w] of SECRET_EXTRA) total += w;
+    let r = rng.next() * total;
+    kinds.push(SECRET_EXTRA.find(([, w]) => (r -= w) <= 0)?.[0] ?? 'shell');
+    if (rng.chance(SECRET_CHEST)) kinds.push('chest');
+    const at = t.standAt(t.cx, t.cy, t.tile, t.tile * 2) ?? { x: t.cx, y: t.cy };
+    kinds.forEach((kind, k) => {
+      const a = -Math.PI / 2 + (k - (kinds.length - 1) / 2) * 0.45;
+      this.world.drop(kind, at.x, at.y - t.tile, Math.cos(a) * 60, Math.sin(a) * 60);
+    });
+  }
+
+  /**
+   * A bomb fish burst at (`x`, `y`), `r` across: a secret door's rock within reach of it breaks,
+   * from both sides, and what is behind it is on the map. Answered from inside a secret room as
+   * from outside, since its other doors are rock too.
+   */
+  blast(x: number, y: number, r: number) {
+    const t = this.room;
+    for (const [side, why] of t.shut) {
+      if (why !== 'crack') continue;
+      const d = t.doorRect(side);
+      const cx = clamp(x, d.x, d.x + d.w), cy = clamp(y, d.y, d.y + d.h);
+      if (Math.hypot(x - cx, y - cy) > r + t.tile * CRACK_REACH) continue;
+      this.open(this.current, side);
+      this.fx.burst(d.x + d.w / 2, d.y + d.h / 2, 0x6a7a96, 18, 120, 2.6);
+      const behind = this.cells[this.neighbour(this.current, side)];
+      if (behind.map.type === 'secret' && !behind.visited) this.ui.toast('A secret room — the rock gave way');
+    }
   }
 
   /** Open a door shut on its own, from both sides, and let what is behind it be seen. */
@@ -613,7 +672,16 @@ export class TankMap {
 
   /** What the current room's decoration lights it with. */
   get lights() {
-    return this.viewsOf(this.current).decor.lights;
+    const own = this.viewsOf(this.current).decor.lights;
+    const t = this.room;
+    const cracks = [...t.shut].filter(([, why]) => why === 'crack');
+    if (!cracks.length) return own;
+    // a secret door's crack is lit a little, as if the water beyond showed through it: rock this
+    // deep in a wall is in its own shadow, and a crack drawn there was not seen at all
+    return [...own, ...cracks.map(([side]) => {
+      const d = t.doorRect(side);
+      return { x: d.x + d.w / 2, y: d.y + d.h / 2, r: t.tile * CRACK_GLOW, color: 0x9ab8e8, a: 0.32 };
+    })];
   }
 
   /** The minimap's rooms: those seen, which have been visited, and which one is current. */

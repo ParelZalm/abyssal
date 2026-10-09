@@ -479,9 +479,9 @@ What it found, and what it leaves:
 - An idle larva lasts 9 to 15 seconds against three of the deep's, about the nursery's; the
   siphonophore's pieces and the gulper's draw land most of it.
 
-## The player fish rework
+## ~~The player fish rework~~
 
-To do, decided October 2026: the larva and every plan it can become are still painted from the
+Done but for Twin Spout's second sac, which is still painted. Decided October 2026: the larva and every plan it can become are still painted from the
 genome (`render/creature/fishbake.ts`, the painters in `bake/`), and since the enemies went to
 authored sprites (`docs/sprites.md`) and the mutations to drawn items (`render/itemart.ts`,
 [sprite-prompts-items.md](sprite-prompts-items.md)), the player is the roughest thing on the
@@ -526,7 +526,33 @@ Spout's second sac is the one still painted. All five forms are drawn: the Shark
 the Angler each with jaws and lures of its own, and the Bloom, a bell whose strike is a pulse,
 wearing the larva's jaws and lures on a mouth at its bell's front.
 
+## ~~Bomb fish and secret rooms~~
+
+Done: Isaac's bombs and secret rooms (*The economy* in `progression.md`). F releases a bomb fish
+where the body is; it hangs, sinking slowly, swells over 1.6 s and bursts over a door's width,
+hitting every hostile in reach for five of the player's hits, the player for half a heart, and
+breaking pots. Until it bursts it moves as Isaac's does: shoved by the body, knocked by a shot
+or a strike, slowed by the water. A run starts with one, and they drop as keys do and sell for
+five shells. Every tank has one secret room, in the free cell touching the most rooms but
+never the boss's or the deal's, its doors cracked rock that a bomb fish breaks, with a hoard
+inside. The board has the bomb fish loose and lit (*Shop & deals*) and a room with a cracked
+door (*Rooms*).
+
+What it found:
+
+- **The crack was invisible.** A dark seam on the rock vanished in the wall's own shadow; it
+  is a dark line lit pale on both sides now, and the door casts a faint light of its own, so a
+  player who looks finds it and one who does not, does not.
+- **At a pickup's size the lit bomb fish read as a glow**, its warm bloom swallowing the fish.
+  Lit, it is drawn at twice the size, pale, and lights itself; only its spine sparks.
+- **A bomb laid under the body would shove at once.** It does not touch the body until the
+  body has swum off it, as Isaac walks off his; and an open door is a gap in the rock, so one
+  knocked through it is held in the room rather than bursting off the screen.
+- Terrain is not destroyed: the cracked door is carved like any door and shut, and its rock is
+  a plug baked once with the room and hidden when the door opens. Rock that breaks anywhere
+  would mean re-baking a room, which costs half a second.
+
 ## Later
 
-Bomb fish and secret rooms; tanks four and five (the sperm whale, the colossal squid, the
+Tanks four and five (the sperm whale, the colossal squid, the
 Leviathan in the basement tank); an ending cutscene.

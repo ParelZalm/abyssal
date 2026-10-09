@@ -48,7 +48,7 @@ export interface Pulse {
   x: number; y: number; r: number;
   kind: 'flash' | 'ink' | 'discharge' | 'inflate' | 'tell' | 'click' | 'blast' | 'exposed'
     | 'draw' | 'snap' | 'venom' | 'shot' | 'splash' | 'impact' | 'bubbles' | 'rise' | 'dust'
-    | 'turn' | 'cavitate' | 'flame' | 'shaft' | 'arc' | 'shatter';
+    | 'turn' | 'cavitate' | 'flame' | 'shaft' | 'arc' | 'shatter' | 'bomb';
   /** For something moving through the water rather than spreading: the draw's streaks, a shot's impact. */
   vx?: number; vy?: number;
   /** What was fired or spent, for a `shot`, a `splash` or an `impact`. */

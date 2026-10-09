@@ -29,7 +29,7 @@ export class Hearts {
   }
 }
 
-/** A count beside its glyph: shells, and in time keys and bombs. */
+/** A count beside its glyph: shells, bomb fish and keys. */
 export class Counter {
   readonly element = div('counter');
   private readonly value = span();

@@ -38,6 +38,19 @@ export const SPRITES = {
     '.####..#dd#',
     '.......####',
   ],
+  // a bomb fish: a slate puffer, its tail a fan, its one spine standing up like a fuse
+  bomb: [
+    '.......h....',
+    '.......#....',
+    '.....####...',
+    '#...#hhxx#..',
+    '##.#hhxxxx#.',
+    '#x##hxxxx#x#',
+    '#x#xxxxxxxd#',
+    '##.#xxxxxdd#',
+    '#...#ddddd#.',
+    '.....#####..',
+  ],
   chest: [
     '.#########.',
     '#hhhhhhhhh#',
@@ -87,6 +100,8 @@ export const COLOURS: Record<SpriteName, Palette> = {
   heart: { x: '#e0344a', h: '#ff9aa4', d: '#8e1c36', o: '#2a0a16' },
   shell: { x: '#e8d4b8', h: '#fff6e6', d: '#b09478', o: '#3a2a20' },
   key: { x: '#e0b048', h: '#fff0a0', d: '#9a6a20', o: '#2e1e08' },
+  // pale, as every pickup is: the slate it was first drawn in was lost against the water
+  bomb: { x: '#9ab8e4', h: '#eef6ff', d: '#56709e', o: '#0e1426' },
   chest: { x: '#9a6a3a', h: '#d8a468', d: '#5a3a1e', o: '#1e1208' },
   pellet: { x: '#c07a3a', h: '#f0b070', d: '#7a4418', o: '#2a1406' },
   airstone: { x: '#8a98a8', h: '#d8e4f0', d: '#4a5868', o: '#141c26' },
@@ -133,7 +148,7 @@ export function spriteTexture(name: SpriteName) {
 
 /** What each kind glows in the dark with, so a pickup can be found without the larva's light. */
 export const PICKUP_GLOW: Record<PickupKind, number> = {
-  heart: 0xff5a6a, shell: 0xffe8c8, key: 0xffd27a, chest: 0xd8a468,
+  heart: 0xff5a6a, shell: 0xffe8c8, key: 0xffd27a, bomb: 0xffb060, chest: 0xd8a468,
   pellet: 0xf0b070, airstone: 0xdff4ff, snail: 0xf0b890,
 };
 

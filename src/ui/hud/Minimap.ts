@@ -15,6 +15,8 @@ const GLYPHS: Partial<Record<MapCell['type'], { rows: string[]; color: string }>
   shop: { color: '#f0dcc0', rows: ['..#..', '.###.', '#.#.#', '#####', '.###.'] },
   // a heart in red: what a deal is paid in
   deal: { color: '#ff6a5a', rows: ['.#.#.', '#####', '#####', '.###.', '..#..'] },
+  // the bomb fish that opened it, round with its spine up
+  secret: { color: '#9ab4dc', rows: ['..#..', '.###.', '#####', '#####', '.###.'] },
 };
 
 /**

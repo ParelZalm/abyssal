@@ -14,6 +14,7 @@ export class StatusPanel {
   private readonly hearts = new Hearts();
   private readonly belly = new StatusBar('food', 'Belly');
   private readonly shells = new Counter('shell');
+  private readonly bombs = new Counter('bomb');
   private readonly keys = new Counter('key');
 
   constructor() {
@@ -30,9 +31,9 @@ export class StatusPanel {
     sizeWrap.append('Length ', this.size);
     row3.append(sizeWrap);
 
-    // shells and keys side by side under the belly, Isaac's pickups column
+    // shells, bomb fish and keys side by side under the belly, Isaac's pickups column in his order
     const pockets = div('stat-row counters');
-    pockets.append(this.shells.element, this.keys.element);
+    pockets.append(this.shells.element, this.bombs.element, this.keys.element);
     this.element.append(row1, this.hearts.element, this.belly.element, pockets, row3);
   }
 
@@ -48,6 +49,7 @@ export class StatusPanel {
     this.hearts.update(s.hp, s.hpMax);
     this.belly.update(s.belly);
     this.shells.update(s.shells);
+    this.bombs.update(s.bombs);
     this.keys.update(s.keys);
     this.set('stage', this.stage, String(s.stage));
     this.set('size', this.size, `${s.size.toFixed(0)} cm`);

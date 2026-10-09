@@ -75,6 +75,14 @@ export class Impacts {
         this.dread.startle(0.6);
       } else if (f.kind === 'click') {
         fx.ring(f.x, f.y, 0xe6f2ff, f.r);
+      } else if (f.kind === 'bomb') {
+        // a bomb fish bursting: a flash of its spark's orange, the water thrown out in two rings,
+        // bubbles, and the hardest jolt the player sets off
+        fx.ring(f.x, f.y, 0xffb060, f.r * 0.4);
+        fx.ring(f.x, f.y, 0xe6f2ff, f.r);
+        fx.burst(f.x, f.y, 0xffb060, 14, f.r * 1.2, 2.6);
+        fx.burst(f.x, f.y, 0xe8fbff, 22, f.r * 0.8, 3);
+        camera.jolt(12, 18);
       } else if (f.kind === 'blast') {
         fx.ring(f.x, f.y, 0xe6f2ff, f.r * 0.35);
         fx.ring(f.x, f.y, 0xe6f2ff, f.r * 0.7);

@@ -244,17 +244,18 @@ points; a card whose effect fed one of them now says what it does instead:
 ## The economy
 
 Roadmap stage 6: shells, keys and items, the shop and the deal room (`run/Pockets.ts`,
-`run/TankMap.ts`, `content/items.ts`).
+`run/TankMap.ts`, `content/items.ts`); and later the bomb fish and the secret room
+(`sim/bombs.ts`, `render/bombs.ts`).
 
-- **Pickups** are `World.pickups`: a half heart, a shell, a key, a chest, or an item. The
+- **Pickups** are `World.pickups`: a half heart, a shell, a key, a bomb fish, a chest, or an item. The
   player takes one by touch, if `World.takes` lets it — `Pockets.takes`, which holds a chest
   back until there is a key for it and never lets an item go by touch: an item is taken on
   E, within 1.2 tiles past the body (`Pockets.nearItem`, `pickUp`), under the same prompt
-  and card as a pedestal's good, so a swap is always meant. `Pockets.collect` does the rest: shells and keys counted
-  on the run, a chest opened for a key and spilling two or three pickups, an item put in the
+  and card as a pedestal's good, so a swap is always meant. `Pockets.collect` does the rest: shells, keys and bomb fish
+  counted on the run, a chest opened for a key and spilling two or three pickups, an item put in the
   pocket (one already there is dropped, and lies 1.5 s before E will take it back).
 - **A cleared room drops** two times in five (`CLEAR_DROP`, in `Game`), where the fight was:
-  shells 45, a half heart 22, a key 15, an item 12, a chest 6. The roll is the room's own
+  shells 40, a half heart 20, a key 13, a bomb fish 12, an item 10, a chest 5. The roll is the room's own
   seed.
 - **Items** are one in the pocket, used on Q (`Pockets.use`), Isaac's pocket key: the Food Pellet mends a heart,
   the Air Stone bursts (`World.burst`: everything within four tiles shoved out and stunned,
@@ -264,8 +265,25 @@ Roadmap stage 6: shells, keys and items, the shop and the deal room (`run/Pocket
   room's does too; a chest takes one. A locked door is its gate band shut on its own
   (`Terrain.shut`, `'key'`), on both sides of the door, drawn as a brass grate; pressed
   against with a key it opens (`TankMap.open`).
+- **Bomb fish**, Isaac's bombs. A run starts with one; they drop as keys do and the shop sells
+  them (5). F releases one where the body is (`Pockets.bomb`, `World.bombs`): it hangs,
+  sinking a quarter tile a second onto whatever is under it, and swells for 1.6 s (`FUSE`),
+  blinking red in its last 0.7 s, then bursts over 1.6 tiles. Every hostile in reach takes five
+  of the player's hits and is thrown; the player is thrown too and takes half a heart; pots
+  break; and a cracked door in reach gives way (`World.blasts` → `TankMap.blast`). Until it
+  bursts it is Isaac's bomb to move: the body shoves it once it has swum off it, a shot of the
+  player's knocks it on at half the shot's way and breaks on it, a strike knocks it off along the
+  bite, and the water takes its way in about a third of a second. Hostiles do not move it.
+- **The secret room.** Every tank has one (`content/map.ts`, `secret`): the free cell touching
+  the most rooms, never beside the boss room or the deal room. Its doors are shut on both sides
+  as `'crack'`: rock to the body, with no grate drawn, and a plug of rock baked over the opening
+  (`RoomView`, from `Terrain.plugged`) with a dark seam lit pale along it and a faint light on it,
+  so a player who looks finds it. A bomb fish's blast opens it, and says so; the room is not on
+  the minimap until then. Inside is a hoard, dropped on the first visit (`TankMap.cache`): three
+  to five shells, one of a bomb fish, a key or a half heart, and a chest three times in ten.
 - **The shop** stands three goods and a mutation on pedestals across its floor: three of a
-  half heart (3 shells), the snail (3), the pellet (4), the air stone (5) and a key (5), and
+  half heart (3 shells), the snail (3), the pellet (4), the air stone (5), a key (5) and a bomb
+  fish (5), and
   a mutation from the tank's pool for 15. E beside one pays and takes it; one that cannot
   be paid says its price.
 - **The deal room.** Half of all tanks have one (`DEAL_CHANCE`, rolled with the map): a room

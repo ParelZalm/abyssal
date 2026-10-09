@@ -6,8 +6,9 @@ const ARROWS: Record<string, [number, number]> = {
 
 /**
  * Keyboard state the frame reads, laid out Isaac's way: WASD swims, the arrows attack,
- * Space fires the active mutation, E takes what the player is beside and Q uses the held
- * item — Isaac's pocket key. Bound once for the page; the
+ * Space fires the active mutation, E takes what the player is beside, Q uses the held
+ * item — Isaac's pocket key — and F releases a bomb fish, beside them under the left hand,
+ * since Isaac's E is taken here. Bound once for the page; the
  * run's `PlayerController` turns it into a swim and a strike.
  */
 export class Input {
@@ -24,6 +25,8 @@ export class Input {
   wantItem = false;
   /** A press of E: take the pedestal's good or the item the player is beside. */
   wantInteract = false;
+  /** A press of F: release a bomb fish. */
+  wantBomb = false;
   /** Any key or click at all, for skipping a cutscene. Cleared by whoever reads it. */
   anyPress = false;
 
@@ -37,6 +40,7 @@ export class Input {
       if ((k === ' ' || k === 'spacebar') && !e.repeat) this.wantActive = true;
       if (k === 'q' && !e.repeat) this.wantItem = true;
       if (k === 'e' && !e.repeat) this.wantInteract = true;
+      if (k === 'f' && !e.repeat) this.wantBomb = true;
       if (k === 'm' && !e.repeat) on.mute();
       if (!e.repeat) this.anyPress = true;
       wakeAudio();

@@ -33,7 +33,8 @@ const DEAL_CHANCE = 0.5;
  * A tank's map, Isaac's way: rooms grown out from the start one neighbour at a time, a room
  * only added where it touches exactly one other so the map branches rather than clotting into
  * a block, and the special rooms put on dead ends — the boss on the one furthest from the
- * start, the treasure room and the shop on the next two. Everything else is a fight. Retries
+ * start, the treasure room and the shop on the next two. Everything else is a fight. Then the
+ * secret room, in a free cell beside as many rooms as any free cell is (`secret`). Retries
  * until the map has the dead ends it needs; deterministic in the stream it is given.
  */
 export function generateMap(rng: Rng): MapRoom[] {
@@ -87,5 +88,34 @@ function grow(rng: Rng, count: number): MapRoom[] | null {
       break;
     }
   }
-  return rooms;
+  return secret(rng, rooms) ? rooms : null;
+}
+
+/**
+ * Every tank's secret room, Isaac's: in a free cell beside the most rooms any free cell is, so
+ * the wall to bomb is one several rooms share and the map can be read for it, with a door to
+ * each, sealed in rock a bomb fish opens (`TankMap`). Never beside the boss's room or the deal room: the one is a fight that
+ * ends in the drain, the other is found through the boss's. Ties go to the stream. False for a
+ * map with no free cell beside a room it may join, which is grown again.
+ */
+function secret(rng: Rng, rooms: MapRoom[]): boolean {
+  const at = (x: number, y: number) => rooms.find(r => r.gx === x && r.gy === y);
+  const joins = (r: MapRoom | undefined) => !!r && r.type !== 'boss' && r.type !== 'deal';
+  const free: { x: number; y: number; sides: Side[] }[] = [];
+  for (const r of rooms) {
+    for (const s of SIDES) {
+      const x = r.gx + STEP[s][0], y = r.gy + STEP[s][1];
+      if (at(x, y) || free.some(f => f.x === x && f.y === y)) continue;
+      const near = SIDES.map(t => at(x + STEP[t][0], y + STEP[t][1]));
+      // a cell beside the boss or the deal room is not one: its wall would open on either
+      if (near.some(n => n && !joins(n))) continue;
+      free.push({ x, y, sides: SIDES.filter((_, k) => near[k]) });
+    }
+  }
+  if (!free.length) return false;
+  const most = Math.max(...free.map(f => f.sides.length));
+  const pick = rng.pick(free.filter(f => f.sides.length === most));
+  for (const s of pick.sides) at(pick.x + STEP[s][0], pick.y + STEP[s][1])!.doors.push(OPPOSITE[s]);
+  rooms.push({ gx: pick.x, gy: pick.y, type: 'secret', doors: pick.sides });
+  return true;
 }

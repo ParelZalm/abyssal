@@ -26,11 +26,16 @@ drop-in lands; a **Fight** room locks its exits until its hostiles are dead; a
 shells behind a door that takes a key; a **Deal** room, which some tanks have, is sealed
 beside the boss room until the boss room is cleared, and offers a deal mutation and a
 curse; the
-**Boss** room holds the tank's boss, and beating it opens the descent.
+**Boss** room holds the tank's boss, and beating it opens the descent. Every tank has one
+**Secret** room, never on the minimap until found: its doors are cracked rock that only a
+bomb fish breaks, and inside it is a hoard of pickups.
 
 **Door** — an opening in the middle of a room's edge into the room beside it. A fight room
 shuts its doors on the player until its hostiles are dead; the room is then **cleared**,
 and stays so.
+A **cracked** door is a secret room's: rock with a faint lit seam, not an opening, until a
+bomb fish bursts beside it.
+_Avoid_: secret wall, fake wall
 
 **Map** — how a tank's rooms connect, dealt from the run's seed, and what the minimap
 shows of it: the rooms seen, the rooms visited, and the one the player is in.
@@ -46,8 +51,8 @@ _Avoid_: prop, scenery
 room's mutation, and each of a shop's or a deal room's goods, at its price.
 
 **Pickup** — anything lying loose in a room that is collected by swimming into it: a
-half heart, a shell, a key, or a chest, which takes a key and spills pickups — and an item,
-which is taken only on E, as a pedestal's good is.
+half heart, a shell, a key, a bomb fish, or a chest, which takes a key and spills pickups —
+and an item, which is taken only on E, as a pedestal's good is.
 Pickups drop from cleared rooms, from chests, from the belly, and now and then from fauna
 the player kills and from pots.
 
@@ -163,6 +168,12 @@ _Avoid_: coin, money
 
 **Key** — what opens a locked door or a chest. Found and dropped like a shell, spent one
 at a time.
+
+**Bomb fish** — a puffer carried like a key and released on F. It hangs where it was let go,
+swells, and bursts: everything near it is hurt and thrown, the player too, pots break, and a
+cracked door gives way. Until it bursts it can be pushed by the body and knocked by a shot
+or a strike.
+_Avoid_: bomb, explosive
 
 **Belly** — what swallowing a hostile fills, or eating its carcass, by the size of what
 went down; the fauna fills nothing. A full belly empties by

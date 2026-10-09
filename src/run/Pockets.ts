@@ -18,15 +18,15 @@ const ITEM_REACH = 1.2;
 /** Seconds between two "you cannot" toasts — a price or a lock touched every frame. */
 const NAG = 2.5;
 
-/** What a chest spills, by weight: mostly shells, then hearts, keys and items. */
-const CHEST: [PickupKind | 'item', number][] = [['shell', 50], ['heart', 20], ['key', 15], ['item', 15]];
+/** What a chest spills, by weight: mostly shells, then hearts, keys, bomb fish and items. */
+const CHEST: [PickupKind | 'item', number][] = [['shell', 45], ['heart', 18], ['key', 13], ['bomb', 12], ['item', 12]];
 
 /**
  * What a critter or a pot may leave, by weight, and how often each does: the fauna now and
  * then — a room holds two dozen, and it is not what a room is for — a pot one time in three,
  * since a room holds at most three and each was worth a detour to break.
  */
-const SPOILS: [PickupKind, number][] = [['shell', 60], ['heart', 25], ['key', 15]];
+const SPOILS: [PickupKind, number][] = [['shell', 55], ['heart', 22], ['key', 12], ['bomb', 11]];
 export const CRITTER_SPOILS = 0.06;
 export const POT_SPOILS = 0.35;
 
@@ -36,7 +36,7 @@ export type Price = { shells: number } | { containers: number };
 const isItem = (k: PickupKind): k is ItemId => (ITEM_IDS as string[]).includes(k);
 
 /**
- * What the player carries and is not its body: shells, keys and the one item, and what
+ * What the player carries and is not its body: shells, keys, bomb fish and the one item, and what
  * happens to everything it picks up. A run system: it owns no state of its own but a stream
  * for chests and the nag timer; the counts are the run's, for the HUD and the end screen.
  */
@@ -99,6 +99,9 @@ export class Pockets {
     } else if (kind === 'key') {
       run.keys++;
       fx.ring(p.x, p.y, 0xffd27a, p.radius * 1.8);
+    } else if (kind === 'bomb') {
+      run.bombs++;
+      fx.ring(p.x, p.y, 0xffb060, p.radius * 1.8);
     } else if (kind === 'chest') {
       run.keys--;
       this.spill(k.x, k.y);
@@ -183,6 +186,14 @@ export class Pockets {
     this.p.hpMax = run.containers * 2;
     this.p.hp = Math.min(this.p.hp, this.p.hpMax);
     this.fx.ring(this.p.x, this.p.y, 0xff3a4a, this.p.radius * 3);
+    return true;
+  }
+
+  /** F: a bomb fish out of the pocket, where the player is. False, and a nag, with none to release. */
+  bomb(): boolean {
+    if (this.run.bombs <= 0) { this.nag('No bomb fish'); return false; }
+    this.run.bombs--;
+    this.world.bombs.lay(this.p.x, this.p.y);
     return true;
   }
 

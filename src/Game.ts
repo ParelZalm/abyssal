@@ -18,6 +18,7 @@ import { Impacts } from './render/Impacts';
 import { Ocean } from './render/ocean';
 import { followZoom, FramePass, PIXEL } from './render/pixel';
 import { PickupView, SPRITES } from './render/pickups';
+import { BombView } from './render/bombs';
 import { TellView } from './render/tells';
 import { GhostView } from './render/ghosts';
 import { PotView } from './render/pots';
@@ -53,7 +54,7 @@ const PLAYER_SPECIES: Species = {
 
 /**
  * A cleared room's drop, Isaac's: two rooms in five drop something, mostly shells, then a
- * half heart, a key, an item, and now and then a chest.
+ * half heart, a key, a bomb fish, an item, and now and then a chest.
  */
 const CLEAR_DROP = 0.4;
 /**
@@ -69,7 +70,7 @@ const GROWTH = 1.8;
  */
 const WARM_MS = 8;
 const CLEAR_DROPS: [PickupKind | 'item', number][] = [
-  ['shell', 45], ['heart', 22], ['key', 15], ['item', 12], ['chest', 6],
+  ['shell', 40], ['heart', 20], ['key', 13], ['bomb', 12], ['item', 10], ['chest', 5],
 ];
 
 /**
@@ -107,6 +108,7 @@ export class Game {
   /** The tank the run is in: its map, the room the player is in, the doors, the slide. */
   tank!: TankMap;
   private pickups!: PickupView;
+  private bombs!: BombView;
   private tells!: TellView;
   private ghosts!: GhostView;
   private pots!: PotView;
@@ -256,6 +258,7 @@ export class Game {
     this.camera.over.removeChildren();
     this.tank?.destroy();
     this.pickups?.destroy();
+    this.bombs?.destroy();
     this.tells?.destroy();
     this.ghosts?.destroy();
     this.pots?.destroy();
@@ -269,6 +272,7 @@ export class Game {
     this.rng = new Rng(seed);
     this.ocean = new Ocean(this.rng);
     this.pickups = new PickupView();
+    this.bombs = new BombView();
     this.tells = new TellView();
     this.ghosts = new GhostView();
     this.pots = new PotView();
@@ -289,7 +293,7 @@ export class Game {
     this.camera.root.addChild(
       // what grows on the rock stands behind the bodies; the rock itself is drawn over them
       this.ocean.world, layers.decor, this.scene.focus,
-      this.drain.root, this.pedestals.root, this.pots.root, world.fog, this.fx.under, world.layer, this.pickups.root,
+      this.drain.root, this.pedestals.root, this.pots.root, world.fog, this.fx.under, world.layer, this.pickups.root, this.bombs.root,
       this.shots.root, this.fx.layer,
       // the rock over the bodies, so a nose pressed into a wall goes into it
       layers.rock,
@@ -297,7 +301,7 @@ export class Game {
     // the blooms go above the lighting, in one additive layer of their own that batches as
     // one draw: they are the light, and the dark must not fall on them. The E prompt goes
     // last, over them all, since the dark must not swallow it either
-    this.camera.over.addChild(layers.glow, this.drain.glow, this.pedestals.glow, this.pickups.glow,
+    this.camera.over.addChild(layers.glow, this.drain.glow, this.pedestals.glow, this.pickups.glow, this.bombs.glow,
       this.shots.glow, world.glow, this.fx.glow, this.ghosts.root, this.tells.root, this.prompt.root);
     this.app.stage.addChild(this.water.layer, this.camera.root, this.lighting.sprite,
       this.camera.over, this.dropIn.root);
@@ -307,6 +311,7 @@ export class Game {
     this.input.wantActive = false;
     this.input.wantItem = false;
     this.input.wantInteract = false;
+    this.input.wantBomb = false;
     this.controller = new PlayerController(this.input, p, world, fx);
     this.belly = new Belly(run, p, world, fx, ui);
     const pockets = this.pockets = new Pockets(run, p, world, fx, ui);
@@ -409,7 +414,7 @@ export class Game {
     this.reset({ start: start.id, seed }, { ...start, traits: [...start.traits, ...extra] });
     this.dev.god = l.god;
     if (l.calm) this.world.spawner.hostiles = () => {};
-    if (l.rich) { this.run.shells = 99; this.run.keys = 9; }
+    if (l.rich) { this.run.shells = 99; this.run.keys = 9; this.run.bombs = 9; }
     if (l.tank !== 'nursery' || l.room !== 'start') {
       this.enterTank(l.tank, GROWTH ** tankIndex(l.tank), l.room);
     }
@@ -518,7 +523,8 @@ export class Game {
       this.pockets.update(dt);
       if (this.input.wantItem) this.pockets.use();
       if (this.input.wantInteract) this.interact();
-      this.input.wantItem = this.input.wantInteract = false;
+      if (this.input.wantBomb) this.pockets.bomb();
+      this.input.wantItem = this.input.wantInteract = this.input.wantBomb = false;
       this.camera.settle(dt);
       this.run.tick(dt);
       this.dread.update(dt, this.world.hunted);
@@ -537,6 +543,7 @@ export class Game {
     this.impacts.drain(world, this.player);
     if (world.playerGain > 0) this.belly.swallow(world.playerGain);
     for (const k of world.collected) this.pockets.collect(k);
+    for (const b of world.blasts) this.tank.blast(b.x, b.y, b.r);
     for (const f of world.felled) this.pockets.loot(f.x, f.y, CRITTER_SPOILS);
     for (const pot of world.broken) {
       this.pots.shatter(pot, this.fx);
@@ -579,6 +586,7 @@ export class Game {
     // under the drop-in and the title the room is baked a slice a frame (`warm`), not all at once here
     this.tank.draw(view.t, this.phase !== 'dropin' && this.phase !== 'title');
     this.pickups.update(this.world.pickups, view.zoom, view.t);
+    this.bombs.update(this.world.bombs.live, view.zoom);
     this.tells.update(this.world.creatures, view.zoom, view.t);
     this.ghosts.update(this.world.ghosts, this.world.creatures, dt, view.t);
     this.pots.update(this.world.pots, view.zoom);
@@ -591,7 +599,7 @@ export class Game {
     const stage = this.tank.stage;
     const dread = this.scene.draw(view, this.world, p, this.phase, this.dread,
       [...this.tank.lights, ...this.shots.lights, ...this.pedestals.lights, ...this.pots.lights, ...this.drain.lights,
-        ...this.pickups.lights, ...this.fx.lights, ...(stage ? stageLights(this.tank.room) : [])],
+        ...this.pickups.lights, ...this.bombs.lights, ...this.fx.lights, ...(stage ? stageLights(this.tank.room) : [])],
       stage ? STAGE_LEVEL : undefined);
     this.lighting.render(this.camera);
     if ((this.phase === 'play' || this.phase === 'draft') && !this.tank.sliding) {
@@ -604,7 +612,7 @@ export class Game {
 
     this.ui.update({
       hp: Math.max(0, p.hp), hpMax: p.hpMax,
-      belly: run.belly / this.belly.full, shells: run.shells, keys: run.keys, item: run.item,
+      belly: run.belly / this.belly.full, shells: run.shells, keys: run.keys, bombs: run.bombs, item: run.item,
       stage: run.stage, size: p.genome.size, place: this.run.tank.name,
       traits: run.takenNames,
       score: Math.round(run.score), elapsed: run.elapsed,

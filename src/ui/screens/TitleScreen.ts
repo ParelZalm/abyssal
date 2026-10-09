@@ -69,7 +69,7 @@ export class TitleScreen implements Component {
       this.scene.element,
       front,
       keysLine([kbd('WASD'), ' swim  ', kbd('\u2190\u2191\u2192\u2193'), ' strike  ', kbd('Space'),
-        ' mutation  ', kbd('P'), ' pause']),
+        ' mutation  ', kbd('F'), ' bomb fish  ', kbd('P'), ' pause']),
     );
     this.hatch = hatch;
   }
