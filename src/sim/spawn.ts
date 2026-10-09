@@ -29,9 +29,9 @@ export class Spawner {
    * the player comes in, away from the door they came through, so the first the player
    * knows of one is it coming. A role is held to `ROLE_MAX` a room: two turrets and a
    * spitter is a room to wait out, not one to fight. A pack species comes two at a time,
-   * since one mackerel circling is only a charger. Every tank's first fight (`first`) is dealt
-   * the newest reworked enemy alone (`NEWEST`), whatever tank it is from: it is there to be
-   * tested, from the first fight of a run, and anything beside it was a second thing to watch.
+   * since one mackerel circling is only a charger. While an enemy is being tested (`NEWEST`),
+   * every tank's first fight (`first`) is dealt it alone, whatever tank it is from: it is there
+   * from the first fight of a run, and anything beside it was a second thing to watch.
    */
   hostiles(room: Terrain, tank: Tank, player: Creature, count: number, first = false) {
     const table = dealtHostiles(tank.hostiles);

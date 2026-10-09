@@ -5,15 +5,14 @@ drawn from a sprite (`content/sprites.ts`), one at a time, through the flow belo
 the list: what is done, what can be done next, and what has to be built first. The how of
 each step is in [sprites.md](sprites.md); this page is the order and the record.
 
-**While the rework is under way, only reworked enemies are dealt into fights**
-(`REWORKED_ONLY` in `content/sprites.ts`), so no room mixes the two styles. A tank with no
-reworked enemy yet has its fight rooms open as soon as they are entered; since the archerfish
-every tank has one. Bosses are dealt whatever they are drawn with, since a tank cannot lose its way
-down. Set `REWORKED_ONLY` false to see the whole roster again.
+**The roster is through** (October 2026): every enemy and every boss is drawn, and each tank deals
+its whole table again. While the rework was under way only reworked enemies were dealt into
+fights (`REWORKED_ONLY`, taken out once the last came in), so no room mixed the two styles.
 
-**The enemy last reworked is tested on its own** (`NEWEST` in `content/sprites.ts`): the first
+**An enemy just drawn is tested on its own** (`NEWEST` in `content/sprites.ts`): the first
 fight room entered in every tank holds it alone, one of it, scaled to that tank, so a run's
-first fight is it; no other room deals it. Point `NEWEST` at each enemy as it comes in.
+first fight is it; no other room deals it. Point `NEWEST` at an enemy as it comes in, and back
+at null before it ships.
 
 ## The flow, for one enemy
 
@@ -104,4 +103,5 @@ name it.
 5. **Rigged arms**, then the vampire squid (both done): the deep's roster is through.
 6. **Bosses**, each a question of its own (all done), from
    [sprite-prompts-bosses.md](sprite-prompts-bosses.md).
-7. **`REWORKED_ONLY` comes out** once no fight room is short of enemies.
+7. ~~**`REWORKED_ONLY` comes out** once no fight room is short of enemies.~~ Done: it is gone, and
+   `NEWEST` is null, so every tank's first fight is dealt from its table like the rest.

@@ -544,30 +544,17 @@ export function drawnForm(id: string, f: Form): Form {
 }
 
 /**
- * While the roster is converted (`docs/sprites.md`), only enemies drawn from a sprite are
- * dealt into a fight room: the painted ones beside them made every room a mix of two art
- * styles. A tank with none left to deal has its fight rooms open as soon as they are entered.
- * The bosses are dealt whatever they are drawn with, since a tank cannot be left without its
- * way down. False deals the whole roster again.
+ * An enemy just drawn, for testing it: the first fight room entered in every tank holds it and
+ * nothing else, one of it, scaled to that tank, so a run meets it in its first fight. No other
+ * room deals it — two side by side at different sizes read as two versions of it, and the rest
+ * of a room was more to watch than the one thing being tested. Null, as it ships, deals every
+ * enemy by its tank's table (`docs/sprites.md`, *Wire it*).
  */
-export const REWORKED_ONLY = true;
+export const NEWEST: string | null = null;
 
-/**
- * The enemy last reworked, for testing it while the roster is converted: the first fight room
- * entered in every tank holds it and nothing else, one of it, scaled to that tank, so a run
- * meets it in its first fight. No other room deals it — two side by side at different sizes
- * read as two versions of it, and the rest of a room was more to watch than the one thing
- * being tested. Null deals it as any other.
- */
-export const NEWEST: string | null = 'vampiresquid';
-
-/**
- * A tank's hostile table as it is dealt: the reworked enemies only, while `REWORKED_ONLY`,
- * and never `NEWEST`, which `Spawner.hostiles` deals on its own.
- */
+/** A tank's hostile table as it is dealt: never `NEWEST`, which `Spawner.hostiles` deals on its own. */
 export function dealtHostiles(table: Record<string, number>): Record<string, number> {
-  return Object.fromEntries(Object.entries(table)
-    .filter(([id]) => (!REWORKED_ONLY || SPRITES[id]) && id !== NEWEST));
+  return Object.fromEntries(Object.entries(table).filter(([id]) => id !== NEWEST));
 }
 
 /**

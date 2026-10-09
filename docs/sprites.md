@@ -323,7 +323,7 @@ Open the preview. When something is off:
   run again.
 - **`content/species.ts`**: set `drawn` (*Size*, below).
 - **`content/sprites.ts`**: point `NEWEST` at it, so every tank's first fight room holds it
-  alone to test, a run's first fight included.
+  alone to test, a run's first fight included; back at null before it ships.
 
 Nothing else changes: `FishView`, `Creature` and the board's cells already pass the species
 through, and `bakeFish` takes the sprite path for any species with frames loaded.
@@ -367,5 +367,5 @@ The sheet in `docs/media/reference/`, the frames in `render/creature/sprites/`, 
 ## Converting the current roster
 
 The list — which enemies are done, which are ready, which are blocked and on what, and the
-order — is [roadmap-enemies-rework.md](roadmap-enemies-rework.md). While it is under way only
-reworked enemies are dealt into fights (`REWORKED_ONLY` in `content/sprites.ts`).
+order — is [roadmap-enemies-rework.md](roadmap-enemies-rework.md). Every enemy is through, and
+every tank deals its whole table.
