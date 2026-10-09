@@ -1355,5 +1355,121 @@ any background other than flat #00FF00, soft glows, painterly texture, noise, su
 detail, text, borders, shadows, a second animal.
 ```
 
-**What to send back:** the sheet, by its file name in Downloads. Sheet 2, the bare bell at rest and
-in its pulse, is written from it.
+The sheet came back (`bloom-form-parts-sprite.png`) on the grid asked for, 1536 × 1408 with every
+block flat and 16 colours, and kept but for its oral arms. The bell is a dome 54 long from its top to
+the rim's lip and 71 deep, the eye 17 across with its middle 13 behind the dome's top on the midline,
+the gut 13 by 10 (drawn in the tentacles' #9B8DB7, not the gut's violet) with its middle 36 behind
+the dome's top and 11 below the midline. The nine tentacles are as asked, 1-pixel lines beaded every
+6, their knobs drawn as small crosses. The oral arms are not: three flat-topped slabs with straight
+lower edges and a few lumps, stacked edge to edge, which read as planks, not frilled ribbons; their
+roots sit 6 above, 6 below and 17 below the midline, round the gut. A speckle runs through the bell
+and the arms, against "no dithering", which the bake's third averages out.
+
+#### Sheet 1b: the oral arms, drawn again
+
+The three oral arms alone, as one part, their roots where the parts sheet put them, since the arms
+are laid into the bake by those roots and not found on the whole. One cell of 64 × 44 art pixels.
+
+```text
+GOAL
+True pixel-art sprite of the three oral arms of the pale jellyfish on the attached parts
+sheet, for a game, drawn again: on that sheet they came out as flat-topped slabs with
+straight edges. Here they are soft, wavy, frilled ribbons, the arms of a jellyfish.
+Same colours, same style as the rest of the attached sheet.
+
+THE GRID (most important)
+- The sheet is exactly 64 × 44 art pixels.
+- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
+  square block, so the image is 512 × 352.
+- No anti-aliasing, no blur, no soft edges, no gradients, no dithering or speckle, and
+  no colour change smaller than one block. Every block is one flat colour.
+- 1-block outline (#79728F) round each arm, never thicker, and none inside it.
+
+THE ARMS
+Three oral arms together, as they hang from the bell, trailing to the LEFT from their
+roots. Their roots are cut flat in one vertical line 2 art pixels from the sheet's
+RIGHT edge, the root ends finished with the outline: the top arm's root centred 10
+art pixels from the sheet's top, the middle one's 12 below that, the bottom one's 11
+below that.
+- Each arm a ribbon 9 art pixels deep at its root, tapering to a rounded tip 3 deep.
+  Lengths: top 46, middle 52, bottom 44 art pixels.
+- Each sways in one slow, gentle S-wave along its length, 3 or 4 art pixels high, the
+  three swaying together, never crossing or touching, with at least 1 art pixel of
+  background between them.
+- Both edges of each ribbon frilled: small rounded lobes 3 or 4 art pixels apart,
+  bulging 1 art pixel out of the edge. Not straight edges, not flat tops, not boxes.
+- Shading: a paler band down the middle of each ribbon (#F4F2FF), the arm colour either
+  side of it (#D6D0ED), the frilled edges a shade darker (#B8B0D8), lit from above.
+- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
+  anywhere on the arms.
+
+PALETTE
+Outline #79728F, deep shadow #B8B0D8, arm #D6D0ED, highlight #F4F2FF, plus at most 4
+in-between shades of them.
+
+AVOID
+Rectangles, slabs or planks, straight or flat edges, arms touching or stacked edge to
+edge, arms crossing, more or fewer than three arms, a bell, tentacles, an eye, any
+background other than flat #00FF00, speckle or noise, soft glows, painterly texture,
+sub-pixel detail, text, labels, borders, shadows.
+```
+
+#### Sheet 2: the bare body
+
+The bell's second frame is its pulse, not a jaw: the strike's swap is a hard squeeze of the bell,
+as a jelly swims. The dome's top stays where it is in both frames, since the game lays a drawn body
+by its snout and its tail, and here the snout is the dome's top and the tail the rim.
+
+```text
+GOAL
+True pixel-art sprite of the pale jellyfish's BARE BELL, for a game: EXACTLY the bell
+of the whole jellyfish at the top of the attached parts sheet — the same dome, the same
+shading, the same frilled rim, the faint radial canals and the gut — with its eye, its
+oral arms and its tentacles taken off. 2 frames of the same bell, side by side, left
+to right: "rest", "pulse".
+
+THE GRID (most important)
+- Each frame is exactly 72 × 84 art pixels.
+- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
+  square block, so the image is 1152 × 672.
+- No anti-aliasing, no blur, no soft edges, no gradients, no dithering or speckle, and
+  no colour change smaller than one block. Every block is one flat colour.
+- 1-block outline (#79728F) round the whole silhouette, never thicker.
+
+COMPOSITION
+- Strict side view: the dome facing RIGHT, the open rim facing left, level.
+- In both frames the dome's top touches the same column, 8 art pixels from the frame's
+  right edge, and the bell's midline lies along the frame's horizontal centre line.
+- Where the eye was, the bell is plain glass, shaded as the rest of the dome: no
+  socket, no hole, no dotted outline. Where the arms and tentacles hung, the rim's
+  frilled lip runs whole, finished with the outline.
+- The gut: a rounded shape in muted dusky violet (#6A5A8A), 13 long and 10 deep, its
+  middle 36 behind the dome's top and 11 below the midline, seen through the glass.
+- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
+  anywhere on the animal, and do not let the outline pick up a green tint where it
+  meets the background.
+
+PALETTE
+The parts sheet's colours: outline #79728F, deep shadow #B8B0D8, bell #E8E4F8, bell
+highlight #F4F2FF, rim #D6D0ED, gut #6A5A8A, plus at most 8 in-between shades.
+
+FRAME 1 — "rest"
+The bare bell at rest, EXACTLY the parts sheet's: 54 art pixels from the dome's top to
+the rim's lip and 71 deep at the rim, the rim's frilled lip over its last 9.
+
+FRAME 2 — "pulse"
+The same bell squeezed in a hard swimming pulse: the rim drawn in to 56 deep, the bell
+stretched to 60 long, the dome taller and rounder like the nose of a bullet, its rim's
+lip pinched inward. The radial canals follow the squeezed dome. The gut in the same
+place. The dome's top in the same column as frame 1, so the two can be swapped
+without the animal moving.
+
+AVOID
+A bell shaped differently from the parts sheet's at rest, a flat front, an eye, an eye
+socket or a dotted outline, oral arms, tentacles, a mouth or face, a spine, fins, any
+background other than flat #00FF00, speckle or noise, soft glows, painterly texture,
+sub-pixel detail, text, labels, borders, shadows, a second animal.
+```
+
+**What to send back:** both sheets, by their file names in Downloads, or pasted at full size as the
+parts sheet was.
