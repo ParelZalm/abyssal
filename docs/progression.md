@@ -268,8 +268,9 @@ Roadmap stage 6: shells, keys and items, the shop and the deal room (`run/Pocket
 - **Bomb fish**, Isaac's bombs. A run starts with one; they drop as keys do and the shop sells
   them (5). F releases one where the body is (`Pockets.bomb`, `World.bombs`): it hangs,
   sinking a quarter tile a second onto whatever is under it, and swells for 2.5 s (`FUSE`),
-  blinking red in its last 0.7 s, then bursts over 1.6 tiles. Every hostile in reach takes five
-  of the player's hits and is thrown; the player is thrown too and takes half a heart; pots
+  blinking red in its last 0.7 s, then bursts over 1.6 tiles. Every hostile in reach takes eighteen
+  of the player's hits (`BOMB_MULT`: Isaac's 60, which ends any ordinary enemy and takes a quarter
+  off a boss) and is thrown; the player is thrown too and takes a whole heart, as Isaac does; pots
   break; and a cracked door in reach gives way (`World.blasts` → `TankMap.blast`). Until it
   bursts it is Isaac's bomb to move: the body shoves it once it has swum off it, a shot of the
   player's knocks it on at half the shot's way and breaks on it, a strike knocks it off along the
