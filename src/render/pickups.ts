@@ -1,6 +1,7 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 import type { Pickup, PickupKind } from '../sim/world';
 import { beamTexture, glowTexture } from './textures';
+import { bombCanvas } from './bombfish';
 import type { Light } from './lighting';
 
 /**
@@ -37,19 +38,6 @@ export const SPRITES = {
     '#xxdd###dd#',
     '.####..#dd#',
     '.......####',
-  ],
-  // a bomb fish: a slate puffer, its tail a fan, its one spine standing up like a fuse
-  bomb: [
-    '.......h....',
-    '.......#....',
-    '.....####...',
-    '#...#hhxx#..',
-    '##.#hhxxxx#.',
-    '#x##hxxxx#x#',
-    '#x#xxxxxxxd#',
-    '##.#xxxxxdd#',
-    '#...#ddddd#.',
-    '.....#####..',
   ],
   chest: [
     '.#########.',
@@ -91,17 +79,17 @@ export const SPRITES = {
   ],
 } as const;
 
-export type SpriteName = keyof typeof SPRITES;
+type MapName = keyof typeof SPRITES;
+/** Every pickup's picture: the maps, and the bomb fish, which is drawn (`render/bombfish.ts`). */
+export type SpriteName = MapName | 'bomb';
 
 /** The colours a map is painted in: body, highlight, shade, outline. */
 export interface Palette { x: string; h: string; d: string; o: string }
 
-export const COLOURS: Record<SpriteName, Palette> = {
+export const COLOURS: Record<MapName, Palette> = {
   heart: { x: '#e0344a', h: '#ff9aa4', d: '#8e1c36', o: '#2a0a16' },
   shell: { x: '#e8d4b8', h: '#fff6e6', d: '#b09478', o: '#3a2a20' },
   key: { x: '#e0b048', h: '#fff0a0', d: '#9a6a20', o: '#2e1e08' },
-  // pale, as every pickup is: the slate it was first drawn in was lost against the water
-  bomb: { x: '#9ab8e4', h: '#eef6ff', d: '#56709e', o: '#0e1426' },
   chest: { x: '#9a6a3a', h: '#d8a468', d: '#5a3a1e', o: '#1e1208' },
   pellet: { x: '#c07a3a', h: '#f0b070', d: '#7a4418', o: '#2a1406' },
   airstone: { x: '#8a98a8', h: '#d8e4f0', d: '#4a5868', o: '#141c26' },
@@ -132,6 +120,7 @@ export function paintMap(rows: readonly string[], col: Palette, cell = 1, fill =
 }
 
 export function spriteCanvas(name: SpriteName, cell = 1, fill = 1): HTMLCanvasElement {
+  if (name === 'bomb') return bombCanvas('token', cell);
   return paintMap(SPRITES[name], COLOURS[name], cell, fill);
 }
 

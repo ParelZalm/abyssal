@@ -17,6 +17,7 @@ invariants hold them together, and which mistakes have already been made and und
 | [roadmap.md](roadmap.md) | The tank rework, stage by stage, with where each lands. |
 | [releasing.md](releasing.md) | Branches, the changelog, versions, and cutting a release. |
 | [sprite-prompts-items.md](sprite-prompts-items.md) | The prompts for the mutations' item sprite sheets. |
+| [sprite-prompts-bombfish.md](sprite-prompts-bombfish.md) | The prompts for the bomb fish, the one pickup that is an animal. |
 
 Keep these current when the shape of a system changes. They are for the next person
 reading the code cold; they are not a changelog — that is [`CHANGELOG.md`](../CHANGELOG.md).

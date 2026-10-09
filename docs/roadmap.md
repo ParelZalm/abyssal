@@ -529,9 +529,9 @@ wearing the larva's jaws and lures on a mouth at its bell's front.
 ## ~~Bomb fish and secret rooms~~
 
 Done: Isaac's bombs and secret rooms (*The economy* in `progression.md`). F releases a bomb fish
-where the body is; it hangs, sinking slowly, swells over 1.6 s and bursts over a door's width,
-hitting every hostile in reach for five of the player's hits, the player for half a heart, and
-breaking pots. Until it bursts it moves as Isaac's does: shoved by the body, knocked by a shot
+where the body is; it hangs, sinking slowly, swells over 2.5 s and bursts over a door's width,
+hitting every hostile in reach for eighteen of the player's hits, the player for a whole heart,
+and breaking pots — Isaac's numbers: any ordinary hostile ended, a quarter off a boss. Until it bursts it moves as Isaac's does: shoved by the body, knocked by a shot
 or a strike, slowed by the water. A run starts with one, and they drop as keys do and sell for
 five shells. Every tank has one secret room, in the free cell touching the most rooms but
 never the boss's or the deal's, its doors cracked rock that a bomb fish breaks, with a hoard

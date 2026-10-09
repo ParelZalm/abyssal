@@ -5,9 +5,10 @@ import type { Shot, World } from './world';
 
 /**
  * Seconds a bomb fish swells before it bursts: Isaac's bomb's fuse, long enough to lay one and
- * swim clear, short enough that a hostile on top of it is still there.
+ * swim clear, short enough that a hostile on top of it is still there. 1.6 and 2.2 were too
+ * quick to lay one and then shove or shoot it somewhere.
  */
-export const FUSE = 1.6;
+export const FUSE = 2.5;
 /**
  * The burst's reach, in tiles: a door's width, so one laid in a secret door's alcove breaks it
  * (`TankMap.blast`), and a little over a room's rock knob, so a hostile pressed to a wall is
@@ -15,11 +16,16 @@ export const FUSE = 1.6;
  */
 const BOMB_R = 1.6;
 /**
- * What the burst lands on a hostile, as a share of one of the player's hits: about five shots,
- * which ends most of the nursery's hostiles and half the deep's. A share of the player's own,
- * so it keeps pace with a build as Isaac's fixed sixty does with his flat curve.
+ * What the burst lands on a hostile, as a share of one of the player's hits: Isaac's bomb, which
+ * ends any ordinary enemy where it lands and takes a quarter off a boss (his 60 against
+ * Monstro's 250). Eighteen does that here: a quarter of the giant squid, and every hostile of the
+ * deep but a full-grown gulper. Five, the first number, was a strong shot, not a bomb. A share
+ * of the player's own, so it keeps pace with a build as Isaac's fixed sixty does with his flat
+ * curve.
  */
-const BOMB_MULT = 5;
+const BOMB_MULT = 18;
+/** What the burst costs the player, in half hearts: a whole heart, as Isaac's costs him. */
+const BOMB_HURT = 2;
 /** How hard it throws what it reaches, as a share of each body's own top speed, hardest at the middle. */
 const BOMB_SHOVE = 2.2;
 /** How fast a bomb fish sinks, in tiles a second: it hangs, nearly, and settles on a ledge under it. */
@@ -56,7 +62,7 @@ export interface Bomb { x: number; y: number; vx: number; vy: number; t: number;
  * The bomb fish the player has released. Each hangs where it was let go, sinking slowly onto
  * whatever is under it, and can be moved as Isaac's can: the player's body shoves it, a shot
  * breaks on it and knocks it on, a strike sends it off. It bursts at `FUSE`: every body in reach is hit and thrown, the player
- * included for half a heart, pots break, and the burst is published (`World.blasts`) for the
+ * included for a whole heart, pots break, and the burst is published (`World.blasts`) for the
  * tank to break a secret door's rock with. Gone with the room it was laid in.
  */
 export class Bombs {
@@ -161,10 +167,10 @@ export class Bombs {
       this.throw(c, x, y, r);
       w.hit(p, c, BOMB_MULT, true);
     }
-    // the player is not spared: half a heart, as any blow, and thrown like the rest
+    // the player is not spared: a whole heart, and thrown like the rest
     if (p.alive && surfaceGap(p, x, y) <= r) {
       this.throw(p, x, y, r);
-      const got = p.takeHit(p, 1, 'shot');
+      const got = p.takeHit(p, BOMB_HURT, 'shot');
       if (got) w.bites.push({ x: p.x, y: p.y, amount: got, fatal: p.hp < 1, onPlayer: true, byPlayer: false,
         size: p.genome.size });
     }

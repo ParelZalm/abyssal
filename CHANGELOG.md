@@ -9,13 +9,18 @@ plays and a patch is a fix or a balance pass.
 ## [Unreleased]
 
 - **Bomb fish and secret rooms.** F releases a bomb fish where you are: it hangs, swells and
-  blinks red, and after 1.6 s bursts, hurting every hostile near it badly and you for half a
-  heart, throwing everything in reach and breaking pots. Until then it can be pushed with the
-  body and knocked with a shot or a strike, as Isaac's bombs are. A run starts with one; they
-  drop like keys, come out of chests, and sell in shops for 5 shells, and the HUD counts them
-  beside the shells. Every tank hides one secret room behind cracked rock — a pale seam lit
-  faintly in a wall where a door could be — that only a blast breaks open; inside is a hoard of
-  shells, a bomb fish, key or heart, and sometimes a chest.
+  blinks red, and after 2.5 s bursts, ending any ordinary hostile near it and taking a quarter
+  off a boss, as Isaac's do, and costing you a whole heart if you are in it, throwing everything
+  in reach and breaking pots. Until then it can be pushed with the body and knocked with a shot
+  or a strike, as Isaac's bombs are. A run starts with one; they drop like keys, come out of
+  chests, and sell in shops for 5 shells, and the HUD counts them beside the shells. Every tank
+  hides one secret room behind cracked rock — a pale seam lit faintly in a wall where a door
+  could be — that only a blast breaks open; inside is a hoard of shells, a bomb fish, key or
+  heart, and sometimes a chest.
+
+- **The bomb fish is drawn.** A pale, banded little puffer, the larva's kin, as the token and
+  on the HUD, and lit in three frames, calm, swelling and blown, glowing from inside and
+  blinking red before it goes.
 
 - **The last painted marks are drawn.** The Gill Rakers cut four gill slits behind the eye and stand
   a comb in the open mouth; the Crushing Pharynx hangs a jowl under the head and lines the mouth
