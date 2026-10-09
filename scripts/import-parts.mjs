@@ -6,6 +6,7 @@
  *   node scripts/import-parts.mjs <sheet.png> --body larva --snout 90 --tail 4 --axis 17
  *                                 [--stalk] [--whole joint,snout,axis] [--only eye,tail]
  *                                 [--pick back:60,58;belly:60,78] [--place tail:-3,7]
+ *                                 [--group x0,y0,x1,y1;…] [--add arms:<sheet.png>@x,y]
  *                                 [--key green] [--pitch 8] [--out src/render/creature/sprites]
  *
  * The sheet is the whole animal once, assembled, and each part apart from it at its size on
@@ -50,8 +51,6 @@ const green = opt('key', 'green') === 'green';
 
 // The parts sheet came back on a clean grid at the pitch asked for, unlike the frames sheets
 // `import-sprite.mjs` has to find a drifting grid on; `--pitch` is there for one that does not.
-const { w: W, h: H, px: D } = decodePng(readFileSync(sheet));
-const cw = Math.floor(W / P), ch = Math.floor(H / P);
 const lum = c => c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
 const isBg = c => green
   ? c[1] > 170 && c[1] - Math.max(c[0], c[2]) > 100
@@ -59,38 +58,66 @@ const isBg = c => green
 // bleed: an outline greyed toward the key, as the body sheet's was (`import-sprite.mjs`)
 const bled = c => green ? c[1] > c[0] + 6 && c[1] > c[2] - 4 : c[0] > c[1] + 30 && c[2] > c[1] + 30;
 const median = a => a.sort((x, y) => x - y)[a.length >> 1];
-const cells = [];
-for (let j = 0; j < ch; j++) for (let i = 0; i < cw; i++) {
-  // the middle of the cell, a pixel in from each edge, so the seam's blur does not count; a
-  // sheet at one image pixel to the art pixel, as the redrawn larva's came, has no seam
-  // A pitch need not be whole: the Moray's sheet came back at 9.64 image pixels to the art pixel
-  // (176 cells across 1697), so each cell's bounds are rounded rather than its pitch.
-  const r = [], g = [], b = [], m = P >= 3 ? 1 : 0;
-  const y0 = Math.round(j * P) + m, y1 = Math.round((j + 1) * P) - m;
-  const x0 = Math.round(i * P) + m, x1 = Math.round((i + 1) * P) - m;
-  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
-    const o = (y * W + x) * 4;
-    r.push(D[o]); g.push(D[o + 1]); b.push(D[o + 2]);
+/** A sheet's art pixels, each its cell's median colour or null for the key, bleed cleaned. */
+function cellsOf(file) {
+  const { w: W, h: H, px: D } = decodePng(readFileSync(file));
+  const cw = Math.floor(W / P), ch = Math.floor(H / P);
+  const cells = [];
+  for (let j = 0; j < ch; j++) for (let i = 0; i < cw; i++) {
+    // the middle of the cell, a pixel in from each edge, so the seam's blur does not count; a
+    // sheet at one image pixel to the art pixel, as the redrawn larva's came, has no seam
+    // A pitch need not be whole: the Moray's sheet came back at 9.64 image pixels to the art pixel
+    // (176 cells across 1697), so each cell's bounds are rounded rather than its pitch.
+    const r = [], g = [], b = [], m = P >= 3 ? 1 : 0;
+    const y0 = Math.round(j * P) + m, y1 = Math.round((j + 1) * P) - m;
+    const x0 = Math.round(i * P) + m, x1 = Math.round((i + 1) * P) - m;
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const o = (y * W + x) * 4;
+      r.push(D[o]); g.push(D[o + 1]); b.push(D[o + 2]);
+    }
+    const c = [median(r), median(g), median(b)];
+    cells.push(isBg(c) ? null : c);
   }
-  const c = [median(r), median(g), median(b)];
-  cells.push(isBg(c) ? null : c);
+  // a bled cell takes the clean colour nearest its brightness
+  const clean = cells.filter(c => c && !bled(c));
+  let bleeds = 0;
+  for (let k = 0; k < cells.length; k++) {
+    const c = cells[k];
+    if (!c || !bled(c)) continue;
+    cells[k] = clean.reduce((a, z) => Math.abs(lum(z) - lum(c)) < Math.abs(lum(a) - lum(c)) ? z : a);
+    bleeds++;
+  }
+  return { cw, ch, cells, bleeds };
 }
+const { cw, ch, cells, bleeds } = cellsOf(sheet);
 const at = (i, j) => i < 0 || j < 0 || i >= cw || j >= ch ? null : cells[j * cw + i];
-// a bled cell takes the clean colour nearest its brightness
-const clean = cells.filter(c => c && !bled(c));
-let bleeds = 0;
-for (let k = 0; k < cells.length; k++) {
-  const c = cells[k];
-  if (!c || !bled(c)) continue;
-  cells[k] = clean.reduce((a, z) => Math.abs(lum(z) - lum(c)) < Math.abs(lum(a) - lum(c)) ? z : a);
-  bleeds++;
-}
 
 // ------------------------------------------------------------------ the pieces
 
 /** Connected runs of art pixels, four ways round: the whole and each part. */
 const seen = new Uint8Array(cw * ch);
 const blobs = [];
+/** The piece made of these cells of the sheet, cropped to them. */
+function blobOf(px) {
+  let x0 = cw, y0 = ch, x1 = 0, y1 = 0;
+  for (const q of px) { const i = q % cw, j = (q - i) / cw; x0 = Math.min(x0, i); x1 = Math.max(x1, i); y0 = Math.min(y0, j); y1 = Math.max(y1, j); }
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  const img = new Array(w * h).fill(null);
+  for (const q of px) { const i = q % cw, j = (q - i) / cw; img[(j - y0) * w + i - x0] = cells[q]; }
+  return { x0, y0, w, h, img, n: px.length };
+}
+// `--group x0,y0,x1,y1` makes every art pixel in that box of the sheet one piece, however it
+// joins: the Bloom's tentacles are lines a pixel thick that step a row at a time, corner to
+// corner, so four ways round each fell apart into specks, and nine of them are one part
+for (const box of (opt('group') ?? '').split(';').filter(Boolean)) {
+  const [bx0, by0, bx1, by1] = box.split(',').map(Number);
+  const px = [];
+  for (let j = by0; j <= by1; j++) for (let i = bx0; i <= bx1; i++) {
+    const q = j * cw + i;
+    if (at(i, j) && !seen[q]) { seen[q] = 1; px.push(q); }
+  }
+  if (px.length) blobs.push(blobOf(px));
+}
 for (let k = 0; k < cells.length; k++) {
   if (!cells[k] || seen[k]) continue;
   const px = [];
@@ -107,12 +134,7 @@ for (let k = 0; k < cells.length; k++) {
   }
   // a speck of bleed is not a part
   if (px.length < 12) continue;
-  let x0 = cw, y0 = ch, x1 = 0, y1 = 0;
-  for (const q of px) { const i = q % cw, j = (q - i) / cw; x0 = Math.min(x0, i); x1 = Math.max(x1, i); y0 = Math.min(y0, j); y1 = Math.max(y1, j); }
-  const w = x1 - x0 + 1, h = y1 - y0 + 1;
-  const img = new Array(w * h).fill(null);
-  for (const q of px) { const i = q % cw, j = (q - i) / cw; img[(j - y0) * w + i - x0] = cells[q]; }
-  blobs.push({ x0, y0, w, h, img, n: px.length });
+  blobs.push(blobOf(px));
 }
 blobs.sort((a, b) => b.n - a.n);
 const [whole, ...pieces] = blobs;
@@ -178,6 +200,26 @@ rule('back', l => l.reduce((a, p) => p.dy < a.dy ? p : a));
 rule('pectoral', l => l.reduce((a, p) => p.dx + p.w > a.dx + a.w ? p : a));
 rule('belly', l => l[0]);
 if (left.length) console.warn(`${left.length} piece(s) left over, not written`);
+// `--add arms:<sheet.png>@x,y` takes a part from a sheet of its own, drawn again — the Bloom's
+// oral arms came back as planks — every art pixel on it one piece, at the same pitch and key.
+// Nothing on the whole is its shape, so it is placed by hand: the added sheet's top-left cell
+// goes on cell x, y of this one, where the part it replaces was drawn
+for (const s of (opt('add') ?? '').split(';').filter(Boolean)) {
+  const [, name, file, x, y] = s.match(/^([^:]+):(.+)@(-?[\d.]+),(-?[\d.]+)$/) ?? [];
+  if (!name) throw new Error(`--add ${s}: name:<sheet.png>@x,y`);
+  const add = cellsOf(file);
+  let x0 = add.cw, y0 = add.ch, x1 = -1, y1 = -1;
+  add.cells.forEach((c, q) => {
+    if (!c) return;
+    const i = q % add.cw, j = (q - i) / add.cw;
+    x0 = Math.min(x0, i); x1 = Math.max(x1, i); y0 = Math.min(y0, j); y1 = Math.max(y1, j);
+  });
+  if (x1 < 0) throw new Error(`--add ${name}: nothing on ${file}`);
+  const w = x1 - x0 + 1, h = y1 - y0 + 1, img = [];
+  for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) img.push(add.cells[j * add.cw + i]);
+  named.set(name, { w, h, img, n: img.filter(Boolean).length, score: NaN,
+                    dx: Number(x) + x0 - whole.x0, dy: Number(y) + y0 - whole.y0 });
+}
 
 // ------------------------------------------------------------------ onto the body
 
@@ -187,14 +229,14 @@ if (left.length) console.warn(`${left.length} piece(s) left over, not written`);
 // stalk's (the larva's, a pixel off, is kept as it went in), but a shark's tail sweeps up: its
 // middle row ran over the back, and the dorsal's tip was taken for the snout.
 const tail = named.get('tail');
-if (!tail) throw new Error('no tail found: the whole cannot be laid on the body without its joint');
 // `--whole joint,snout,axis` gives the three by hand, in the whole's own pixels, where they cannot
 // be read: a squid's fins straddle its mantle's point rather than join behind it, and its arms
-// run on past its head, so the snout found was a tentacle's club
+// run on past its head, so the snout found was a tentacle's club; and a jelly has no tail at all
 const given = opt('whole')?.split(',').map(Number);
+if (!tail && !given) throw new Error('no tail found: the whole cannot be laid on the body without its joint (--whole)');
 const joint = given ? given[0] : tail.dx + tail.w - 1;
 const stalk = Array.from({ length: whole.h }, (_, y) => whole.img[y * whole.w + joint + 2] ? y : -1).filter(y => y >= 0);
-const axisW = argv.includes('--stalk') && stalk.length ? (stalk[0] + stalk[stalk.length - 1]) / 2
+const axisW = given ? given[2] : argv.includes('--stalk') && stalk.length ? (stalk[0] + stalk[stalk.length - 1]) / 2
   : tail.dy + (tail.h - 1) / 2;
 const axisAt = given ? given[2] : axisW;
 let snoutW = joint;
@@ -230,7 +272,8 @@ const put = (x, y, c) => {
 };
 for (let y = 0; y < ph; y++) for (let x = 0; x < pw; x++) put(x, y, [7, 23, 49]);
 whole.img.forEach((c, i) => { if (c) put(i % whole.w, Math.floor(i / whole.w), c); });
-const tint = { eye: [255, 80, 80], tail: [80, 200, 255], pectoral: [255, 220, 60], back: [120, 255, 120], belly: [220, 120, 255] };
+const tint = { eye: [255, 80, 80], tail: [80, 200, 255], pectoral: [255, 220, 60], back: [120, 255, 120], belly: [220, 120, 255],
+               tentacles: [80, 200, 255], arms: [220, 120, 255] };
 whole.img.forEach((c, i) => { if (c) put(whole.w + 4 + i % whole.w, Math.floor(i / whole.w), c.map(v => v * 0.35)); });
 for (const [name, p] of named) {
   p.img.forEach((c, i) => {
@@ -242,7 +285,7 @@ const previewPath = join(tmpdir(), `${body}-parts-preview.png`);
 writeFileSync(previewPath, encodePng(pw * S, ph * S, prev));
 
 console.log(`\npitch ${P} · grid ${cw}×${ch} · whole ${whole.w}×${whole.h} · ${named.size} parts${bleeds ? ` · ${bleeds} bled cells cleaned` : ''}`);
-console.log(`whole: joint ${joint}, snout ${snoutW}, axis ${axisAt}; ${k.toFixed(3)} body pixels to its pixel`);
+console.log(`whole: at ${whole.x0},${whole.y0} on the sheet; joint ${joint}, snout ${snoutW}, axis ${axisAt}; ${k.toFixed(3)} body pixels to its pixel`);
 console.log(`wrote ${[...named.keys()].map(n => join(out, fileOf(n))).join(', ')}`);
 console.log(`preview ${previewPath}`);
 console.log(`\ncontent/sprites.ts, on ${body}:\n  parts: { scale: ${k.toFixed(3)}, at: { ${lines.join(', ')} } },`);

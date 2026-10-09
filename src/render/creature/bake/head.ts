@@ -106,7 +106,8 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
     }
   }
 
-  if (sieve > 0) rakers(s, f, sieve, upper, back, lower, peak);
+  // a body with no mouth at its front has no comb to stand in it: the Bloom's sieve is its arms
+  if (sieve > 0 && A.mouth > 0) rakers(s, f, sieve, upper, back, lower, peak);
   if (g.crush > 0) pharynx(s, f, back);
   if (hasSynergy(g, 'morayjaws')) throatJaw(s, nose, back, open);
   if (g.electro > 0) ampullae(s, f, pal, g);

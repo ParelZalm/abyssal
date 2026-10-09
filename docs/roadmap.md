@@ -521,8 +521,9 @@ drawn outline and shaded in the drawn swatches. The back, the belly and the flan
 (`docs/sprite-prompts-player.md`), each part placed at every point its painter paints one and never
 shrunk past half its drawing (`Placed.least`), the coats clipped to the body. Still painted: the
 Gill Rakers', Crushing Pharynx's and Moray Jaws' marks, the Urchin's thorns, the Whale Shark's
-spots and Twin Spout's second sac. Of the five forms the Shark, the Squid, the Moray and the
-Angler are drawn, each with jaws and lures of its own; the Bloom is next.
+spots and Twin Spout's second sac. All five forms are drawn: the Shark, the Squid, the Moray and
+the Angler each with jaws and lures of its own, and the Bloom, a bell whose strike is a pulse;
+its own marks are next.
 
 ## Later
 

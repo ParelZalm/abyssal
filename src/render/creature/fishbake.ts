@@ -24,7 +24,7 @@ import { lerp } from '../../core/util';
 import { BLOOM_TRAIL, hasSynergy, synergiesOf } from '../../sim/organs';
 import { artDensity } from '../pixel';
 import { palette, type Palette, type RGB } from './bake/palette';
-import { bakeSprite, drawnArms, drawnBody, drawnEye, drawnHinge, drawnTip, hasParts, hasSprite, hasWounded, marksOf, type Poses } from './sprite';
+import { bakeSprite, drawnArms, drawnBack, drawnBody, drawnEye, drawnHinge, drawnTip, hasParts, hasSprite, hasWounded, marksOf, type Poses } from './sprite';
 import { BODIES, drawnForm, SPRITES, type MarkName } from '../../content/sprites';
 import { M, shade, Sheet, type Emitter } from './bake/sheet';
 import { flank, whaleSpots, camouflage, crazing, veins, ballast, viscera, mantle, cilia, scales } from './bake/body';
@@ -206,11 +206,12 @@ function paint(g: Genome, plan: Plan): Baked {
   const front = spineAt(0, f) + Math.max(R * 0.4, L ? L.x - spineAt(0, f) + L.r * 3 : 0,
     A.club || hasSynergy(g, 'ballistic') ? ballisticReach(g) + R * 0.2 : 0, widest * 0.5,
     g.pierce > 0 ? R * (NEEDLE + 0.1) : 0);
-  const back = spineAt(1, f) - f.len * R * (f.fluke * 1.5 + g.veil * 0.7 + (bloom ? BLOOM_TRAIL * 1.1 : 0))
-    - (rigged ? 0 : A.armLen * R * (1 + g.segments * 0.1) * 1.8) - R * 0.6;
-  const halfH = Math.ceil(reachUp * res) / res;
   const marks = drawn ? marksOf(drawn) : new Set<string>();
   const poses = drawn && hasParts(drawn) ? posesFor(g, plan, f, A, marks) : {};
+  const back = Math.min(spineAt(1, f) - f.len * R * (f.fluke * 1.5 + g.veil * 0.7 + (bloom ? BLOOM_TRAIL * 1.1 : 0))
+    - (rigged ? 0 : A.armLen * R * (1 + g.segments * 0.1) * 1.8) - R * 0.6,
+    drawn ? drawnBack(drawn, f, poses) - R * 0.2 : Infinity);
+  const halfH = Math.ceil(reachUp * res) / res;
   const eye = drawn && poses.eye ? drawnEye(drawn, f, poses.eye.sx) : null;
   const own = drawn ? { eye, hinge: drawnHinge(drawn, f),
                        tip: (n: MarkName, x0: number, y0: number, x1: number) => drawnTip(drawn, f, n, x0, y0, x1) } : null;
@@ -272,7 +273,7 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, 
   const eye = own?.eye ?? null;
   // --- behind the body ---------------------------------------------------
   const jellyArms = A.arms > 0 && !rigged;
-  if (jellyArms) tentacles(s, f, A, g);
+  if (jellyArms && !poses.tentacles) tentacles(s, f, A, g);
   if (g.veil > 0) veil(s, f, g, seed);
   // a drawn moray's fins are the ribbon already (`posesFor`)
   if (g.eel > 0 && !poses.back) ribbonFin(s, f, seed);
@@ -419,6 +420,11 @@ function posesFor(g: Genome, plan: Plan, f: Form, A: PlanArt, marks: ReadonlySet
     poses.back = poses.belly = { sx: 1, sy: k };
   }
   if (A.fins.length > 0) poses.pectoral = { sx: fan(g) / fan(b), sy: fan(g) / fan(b) };
+  // a jelly's hanging arms, drawn: they trail longer as the painted ones do, with its segments
+  if (A.arms > 0 && A.grasp === 0) {
+    const trail = (x: Genome) => 1 + x.segments * 0.1;
+    poses.tentacles = poses.arms = { sx: trail(g) / trail(b), sy: 1 };
+  }
   // a body with a real dorsal (the Shark's) has it drawn as its back, at the size the ridge was,
   // and its second pair, the pelvics, as its belly, grown as the pectorals are
   if (A.dorsalFin > 0) {

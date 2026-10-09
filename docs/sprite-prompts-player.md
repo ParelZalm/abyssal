@@ -1215,3 +1215,196 @@ larva's, the larva's lower plate wholly outline grey. `--drawn` names a sheet's 
 never bleed; the larva's, the Shark's and the Squid's beaks were imported again with it, and nothing
 else changes (every recorded marks import, run again without it, is byte for byte what the game
 has). The prompt is in the history: `git show 721a3eb:docs/sprite-prompts-player.md`.
+
+---
+
+## The Bloom
+
+- ~~Stage A~~ — done: `docs/media/reference/bloom-form.webp`. Its prompt is in the history:
+  `git show 7cf2303:docs/sprite-prompts-player.md`.
+
+The fifth and last form (`content/forms.ts`): three different Grazer mutations rebuild the larva
+onto the jelly's plan, a drifting bell whose mouth sieves small prey from afar (`filter` +1) and
+whose stinging fringe guards it (`frill` +1). As with every form, **it is still the player**: the
+larva's pale lavender glass, the larva's eye, and the gut showing through. It must not read as
+either of the roster's jellies: the moon jelly (`moonjelly.webp`), a blue bell with four violet
+horseshoes in it, a fringe of many fine rim tentacles and long frilled oral arms; and the sea
+nettle (`nettle.webp`), an amber bell striped red, trailing long red tentacles.
+
+The shape is the plan's (`PLANS.jelly`, `PLAN_ART.jelly`): a bell swimming bell-first, facing
+right, everything else trailing behind it — nine marginal tentacles and three frilled oral arms.
+Nothing on it is a fin. Two things from the other forms do not carry over: **the notochord**, since
+a bell with a spine through it reads as a fish wearing a hat, so what shows through is the gut
+alone; and **the face**, since a jelly's mouth is under the bell among the oral arms. **The eye
+stays**, the larva's own, in the glass of the bell's front: it is the one thing every body the
+player has been shares, and without it the Bloom is a pale moon jelly. The strike — the bell
+squeezed in a hard pulse, since a jelly does not open a jaw — is the bare body's second frame;
+where the bite and the sieve sit are the Bloom's own marks after it, as the Angler's jaws and lures
+were. **The fringe is the arms**: the grant's frill is a mark the game places (`organs.ts`), and on
+the Bloom the marginal tentacles, beaded with stinging cells, are where the sting already is.
+
+### Stage B
+
+The parts sheet first, then the bare body with it attached, as each form went. The "in game" image
+is the target. It came back as asked but for two things: **the tentacles trail about two bell
+lengths**, where one and a quarter was asked, and they are kept — the sheet is the target, and the
+long trail with its knobbed tips is most of what tells it from the moon jelly; and **the "in game"
+image has two oral arms** where its "parts" image and the prompt have three, so three are asked for.
+Kept from it: the dome, the frilled lip of the rim, the big eye at the front, the gut low by the rim,
+the tentacles beaded white and ending in a small knob.
+
+**The sizes**, off the "in game" image at about 4 image pixels to the art pixel, the bell about as
+long as the plan's 1.5 body radii at the Angler's texel density: the bell 52 long from the dome's
+top to the rim's lip and 70 deep at the rim; the rim a frilled lip over its last 9; the eye 18
+across, its middle 16 behind the dome's top and 1 above the midline; the gut 15 long and 12 deep,
+its middle 40 behind the dome's top and 12 below the midline; the oral arms 50 long past the rim and
+about 10 deep each; the tentacles 70 to 100 long past the rim, their roots spread down the rim; the
+whole jelly 152 long and 74 deep. The sheet is 192 × 176: the whole is wider than any form's but
+the Moray's, and its two sets of arms are parts as wide as the bell is tall.
+
+**On green.** **Attach:** `bloom-form.webp`, `angler-form-parts-sprite.png` and
+`moray-parts-sprite.png` (how a form's parts are cut), `larva-parts-sprite.png`, `cave-room.webp`;
+for sheet 2, the parts sheet that came back as well.
+
+#### Sheet 1: the parts
+
+```text
+GOAL
+True pixel-art sprite sheet of the pale jellyfish in the attached reference sheet, for
+a game: the whole jellyfish once, and under it its parts drawn apart. The design and
+colours of the reference's "in game" image — the pale see-through lavender bell, a
+dome deeper than it is long with a frilled rim, the big eye in the front of the bell,
+the gut showing through, the beaded tentacles with knobbed tips and the frilled oral
+arms trailing to the left — redrawn as clean pixel art on a strict grid, in the style
+of the attached angler, moray and larva parts sheets (the same creature as other
+forms).
+
+THE GRID (most important)
+- The sheet is exactly 192 × 176 art pixels.
+- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
+  square block, so the image is 1536 × 1408.
+- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
+  than one block. No dithering noise. Every block is one flat colour.
+- 1-block outline (#79728F) round each silhouette, never thicker. A tentacle is a line
+  1 art pixel thick with no outline of its own.
+
+LAYOUT
+- Top: the WHOLE jellyfish, assembled, as in the reference's "in game" image: the bell's
+  dome facing RIGHT, the rim facing left, everything trailing to the LEFT, level. 152
+  art pixels from the furthest tentacle tip to the dome's top and 74 deep. Centred left
+  to right.
+  - The bell 52 long from the dome's top to the rim's lip and 70 deep at the rim: a
+    DOME, NOT a half-disc with a flat front. Its outline, in art pixels above and below
+    its midline, at each distance behind the dome's top:
+      4 behind: 11 above, 11 below
+      9 behind: 19 above, 19 below
+      13 behind: 24 above, 24 below
+      18 behind: 26 above, 26 below
+      23 behind: 29 above, 29 below
+      28 behind: 30 above, 30 below
+      36 behind: 32 above, 32 below
+      43 behind: 35 above, 35 below (the deepest, where the rim begins)
+    A smooth curve through those points. The rim: a frilled, scalloped lip from 43 to
+    52 behind the dome's top, its scallops 4 or 5 art pixels apart, paler than the bell.
+    A few faint radial canals, 1-pixel lines barely darker than the bell, fanning from
+    the dome's top to the rim. Smooth glass, no spots.
+  - The eye 18 across, its middle 16 art pixels behind the dome's top and 1 above the
+    midline: black pupil, pale-silver ring, one white glint.
+  - The gut: a darker rounded shape (#6A5A8A) 15 long and 12 deep, its middle 40 behind
+    the dome's top and 12 below the midline, seen through the glass.
+  - The oral arms: THREE thick wavy ribbons from the middle of the rim, one on the
+    midline and one 10 above and 10 below it, each about 10 deep, 50 long past the rim,
+    the middle one 4 longer, their edges frilled in small lobes, shaded as their own
+    forms.
+  - The marginal tentacles: NINE, their roots spread evenly down the rim from 32 above
+    the midline to 32 below it, each a 1-pixel line (#9B8DB7) in a slow, loose wave 2 or
+    3 art pixels high, beaded with a near-white dot (#F4F2FF) every 6 art pixels, ending
+    in a small round knob 3 art pixels across. Their lengths past the rim staggered
+    between 70 and 100. They pass over and under the oral arms; none of them touch.
+- Bottom rows: its parts, each on its own with at least 8 art pixels of background on
+  every side between it and anything else, each at EXACTLY the size and shape it has
+  on the whole jellyfish above, not rotated, not enlarged:
+  1. the nine tentacles together, as one part, as they lie on the whole (their root
+     ends cut where they meet the rim);
+  2. the three oral arms together, as one part, as they lie on the whole (their root
+     ends cut where they meet the rim);
+  3. the eye (the black pupil, the pale-silver ring and the white glint).
+- Where a part meets the body, finish its edge with the outline like the rest of it.
+- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
+  anywhere on the animal, and do not let the outline pick up a green tint where it
+  meets the background.
+
+PALETTE
+Use these colours, plus at most 8 in-between shades of them: outline #79728F, deep
+shadow #B8B0D8, bell #E8E4F8, bell highlight #F4F2FF, arm #D6D0ED, tentacle #9B8DB7,
+gut #6A5A8A, eye ring #CDD3E3, pupil #080B16. Light comes from above and slightly in
+front: lit top of the dome, darker underside; the oral arms and the rim paler and more
+see-through than the bell.
+
+LIGHTS
+The eye's glint is a flat white block. NO glow halo, bloom or light spill, on the
+animal or on the background. The game adds the glow itself.
+
+AVOID
+Labels, leader lines, dotted outlines, parts that differ from the whole jellyfish in
+size or shape, a half-disc bell with a flat front, a pointed dome, two oral arms, more
+or fewer than nine tentacles, tentacles thicker than 1 pixel, tentacles that touch or
+tangle, a curtain of fine hairs, a bell drawn apart, blue, amber, orange or red, stripes,
+gonads or horseshoe shapes, a spine or notochord, a mouth or face, fins, a tail, lights,
+any background other than flat #00FF00, soft glows, painterly texture, noise, sub-pixel
+detail, text, borders, shadows, a second animal.
+```
+
+The sheet came back (`bloom-form-parts-sprite.png`) on the grid asked for, 1536 × 1408 with every
+block flat and 16 colours, and kept but for its oral arms. The bell is a dome 54 long from its top to
+the rim's lip and 71 deep, the eye 17 across with its middle 13 behind the dome's top on the midline,
+the gut 13 by 10 (drawn in the tentacles' #9B8DB7, not the gut's violet) with its middle 36 behind
+the dome's top and 11 below the midline. The nine tentacles are as asked, 1-pixel lines beaded every
+6, their knobs drawn as small crosses. The oral arms are not: three flat-topped slabs with straight
+lower edges and a few lumps, stacked edge to edge, which read as planks, not frilled ribbons; their
+roots sit 6 above, 6 below and 17 below the midline, round the gut. A speckle runs through the bell
+and the arms, against "no dithering", which the bake's third averages out.
+
+#### ~~Sheet 1b: the oral arms, drawn again~~ — done
+
+`docs/media/reference/bloom-form-arms-sprite.png`: three frilled ribbons on the grid asked for, 512 ×
+352 with every block flat and 5 colours, 45, 52 and 44 long, their roots in one column at the right
+and centred 10, 22 and 33 from the top. Mostly the highlight, with the arm colour and the shadow at
+their frilled edges. The parts sheet's arms were three flat-topped slabs; these are laid into the
+bake by their roots, which sit as the parts sheet's did, round the gut. The prompt is in the history:
+`git show 98581df:docs/sprite-prompts-player.md`.
+
+#### ~~Sheet 2: the bare body~~ — done
+
+`docs/media/reference/bloom-form-sprite.png`, the bell at rest and in its pulse, on the grid asked
+for, 1152 × 672 with every block flat and 10 colours: 52 × 70 at rest and 58 × 55 in the pulse, the
+dome's top in the same column in both and the gut where asked. Its top runs straighter than the
+parts sheet's round dome, nearer a shield, within a couple of pixels of it. The prompt is in the
+history: `git show 98581df:docs/sprite-prompts-player.md`.
+
+**In** (`BODIES.jelly`, the body `bloom`): the bare bell, and the eye and the tentacles off
+`bloom-form-parts-sprite.png`, the oral arms off `bloom-form-arms-sprite.png`.
+
+```bash
+npm run sprite -- docs/media/reference/bloom-form-sprite.png --id bloom --key green --fringe --pitch 8 --pulse
+node scripts/import-parts.mjs docs/media/reference/bloom-form-parts-sprite.png --body bloom --snout 62 --tail 10 --axis 36 --group "0,0,191,84;0,88,122,175" --whole 96,148,35 --pick "tentacles:60,130" --add "arms:docs/media/reference/bloom-form-arms-sprite.png@55,24" --only eye,tentacles,arms
+```
+
+As it went: a strike is lined up on the rest by its back half, which a jaw leaves alone and a
+pulse moves most, so the squeezed bell came out four cells high with its dome cut off; `--pulse`
+lines it up by its front and its middle, takes it whole and pads the frame for it. The tentacles
+are lines a pixel thick that step corner to corner, which the parts import, joining four ways
+round, broke into specks, so `--group` makes each box of the sheet one piece; the oral arms came
+from a sheet of their own, which `--add` places by hand where the planks were. A jelly has no
+tail to lay the whole by, so the landmarks are given (`--whole`): the rim, the dome's top, the
+bell's middle, at one body pixel to the sheet's. The parts are new ones, `tentacles` and `arms`,
+laid behind the bell, the arms over the tentacles, both trailing longer with the segments as the
+painted ones did; the tentacles are kept wherever a line crosses a texel and not ringed
+(`THIN`), since under the usual third they fell away at play size and left their knobs
+floating. Its eye is 16 across, so the larva's eye marks are drawn at 0.8; the frill's drawn
+tentacles are off it (`markSize` 0), its own being the fringe; no rakers are painted on its front
+(`art.mouth` 0); and the spit sac sits low ahead of the gut, as on the Angler, not under the eye
+like a tear. Its own marks, where the bite and the sieve and a lure sit on a bell, are next.
+
+**What to send back:** both sheets, by their file names in Downloads, or pasted at full size as the
+parts sheet was.

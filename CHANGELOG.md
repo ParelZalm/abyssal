@@ -39,6 +39,14 @@ plays and a patch is a fix or a balance pass.
   brow at its own reach. Its eye looks ahead of it, and the hatchling's spit sac sits low by its
   gut rather than under its eye like a tear. Before, it was painted as the deep's anglerfish: dark,
   scaled, a comb of spines and a lamp of an eye.
+- **The Bloom is drawn.** Becoming a Bloom makes the larva a drawn jellyfish of the same pale glass:
+  a dome of a bell with the larva's eye in its front and its gut showing through, trailing nine
+  fine tentacles beaded with stinging cells and three frilled oral arms, and it strikes by
+  squeezing its bell in a hard pulse rather than opening a jaw. It wears the larva's drawn
+  mutations; its tentacles are its stinging fringe, so no second fringe hangs under it, and no
+  comb of rakers is painted on its front, since its sieve is its arms. Its tentacles trail
+  longer with its segments, and they hold together as lines at every size rather than breaking
+  into specks. Before, it was painted: a grey bell with a mouth at its front.
 - **The Angler's glow dazes.** A hostile that comes too close to the Angler, into its glow, is dazed
   for 4.5 s: greyed out, stars circling over its head, and at 0.4 of its pace — its swim, its
   charge and the shots it fires, which still reach as far. It comes round

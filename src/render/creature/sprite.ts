@@ -94,6 +94,11 @@ import anglerFormBack from './sprites/angler-back.png';
 import anglerFormBelly from './sprites/angler-belly.png';
 import anglerFormPectoral from './sprites/angler-pectoral.png';
 import anglerFormEye from './sprites/angler-eye.png';
+import bloomRest from './sprites/bloom.png';
+import bloomStrike from './sprites/bloom-strike.png';
+import bloomTentacles from './sprites/bloom-tentacles.png';
+import bloomArms from './sprites/bloom-arms.png';
+import bloomEye from './sprites/bloom-eye.png';
 
 /** Every sprite file, by its path: the marks are looked up here by name (`marksFrom`). */
 const FILES = import.meta.glob<string>('./sprites/*.png', { eager: true, import: 'default' });
@@ -148,6 +153,9 @@ const SOURCES: Record<string, Sources> = {
             parts: { tail: anglerFormTail, back: anglerFormBack, belly: anglerFormBelly, pectoral: anglerFormPectoral,
                      eye: anglerFormEye },
             marks: { ...marksFrom(SPRITES.angler.marksFrom ?? 'angler'), ...marksFrom('angler') } },
+  bloom: { rest: bloomRest, strike: bloomStrike,
+           parts: { tentacles: bloomTentacles, arms: bloomArms, eye: bloomEye },
+           marks: { ...marksFrom(SPRITES.bloom.marksFrom ?? 'bloom'), ...marksFrom('bloom') } },
 };
 
 /** A frame shut and open, and the colours both may snap to. */
@@ -236,7 +244,7 @@ function darkest(palette: number[][]) {
  * lies on the body, which has its own.
  */
 function resample(d: ImageData, palette: number[][], k: number, w: number, h: number, oy: number, ox = 0,
-                  ky = k, ring = true) {
+                  ky = k, ring = true, thin = false) {
   const cv = document.createElement('canvas');
   cv.width = w; cv.height = h;
   const ctx = cv.getContext('2d')!;
@@ -257,7 +265,10 @@ function resample(d: ImageData, palette: number[][], k: number, w: number, h: nu
         r += d.data[i] * cov; g += d.data[i + 1] * cov; b += d.data[i + 2] * cov; a += cov;
       }
     }
-    if (a < step * stepY * 0.34) continue;
+    // a third of the texel, or for a picture of lines a pixel thick (`THIN`) a line across it:
+    // a line covers 1 / step of each texel it crosses, and the Bloom's tentacles, at 3.5 pixels
+    // to the texel, fell under the third and left only their knobs, floating
+    if (a < (thin ? Math.min(step, stepY) * 0.5 : step * stepY * 0.34)) continue;
     let best = palette[0], bd = Infinity;
     for (const c of palette) {
       // weighted toward green, as the eye is: blues this dark otherwise snap by their red
@@ -363,14 +374,20 @@ function armRig(a: Arm, m: { root: number; tip: number; axis: number; reach: num
  */
 export type Poses = Partial<Record<PartName, { sx: number; sy: number; as?: string }>>;
 
-/** Behind the body, then over it, each in this order. */
-const UNDER: PartName[] = ['tail', 'back', 'belly'];
+/** Behind the body, then over it, each in this order: a jelly's oral arms hang over its tentacles. */
+const UNDER: PartName[] = ['tentacles', 'arms', 'tail', 'back', 'belly'];
+/**
+ * Parts drawn as lines a pixel thick, with no outline of their own: kept wherever a line crosses
+ * a texel, and not ringed, since a ring round every tentacle drew each as a dark band.
+ */
+const THIN: PartName[] = ['tentacles'];
 const OVER: PartName[] = ['pectoral', 'eye'];
 /**
  * Where a part is stretched from, as a share of its picture across and down: the edge it leaves
  * the body by, so a bigger fin still joins where it did and an eye grows about its middle.
  */
-const ANCHOR: Record<PartName, Pt> = { tail: [1, 0.5], back: [0.5, 1], belly: [0.5, 0], pectoral: [0, 0.5], eye: [0.5, 0.5] };
+const ANCHOR: Record<PartName, Pt> = { tail: [1, 0.5], back: [0.5, 1], belly: [0.5, 0], pectoral: [0, 0.5], eye: [0.5, 0.5],
+                                       tentacles: [1, 0.5], arms: [1, 0.5] };
 
 /** Whether body `id` has its parts drawn (`SpriteArt.parts`). */
 export const hasParts = (id: string) => !!framesOf(id)?.parts && !!SPRITES[id]?.parts;
@@ -396,9 +413,9 @@ export function drawnBody(id: string, f: Form, back: number, halfH: number, res:
   const ctx = cv.getContext('2d')!;
   // a picture drawn at the parts' scale, its pixel (`ax`, `ay`) on texel (`tx`, `ty`), stretched
   const lay = (a: Arm, ax: number, ay: number, tx: number, ty: number, sx: number, sy: number, ring: boolean,
-               to = ctx) => {
+               to = ctx, thin = false) => {
     const kx = k * sc * sx, ky = k * sc * sy;
-    to.drawImage(resample(a.image, a.palette, kx, w, h, ty / ky - ay, ax - tx / kx, ky, ring), 0, 0);
+    to.drawImage(resample(a.image, a.palette, kx, w, h, ty / ky - ay, ax - tx / kx, ky, ring && !thin, thin), 0, 0);
   };
   const part = (name: PartName, ring: boolean) => {
     const p = fr.parts?.[name], at = s.parts?.at[name], fit = s.parts?.size?.[name] ?? 1, pose = poses[name];
@@ -409,7 +426,7 @@ export function drawnBody(id: string, f: Form, back: number, halfH: number, res:
     const swap = pose.as ? fr.marks?.[pose.as] : undefined, its = pose.as ? s.marks?.[pose.as as MarkName] : undefined;
     const z = pose.as ? s.markSize?.[pose.as as MarkName] ?? 1 : 1;
     if (swap && its) lay(swap, its.at[0], its.at[1], tx, ty, pose.sx * fit * z, pose.sy * fit * z, ring);
-    else lay(p, ax, ay, tx, ty, pose.sx * fit, pose.sy * fit, ring);
+    else lay(p, ax, ay, tx, ty, pose.sx * fit, pose.sy * fit, ring, ctx, THIN.includes(name));
   };
   const mark = (m: Placed, to = ctx) => {
     const name = open && fr.marks?.[`${m.name}-open`] ? `${m.name}-open` : m.name;
@@ -444,6 +461,24 @@ export function drawnBody(id: string, f: Form, back: number, halfH: number, res:
   for (const name of OVER) part(name, false);
   layer('over');
   return ctx.getImageData(0, 0, w, h);
+}
+
+/**
+ * How far behind the body, in R units, body `id`'s parts reach at `poses`: the sheet is sized for
+ * what the painters draw, and the Bloom's drawn tentacles trail nearly twice its bell's length,
+ * past the painted ones it was sized for.
+ */
+export function drawnBack(id: string, f: Form, poses: Poses) {
+  const s = SPRITES[id], fr = framesOf(id);
+  let back = Infinity;
+  for (const name of Object.keys(poses) as PartName[]) {
+    const at = s.parts?.at[name], p = fr?.parts?.[name], pose = poses[name];
+    if (!at || !p || !pose || !s.parts) continue;
+    const w = p.image.width * s.parts.scale * pose.sx * (s.parts.size?.[name] ?? 1);
+    const root = at[0] + ANCHOR[name][0] * p.image.width * s.parts.scale;
+    back = Math.min(back, spritePoint(s, f, [root - ANCHOR[name][0] * w, s.axis]).x);
+  }
+  return back;
 }
 
 /** Body `id`'s drawn eye on form `f` stretched by `sx`, for what is painted round it (`head`). */
