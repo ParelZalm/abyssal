@@ -1408,3 +1408,111 @@ like a tear. Its own marks, where the bite and the sieve and a lure sit on a bel
 
 **What to send back:** both sheets, by their file names in Downloads, or pasted at full size as the
 parts sheet was.
+
+### The Bloom's jaws and lures
+
+What the larva's marks cannot lend it. **Its jaws, decided October 2026: a mouth at the front.** A
+jelly's mouth is among its arms, at the back, where a bite never lands; the Bloom bites with its
+bell's front, so a jaw mutation grows a small mouth there, low on the dome under the eye, and each
+card's look is that mouth armed. The bare bell has none: without a jaw mutation the Bloom is the
+bell alone. The hinge is inside the glass 14 behind the dome's top and 14 below the axis (`hinge`
+[48, 50] on its 64 × 73 picture, the dome's top at 62), and the lower jaw runs level forward from
+it to the bell's front edge and 2 past it. Its lures root on the top of the dome, above and behind
+the eye, and arch forward over the bell to hang ahead of it. Everything is the Angler's scaled to
+the bell, 52 long to the Angler's 80: a jaw 13 long where the Angler's is 20. 10 parts, `«C»` 4,
+`«N»` 3, `«W»` × `«H»` 48 × 40, so the sheet is 192 × 120 art pixels; the last two cells are empty.
+The sizes are said twice, as for the Angler. On green.
+
+Attach `bloom-form-sprite.png` and `bloom-form-parts-sprite.png` (the bell, and the whole jelly),
+`angler-form-head-sprite.png` and `moray-head-sprite.png` (how a form's jaws and lures are cut), and
+`items-sheet-1-current.png`, `items-sheet-3-current.png`, `items-sheet-5-current.png`.
+
+```text
+GOAL
+True pixel-art sprite sheet of body parts for the pale jellyfish in the attached
+sheets, for a game: each part a separate piece that the game lays onto the jellyfish's
+bell. Same style, same outline, same light and the same scale as the jellyfish and its
+parts in the attached sheets: these are added to that jellyfish. A grid of cells, one
+part per cell, in the order listed.
+
+THE GRID (most important)
+- 4 columns and 3 rows of cells, each exactly 48 × 40 art pixels, so the sheet is
+  192 × 120 art pixels. No gaps between cells and no lines drawn between them.
+- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
+  square block, so the image is 1536 × 960.
+- No anti-aliasing, no blur, no soft edges, no gradients and no colour change smaller
+  than one block. No dithering noise. Every block is one flat colour.
+- 1-block outline (#79728F) round each part, never thicker, as on the jellyfish.
+
+EACH PART
+- Side view, facing RIGHT like the jellyfish: forward is right, up is up.
+- Drawn at the jellyfish's scale: its bell is 52 art pixels long and 70 deep, its eye
+  16 across. The parts are SMALL against their cells: a jaw is about 13 art pixels
+  long in a cell 48 wide.
+- Where a part joins the bell, its edge is cut clean and outlined like the rest of it.
+- Thin parts (stalks) are at least 3 art pixels thick.
+- Background: flat pure green #00FF00, one colour, in every cell. Do not use green on
+  any part, and do not let an outline pick up a green tint.
+
+MOSTLY FILL, LITTLE OUTLINE (most important)
+The game shows these at about half size. A part that is mostly outline turns into a grey
+smudge there. Each part must be a SOLID shape of its own colours, at least 3 art pixels
+of fill across at its thickest, with the outline only round its edge. No stalks or
+fingers thinner than 3 art pixels including their outline, no single-pixel lines inside
+a part, no gaps or holes except where the item says.
+
+PALETTE
+The jellyfish's colours where a part is its own flesh: outline #79728F, deep shadow
+#B8B0D8, bell #E8E4F8, bell highlight #F4F2FF, rim #D6D0ED, gut #6A5A8A. Each item's
+own colours where it says, plus at most 8 in-between shades. Light from above and
+slightly in front: lit top, darker below.
+
+LIGHTS
+Lit things (a lure's bulb) are flat bright pixels. NO glow halo, bloom or light spill,
+on the part or on the background. The game adds the glow itself.
+
+PARTS (left to right, top to bottom)
+The jaws give the attached pale jellyfish a small mouth on the FRONT of its bell, low
+on the dome under its eye: the hinge is the back corner of the mouth, inside the bell,
+and the lower jaw runs LEVEL forward from it to the bell's front edge and a little past
+it. Each jaw's hinge is at the cell's left margin, at mid-height, cut flat: the game
+puts it on the hinge. The jaw runs to the right from there.
+1. Hinged Jaw, shut — a small lower jaw as a piece: 13 art pixels long, level, 4 deep
+   at the hinge and 3 at its tip, its tip rounded, pale like the bell (#E8E4F8, shade
+   #B8B0D8), a row of small ivory teeth (#f4ecd8), each 2 tall, along its top edge,
+   leaning back into the mouth.
+2. Hinged Jaw, open — the same jaw swung down 30° about its hinge, and above it the dark
+   gape of the open mouth (#2a1e3a) as a wedge from the hinge forward, 7 tall at the
+   front, a row of small ivory teeth along the upper edge of the gape too.
+3. Lunging Bite, shut — the same jaw with three long ivory needle fangs (#f4ecd8), each
+   2 wide and 4 tall, standing up from it and curving back into the mouth.
+4. Lunging Bite, open — that jaw swung down 30° as in 2, with the gape, the needle fangs
+   pointing up into it, curved back, and two more hanging from the upper edge.
+5. Serrated Teeth, shut — the same jaw with a saw edge: close-set ivory triangle teeth
+   along its whole top, each 2 wide and 2 tall.
+6. Serrated Teeth, open — that jaw swung down 30° as in 2, with the gape, saw teeth
+   along both the jaw and the upper edge of the gape.
+7. Parrot Beak, shut — a parrotfish's fused beak as the jellyfish's mouth: a slate-blue
+   upper plate (#5a6a8a) over a teal lower one (#3a8a8a), a pale cutting edge where they
+   meet, 12 long and 6 deep, its point at the right, level.
+8. Parrot Beak, open — the same beak with the lower plate swung down 30° about its back
+   edge, the dark gape (#2a1e3a) between the plates.
+9. Illicium — a lure sized for the jellyfish: a thin dark stalk (#3a3550), 3 thick,
+   rising from its root at the cell's bottom-left, arching up 18 and forward, its end 25
+   to the right of the root, and a glowing cyan bulb (#3fd8ff, white-cyan centre
+   #e8ffff) 8 across hanging from the end, its middle 6 above the root's level.
+10. Deep Lantern — the same lure longer: rising 24 and reaching 31 forward, its bulb 10
+    across, its middle 8 above the root's level. Root again at the bottom-left.
+11, 12. Empty: flat green.
+
+AVOID
+The jellyfish itself or any part of its bell, tentacles or arms, jaws longer than 13
+art pixels or filling their cells, slanted jaws in the shut parts, a face, lips or a
+nose, labels, text, numbers, cell borders, any background other than flat #00FF00,
+soft glows, painterly texture, noise, sub-pixel detail, shadows.
+```
+
+**When it lands:** imported as the Angler's head sheet was, with `--body bloom` (and `--pitch`,
+`--fit` if it comes back off the 8× grid, `--drawn 3a8a8a` for the beak's teal), the jaws `:left`
+and the lures `:bottomleft`; the Bloom gets its `hinge`, and its own marks come before the larva's
+it wears.
