@@ -273,9 +273,10 @@ The coats (crazing, mottling, mantle rings) need a layer the bake does not have 
 the body and clipped to it (`drawnBody`); the lights (photophores, coals, vent glands, the
 galvanic spark) keep the painter's `s.light`, so the bloom stays where the drawn lens is.
 
-Three marks need no art of their own: Twin Spout's second sac is the Archer Spit's sac drawn
-again behind the first, Flash Sense's flank row is the photophore placed higher, and the
-Electric Eel's organ is the electric field placed again back to the tail.
+Three marks need no art of their own: Twin Spout's second sac is painted (the Archer Spit's sac
+it was to be drawn from is off every body, `decisions.md`), Flash Sense's flank row is the
+photophore placed higher, and the Electric Eel's organ is the electric field placed again back
+to the tail.
 
 **Still painted after these:** the Gill Rakers' comb and slits, the Crushing Pharynx's jowl and
 the Moray Jaws' second jaw, which are the head's, missed by its sheet; the Urchin's thorns,
@@ -1403,11 +1404,7 @@ painted ones did; the tentacles are kept wherever a line crosses a texel and not
 (`THIN`), since under the usual third they fell away at play size and left their knobs
 floating. Its eye is 16 across, so the larva's eye marks are drawn at 0.8; the frill's drawn
 tentacles are off it (`markSize` 0), its own being the fringe; no rakers are painted on its front
-(`art.mouth` 0); and the spit sac sits low ahead of the gut, as on the Angler, not under the eye
-like a tear. Its own marks, where the bite and the sieve and a lure sit on a bell, are next.
-
-**What to send back:** both sheets, by their file names in Downloads, or pasted at full size as the
-parts sheet was.
+(`art.mouth` 0).
 
 ### ~~The Bloom's jaws and lures~~ — the larva's
 

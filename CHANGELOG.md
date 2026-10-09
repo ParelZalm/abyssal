@@ -36,8 +36,7 @@ plays and a patch is a fix or a balance pass.
   glass, a deep egg of a body under its lure, its fins, its fan of a tail and its eye drawn apart,
   its mouth a long upturned seam that opens wide to bite, and it wears the larva's drawn mutations,
   with jaws and lures drawn for it: its jaws along that upturned mouth, its lure arching from its
-  brow at its own reach. Its eye looks ahead of it, and the hatchling's spit sac sits low by its
-  gut rather than under its eye like a tear. Before, it was painted as the deep's anglerfish: dark,
+  brow at its own reach. Its eye looks ahead of it. Before, it was painted as the deep's anglerfish: dark,
   scaled, a comb of spines and a lamp of an eye.
 - **The Bloom is drawn.** Becoming a Bloom makes the larva a drawn jellyfish of the same pale glass:
   a dome of a bell with the larva's eye in its front and its gut showing through, trailing nine
@@ -51,6 +50,9 @@ plays and a patch is a fix or a balance pass.
   front of its bell under the eye, armed in the card's look — the Hinged Jaw, the fangs, the saw or
   the Parrot Beak — opening on the strike; before, jaws showed nothing on it. Its lures root on the
   top of its dome and arch forward over it.
+- **No more spit sac.** The blue drop of water every body wore for the hatchling's spit is gone
+  from the larva and every form: wherever it sat it read as a tear or a stain. Twin Spout still
+  shows its second sac.
 - **The Angler's glow dazes.** A hostile that comes too close to the Angler, into its glow, is dazed
   for 4.5 s: greyed out, stars circling over its head, and at 0.4 of its pace — its swim, its
   charge and the shots it fires, which still reach as far. It comes round

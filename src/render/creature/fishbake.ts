@@ -32,7 +32,7 @@ import { caudalFin, fluke, mantleFins, dorsalRidge, medianFins, fins, ribbonFin,
          tentacles } from './bake/fins';
 import { bluntSnout, head, lureAt, lure, barbels, type DrawnHead } from './bake/head';
 import { spines, organs, ballisticReach, urchinReach, urchinSpines, electroplates, prickles,
-         inkSac, spitSac, stoneWarts, volleyQuills, armourBands } from './bake/organs';
+         inkSac, stoneWarts, volleyQuills, armourBands } from './bake/organs';
 import { photophores, flankLights, embers } from './bake/lights';
 import { broodPouch, broodThroat, cavityBladder, galvanicLine, halo, nares, NEEDLE, needleBill, parietalEye, rime,
   twinSac,
@@ -114,7 +114,7 @@ function key(g: Genome, plan: Plan) {
           Math.min(3, g.coral), Math.min(3, g.frill), g.jet > 0 ? 1 : 0,
           g.venom > 0 ? 1 : 0, Math.min(2, g.filter), g.crush > 0 ? 1 : 0,
           g.eel > 0 ? 1 : 0, g.mantle > 0 ? 1 : 0, g.lurk > 0 ? 1 : 0, g.smoke > 0 ? 1 : 0,
-          g.spit > 0 ? 1 : 0, g.volley > 0 ? 1 : 0, g.brooder > 0 ? 1 : 0,
+          g.volley > 0 ? 1 : 0, g.brooder > 0 ? 1 : 0,
           g.parietal > 0 ? 1 : 0, g.twin > 0 ? 1 : 0, g.foureye > 0 ? 1 : 0,
           g.blast > 0 ? 1 : 0, g.scald > 0 ? 1 : 0, Math.min(2, g.halo), g.arc > 0 ? 1 : 0,
           g.pierce > 0 ? 1 : 0, g.seek > 0 ? 1 : 0, g.brood > 0 ? 1 : 0, g.frost > 0 ? 1 : 0,
@@ -309,7 +309,6 @@ function draw(s: Sheet, { g, f, A, pal, men, seed, smoke, bloom, rigged, drawn, 
   if (hasSynergy(g, 'stonefish')) stoneWarts(s, f, seed);
   if (g.discharge > 0) electroplates(s, f, g);
   if (g.ink > 0) inkSac(s, f);
-  if (g.spit > 0) spitSac(s, f, eye);
   if (g.twin > 0) twinSac(s, f);
   if (g.seek > 0) nares(s, f, eye);
   if (g.arc > 0) galvanicLine(s, f);

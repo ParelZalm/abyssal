@@ -30,7 +30,7 @@ export type PartName = 'tail' | 'back' | 'belly' | 'pectoral' | 'eye' | 'tentacl
  * with the mouth open, shown with the body's strike frame.
  */
 export type MarkName =
-  | 'tapetum' | 'foureye' | 'parietal' | 'halo' | 'nares' | 'ampullae' | 'spit' | 'brood' | 'barbels'
+  | 'tapetum' | 'foureye' | 'parietal' | 'halo' | 'nares' | 'ampullae' | 'brood' | 'barbels'
   | 'needle' | 'illicium' | 'lantern' | 'jaw' | 'jaw-open' | 'fangs' | 'fangs-open' | 'saw' | 'saw-open'
   | 'beak' | 'beak-open' | 'fork' | 'fork2' | 'siphon' | 'smoke' | 'bloom'
   | 'spine' | 'quill' | 'rime' | 'coral' | 'coral2' | 'prickle' | 'porcupine' | 'wart'
@@ -170,7 +170,7 @@ export interface SpriteArt {
 
 /** The larva's drawn marks (`SpriteArt.marks`), which the forms wear too (`marksFrom`). */
 const LARVA_MARKS: SpriteArt['marks'] = { tapetum: { at: [10, 10] }, foureye: { at: [13, 23] }, parietal: { at: [5, 5] }, halo: { at: [13, 4] },
-  nares: { at: [7, 4] }, ampullae: { at: [8, 5] }, spit: { at: [5, 5] }, brood: { at: [12, 0] },
+  nares: { at: [7, 4] }, ampullae: { at: [8, 5] }, brood: { at: [12, 0] },
   barbels: { at: [20, 0] }, needle: { at: [0, 4.5] },
   illicium: { at: [2, 25], tip: [26, 9.3] }, lantern: { at: [2, 33], tip: [26.3, 10.9] },
   jaw: { at: [0, 4] }, 'jaw-open': { at: [0, 5] }, fangs: { at: [0, 8] }, 'fangs-open': { at: [0, 5] },
@@ -480,9 +480,6 @@ export const SPRITES: Record<string, SpriteArt> = {
                      illicium: { at: [1.5, 35], tip: [38.7, 25.8] }, lantern: { at: [1.5, 45], tip: [48.0, 33.7] } },
             // the larva's eye is 20 across and the Angler's 13
             markSize: { tapetum: 0.65, foureye: 0.65 },
-            // the Archer Spit's sac low beside the gut, an organ inside the glass: off the eye, under
-            // its round high eye it hung like a tear, and alone on the flank it read as a second eye
-            place: { spit: [0.62, 0.3] },
             art: { maw: false, crest: false, scales: false, eyeLamp: false, sparkle: false, fan: false,
                    finHue: 0, paleEyes: false },
             parts: { scale: 1.027, at: { eye: [58.4, 7.1], tail: [-16.5, 10.2], back: [12.2, -3.2], pectoral: [46.1, 26.6],
@@ -512,9 +509,6 @@ export const SPRITES: Record<string, SpriteArt> = {
                        'fangs-open': 0.72, saw: 0.72, 'saw-open': 0.72, beak: 0.72, 'beak-open': 0.72 },
            // no mouth at its front, so nothing is painted there: its sieve is its arms
            art: { mouth: 0 },
-           // the Archer Spit's sac low in the bell ahead of the gut, as on the Angler: under the eye
-           // it hung like a tear
-           place: { spit: [0.52, 0.4] },
            parts: { scale: 1, at: { tentacles: [-86, 1], eye: [41, 27], arms: [-43, 25] } },
            ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
            hull: [[60.5, 37, 10.2], [54.5, 36, 17], [48.5, 36.5, 21.7], [42.5, 36.5, 24.2], [36.5, 37, 26.3],

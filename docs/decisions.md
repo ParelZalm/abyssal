@@ -117,6 +117,12 @@ from where it sits. What the move to play found, beyond the board:
 - Extracting a `FishView` to a texture without hiding its `halo`/`aura` sprites: both
   are wide soft discs, they swamp the extracted bounds, and every plan comes back as the
   same round blob.
+- The Archer Spit's water sac on the body (October 2026). Every player hatches with the spit, so
+  every body wore a blue drop: on the larva it sat in the eye as a tear, hung under the drawn eyes
+  it was still a tear, moved low by the gut (the Angler, the Bloom) it read as a second eye or a
+  stain, and on no form did it look like an organ. Removed from every body, painted and drawn; the
+  shot itself is the spit's consequence. Twin Spout's second sac is still painted, as the one look
+  that mutation has.
 
 ## Side-on pixel art replaced the top-down smooth bake (September 2026)
 

@@ -310,10 +310,10 @@ A shot flies 9 tiles a second — faster than any hostile's, and faster again wi
 Jet, which lunges a bite harder — for 10 tiles, a third of a room (`SHOT_SPEED`, `SHOT_RANGE` in
 `PlayerController`), and lands as a blow (`Combat.hit`), never a swallow, so what it kills is
 left as a carcass for the mouth. The strike's kick still opens its window, so the organs that
-answer a strike answer a shot. The body paints it: a water sac under the jaw for the spit, a
-rack of loose quills for the volley (`bake/organs.ts`), a wider jaw for the bite. The cards
-say *damage* where they once said *bite*: every hit the body lands is `biteDamage` times its
-primary's share.
+answer a strike answer a shot. The body paints it: a rack of loose quills for the volley
+(`bake/organs.ts`), a wider jaw for the bite; the spit is the shot alone, its water sac taken off
+every body (`decisions.md`). The cards say *damage* where they once said *bite*: every hit the
+body lands is `biteDamage` times its primary's share.
 
 ## Shot organs
 
