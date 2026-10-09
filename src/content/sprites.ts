@@ -499,11 +499,17 @@ export const SPRITES: Record<string, SpriteArt> = {
   // the sheet they were drawn again on, where the parts sheet drew planks. The snout is the dome's
   // top and the tail the rim. No mouth and no jaw: a jelly's mouth is among its arms, and its
   // strike is the pulse
-  bloom: { w: 64, h: 73, snout: 63, tail: 10, axis: 36, marksFrom: 'larva',
+  // Its jaws are the larva's, decided October 2026: a jelly's mouth is among its arms, where a
+  // bite never lands, so a jaw mutation grows a small mouth on the bell's front, low under the
+  // eye, level as the larva's is, and its hinge is inside the glass there. A sheet of the Bloom's
+  // own came back the larva's shrunk; the size is all a level jaw needs (`markSize`)
+  bloom: { w: 64, h: 73, snout: 63, tail: 10, axis: 36, hinge: [48, 50], marksFrom: 'larva',
            marks: { ...LARVA_MARKS },
-           // the larva's eye is 20 across and the Bloom's 16; and its tentacles are the stinging
-           // fringe already, so the frill's drawn tentacles would hang a second one under the bell
-           markSize: { tapetum: 0.8, foureye: 0.8, frill: 0 },
+           // the larva's eye is 20 across and the Bloom's 16, its jaw 18 long and the Bloom's 13;
+           // and its tentacles are the stinging fringe already, so the frill's drawn tentacles
+           // would hang a second one under the bell
+           markSize: { tapetum: 0.8, foureye: 0.8, frill: 0, jaw: 0.72, 'jaw-open': 0.72, fangs: 0.72,
+                       'fangs-open': 0.72, saw: 0.72, 'saw-open': 0.72, beak: 0.72, 'beak-open': 0.72 },
            // no mouth at its front, so nothing is painted there: its sieve is its arms
            art: { mouth: 0 },
            // the Archer Spit's sac low in the bell ahead of the gut, as on the Angler: under the eye

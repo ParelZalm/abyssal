@@ -47,6 +47,10 @@ plays and a patch is a fix or a balance pass.
   comb of rakers is painted on its front, since its sieve is its arms. Its tentacles trail
   longer with its segments, and they hold together as lines at every size rather than breaking
   into specks. Before, it was painted: a grey bell with a mouth at its front.
+- **The Bloom bites with its bell.** A jaw mutation taken as a Bloom grows a small mouth on the
+  front of its bell under the eye, armed in the card's look — the Hinged Jaw, the fangs, the saw or
+  the Parrot Beak — opening on the strike; before, jaws showed nothing on it. Its lures root on the
+  top of its dome and arch forward over it.
 - **The Angler's glow dazes.** A hostile that comes too close to the Angler, into its glow, is dazed
   for 4.5 s: greyed out, stars circling over its head, and at 0.4 of its pace — its swim, its
   charge and the shots it fires, which still reach as far. It comes round
