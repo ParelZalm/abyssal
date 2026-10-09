@@ -9,7 +9,7 @@ import { lerp } from '../../../core/util';
 import { mass } from './body';
 import { rgbOf, type Palette, type RGB } from './palette';
 import { lamp } from './lights';
-import { M, type Pt, type Sheet } from './sheet';
+import { BACK, M, STANDS, type Pt, type Sheet } from './sheet';
 
 export const TOXIC: RGB = rgbOf(78, 0.8, 0.52);
 
@@ -48,6 +48,29 @@ function jawOf(g: Genome) {
 }
 
 /**
+ * How big a drawn jaw is drawn, and what sits in its mouth with it: past the Hinged Jaw's with the
+ * bite, from a little under the size it was drawn at, which jutted half the head out.
+ */
+const jawK = (g: Genome) => Math.min(1.4, 0.8 + Math.max(0, g.jaw - 0.6) * 0.4);
+
+/**
+ * How what sits in a drawn mouth is drawn (the comb, the plates, the second jaw): with a drawn jaw
+ * as big as it, and in the bare body's own mouth fitted between the hinge and the snout, since the
+ * larva's head runs only 8 of its pixels past the hinge and a plate drawn for a jaw stuck out of it
+ * like a stick.
+ */
+function inMouth(g: Genome, f: Form, hinge: { x: number }) {
+  return jawOf(g) ? { sx: jawK(g), sy: jawK(g) } : { span: spineAt(0.02, f) - hinge.x, least: STANDS };
+}
+
+/**
+ * Where a drawn body's gill slits are cut, as `t`: the first just behind the drawn eye, which
+ * covers the larva's head to about 0.28, and the rest a slit's width and as much again apart,
+ * since closer they ran together into one grille on a big body.
+ */
+const SLITS = 0.3, SLIT_STEP = 0.055;
+
+/**
  * Mouth, teeth, eye and gill slit. `attack` is how far the jaw is dropped for a strike, 0 to
  * 1: the second texture every body is baked with, which the view swaps in mid-attack.
  */
@@ -78,8 +101,8 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
     // a drawn body has its own mouth, shut and open (`BODIES`), and a grown jaw is drawn over
     // it from its hinge, under the eye, swapped open with it; it grows past the Hinged Jaw's with
     // the bite, from a little under the size it was drawn at, which jutted half the head out
-    const jaw = jawOf(g), k = Math.min(1.4, 0.8 + Math.max(0, g.jaw - 0.6) * 0.4);
-    if (jaw && own?.hinge) s.mark(jaw, own.hinge.x, own.hinge.y, { sx: k, sy: k, layer: 'skin' });
+    const jaw = jawOf(g);
+    if (jaw && own?.hinge) s.mark(jaw, own.hinge.x, own.hinge.y, { sx: jawK(g), sy: jawK(g), layer: 'skin' });
   } else if (open * s.res < 1.2) {
     // a mouth too small to open is a seam: one dark line from the snout to the hinge
     s.line([nose, back], M.MOUTH);
@@ -107,9 +130,9 @@ export function head(s: Sheet, f: Form, pal: Palette, g: Genome, A: PlanArt, men
   }
 
   // a body with no mouth at its front has no comb to stand in it: the Bloom's sieve is its arms
-  if (sieve > 0 && A.mouth > 0) rakers(s, f, sieve, upper, back, lower, peak);
-  if (g.crush > 0) pharynx(s, f, back);
-  if (hasSynergy(g, 'morayjaws')) throatJaw(s, nose, back, open);
+  if (sieve > 0 && A.mouth > 0) rakers(s, f, g, sieve, upper, back, lower, peak, attack, own);
+  if (g.crush > 0) pharynx(s, f, back, g, own);
+  if (hasSynergy(g, 'morayjaws')) throatJaw(s, f, nose, back, open, g, own);
   if (g.electro > 0) ampullae(s, f, pal, g);
 
   // the eye. A light-gathering eye is pale because of the tapetum behind it; past the point
@@ -240,7 +263,18 @@ function maw(s: Sheet, f: Form, pal: Palette, g: Genome, attack: number) {
  * whale shark's, because a filter feeder is a body built around pushing water through
  * itself.
  */
-function rakers(s: Sheet, f: Form, sieve: number, upper: Pt, back: Pt, lower: Pt, peak: number) {
+function rakers(s: Sheet, f: Form, g: Genome, sieve: number, upper: Pt, back: Pt, lower: Pt, peak: number,
+                attack: number, own: DrawnHead | null) {
+  // drawn, the comb stands in the gape only, the mouth shut over it, and the slits say rakers then:
+  // stepped back from behind the drawn eye, which covers the head where the painter cuts them
+  if (own?.hinge && s.drawn.has('rakers')) {
+    if (attack > 0) s.mark('rakers', own.hinge.x, own.hinge.y, { ...inMouth(g, f, own.hinge), layer: 'skin' });
+    for (let i = 0, n = 3 + Math.round(sieve); i < n; i++) {
+      const t = SLITS + i * SLIT_STEP;
+      s.mark('slit', spineAt(t, f), edgeAt(t, f, 0), { layer: 'skin', least: STANDS });
+    }
+    return;
+  }
   const n = 3 + Math.round(sieve * 2);
   for (let i = 0; i < n; i++) {
     const k = (i + 0.5) / n;
@@ -259,8 +293,13 @@ function rakers(s: Sheet, f: Form, sieve: number, upper: Pt, back: Pt, lower: Pt
  * one organ that swells the head's own outline, so a crusher reads as jowled — and the lips
  * carry blunt plates rather than teeth, since a molar that points is a molar that snaps.
  */
-function pharynx(s: Sheet, f: Form, back: Pt) {
+function pharynx(s: Sheet, f: Form, back: Pt, g: Genome, own: DrawnHead | null) {
   const t = 0.14;
+  // drawn, the jowl hangs under the head behind the jaw, and the plates run along it from the hinge
+  if (own?.hinge && s.mark('jowl', spineAt(0.16, f), edgeAt(0.16, f, -BACK), { layer: 'under', least: STANDS })) {
+    s.mark('plates', own.hinge.x, own.hinge.y, { ...inMouth(g, f, own.hinge), layer: 'skin' });
+    return;
+  }
   const w = halfWidth(t, f);
   mass(s, [[spineAt(0.05, f), edgeAt(0.05, f, 0.8)], [spineAt(t, f), edgeAt(t, f, 1) + w * 0.35],
            [spineAt(0.26, f), edgeAt(0.26, f, 0.9)], [spineAt(0.2, f), edgeAt(0.2, f, 0.3)]]);
@@ -275,7 +314,9 @@ function pharynx(s: Sheet, f: Form, back: Pt) {
  * the hinge, raked backward the way pharyngeal teeth are, so the gape shows a mouth behind
  * the mouth. Shut, it is a pale ridge at the corner of the jaw, which is all a moray shows.
  */
-function throatJaw(s: Sheet, nose: Pt, back: Pt, open: number) {
+function throatJaw(s: Sheet, f: Form, nose: Pt, back: Pt, open: number, g: Genome, own: DrawnHead | null) {
+  // drawn, shut and thrust forward on the strike (`-open`), from the hinge the drawn jaws hang from
+  if (own?.hinge && s.mark('throat', own.hinge.x, own.hinge.y, { ...inMouth(g, f, own.hinge), layer: 'skin' })) return;
   const n = open * s.res >= 3 ? 4 : 2;
   for (let i = 0; i < n; i++) {
     const k = 0.1 + i * 0.09;

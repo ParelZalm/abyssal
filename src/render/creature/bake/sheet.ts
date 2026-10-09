@@ -45,6 +45,8 @@ export const STANDS = 0.5;
 export interface Placed {
   name: string; x: number; y: number; sx: number; sy: number;
   to?: [number, number]; span?: number; layer: 'under' | 'skin' | 'coat' | 'over'; flip?: boolean; least?: number;
+  /** Radians it is turned about its anchor, clockwise: the Urchin's thorns, radiating from the body's middle. */
+  turn?: number;
 }
 
 /** A point of light the view can hang a bloom on, in R units. */

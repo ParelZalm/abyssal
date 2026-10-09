@@ -36,7 +36,8 @@ export type MarkName =
   | 'spine' | 'quill' | 'rime' | 'coral' | 'coral2' | 'prickle' | 'porcupine' | 'wart'
   | 'claw' | 'claw-saw' | 'club' | 'frill' | 'roe' | 'lead' | 'photophore' | 'funnel' | 'beard'
   | 'ink' | 'electric' | 'galvanic' | 'vent' | 'cavity' | 'venom' | 'nematocyst' | 'coal' | 'veins'
-  | 'brittle' | 'mottle' | 'mantle';
+  | 'brittle' | 'mottle' | 'mantle'
+  | 'rakers' | 'slit' | 'jowl' | 'plates' | 'throat' | 'throat-open' | 'thorn' | 'thorn2' | 'whale';
 
 /** A light organ on the picture: where the view hangs a bloom, its colour and how bright. */
 export interface SpriteLight { at: Pt; color: number; strength: number }
@@ -185,7 +186,10 @@ const LARVA_MARKS: SpriteArt['marks'] = { tapetum: { at: [10, 10] }, foureye: { 
   ink: { at: [4.5, 4.5] }, electric: { at: [10.5, 7] }, galvanic: { at: [39, 3.5] },
   vent: { at: [4.5, 8.5] }, cavity: { at: [6, 6] }, venom: { at: [5.5, 5.5] },
   nematocyst: { at: [10.5, 10.5] }, coal: { at: [2.5, 2.5] }, veins: { at: [50, 10.5] },
-  brittle: { at: [28.5, 10] }, mottle: { at: [31.5, 11] }, mantle: { at: [17.5, 13] } };
+  brittle: { at: [28.5, 10] }, mottle: { at: [31.5, 11] }, mantle: { at: [17.5, 13] },
+  rakers: { at: [0, 5.5] }, slit: { at: [2.5, 7] }, jowl: { at: [10, 0] }, plates: { at: [0, 3] },
+  throat: { at: [0, 4.5] }, 'throat-open': { at: [0, 5.5] }, thorn: { at: [2, 16] }, thorn2: { at: [1.5, 10] },
+  whale: { at: [32, 7.5] } };
 
 export const SPRITES: Record<string, SpriteArt> = {
   // `npm run sprite -- angler-sprite.png --id anglerfish` (`docs/sprites.md`), from
@@ -453,7 +457,8 @@ export const SPRITES: Record<string, SpriteArt> = {
            // their size: the jaws are drawn at half, a pixel past the snout shut, since at the 0.4
            // that fits the seam their teeth thinned to specks
            markSize: { tapetum: 0.7, foureye: 0.7, mottle: 0, beard: 0, jaw: 0.5, 'jaw-open': 0.5, fangs: 0.5,
-                       'fangs-open': 0.5, saw: 0.5, 'saw-open': 0.5, beak: 0.5, 'beak-open': 0.5 },
+                       'fangs-open': 0.5, saw: 0.5, 'saw-open': 0.5, beak: 0.5, 'beak-open': 0.5,
+                       rakers: 0.5, plates: 0.5, throat: 0.5, 'throat-open': 0.5 },
            // the eye at the 9 across its prompt asked for, from the 14 it came back: drawn whole it
            // took the head's depth over the back half of the mouth, and the jaws, laid under it,
            // showed only their tips in front of it
@@ -506,7 +511,8 @@ export const SPRITES: Record<string, SpriteArt> = {
            // and its tentacles are the stinging fringe already, so the frill's drawn tentacles
            // would hang a second one under the bell
            markSize: { tapetum: 0.8, foureye: 0.8, frill: 0, jaw: 0.72, 'jaw-open': 0.72, fangs: 0.72,
-                       'fangs-open': 0.72, saw: 0.72, 'saw-open': 0.72, beak: 0.72, 'beak-open': 0.72 },
+                       'fangs-open': 0.72, saw: 0.72, 'saw-open': 0.72, beak: 0.72, 'beak-open': 0.72,
+                       plates: 0.72, throat: 0.72, 'throat-open': 0.72 },
            // no mouth at its front, so nothing is painted there: its sieve is its arms
            art: { mouth: 0 },
            parts: { scale: 1, at: { tentacles: [-86, 1], eye: [41, 27], arms: [-43, 25] } },

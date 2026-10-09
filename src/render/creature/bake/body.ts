@@ -83,6 +83,9 @@ export function scales(s: Sheet, f: Form, pal: Palette) {
  * where the real animal's are.
  */
 export function whaleSpots(s: Sheet, f: Form, seed: number) {
+  // drawn, the spots come on a back of their own, a darker glass over the upper flank: cream on the
+  // larva's lavender was no spots at all
+  if (s.mark('whale', spineAt(0.52, f), edgeAt(0.52, f, -0.5), { layer: 'coat', least: STANDS })) return;
   const spot: RGB = [226, 222, 196];
   const step = Math.max(s.texel * 2.5, 0.045 * f.len * R);
   for (let x = spineAt(0.9, f); x < spineAt(0.1, f); x += step) {
