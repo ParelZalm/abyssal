@@ -529,7 +529,7 @@ wearing the larva's jaws and lures on a mouth at its bell's front.
 ## ~~Bomb fish and secret rooms~~
 
 Done: Isaac's bombs and secret rooms (*The economy* in `progression.md`). F releases a bomb fish
-where the body is; it hangs, sinking slowly, swells over 1.6 s and bursts over a door's width,
+where the body is; it hangs, sinking slowly, swells over 2.2 s and bursts over a door's width,
 hitting every hostile in reach for five of the player's hits, the player for half a heart, and
 breaking pots. Until it bursts it moves as Isaac's does: shoved by the body, knocked by a shot
 or a strike, slowed by the water. A run starts with one, and they drop as keys do and sell for

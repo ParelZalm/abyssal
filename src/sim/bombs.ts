@@ -5,9 +5,10 @@ import type { Shot, World } from './world';
 
 /**
  * Seconds a bomb fish swells before it bursts: Isaac's bomb's fuse, long enough to lay one and
- * swim clear, short enough that a hostile on top of it is still there.
+ * swim clear, short enough that a hostile on top of it is still there. 1.6 was too quick to lay
+ * one and then shove or shoot it somewhere.
  */
-export const FUSE = 1.6;
+export const FUSE = 2.2;
 /**
  * The burst's reach, in tiles: a door's width, so one laid in a secret door's alcove breaks it
  * (`TankMap.blast`), and a little over a room's rock knob, so a hostile pressed to a wall is

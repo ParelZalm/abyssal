@@ -11,7 +11,7 @@ import { glowTexture } from './textures';
  * frames, the tell that it is about to go, and is blown for its last `HOT` seconds, as it
  * blinks.
  */
-const SWELLS = 0.5;
+const SWELLS = 0.8;
 /**
  * The last seconds of the fuse, when it blinks hot; and how fast, in blinks a second, at the
  * start of them and at the burst. Isaac's bomb flashes faster as it goes.

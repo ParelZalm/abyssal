@@ -9,7 +9,7 @@ plays and a patch is a fix or a balance pass.
 ## [Unreleased]
 
 - **Bomb fish and secret rooms.** F releases a bomb fish where you are: it hangs, swells and
-  blinks red, and after 1.6 s bursts, hurting every hostile near it badly and you for half a
+  blinks red, and after 2.2 s bursts, hurting every hostile near it badly and you for half a
   heart, throwing everything in reach and breaking pots. Until then it can be pushed with the
   body and knocked with a shot or a strike, as Isaac's bombs are. A run starts with one; they
   drop like keys, come out of chests, and sell in shops for 5 shells, and the HUD counts them
