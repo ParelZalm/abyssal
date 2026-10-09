@@ -10,7 +10,7 @@ import { fbm } from '../../../core/noise';
 import { lerp } from '../../../core/util';
 import { hasSynergy } from '../../../sim/organs';
 import { tAt } from './body';
-import { TOXIC, type DrawnEye } from './head';
+import { TOXIC } from './head';
 import { rgbOf, type Palette, type RGB } from './palette';
 import { BACK, M, STANDS, type Pt, type Sheet } from './sheet';
 
@@ -266,41 +266,6 @@ export function inkSac(s: Sheet, f: Form) {
   s.dot(x + w * 0.1, y - w * 0.15, INK_SHEEN, 0.8);
   const n = Math.max(2, Math.round(w * 0.8 * s.res));
   for (let i = 0; i <= n; i++) s.dot(x + (i / n) * w * 0.9, y + (i / n) * w * 0.2, [20, 16, 30], 0.8);
-}
-
-/** Archer Spit's water, the shot's own blue (`render/shots.ts`), and the wet light on it. */
-const WATER: RGB = [120, 196, 240];
-const WATER_SHEEN: RGB = [236, 250, 255];
-
-/**
- * Archer Spit: the archerfish's throat — a pale sac of water held under the jaw, and the
- * groove in the roof of the mouth it is squeezed forward down, drawn as a line of the same
- * blue to the lips. Low and forward, where a shot comes from. On a drawn body it sits in the
- * throat behind the drawn eye (`eye`), with no groove: where the painted one goes the drawn eye
- * is, and the larva came out with a blue tear in it, and hung under the eye it was still a tear.
- */
-export function spitSac(s: Sheet, f: Form, eye: DrawnEye | null = null) {
-  const t = 0.17;
-  const w = halfWidth(t, f);
-  const r = eye ? eye.r * 0.38 : w * 0.36;
-  let x = eye ? eye.x - eye.r * 1.55 : spineAt(t, f), y = eye ? eye.y + eye.r * 0.7 : edgeAt(t, f, 0.5);
-  // a body whose eye sits high and round puts it elsewhere (`SpriteArt.place`): under the
-  // Angler's, the sac hung like a tear
-  if (s.place.spit !== undefined) {
-    const [pt, pk] = s.placed('spit', t, 0.5);
-    x = spineAt(pt, f);
-    y = edgeAt(pt, f, pk);
-  }
-  if (s.mark('spit', x, y, { layer: 'skin' })) return;
-  s.blot(x, y, r, WATER, 0.85, M.BODY);
-  s.dot(x + r * 0.33, y - r * 0.4, WATER_SHEEN, 0.9);
-  if (eye) return;
-  const nose = spineAt(0.02, f), lip = edgeAt(0.04, f, 0.15);
-  const n = Math.max(2, Math.round((nose - x) * s.res));
-  for (let i = 1; i <= n; i++) {
-    const k = i / n;
-    s.dot(x + (nose - x) * k, y + (lip - y) * k, WATER, 0.7);
-  }
 }
 
 /**
