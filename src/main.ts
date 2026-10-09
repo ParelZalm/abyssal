@@ -3,12 +3,13 @@ import '@fontsource/pixelify-sans/600.css';
 import './style.css';
 import { Game } from './Game';
 import { loadSprites } from './render/creature/sprite';
+import { loadBombFish } from './render/bombfish';
 import { parseLaunch } from './dev/launch';
 import { devPanel } from './dev/panel';
 import { lab } from './dev/lab';
 
 // a bake is synchronous, so the authored sprites are in hand before anything is drawn
-await loadSprites();
+await Promise.all([loadSprites(), loadBombFish()]);
 const game = new Game();
 // Development only, and not in a production build at all: a launch from the address bar
 // (`dev/launch.ts`), the dev panel with the link to the design board, and `window.game`

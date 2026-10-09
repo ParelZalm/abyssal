@@ -20,6 +20,7 @@ import type { Rarity } from '../content/traits';
 import { catalog, type DesignGroup, type DesignItem } from './catalog';
 import { followZoom } from '../render/pixel';
 import { loadSprites } from '../render/creature/sprite';
+import { loadBombFish } from '../render/bombfish';
 
 const params = new URLSearchParams(location.search);
 // not the rooms, which are twenty seconds' baking: they bake when asked for
@@ -73,7 +74,7 @@ interface Cell {
   wait?: Text;
 }
 let cells: Cell[] = [];
-await loadSprites();
+await Promise.all([loadSprites(), loadBombFish()]);
 const sections = catalog();
 const groups: DesignGroup[] = sections.flatMap(s => s.groups);
 

@@ -17,7 +17,7 @@ import { Fx } from './render/fx';
 import { Impacts } from './render/Impacts';
 import { Ocean } from './render/ocean';
 import { followZoom, FramePass, PIXEL } from './render/pixel';
-import { PickupView, SPRITES } from './render/pickups';
+import { PickupView, spriteTexture } from './render/pickups';
 import { BombView } from './render/bombs';
 import { TellView } from './render/tells';
 import { GhostView } from './render/ghosts';
@@ -645,7 +645,7 @@ export class Game {
                       pedestal: Pedestal | null; pickup: Pickup | null } | null {
     const s = this.tank.offered;
     if (s?.good) {
-      const tall = s.good.kind === 'mutation' ? GLYPH : SPRITES[s.good.pickup].length;
+      const tall = s.good.kind === 'mutation' ? GLYPH : spriteTexture(s.good.pickup).height;
       return { good: s.good, price: s.price, x: s.x,
         y: s.y - goodLift(this.tank.room.tile * HOVER, this.camera.zoom, !!s.price),
         lift: tall / 2 + BOB, pedestal: s, pickup: null };
@@ -654,7 +654,7 @@ export class Game {
     if (!k) return null;
     // a pickup is drawn from its foot, which `PickupView` sets 3 under where it lies
     return { good: { kind: 'pickup', pickup: k.kind }, price: null, x: k.x, y: k.y + 3,
-      lift: SPRITES[k.kind].length, pedestal: null, pickup: k };
+      lift: spriteTexture(k.kind).height, pedestal: null, pickup: k };
   }
 
   /** E: take what the player is beside, paying for a pedestal's good. */
