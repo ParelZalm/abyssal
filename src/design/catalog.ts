@@ -582,7 +582,7 @@ const BUILDS: { id: string; name: string; note: string; plan: Plan; depth: numbe
     note: 'Synergy: frill + glass body. The fringe lets go of the flank and trails past the tail, beaded with stinging cells.',
     edit: g => { g.frill = 1; g.translucent = 0.5; g.stealth = 0.55; g.hue = 296; g.accentHue = 186; } },
   { id: 'whaleshark', name: 'Whale Shark', plan: 'shark', depth: 5200,
-    note: 'Synergy: ram gills past the Midnight gate. A mouth as wide as the head, and the back darkened to a slate under rows of pale spots, barred.',
+    note: 'Synergy: ram gills past the Midnight gate. A mouth as wide as the head, and the back darkened to a slate under a checkerboard of pale spots and broken lines.',
     edit: g => { g.ram = 1; g.size = 100; g.speed = 220; g.metabolism = 0.7; g.hue = 214; g.accentHue = 200; } },
   { id: 'smokescreen', name: 'Smoke Screen', plan: 'squid', depth: 3400,
     note: 'Synergy: siphon + ink sac. The siphon\'s mouth is stained black, a smear back from it thinning to dots.',
