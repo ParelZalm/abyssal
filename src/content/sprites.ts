@@ -19,9 +19,10 @@ export type Pt = [number, number];
 
 /**
  * The parts a player's body is drawn apart from (`SpriteArt.parts`): what a mutation replaces or
- * resizes, so each is a picture of its own the bake can stretch, swap or leave off.
+ * resizes, so each is a picture of its own the bake can stretch, swap or leave off. A jelly has
+ * no fins or tail: what trails behind its bell is its marginal `tentacles` and its oral `arms`.
  */
-export type PartName = 'tail' | 'back' | 'belly' | 'pectoral' | 'eye';
+export type PartName = 'tail' | 'back' | 'belly' | 'pectoral' | 'eye' | 'tentacles' | 'arms';
 
 /**
  * What a mutation adds to a player's body (`SpriteArt.marks`), drawn one to a cell and placed
@@ -489,6 +490,29 @@ export const SPRITES: Record<string, SpriteArt> = {
             ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
             hull: [[78.5, 23.5, 3.8], [69.5, 22.5, 9.8], [60.5, 22, 12.8], [51.5, 21, 15.3], [42.5, 20.5, 15.7],
                    [33.5, 21.5, 14.9], [24.5, 21.5, 12.3], [15.5, 22, 9.3], [6.5, 22.5, 5.5]] },
+  // The Bloom form: `npm run sprite -- docs/media/reference/bloom-form-sprite.png --id bloom --key
+  // green --fringe --pitch 8 --pulse` (its strike is the bell squeezed in a pulse, lined up by the
+  // dome, not a jaw), its parts `node scripts/import-parts.mjs docs/media/reference/bloom-form-parts-
+  // sprite.png --body bloom --snout 62 --tail 10 --axis 36 --group "0,0,191,84;0,88,122,175" --whole
+  // 96,148,35 --pick "tentacles:60,130" --add "arms:docs/media/reference/bloom-form-arms-sprite.png@55,24"
+  // --only eye,tentacles,arms`: the tentacles grouped, being lines a pixel thick, and the oral arms off
+  // the sheet they were drawn again on, where the parts sheet drew planks. The snout is the dome's
+  // top and the tail the rim. No mouth and no jaw: a jelly's mouth is among its arms, and its
+  // strike is the pulse
+  bloom: { w: 64, h: 73, snout: 63, tail: 10, axis: 36, marksFrom: 'larva',
+           marks: { ...LARVA_MARKS },
+           // the larva's eye is 20 across and the Bloom's 16; and its tentacles are the stinging
+           // fringe already, so the frill's drawn tentacles would hang a second one under the bell
+           markSize: { tapetum: 0.8, foureye: 0.8, frill: 0 },
+           // no mouth at its front, so nothing is painted there: its sieve is its arms
+           art: { mouth: 0 },
+           // the Archer Spit's sac low in the bell ahead of the gut, as on the Angler: under the eye
+           // it hung like a tear
+           place: { spit: [0.52, 0.4] },
+           parts: { scale: 1, at: { tentacles: [-86, 1], eye: [41, 27], arms: [-43, 25] } },
+           ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
+           hull: [[60.5, 37, 10.2], [54.5, 36, 17], [48.5, 36.5, 21.7], [42.5, 36.5, 24.2], [36.5, 37, 26.3],
+                  [30.5, 37.5, 26.8], [24.5, 37, 29.8], [18.5, 38, 24.6], [12.5, 36.5, 5.5]] },
 };
 
 /**
@@ -498,7 +522,7 @@ export const SPRITES: Record<string, SpriteArt> = {
  * is painted whole, as every plan was.
  */
 export const BODIES: Partial<Record<Plan, string>> = { wraith: 'larva', shark: 'shark', squid: 'squid', eel: 'moray',
-                                                       angler: 'angler' };
+                                                       angler: 'angler', jelly: 'bloom' };
 
 /** How many steps nose to tail a drawn outline is sampled at (`Form.outline`). */
 const OUTLINE = 24;

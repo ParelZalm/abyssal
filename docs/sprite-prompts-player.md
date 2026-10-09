@@ -1374,62 +1374,37 @@ their frilled edges. The parts sheet's arms were three flat-topped slabs; these 
 bake by their roots, which sit as the parts sheet's did, round the gut. The prompt is in the history:
 `git show 98581df:docs/sprite-prompts-player.md`.
 
-#### Sheet 2: the bare body
+#### ~~Sheet 2: the bare body~~ — done
 
-The bell's second frame is its pulse, not a jaw: the strike's swap is a hard squeeze of the bell,
-as a jelly swims. The dome's top stays where it is in both frames, since the game lays a drawn body
-by its snout and its tail, and here the snout is the dome's top and the tail the rim.
+`docs/media/reference/bloom-form-sprite.png`, the bell at rest and in its pulse, on the grid asked
+for, 1152 × 672 with every block flat and 10 colours: 52 × 70 at rest and 58 × 55 in the pulse, the
+dome's top in the same column in both and the gut where asked. Its top runs straighter than the
+parts sheet's round dome, nearer a shield, within a couple of pixels of it. The prompt is in the
+history: `git show 98581df:docs/sprite-prompts-player.md`.
 
-```text
-GOAL
-True pixel-art sprite of the pale jellyfish's BARE BELL, for a game: EXACTLY the bell
-of the whole jellyfish at the top of the attached parts sheet — the same dome, the same
-shading, the same frilled rim, the faint radial canals and the gut — with its eye, its
-oral arms and its tentacles taken off. 2 frames of the same bell, side by side, left
-to right: "rest", "pulse".
+**In** (`BODIES.jelly`, the body `bloom`): the bare bell, and the eye and the tentacles off
+`bloom-form-parts-sprite.png`, the oral arms off `bloom-form-arms-sprite.png`.
 
-THE GRID (most important)
-- Each frame is exactly 72 × 84 art pixels.
-- Export scaled up 8× with nearest-neighbour, every art pixel a perfect solid 8 × 8
-  square block, so the image is 1152 × 672.
-- No anti-aliasing, no blur, no soft edges, no gradients, no dithering or speckle, and
-  no colour change smaller than one block. Every block is one flat colour.
-- 1-block outline (#79728F) round the whole silhouette, never thicker.
-
-COMPOSITION
-- Strict side view: the dome facing RIGHT, the open rim facing left, level.
-- In both frames the dome's top touches the same column, 8 art pixels from the frame's
-  right edge, and the bell's midline lies along the frame's horizontal centre line.
-- Where the eye was, the bell is plain glass, shaded as the rest of the dome: no
-  socket, no hole, no dotted outline. Where the arms and tentacles hung, the rim's
-  frilled lip runs whole, finished with the outline.
-- The gut: a rounded shape in muted dusky violet (#6A5A8A), 13 long and 10 deep, its
-  middle 36 behind the dome's top and 11 below the midline, seen through the glass.
-- Background: flat pure green #00FF00, one colour, nothing else. Do not use green
-  anywhere on the animal, and do not let the outline pick up a green tint where it
-  meets the background.
-
-PALETTE
-The parts sheet's colours: outline #79728F, deep shadow #B8B0D8, bell #E8E4F8, bell
-highlight #F4F2FF, rim #D6D0ED, gut #6A5A8A, plus at most 8 in-between shades.
-
-FRAME 1 — "rest"
-The bare bell at rest, EXACTLY the parts sheet's: 54 art pixels from the dome's top to
-the rim's lip and 71 deep at the rim, the rim's frilled lip over its last 9.
-
-FRAME 2 — "pulse"
-The same bell squeezed in a hard swimming pulse: the rim drawn in to 56 deep, the bell
-stretched to 60 long, the dome taller and rounder like the nose of a bullet, its rim's
-lip pinched inward. The radial canals follow the squeezed dome. The gut in the same
-place. The dome's top in the same column as frame 1, so the two can be swapped
-without the animal moving.
-
-AVOID
-A bell shaped differently from the parts sheet's at rest, a flat front, an eye, an eye
-socket or a dotted outline, oral arms, tentacles, a mouth or face, a spine, fins, any
-background other than flat #00FF00, speckle or noise, soft glows, painterly texture,
-sub-pixel detail, text, labels, borders, shadows, a second animal.
+```bash
+npm run sprite -- docs/media/reference/bloom-form-sprite.png --id bloom --key green --fringe --pitch 8 --pulse
+node scripts/import-parts.mjs docs/media/reference/bloom-form-parts-sprite.png --body bloom --snout 62 --tail 10 --axis 36 --group "0,0,191,84;0,88,122,175" --whole 96,148,35 --pick "tentacles:60,130" --add "arms:docs/media/reference/bloom-form-arms-sprite.png@55,24" --only eye,tentacles,arms
 ```
+
+As it went: a strike is lined up on the rest by its back half, which a jaw leaves alone and a
+pulse moves most, so the squeezed bell came out four cells high with its dome cut off; `--pulse`
+lines it up by its front and its middle, takes it whole and pads the frame for it. The tentacles
+are lines a pixel thick that step corner to corner, which the parts import, joining four ways
+round, broke into specks, so `--group` makes each box of the sheet one piece; the oral arms came
+from a sheet of their own, which `--add` places by hand where the planks were. A jelly has no
+tail to lay the whole by, so the landmarks are given (`--whole`): the rim, the dome's top, the
+bell's middle, at one body pixel to the sheet's. The parts are new ones, `tentacles` and `arms`,
+laid behind the bell, the arms over the tentacles, both trailing longer with the segments as the
+painted ones did; the tentacles are kept wherever a line crosses a texel and not ringed
+(`THIN`), since under the usual third they fell away at play size and left their knobs
+floating. Its eye is 16 across, so the larva's eye marks are drawn at 0.8; the frill's drawn
+tentacles are off it (`markSize` 0), its own being the fringe; no rakers are painted on its front
+(`art.mouth` 0); and the spit sac sits low ahead of the gut, as on the Angler, not under the eye
+like a tear. Its own marks, where the bite and the sieve and a lure sit on a bell, are next.
 
 **What to send back:** both sheets, by their file names in Downloads, or pasted at full size as the
 parts sheet was.

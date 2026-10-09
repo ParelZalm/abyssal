@@ -5,6 +5,7 @@
  *   npm run sprite -- <sheet.png> --id <species> [--pitch 6.54] [--colours 22]
  *                     [--keep x0,y0,x1,y1[;x0,y0,x1,y1…]] [--key green] [--fringe [hue]]
  *                     [--frames rest,strike,wounded,wounded-strike] [--keep-wounded x0,y0,x1,y1]
+ *                     [--pulse]
  *                     [--wounded-palette #a1,#b1,…/#a2,#b2,…]
  *                     [--out src/render/creature/sprites]
  *
@@ -24,7 +25,9 @@
  * is the box round where the two silhouettes disagree, grown by a few cells, or `--keep`. The
  * wounded frame is the animal turned at half health (`woundedGenome` in `sim/roles.ts`): lined
  * up on the rest by its outline and taken whole, since all of it changes; the wounded strike
- * is to it what the strike is to the rest.
+ * is to it what the strike is to the rest. With `--pulse` the strike is a squeeze of the whole
+ * body, a jelly's bell, rather than a jaw: nothing of it stays where the rest's is but its
+ * front, so it is lined up by its snout and its middle and taken whole, as the wounded is.
  *
  * Writes `<id>.png` (and `<id>-strike.png`, `<id>-wounded.png`, `<id>-wounded-strike.png`) at
  * one pixel per art pixel, a preview at six, and
@@ -46,7 +49,7 @@ const opt = (name, fallback) => {
 const sheet = argv.find((a, i) => !a.startsWith('--') && !(i > 0 && argv[i - 1].startsWith('--')));
 const id = opt('id');
 if (!sheet || !id) {
-  console.error('usage: npm run sprite -- <sheet.png> --id <species> [--pitch n] [--colours n] [--keep x0,y0,x1,y1] [--key green] [--fringe [hue]] [--frames names] [--keep-wounded x0,y0,x1,y1] [--wounded-palette from/to] [--out dir]');
+  console.error('usage: npm run sprite -- <sheet.png> --id <species> [--pitch n] [--colours n] [--keep x0,y0,x1,y1] [--key green] [--fringe [hue]] [--frames names] [--keep-wounded x0,y0,x1,y1] [--wounded-palette from/to] [--pulse] [--out dir]');
   process.exit(1);
 }
 const out = opt('out', 'src/render/creature/sprites');
@@ -247,8 +250,27 @@ function lineUp(a, b, part, agree) {
 // outline, since all of its colours change; the wounded strike on the wounded, as the strike
 // is on the rest
 const S = names.indexOf('strike'), Wd = names.indexOf('wounded'), WS = names.indexOf('wounded-strike');
+const pulse = argv.includes('--pulse');
+/**
+ * How a pulse sits on the rest: front column on front column, middle row on middle row. The
+ * Bloom's bell squeezes deeper at its rim than at its dome, so the back half the strike is
+ * lined up by moved most of all, and the pulse came out four cells high with its dome cut off.
+ */
+function byFront(a, b) {
+  const ends = f => {
+    const g = grids[f];
+    let front = 0, t = g.h, bot = 0;
+    for (let j = 0; j < g.h; j++) for (let i = 0; i < g.w; i++) {
+      if (at(f, i, j) < 0) continue;
+      front = Math.max(front, i); t = Math.min(t, j); bot = Math.max(bot, j);
+    }
+    return [front, (t + bot) / 2];
+  };
+  const [fa, ma] = ends(a), [fb, mb] = ends(b);
+  return [fb - fa, Math.round(mb - ma)];
+}
 const off = names.map(() => [0, 0]);
-if (S > 0) off[S] = lineUp(0, S, 0.55, same);
+if (S > 0) off[S] = pulse ? byFront(0, S) : lineUp(0, S, 0.55, same);
 if (Wd > 0) off[Wd] = lineUp(0, Wd, 1, shape);
 if (WS > 0) { const o = lineUp(Wd, WS, 0.55, same); off[WS] = [off[Wd][0] + o[0], off[Wd][1] + o[1]]; }
 
@@ -262,7 +284,7 @@ grids.forEach((g, f) => {
   if (!f) return;
   top = Math.max(top, off[f][1]);
   bot = Math.max(bot, g.h - off[f][1] - rest.h);
-  if (f !== Wd) return;
+  if (f !== Wd && !(pulse && f === S)) return;
   for (let j = 0; j < g.h; j++) for (let i = 0; i < g.w; i++) {
     if (snapped[f][j * g.w + i] < 0) continue;
     const x = i - off[f][0];
@@ -312,7 +334,7 @@ function struck(base, f) {
 }
 const restIdx = whole(0);
 const out4 = [{ name: 'rest', idx: restIdx }];
-if (S > 0) out4.push({ name: 'strike', ...struck(0, S) });
+if (S > 0) out4.push(pulse ? { name: 'strike', idx: whole(S) } : { name: 'strike', ...struck(0, S) });
 if (Wd > 0) out4.push({ name: 'wounded', idx: whole(Wd) });
 if (WS > 0) out4.push({ name: 'wounded-strike', ...struck(Wd, WS) });
 
