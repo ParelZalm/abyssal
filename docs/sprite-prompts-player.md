@@ -281,7 +281,32 @@ to the tail.
 **Still painted after these:** the Gill Rakers' comb and slits, the Crushing Pharynx's jowl and
 the Moray Jaws' second jaw, which are the head's, missed by its sheet; the Urchin's thorns,
 which radiate from the body's middle and want a mark the game can turn; and the Whale Shark's
-spots.
+spots. Their sheet is the next section; with it in, nothing on the larva is painted but what has
+no art of its own.
+
+### ~~The last of them: the head's three, the Urchin and the Whale Shark~~ — done
+
+`docs/media/reference/larva-last-sprite.png`, 9 parts in a 3 × 3 grid of 72 × 32 cells, at 8×: the
+Gill Rakers' comb and one gill slit, the Crushing Pharynx's jowl and plates, the Moray Jaws' second
+jaw shut and open, the Urchin's thorn long and short, and the Whale Shark's coat. The prompt is in
+the history: `git show 5bf5bd1:docs/sprite-prompts-player.md`.
+
+```bash
+node scripts/import-marks.mjs docs/media/reference/larva-last-sprite.png --body larva --cols 3 --rows 3 --names rakers:left,slit:mid,jowl:top,plates:left,throat:left,throat-open:left,thorn:bottom,thorn2:bottom,whale:mid
+```
+
+As it went: every part came back at the size asked. The comb, the plates and the second jaw sit at
+the drawn jaw's hinge, as big as the jaw, and the comb in the strike only; on a bare mouth, with no
+jaw drawn, they are fitted between the hinge and the snout (`inMouth`), since the larva's head runs
+only 8 pixels past the hinge and the plates stuck out of it like a stick. The gill slits are cut
+behind the drawn eye a slit's width and as much again apart: closer they ran into one grille on a
+big body. The jowl hangs under the head with the back's floor (`Placed.least`). The thorn is the
+first mark that turns (`Placed.turn`): turned at four times its drawing before the bake samples it
+down (`turned` in `render/creature/sprite.ts`), long or short by the painter's noise, shorter where
+the body is slim. The plates came back a strip with three bumps of enamel and the second jaw's fangs
+upright rather than raked; at play size neither shows the difference. The coat's spots are pixel
+crosses, a round spot 3 across on the grid. On the Shark the coat runs from mid-trunk to the gills.
+The board's Urchin build is on the larva now, where the thorns are drawn: no player is a darter.
 
 ---
 

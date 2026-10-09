@@ -519,9 +519,10 @@ the nares, the pores, the pouch, the barbels, the needle, the siphon and the blo
 where its painter put its painted one (`Sheet.mark`). The rest is still painted, placed on the
 drawn outline and shaded in the drawn swatches. The back, the belly and the flank are drawn too
 (`docs/sprite-prompts-player.md`), each part placed at every point its painter paints one and never
-shrunk past half its drawing (`Placed.least`), the coats clipped to the body. Still painted: the
-Gill Rakers', Crushing Pharynx's and Moray Jaws' marks, the Urchin's thorns, the Whale Shark's
-spots and Twin Spout's second sac. All five forms are drawn: the Shark, the Squid, the Moray and
+shrunk past half its drawing (`Placed.least`), the coats clipped to the body. The last of
+the painted marks — the Gill Rakers' comb and slits, the Crushing Pharynx's jowl and plates, the
+Moray Jaws' second jaw, the Urchin's thorns and the Whale Shark's spots — are drawn too; Twin
+Spout's second sac is the one still painted. All five forms are drawn: the Shark, the Squid, the Moray and
 the Angler each with jaws and lures of its own, and the Bloom, a bell whose strike is a pulse,
 wearing the larva's jaws and lures on a mouth at its bell's front.
 

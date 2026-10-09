@@ -565,8 +565,9 @@ const BUILDS: { id: string; name: string; note: string; plan: Plan; depth: numbe
     note: 'Synergy: lure + stealth. The body fades further and the bulb grows a halo: a light with nothing behind it.',
     edit: g => { g.lure = 1; g.stealth = 0.5; g.translucent = 0.25; g.glow = 0.5; g.jaw = 0.8;
                  g.hue = 210; g.accentHue = 186; } },
-  { id: 'urchin', name: 'Urchin', plan: 'darter', depth: 2400,
-    note: 'Synergy: spines + carapace. Thorns stand out of the plate across the whole back, longer as the armour grows.',
+  // on the larva, which wears the drawn thorns: a synergy is the player's, and no player is a darter
+  { id: 'urchin', name: 'Urchin', plan: 'wraith', depth: 2400,
+    note: 'Synergy: spines + carapace. Violet thorns radiate from the body\'s middle, back and belly, longer as the armour grows.',
     edit: g => { g.spikes = 1; g.armor = 11; g.segments = 1; g.hue = 12; g.accentHue = 30; } },
   { id: 'ballistic', name: 'Ballistic', plan: 'darter', depth: 1500,
     note: 'Synergy: jet + claws. The claws fold forward along the head into clubs, heels past the nose.',
@@ -581,7 +582,7 @@ const BUILDS: { id: string; name: string; note: string; plan: Plan; depth: numbe
     note: 'Synergy: frill + glass body. The fringe lets go of the flank and trails past the tail, beaded with stinging cells.',
     edit: g => { g.frill = 1; g.translucent = 0.5; g.stealth = 0.55; g.hue = 296; g.accentHue = 186; } },
   { id: 'whaleshark', name: 'Whale Shark', plan: 'shark', depth: 5200,
-    note: 'Synergy: ram gills past the Midnight gate. A mouth as wide as the head, and pale spots in rows across the back.',
+    note: 'Synergy: ram gills past the Midnight gate. A mouth as wide as the head, and the back darkened to a slate under rows of pale spots, barred.',
     edit: g => { g.ram = 1; g.size = 100; g.speed = 220; g.metabolism = 0.7; g.hue = 214; g.accentHue = 200; } },
   { id: 'smokescreen', name: 'Smoke Screen', plan: 'squid', depth: 3400,
     note: 'Synergy: siphon + ink sac. The siphon\'s mouth is stained black, a smear back from it thinning to dots.',

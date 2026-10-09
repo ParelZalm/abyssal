@@ -175,6 +175,39 @@ function upsideDown(a: Arm): Arm {
   flipped.set(a, f);
   return f;
 }
+/** How many steps a full turn of a mark is taken in (`turned`), each made once. */
+const TURNS = 32;
+/** How much finer than its drawing a turned mark is resampled, so the turn does not step its edge. */
+const TURN_FINE = 4;
+const turns = new WeakMap<Arm, Map<number, { a: Arm; at: [number, number] }>>();
+/**
+ * A mark turned clockwise by `turn` radians about its anchor `at` (`Placed.turn`), at `TURN_FINE`
+ * times its drawing, nearest-neighbour, and its anchor where it went: the bake's resample takes
+ * no rotation, and turned at the drawing's own size its thin edges broke into a stair of specks.
+ */
+function turned(a: Arm, at: [number, number], turn: number) {
+  const q = ((Math.round(turn / (Math.PI * 2) * TURNS) % TURNS) + TURNS) % TURNS;
+  let byQ = turns.get(a);
+  if (!byQ) turns.set(a, byQ = new Map());
+  let t = byQ.get(q);
+  if (!t) {
+    const th = q / TURNS * Math.PI * 2, c = Math.cos(th), s = Math.sin(th);
+    const { width: w, height: h, data } = a.image, U = TURN_FINE;
+    const W = Math.ceil((Math.abs(w * c) + Math.abs(h * s)) * U), H = Math.ceil((Math.abs(w * s) + Math.abs(h * c)) * U);
+    const img = new ImageData(W, H);
+    for (let oy = 0; oy < H; oy++) for (let ox = 0; ox < W; ox++) {
+      const dx = (ox + 0.5) / U - W / U / 2, dy = (oy + 0.5) / U - H / U / 2;
+      const sx = Math.floor(c * dx + s * dy + w / 2), sy = Math.floor(-s * dx + c * dy + h / 2);
+      if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
+      img.data.set(data.subarray((sy * w + sx) * 4, (sy * w + sx) * 4 + 4), (oy * W + ox) * 4);
+    }
+    const ax = at[0] - w / 2, ay = at[1] - h / 2;
+    t = { a: { image: img, palette: a.palette }, at: [(c * ax - s * ay + W / U / 2) * U, (s * ax + c * ay + H / U / 2) * U] };
+    byQ.set(q, t);
+  }
+  return t;
+}
+
 interface Frames extends Pair {
   wounded?: Pair; arm?: Arm; tentacle?: Arm; parts?: Partial<Record<PartName, Arm>>; marks?: Record<string, Arm>;
 }
@@ -443,6 +476,12 @@ export function drawnBody(id: string, f: Form, back: number, halfH: number, res:
     const grow = m.least ? Math.max(1, m.least / (k * sc)) : 1, z = s.markSize?.[name as MarkName] ?? 1;
     if (z === 0) return;
     sx *= grow * z; sy *= grow * z;
+    if (m.turn) {
+      const t = turned(a, its.at, m.turn);
+      lay(t.a, t.at[0], t.at[1], (m.x - back) * res, (m.y + halfH) * res, sx / TURN_FINE, sy / TURN_FINE,
+          m.layer === 'under', to);
+      return;
+    }
     lay(a, its.at[0], m.flip ? a.image.height - its.at[1] : its.at[1], (m.x - back) * res, (m.y + halfH) * res,
         sx, sy, m.layer === 'under', to);
   };

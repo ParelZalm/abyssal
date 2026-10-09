@@ -170,12 +170,19 @@ export const urchinReach = (g: Genome) => Math.min(1.6, armourOf(g) / 11);
 export function urchinSpines(s: Sheet, f: Form, g: Genome, seed: number) {
   const reach = urchinReach(g);
   const cx = spineAt(0.5, f), cy = edgeAt(0.5, f, 0);
+  const deepest = halfWidth(shoulderAt(f), f);
   for (let t = 0.12; t <= 0.9; t += 0.06) {
     for (const k of [-1, 1] as const) {
       const w = halfWidth(t, f);
       const x = spineAt(t, f), y = edgeAt(t, f, k);
       const a = Math.atan2(y - cy, (x - cx) * 0.6);
-      const len = Math.max(s.texel * 2, w * 0.63 * reach * (0.7 + fbm(t * 31, k, seed + 211, 1) * 0.6));
+      const n = fbm(t * 31, k, seed + 211, 1);
+      // drawn, one thorn stood up and turned to its angle, long or short by the same noise, and
+      // shorter where the body is slim, as the painted ones shorten toward the tail
+      const z = reach * Math.max(0.5, w / deepest);
+      if (s.mark(n > 0.5 ? 'thorn' : 'thorn2', x, edgeAt(t, f, k * -BACK),
+                 { sx: z, sy: z, turn: a + Math.PI / 2, layer: 'under', least: STANDS })) continue;
+      const len = Math.max(s.texel * 2, w * 0.63 * reach * (0.7 + n * 0.6));
       s.line([[x, y], [x + Math.cos(a) * len, y + Math.sin(a) * len]], M.TOOTH);
     }
   }

@@ -8,6 +8,14 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+- **The last painted marks are drawn.** The Gill Rakers cut four gill slits behind the eye and stand
+  a comb in the open mouth; the Crushing Pharynx hangs a jowl under the head and lines the mouth
+  with flat molars; Moray Jaws shows a second jaw at the corner of the mouth and thrusts it forward,
+  fangs raked back, on the bite. The Urchin's thorns are violet, radiating from the body's middle
+  back and belly, and the Whale Shark's back is darkened to a slate under rows of pale spots and
+  bars: its cream spots never showed on the pale glass. Only Twin Spout's second sac is still
+  painted.
+
 - **The first fight is any fight.** Every tank's first fight room held one vampire squid alone,
   scaled to the tank, left on from testing it; it is dealt from the tank's own animals now, like
   every room after it. The switch that dealt only drawn enemies is gone, since every enemy is.
