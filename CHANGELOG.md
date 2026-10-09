@@ -8,6 +8,8 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-09
+
 - **The Ink Sac confuses.** Its ink leaves every hostile in the room confused for 4 s — a
   question mark over each, lit plain through the dark, none winding up, charging or firing —
   where before it only hid you while you stayed in the cloud. The cloud is drawn under the
@@ -140,7 +142,8 @@ The column game: one open water column nine kilometres deep, five zones sealed b
 that open to a body big enough, a draft of three mutations at every growth, guardians, the
 Leviathan at the bottom, and the codex. Kept as the tag `v0.1.0`.
 
-[Unreleased]: https://github.com/ParelZalm/abyssal/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/ParelZalm/abyssal/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/ParelZalm/abyssal/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/ParelZalm/abyssal/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/ParelZalm/abyssal/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/ParelZalm/abyssal/compare/v0.1.0...v0.2.0
