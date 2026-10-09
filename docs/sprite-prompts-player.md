@@ -281,7 +281,112 @@ to the tail.
 **Still painted after these:** the Gill Rakers' comb and slits, the Crushing Pharynx's jowl and
 the Moray Jaws' second jaw, which are the head's, missed by its sheet; the Urchin's thorns,
 which radiate from the body's middle and want a mark the game can turn; and the Whale Shark's
-spots.
+spots. Their sheet is the next section.
+
+### The last of them: the head's three, the Urchin and the Whale Shark
+
+What the sheets above left painted: the Gill Rakers' comb and slits, the Crushing Pharynx's jowl
+and plates and the Moray Jaws' second jaw, which are the head's and were missed by its sheet; the
+Urchin's thorns; and the Whale Shark's spots. Painted on the drawn larva they are a few lines in
+the tooth colour, and the spots are cream on lavender, which is no spots at all.
+
+9 parts, `«C»` 3, `«N»` 3, `«W»` × `«H»` 72 × 32, so the sheet is 216 × 96 art pixels: the cells
+are the flank's, since the Whale Shark's coat is as long as the trunk; the rest are small in them.
+Attach `items-sheet-2-current.png` (the Gill Rakers and the Crushing Pharynx), `larva-head-sprite.png`
+(the jaws the comb, the plates and the second jaw sit in), `larva-back-redraw-sprite.png` (a part
+that stands off the body) and `larva-flank-sprite.png` (a part that lies inside it) with the rest.
+
+How each is drawn, decided as the prompt was written:
+
+- **What sits in the mouth is drawn twice where the mouth is**, as the jaws were: the comb only
+  open, since a shut mouth hides it and the slits say rakers then; the Moray's second jaw shut, a
+  pale ridge at the corner of the mouth, and open, thrust forward in the gape. They are anchored by
+  their left edge, the hinge, as the jaws are, so they ride whichever jaw is on the body.
+- **One gill slit, placed again**, three to five behind the eye as the painter counts them, as the
+  back's rows are one part placed again. It lies inside the body, so it has no outline.
+- **One thorn, two lengths, stood up**: the painter radiates fourteen a side from the body's middle,
+  and a drawn row would stand off the curve, so the thorn is drawn upright and the game turns it
+  to its angle — the one mark that has to turn (`Placed` can only flip today). In the urchin's own
+  violet, the player's thrown urchin's (`SHOT_COLOURS.urchin`), so it is not a Spine Volley's spine.
+- **The Whale Shark's spots are a coat on a darker back**: a whale shark is pale spots on a dark
+  back, and the larva has no dark back to put them on. So the coat brings one, the larva's own
+  lavender darkened to a slate, spotted and barred in its highlight, clipped to the body and laid
+  over the upper flank. It is the one mark that darkens the glass; it comes late (the Midnight gate)
+  and on a giant, which is when the body should look like something else.
+
+```text
+OUTLINE BY PART (replaces the outline rule above; most important)
+Parts 1 and 3 to 8 sit on or stand off the fish: draw the 1-block outline (#79728F)
+round each, as on the larva. Parts 2 and 9 lie inside the fish's body, seen through its
+pale skin: NO outline round them; their edges are bare colour.
+
+MOSTLY FILL, LITTLE OUTLINE
+The game shows these at about half size. A part that is mostly outline turns into a grey
+smudge there. Each part must be a SOLID shape of its own colours, at least 2 art pixels
+of fill across at its thinnest, with the outline only round its edge. No single-pixel
+lines inside a part, no gaps or holes except where the item says.
+
+PARTS (left to right, top to bottom)
+1. Gill Rakers — the comb seen in the open mouth: a shallow arch of salmon-red gill
+   (#e88a8a, shade #b84a5c, highlight #ffd6cc) 3 thick and 16 long along the top, and
+   hanging from it a comb of six ivory rakers (#f0e4c8, shade #cdb894), each 2 wide and
+   from 6 to 8 long, 1 apart, pointing straight down, the longest in the middle. 16 wide
+   and 11 tall. Its left end is cut flat, the full height of the arch: it hangs from the
+   jaw's hinge.
+2. Gill Slit — one slit in the side of the head, NO outline: 4 wide and 14 tall, bowed
+   so its middle sits 1 art pixel further RIGHT than its ends, its ends rounded; its
+   front (right) 2 columns dark violet-black (#2a1e3a), its back (left) 2 the salmon-red
+   of the gill showing in it (#b84a5c). Centred.
+3. Crushing Pharynx Jowl — a heavy swelling of jaw muscle under the cheek, in the larva's
+   own flesh (body #E8E4F8, highlight #F4F2FF on top, deep shadow #B8B0D8 below): a
+   rounded bulge 20 wide and 8 deep at its fullest, the fullest a little RIGHT of its
+   middle, tapering to nothing at both ends, a crease of the deep shadow 2 thick along
+   its middle. Its top edge is cut flat at the cell's top margin: it hangs under the head.
+4. Crushing Pharynx Plates — three broad flat molars in a row, touching: ivory (#f0e4c8,
+   shade #cdb894, deep #7e6a50), each 5 wide and 5 tall with rounded corners, the top 2
+   rows of each a worn grinding face of blue-white enamel (#94aac2, highlight #f0f8ff).
+   15 wide and 5 tall. Its left edge is cut flat: it runs forward from the jaw's hinge.
+5. Moray Jaws, shut — the tip of a second jaw showing at the corner of the mouth: a pale
+   ivory ridge (#f0e4c8, shade #cdb894) 9 long and 3 thick, level, two hooked ivory teeth
+   standing from it, each 2 wide and 3 tall, curved back to the LEFT. 9 wide and 6 tall.
+   Its left edge is cut flat: it sits at the jaw's hinge.
+6. Moray Jaws, open — the second jaw thrust forward out of the throat, seen in the open
+   mouth: an ivory jaw bar (#f0e4c8, shade #cdb894) 13 long and 3 thick, level; four
+   hooked fangs standing up from it, each 3 wide at the root and 5 tall, raked back to the
+   LEFT, their back edges the deep ivory (#7e6a50); under the bar a dark gullet
+   (#2a1e3a) 3 deep along its length. 13 wide and 11 tall. Its left edge is cut flat: it
+   sits at the jaw's hinge.
+7. Urchin Thorn, long — one thorn standing straight UP: violet (#b070d0), its lit left
+   side pale violet (#f0d8ff), its right side dark violet (#6a3490), 4 wide at its root
+   narrowing to 2 at its point, 16 tall, the point the pale violet. Its bottom edge is cut
+   flat: it stands on the body.
+8. Urchin Thorn, short — the same thorn, 3 wide at its root narrowing to 2, 10 tall.
+9. Whale Shark Coat — a patch of whale shark pattern in the larva's glass, NO outline:
+   a slate-lavender wash (#8c86b0, darkening to #6e6894 along its top 4 rows) 64 wide
+   and 16 tall, its top edge straight, its bottom edge wandering in shallow waves 2 or 3
+   art pixels high; on it three loose rows of round pale spots (#f4f2ff), each 3 across,
+   about 5 apart; the rows broken every 10 or so by an upright pale bar (#d6d0ed) 2 wide
+   crossing the wash top to bottom. The spots are round, not square, not stars.
+```
+
+**What to send back:** the PNG. Check that the cells are on the grid, that no part runs into its
+neighbour's cell, that the gill slit and the coat have no outline, and that the background is one
+green right up to every edge.
+
+**The code side, when it lands:**
+
+| Part | Anchor | Placed |
+| --- | --- | --- |
+| rakers | the middle of the flat left edge | at the jaw's hinge, the strike's texture only |
+| slit | the middle | 3 + the sieve's slits, behind the drawn eye where the painter steps them |
+| jowl | the middle of the flat top edge | under the head at t 0.14, where `pharynx` swells the outline |
+| plates | the middle of the flat left edge | at the jaw's hinge, both textures |
+| throat, throat-open | the middle of the flat left edge | at the jaw's hinge, shut and in the strike |
+| thorn, thorn2 | the middle of the flat bottom edge | each point `urchinSpines` stands one, turned to its angle, long and short as its noise says, grown with `urchinReach` |
+| whale | the middle | a coat (`coat` in `Placed.layer`), over the upper flank, clipped to the body |
+
+The thorn needs `Placed` to take a turn about its anchor, which nothing has needed yet: every row
+so far stood straight up from the back or hung straight down from the belly.
 
 ---
 
