@@ -189,7 +189,7 @@ const LARVA_MARKS: SpriteArt['marks'] = { tapetum: { at: [10, 10] }, foureye: { 
   brittle: { at: [28.5, 10] }, mottle: { at: [31.5, 11] }, mantle: { at: [17.5, 13] },
   rakers: { at: [0, 5.5] }, slit: { at: [2.5, 7] }, jowl: { at: [10, 0] }, plates: { at: [0, 3] },
   throat: { at: [0, 4.5] }, 'throat-open': { at: [0, 5.5] }, thorn: { at: [2, 16] }, thorn2: { at: [1.5, 10] },
-  whale: { at: [32, 7.5] } };
+  whale: { at: [31.5, 8] } };
 
 export const SPRITES: Record<string, SpriteArt> = {
   // `npm run sprite -- angler-sprite.png --id anglerfish` (`docs/sprites.md`), from

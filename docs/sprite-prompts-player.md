@@ -304,8 +304,18 @@ big body. The jowl hangs under the head with the back's floor (`Placed.least`). 
 first mark that turns (`Placed.turn`): turned at four times its drawing before the bake samples it
 down (`turned` in `render/creature/sprite.ts`), long or short by the painter's noise, shorter where
 the body is slim. The plates came back a strip with three bumps of enamel and the second jaw's fangs
-upright rather than raked; at play size neither shows the difference. The coat's spots are pixel
-crosses, a round spot 3 across on the grid. On the Shark the coat runs from mid-trunk to the gills.
+upright rather than raked; at play size neither shows the difference. The coat's spots came back pixel
+crosses, a round spot 3 across on the grid, every one alike, between solid bars that cut it into
+panels with its ends cut straight; it was drawn again, `larva-whale-redraw-sprite.png` (one cell of
+72 × 32, at 8×), asked for the real animal's broken checkerboard of thin lines with spots of mixed
+sizes, smaller toward the head, tapering to nothing behind and ending in a ragged edge of spots in
+front. At play size its lines and spots blend into a dappled back, subtler than the first:
+
+```bash
+node scripts/import-marks.mjs docs/media/reference/larva-whale-redraw-sprite.png --body larva --cols 1 --rows 1 --names whale:mid
+```
+
+On the Shark the coat runs from mid-trunk to the gills.
 The board's Urchin build is on the larva now, where the thorns are drawn: no player is a darter.
 
 ---
