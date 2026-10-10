@@ -142,10 +142,25 @@ export class Creature {
   /**
    * A deep moveset's move in hand beyond its role's own, and the seconds left of it
    * (`Roles`): a gulper eel's jaw left hanging after a gulp that missed (`gape`), a vampire
-   * squid turned inside out (`ball`), an anglerfish lunging off its spot (`lunge`).
+   * squid turned inside out (`ball`), an anglerfish lunging off its spot (`lunge`), a reef squid
+   * gliding off the jet it threw itself away on (`jet`).
    */
-  trick: '' | 'gape' | 'ball' | 'lunge' = '';
+  trick: '' | 'gape' | 'ball' | 'lunge' | 'jet' = '';
   trickT = 0;
+  /**
+   * A reef squid's skin and its tentacles (`Roles.stalk`): `camo` how far it has taken the rock's
+   * colour and gone from sight, 0 to 1; `flush` the dark that runs over it before it strikes,
+   * 0 to 1; `lash` the point its feeding pair is thrown at, held from the throw until it is
+   * reeled back; `jetCd` seconds before it may jet off again; `hpWas` its health last frame,
+   * so a blow it took is a start; and `hide`, whether it is settling into the rock before it
+   * stalks again — as it arrives, and after every jet.
+   */
+  hide = true;
+  camo = 0;
+  flush = 0;
+  lash: { x: number; y: number } | null = null;
+  jetCd = 0;
+  hpWas = NaN;
   /**
    * How bright an anglerfish's lure burns past its own, 0 to 1 (`Roles`' lure): up through the
    * wind-up, full while its sparks hang (`litT` seconds of that left), and down after.
@@ -514,6 +529,8 @@ export class Creature {
     this.view.swell = this.swell;
     this.view.cloak = this.trick === 'ball';
     this.view.flare = this.lit;
+    this.view.camo = this.camo;
+    this.view.flush = this.flush;
     this.view.place(this.x, this.y, this.angle, this.face, this.upright);
   }
 

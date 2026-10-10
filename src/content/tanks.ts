@@ -116,7 +116,7 @@ export const TANKS: Tank[] = [
   { id: 'reef', name: 'Reef Tank', depth: 2600, tile: 41,
     // plankton to graze and three kinds of shoal that bolt from the larva
     fauna: ['bloom', 'krill', 'fry', 'anchovy', 'reeffish'],
-    hostiles: { ribbon: 3, triggerfish: 3, lionfish: 2, moonjelly: 2 },
+    hostiles: { ribbon: 3, triggerfish: 3, lionfish: 2, moonjelly: 2, reefsquid: 2 },
     hostileHp: 0.8, pace: 1.8, boss: 'greatwhite' },
   // and 1.8 times that again: the twilight-to-midnight water and what glows in it
   { id: 'deep', name: 'Deep Tank', depth: 5200, tile: 74,

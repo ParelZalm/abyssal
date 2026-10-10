@@ -165,8 +165,9 @@ export class Scene {
       const [r, g, b] = PRESENCE.color.map((v, i) => Math.round(v + (TELL.color[i] - v) * k));
       // an eel in the rock lights the water at its head, not the rock round its middle
       const at = c.burrow ? noseOf(c) : c;
+      // a squid in the rock's colour gives no more away by its light than by its body
       lit.add({ x: at.x, y: at.y, r: c.radius * (PRESENCE.r + TELL.r * k), color: (r << 16) | (g << 8) | b,
-        a: (PRESENCE.a + TELL.a * k) * c.emergence * (1 - c.wane * WANED_LIGHT) * (1 - c.gone) });
+        a: (PRESENCE.a * (1 - c.camo) + TELL.a * k) * c.emergence * (1 - c.wane * WANED_LIGHT) * (1 - c.gone) });
       if (c.confused > 0) {
         lit.add({ x: at.x, y: at.y, r: c.radius * LOST.r, color: LOST.color, a: LOST.a * Math.min(1, c.confused) });
       }
