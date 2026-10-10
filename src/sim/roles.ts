@@ -341,6 +341,55 @@ const LINK = 110;
 const STEM = 0.6;
 
 /**
+ * The camo (the reef squid), played as the real animal hunts. It arrives, and comes out of
+ * every jet, hiding: to the nearest rock, `HUG` tiles off it past its own radius, and still
+ * there until it has the rock's colour (`camo`) and its lash is ready. Then it stalks, gliding
+ * along the face, facing the player and sculling on its fins, slowly enough to keep half its
+ * colour; still against the rock it is all but gone, and out in open water it can only thin to
+ * the water's murk (`OPEN_CAMO`). It goes along the face the way that brings it nearer, and
+ * leaves the rock only when the face leads away. Once the player is inside `LASH_REACH` with a clear line it
+ * stops, darkens (`flush`) through `LASH_WIND` — the tell, the one moment it is plain to see —
+ * and throws its feeding pair at where the player was at the lock: out in `LASH_OUT`, reeling a
+ * catch `LASH_PULL` tiles a second toward its crown for `REEL`. Hit or miss, it reels them back
+ * through `LASH_RECOVER`, still and coloured — the opening — and jets away from the player,
+ * mantle first, at `JET_KICK` tiles a second, to glide and fade into the rock somewhere else.
+ * A blow while it is hidden starts it into a jet too, with a puff of ink. Below half health it
+ * inks every time it jets, and comes round in `INKED_CD` of the time.
+ */
+const HUG = 0.35;
+const FEEL = 2.5;
+const CREEP = 0.25;
+const CROSS = 0.4;
+/** How much of the way a wall-hugger pulls back to its distance off the rock, a tile out. */
+const HUG_PULL = 0.8;
+/** How far a squid's face is wanted from the rock's, before it gives up and crosses open water. */
+const LEAVE = 0.25;
+export const LASH_REACH = 3;
+export const LASH_WIND = 0.55;
+export const LASH_LOCK = 0.2;
+export const LASH_OUT = 0.22;
+export const LASH_RECOVER = 0.8;
+const LASH_CD: [number, number] = [1.4, 2.2];
+/** How fast the feeding pair flies out, a second, as the view throws it (`FishView.poseArms`). */
+const LASH_RATE = 16;
+const LASH_PULL = 4;
+const REEL = 0.35;
+export const JET_KICK = 8;
+const JET_GLIDE = 0.7;
+const JET_CD = 2.5;
+/** Closer than this, in tiles, a squid with no lash ready jets off rather than be caught. */
+const CROWDED = 1.4;
+const OPEN_CAMO = 0.45;
+/** How fast the colour is taken and lost, a second. Lost at once: a squid blanches in a frame. */
+const CAMO_IN = 0.9;
+const CAMO_OUT = 7;
+/** Tiles a second past which a squid is moving too fast to hold any colour. */
+const CAMO_SPEED = 3.5;
+/** How near its whole colour a hiding squid has to be before it stalks again. */
+const SETTLED = 0.9;
+const INKED_CD = 0.7;
+
+/**
  * What a moveset looks like turned: the mackerel flushed red with its jaw and fins up, the
  * pufferfish's spines raised, the nettle's bell hotter, the triggerfish flushed red, the
  * lionfish flared, the moon jelly's gonads hot. A turn is a rebuild of the bake with this, once,
@@ -360,8 +409,8 @@ export function woundedGenome(moves: Moveset, g: Genome): Genome | null {
     case 'herd': return { ...g, hue: 22, accentHue: 44 };
     case 'wane': return { ...g, glow: Math.min(1, g.glow + 0.3) };
     // the deep's are all sprites with no turned pair, and turn in what they do: the ricochet,
-    // the spray, the ball, the lunge, the break
-    case 'volley': case 'burrow': case 'line': case 'gulp': case 'cloak': case 'lure': case 'chain':
+    // the spray, the ball, the lunge, the break. The reef squid's colour is its camouflage's
+    case 'volley': case 'burrow': case 'line': case 'gulp': case 'cloak': case 'lure': case 'chain': case 'camo':
       return null;
   }
 }
@@ -403,8 +452,9 @@ export function bracedOf(c: Creature) {
  * tracking part, and `locked` once the line is fixed. Null for anything not winding up a charge.
  */
 export function chargeOf(c: Creature): { fill: number; locked: boolean } | null {
-  // a gulp is not a dash: its tell is the jaw, and a bar that locked would promise a line
-  if (roleOf(c) !== 'charger' || c.attack !== 'windup' || c.species.moves === 'gulp') return null;
+  // a gulp is not a dash: its tell is the jaw, and a bar that locked would promise a line; nor is
+  // a lash, whose tell is the squid darkening out of the rock
+  if (roleOf(c) !== 'charger' || c.attack !== 'windup' || c.species.moves === 'gulp' || c.species.moves === 'camo') return null;
   const done = c.attackLen - c.attackT;
   return { fill: Math.min(1, done / Math.max(0.01, c.attackLen - CHARGE_LOCK)), locked: c.attackT <= CHARGE_LOCK };
 }
@@ -479,6 +529,7 @@ export class Roles {
       case 'charger':
         if (c.species.moves === 'burrow') this.lurk(c, dt, p, t);
         else if (c.species.moves === 'gulp') this.gulp(c, dt, p, t);
+        else if (c.species.moves === 'camo') this.stalk(c, dt, p, t);
         else this.charger(c, dt, p, t);
         break;
       case 'spitter': this.spitter(c, dt, p, t); break;
@@ -1009,6 +1060,202 @@ export class Roles {
     }
   }
 
+  /**
+   * A reef squid (see `HUG` and the rest above): along the rock to within a lash of the player,
+   * still and gone into the rock's colour there, the flush and the throw, and the jet away.
+   */
+  private stalk(c: Creature, dt: number, p: Creature, t: Terrain) {
+    const tile = t.tile;
+    const d = Math.sqrt(dist2(c.x, c.y, p.x, p.y));
+    const aim = Math.atan2(p.y - c.y, p.x - c.x);
+    c.jetCd = Math.max(0, c.jetCd - dt);
+    // a blow it did not see coming: it blanches and is off, inking, the way it was startled
+    if (c.hp < c.hpWas && c.attack === 'none') {
+      if (c.camo > 0.4 && c.jetCd <= 0) this.jet(c, p, true);
+      c.camo = 0;
+    }
+    c.hpWas = c.hp;
+    const rock = this.rockNear(c, t);
+    const hold = () => pitched(aim, c.face, 0.6);
+    if (this.tick(c, dt)) {
+      if (c.attack === 'windup') {
+        // still, eyes on, darkening; the throw follows the player until the lock
+        c.faceToward(p.x, FACE_SLACK * tile);
+        c.strafe(dt, 0, 0, 0, hold());
+        if (c.attackT > LASH_LOCK) {
+          const n = noseOf(c);
+          c.aimA = Math.atan2(p.y - n.y, p.x - n.x);
+          // a little past the player, so it is the club that meets a still one, not the stalk
+          c.aimD = Math.min(Math.hypot(p.x - n.x, p.y - n.y) + p.radius * 0.5, LASH_REACH * tile);
+        }
+      } else {
+        c.strafe(dt, 0, 0, 0, hold());
+        if (c.attack === 'strike') this.lashHit(c, p);
+        else if (c.landed && c.attackLen - c.attackT < REEL) {
+          // reeling the catch in toward the crown
+          const n = noseOf(c);
+          const dx = n.x - p.x, dy = n.y - p.y, l = Math.hypot(dx, dy) || 1;
+          const k = 1 - Math.exp(-8 * dt), pull = LASH_PULL * tile;
+          p.vx += (dx / l * pull - p.vx) * k;
+          p.vy += (dy / l * pull - p.vy) * k;
+        } else if (c.landed) c.view.grab(null);
+      }
+      this.skin(c, dt, rock, tile);
+      return;
+    }
+    if (c.trick === 'jet') {
+      // gliding off the jet, mantle first, its arms still toward what it fled
+      c.faceToward(p.x, FACE_SLACK * tile);
+      c.strafe(dt, 0, 0, 0, hold());
+      if ((c.trickT -= dt) <= 0) c.trick = '';
+      this.skin(c, dt, rock, tile);
+      return;
+    }
+    const sees = t.clearLine(c.x, c.y, p.x, p.y);
+    const near = d < LASH_REACH * tile * 0.85 && sees;
+    if (c.hide && !(near && c.roleCd <= 0)) {
+      // in to the rock, and still there until the colour has come; out in the open, wherever the
+      // glide left it, for what colour the water gives
+      const off = rock ? rock.d - c.radius - HUG * tile : 0;
+      c.faceToward(p.x, FACE_SLACK * tile);
+      if (rock && off > tile * 0.3) {
+        const a = this.steer(c, dt, clearHeading(t, c, Math.atan2(-rock.ny, -rock.nx)));
+        c.strafe(dt, Math.cos(a), Math.sin(a), CROSS, hold());
+      } else {
+        c.strafe(dt, 0, 0, 0, hold());
+      }
+      this.skin(c, dt, rock, tile);
+      if (c.roleCd <= 0 && c.camo >= this.backdrop(c, rock, tile) * SETTLED) c.hide = false;
+      return;
+    }
+    if (near) {
+      if (c.roleCd <= 0 && this.free(c)) {
+        this.begin(c, 'windup', LASH_WIND);
+      } else if (d < CROWDED * tile && c.jetCd <= 0) {
+        this.jet(c, p, c.wounded);
+      } else {
+        // in reach and waiting: hung where it is, sculling, its colour coming
+        c.faceToward(p.x, FACE_SLACK * tile);
+        c.strafe(dt, 0, 0, 0, hold());
+      }
+      this.skin(c, dt, rock, tile);
+      return;
+    }
+    let a: number, throttle = CREEP;
+    if (rock) {
+      // along the face, the way round that brings it nearer the player, kept a while once
+      // chosen, as a pack keeps its way round, or a corner swung it there and back
+      const ux = -rock.ny, uy = rock.nx;
+      const along = (ux * (p.x - c.x) + uy * (p.y - c.y)) / (d || 1);
+      if (c.guardCd <= 0 && Math.abs(along) > LEAVE && Math.sign(along) !== c.orbit) {
+        c.orbit = along > 0 ? 1 : -1;
+        c.guardCd = ORBIT_TURN;
+      }
+      if (along * c.orbit < LEAVE) {
+        // the face leads away from the player: off it, across the water
+        a = this.way(c, p, t);
+        throttle = CROSS;
+      } else {
+        // held off the rock at its distance: in when drifting out, out when scraping
+        const off = clamp((rock.d - c.radius - HUG * tile) / tile, -1, 1) * HUG_PULL;
+        a = Math.atan2(uy * c.orbit - rock.ny * off, ux * c.orbit - rock.nx * off);
+      }
+    } else {
+      a = this.way(c, p, t);
+      throttle = CROSS;
+    }
+    a = this.steer(c, dt, clearHeading(t, c, a));
+    c.faceToward(p.x, FACE_SLACK * tile);
+    c.strafe(dt, Math.cos(a), Math.sin(a), throttle, hold());
+    this.skin(c, dt, rock, tile);
+  }
+
+  /**
+   * The rock round a body, felt for along sixteen rays out to `FEEL` tiles past its radius:
+   * how near the nearest is, and the way out from all of it, each ray that found rock counted
+   * by how close it found it. The nearest ray's own direction alone jumped from one bump of
+   * the face to the next, and a squid gliding along it jerked at each.
+   */
+  private rockNear(c: Creature, t: Terrain): { d: number; nx: number; ny: number } | null {
+    const reach = c.radius + FEEL * t.tile, step = t.cell;
+    let d = Infinity, nx = 0, ny = 0;
+    for (let k = 0; k < 16; k++) {
+      const a = (k / 16) * TAU, cx = Math.cos(a), cy = Math.sin(a);
+      for (let r = c.radius * 0.5; r < reach; r += step) {
+        if (!t.solidAt(c.x + cx * r, c.y + cy * r)) continue;
+        const w = (1 - r / reach) ** 2;
+        nx -= cx * w;
+        ny -= cy * w;
+        d = Math.min(d, r);
+        break;
+      }
+    }
+    const l = Math.hypot(nx, ny);
+    return l > 0 ? { d, nx: nx / l, ny: ny / l } : null;
+  }
+
+  /** The feeding pair thrown along the locked line, as far as the lock found the player. */
+  private throwLash(c: Creature) {
+    const n = noseOf(c);
+    c.lash = { x: n.x + Math.cos(c.aimA) * c.aimD, y: n.y + Math.sin(c.aimA) * c.aimD };
+    c.view.grab(c.lash);
+  }
+
+  /**
+   * Whether the feeding pair has met the player on its way out: the line from the crown to
+   * where its clubs are now, flying out as the view throws them, so what is hit is what is
+   * drawn. A hit is half a heart, and the arms fasten on the player to reel it in.
+   */
+  private lashHit(c: Creature, p: Creature) {
+    if (c.landed || !c.lash) return;
+    const n = noseOf(c);
+    const e = 1 - Math.exp(-LASH_RATE * (c.attackLen - c.attackT));
+    const tx = n.x + (c.lash.x - n.x) * e, ty = n.y + (c.lash.y - n.y) * e;
+    const dx = tx - n.x, dy = ty - n.y, l2 = dx * dx + dy * dy || 1;
+    const s = clamp(((p.x - n.x) * dx + (p.y - n.y) * dy) / l2, 0, 1);
+    const reach = p.radius + c.radius * 0.2;
+    if (dist2(p.x, p.y, n.x + dx * s, n.y + dy * s) > reach * reach) return;
+    c.landed = true;
+    if (this.world.hurtPlayer(c, 'bite') > 0) c.view.grab(p);
+  }
+
+  /**
+   * Away from the player, mantle first: one kick, as a squid's jet is, and a glide it does not
+   * steer, with a puff of ink where it was when `ink`. `r` sizes the puff by the body's radius.
+   */
+  private jet(c: Creature, p: Creature, ink: boolean, r = 1.4) {
+    const t = this.world.terrain!;
+    const a = clearHeading(t, c, Math.atan2(c.y - p.y, c.x - p.x));
+    c.vx += Math.cos(a) * JET_KICK * t.tile;
+    c.vy += Math.sin(a) * JET_KICK * t.tile;
+    c.trick = 'jet';
+    c.trickT = JET_GLIDE;
+    c.jetCd = JET_CD;
+    c.camo = 0;
+    c.hide = true;
+    if (ink) this.world.pulses.push({ x: c.x, y: c.y, r: c.radius * r, kind: 'ink' });
+  }
+
+  /**
+   * A squid's colour this frame: toward hidden while it is slow, the more so the closer the
+   * rock it is matching, and gone the moment it moves fast or strikes; the flush up through
+   * the wind-up and held through the throw, and fading as the arms come home.
+   */
+  private skin(c: Creature, dt: number, rock: { d: number } | null, tile: number) {
+    const speed = Math.hypot(c.vx, c.vy) / tile;
+    const still = 1 - clamp(speed / CAMO_SPEED, 0, 1);
+    const want = c.attack !== 'none' || c.trick === 'jet' ? 0 : still * this.backdrop(c, rock, tile);
+    const rate = want > c.camo ? CAMO_IN * (c.wounded ? 1.6 : 1) : CAMO_OUT;
+    c.camo += (want - c.camo) * Math.min(1, dt * rate);
+    const flush = c.attack === 'windup' ? 1 - c.attackT / c.attackLen : c.attack === 'strike' ? 1 : 0;
+    c.flush += (flush - c.flush) * Math.min(1, dt * (flush > c.flush ? 12 : 3));
+  }
+
+  /** The most of the rock's colour a squid can take where it is: all of it on the rock, the murk's in open water. */
+  private backdrop(c: Creature, rock: { d: number } | null, tile: number) {
+    return rock ? clamp(1 - (rock.d - c.radius - HUG * tile) / (tile * 2), OPEN_CAMO, 1) : OPEN_CAMO;
+  }
+
   /** The hostile nearest the player but `c`, which a triggerfish blows the player into. */
   private partner(c: Creature, p: Creature) {
     let o: Creature | null = null, od = Infinity;
@@ -1237,7 +1484,7 @@ export class Roles {
     if (c.attack === 'windup') {
       this.strike(c, role);
       this.begin(c, 'strike', role === 'charger'
-        ? (moves === 'line' ? LINE_DASH : moves === 'gulp' ? GULP_DRAW : DASH_TIME)
+        ? (moves === 'line' ? LINE_DASH : moves === 'gulp' ? GULP_DRAW : moves === 'camo' ? LASH_OUT : DASH_TIME)
         : moves === 'volley' ? SALVO_GAP * (SALVO - 1) + 0.12 : 0.12);
     } else if (c.attack === 'strike') {
       if (moves === 'gulp') {
@@ -1252,16 +1499,25 @@ export class Roles {
         c.aimA = Math.atan2(p.y - c.y, p.x - c.x);
         return true;
       }
-      this.begin(c, 'recover', role === 'charger' ? CHARGE_RECOVER
+      // a lash that missed is let go of at once, and comes back slowly: the opening
+      if (moves === 'camo' && !c.landed) c.view.grab(null);
+      this.begin(c, 'recover', moves === 'camo' ? LASH_RECOVER : role === 'charger' ? CHARGE_RECOVER
         : role === 'turret' ? TURRET_RECOVER : SPIT_RECOVER);
     } else {
       c.attack = 'none';
       // a lunge over, the anglerfish holds where it is and its beat comes round soon
       if (c.trick === 'lunge') { c.trick = ''; c.roleCd = TURRET_RECOVER; return false; }
       if (c.trick === 'gape') c.trick = '';
-      const [a, b] = moves === 'gulp' ? GULP_CD : role === 'charger' ? CHARGE_CD : role === 'turret' ? TURRET_BEAT
-        : moves === 'volley' ? SALVO_CD : SPIT_CD;
-      c.roleCd = (a + Math.random() * (b - a)) * (moves === 'pack' && c.wounded ? FRENZY_CD : 1);
+      const [a, b] = moves === 'gulp' ? GULP_CD : moves === 'camo' ? LASH_CD : role === 'charger' ? CHARGE_CD
+        : role === 'turret' ? TURRET_BEAT : moves === 'volley' ? SALVO_CD : SPIT_CD;
+      c.roleCd = (a + Math.random() * (b - a)) * (moves === 'pack' && c.wounded ? FRENZY_CD : 1)
+        * (moves === 'camo' && c.wounded ? INKED_CD : 1);
+      // the tentacles home, and away to hide again
+      if (moves === 'camo') {
+        c.lash = null;
+        c.view.grab(null);
+        this.jet(c, this.world.player, c.wounded);
+      }
       return false;
     }
     return true;
@@ -1309,6 +1565,13 @@ export class Roles {
       if (c.den) c.aimA = c.den.a;
     }
     if (c.species.moves === 'wane') c.waneT = SPAWN_EVERY * 0.5;
+    // a squid turned empties its ink sac and is gone from the cloud before the stagger ends
+    if (c.species.moves === 'camo') {
+      c.lash = null;
+      c.view.grab(null);
+      c.jetCd = 0;
+      this.jet(c, p, true, 2.4);
+    }
     c.view.hurt();
     this.world.pulses.push({ x: c.x, y: c.y, r: c.radius * 1.8, kind: 'turn' });
   }
@@ -1430,6 +1693,7 @@ export class Roles {
       }
     } else if (role === 'charger') {
       c.landed = false;
+      if (c.species.moves === 'camo') this.throwLash(c);
       // out of its hole along the line: the rock is let go of until the body is out of it
       if (c.burrow) {
         c.burrow = 'out';

@@ -52,7 +52,7 @@ import {
   SALVO, SALVO_GAP, SHOT_SPEED, SPIT_RECOVER, SPIT_WIND, SPOKES, STING_LIFE, SURGE, SWELL, TAUT, TURRET_RECOVER,
   TURRET_WIND, WANE_FADE, WANE_GONE, WANE_SHOWN, woundedGenome,
   BALL_HOLD, CLOUD, CLOUD_LIFE, CURVE, GULP_DRAW, GULP_GAPE, GULP_WIND, LINE_STUN, LINE_WIND,
-  LURE_FAN, LURE_GAP, LURE_HOLD, LURE_MAX, LURE_MIN, LURE_R, RICOCHET, SPRAY, SPRAY_GAP,
+  LURE_FAN, LURE_GAP, LURE_HOLD, LURE_MAX, LURE_MIN, LURE_R, RICOCHET, SPRAY, SPRAY_GAP, LASH_REACH,
 } from '../sim/roles';
 import { chainPiece, SPRITES, spritePoint } from '../content/sprites';
 import type { Fight, FiredKind, Moveset, Role, ShotKind, Species } from '../content/species';
@@ -1093,6 +1093,10 @@ const MOVE_NOTES: Record<Moveset, { whole: string; turned: string }> = {
   gulp: {
     whole: 'Opens its jaw at you and draws the water in: you, and your shots, which it swallows. A gulp that took nothing leaves its jaw hanging, exposed.',
     turned: `Spits back what it swallowed: a fan of ${SPRAY} and one more for each shot.`,
+  },
+  camo: {
+    whole: `Glides along the rock in the rock's colours, all but gone when still. Within ${LASH_REACH} tiles it darkens, throws its tentacles, reels you in, and jets away to hide again.`,
+    turned: 'Inks as it turns, and every time it jets; its colour comes back quicker, and it lashes sooner.',
   },
   cloak: {
     whole: `Its bolts bend after you at ${CURVE} radians a second for their first second, then fly on.`,

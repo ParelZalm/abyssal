@@ -92,7 +92,8 @@ leaves. The mackerel's **pack** circles and dashes one at a time; the archerfish
 turned and pops when it dies; the sea nettle's **bloom** pulses, trails stings and buds
 into ephyrae. The ribbon eel's **burrow** waits in a hole in the rock and lunges out along
 its line; the triggerfish's **jet** blows the player into the others; the lionfish's **herd**
-fires a fan; the moon jelly's **wane** fades out of the room and back. The barracuda's
+fires a fan; the moon jelly's **wane** fades out of the room and back; the reef squid's **camo** creeps
+along the rock in its colours and lashes its two long tentacles out. The barracuda's
 **line** crosses the room the moment the player is in its row; the gulper eel's **gulp**
 draws the player and its shots into its jaw; the vampire squid's **cloak** curves its bolts
 and, turned, balls up inside out; the anglerfish's **lure** lets bolts out of its lure to hang and take aim;

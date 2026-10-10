@@ -12,10 +12,10 @@ export type Role = 'charger' | 'spitter' | 'turret' | 'drifter';
  * move that makes it this animal and not another of its role, what it turns into below half
  * its health, and what its death leaves. The nursery's: a mackerel's pack, an archerfish's
  * volley, a pufferfish's balloon, a sea nettle's bloom. The reef's: a ribbon eel's burrow, a
- * triggerfish's jet, a lionfish's herd, a moon jelly's wane. The deep's: a barracuda's line, a
+ * triggerfish's jet, a lionfish's herd, a moon jelly's wane, a reef squid's camo. The deep's: a barracuda's line, a
  * gulper eel's gulp, a vampire squid's cloak, an anglerfish's lure, a siphonophore's chain.
  */
-export type Moveset = 'pack' | 'volley' | 'balloon' | 'bloom' | 'burrow' | 'jet' | 'herd' | 'wane'
+export type Moveset = 'pack' | 'volley' | 'balloon' | 'bloom' | 'burrow' | 'jet' | 'herd' | 'wane' | 'camo'
   | 'line' | 'gulp' | 'cloak' | 'lure' | 'chain';
 /**
  * What a body fires: a jet of water, a spine, a blob of light — and the mantis shrimp's
@@ -249,6 +249,15 @@ export const SPECIES: Species[] = [
     zone: 'sunlit', band: 'reef', drawn: 2,
     size: [24, 36], hue: [4, 16], accent: 30, speed: 80, bite: 8,
     nutrition: 2.0, weight: 5, spikes: 2, finSize: 1.9 },
+
+  // a Caribbean reef squid: it hangs off the reef in the reef's own colours, and hunts with its
+  // two feeding tentacles, thrown from a standstill. No picture of its own: a squid plan with
+  // none is the Squid form's drawn body (`BODIES`), painted over, as the glass squid is.
+  // Drawn twice its size, as the reef's others are, or its crown was a smudge
+  { id: 'reefsquid', name: 'Reef Squid', behavior: 'ambush', plan: 'squid', role: 'charger', moves: 'camo',
+    zone: 'sunlit', band: 'reef', drawn: 2,
+    size: [24, 36], hue: [24, 40], accent: 12, speed: 140, bite: 8,
+    nutrition: 2.0, weight: 5, finSize: 1.4, translucent: 0.3, stealth: 0.4 },
 
   { id: 'reefshark', name: 'Reef Shark', behavior: 'hunter', plan: 'shark',
     zone: 'sunlit', band: 'reef', bleed: 700,

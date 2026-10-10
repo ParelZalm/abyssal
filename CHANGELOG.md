@@ -8,6 +8,19 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+- **The reef squid.** A new hostile in the reef that acts like a real squid. It settles against
+  the rock and fades into it, then creeps along the rock's edge toward you, half seen. A squid
+  in the rock's colours gives no light away either. Close enough, it stops, flushes rust red and
+  throws its two long feeding tentacles out at you; if they catch you, it reels you in before
+  it lets go. Then it jets off backwards, mantle first, and settles to hide again. Hit it
+  while it is hidden and it starts away in a cloud of ink. Below half its health it inks and
+  jets straight off, and lashes again sooner. Its arms are loose: they trail behind the body
+  and swing on every turn and jet, rather than holding a pose.
+
+- **A squid's arms grow out of its head.** The Squid form's arms are rooted inside the front of
+  the head instead of on its tip, so their cut ends no longer show as a seam. A see-through
+  body now has see-through arms too, rather than solid ones.
+
 - **Bomb fish and secret rooms.** F releases a bomb fish where you are: it hangs, swells and
   blinks red, and after 2.5 s bursts, ending any ordinary hostile near it and taking a quarter
   off a boss, as Isaac's do, and costing you a whole heart if you are in it, throwing everything

@@ -110,6 +110,30 @@ const STRAIGHT = 0.88;
 const ARM_COLS = 12;
 
 /**
+ * Arms left to the water (`loose`): how fast each joint is pulled back to the pose it is asked
+ * for, a second, at the root and at the tip, and how fast the water takes the way it was going.
+ * Stiff at the root, or the crown came away from the head; slack at the tip, which is what
+ * trails. Under a tip of about two the arms hung back a whole body length on a dart and read
+ * as streamers, not arms.
+ */
+const ARM_ROOT = 40;
+const ARM_TIP = 3;
+const ARM_DRAG = 2.5;
+/** Past this many arm lengths in a frame the body was put somewhere, not swum: start the arms over. */
+const ARM_JUMP = 1.5;
+
+/**
+ * A squid gone into the rock (`camo`): how much of it goes at the most, and the cool blue-grey of
+ * the rock (`docs/rendering.md`, *Art direction*) what is left takes. Not all of it, so a careful
+ * eye finds it by the shimmer; the shimmer is how much the hiding breathes. The flush it darkens
+ * with before it strikes is a reef squid's own rust.
+ */
+const CAMO_HIDE = 0.86;
+const CAMO_TINT = 0x5d6b80;
+const CAMO_SHIMMER = 0.08;
+const FLUSH_TINT = 0x8a3a2a;
+
+/**
  * How much of a plan's sway survives turning the animal on its side. A fish swims by
  * flexing side to side, which from the side is mostly into and out of the screen: the full
  * lateral amplitude drawn as a vertical wave reads as a dolphin kick. An eel keeps more of
@@ -209,7 +233,17 @@ export class FishView extends Container {
   /** Counts down from 1 through a bite, driving the squash-and-snap. */
   private chompT = 0;
   /** Rigged arms, one strip each, under the body. Empty for anything without `grasp`. */
-  private arms: { mesh: MeshSimple; verts: Float32Array; feeding: boolean; rig: Rig; v: number }[] = [];
+  private arms: { mesh: MeshSimple; verts: Float32Array; feeding: boolean; rig: Rig; v: number;
+                  loose?: { x: Float32Array; y: Float32Array; px: Float32Array; py: Float32Array } }[] = [];
+  /**
+   * Whether the arms are left to the water: kept in the world from frame to frame and pulled
+   * toward their pose rather than set to it (`trail`), so they stream behind a dart and swing
+   * round after a turn. The reef squid's, whose tentacles are what it hunts with.
+   */
+  private readonly loose: boolean;
+  /** How far gone into the rock's colour, and how darkened to strike: the squid's (`Creature.camo`, `flush`). */
+  camo = 0;
+  flush = 0;
   /** The arms' own clock: `beat` jumps on a boost, and a jump reads as a twitch in an arm. */
   private armT = Math.random() * 10;
   /**
@@ -316,6 +350,7 @@ export class FishView extends Container {
     super();
     this.art = species && SPRITES[species.id] ? species.id : undefined;
     this.drawn = species?.drawn ?? 1;
+    this.loose = species?.moves === 'camo';
     for (const s of [this.aura, this.halo, this.core, this.ember]) {
       s.anchor.set(0.5);
       s.blendMode = 'add';
@@ -390,6 +425,12 @@ export class FishView extends Container {
     // the light the hit threw (`Impacts`), and then red, fading. It used to blink at once,
     // which hid the body in the very frames that were meant to show the hit land
     const h = this.hurtT;
+    if (this.camo > 0) {
+      alpha *= 1 - this.camo * CAMO_HIDE * (1 - CAMO_SHIMMER + Math.sin(this.clock * 2.6) * CAMO_SHIMMER);
+      tint = mul(tint, lerpColor(0xffffff, CAMO_TINT, this.camo));
+    }
+    // flickering as it darkens: a squid's flush is its chromatophores, and they pulse
+    if (this.flush > 0) tint = mul(tint, lerpColor(0xffffff, FLUSH_TINT, this.flush * (0.8 + Math.sin(this.clock * 22) * 0.2)));
     this.alpha = alpha;
     this.glow.alpha = alpha;
     this.tint = h > HURT_WHITE ? 0xffffff
@@ -883,8 +924,10 @@ export class FishView extends Container {
       if (arm.feeding && e > 0.001) {
         const dx = tx - rx, dy = ty - ry;
         const d = Math.hypot(dx, dy) || 1;
-        // an arm has a length: past it, it points at the prey rather than reaching it
-        const k = Math.min(1, rig.len / d);
+        // an arm has a length: past it, it points at the prey rather than reaching it. A loose
+        // squid's feeding pair stretches to wherever it is thrown, as the real one's does, since
+        // where it is thrown is where it hits (`Roles.lashHit`)
+        const k = this.loose ? 1 : Math.min(1, rig.len / d);
         const wig = Math.sin(this.armT * 3 + i) * d * 0.05;
         for (let j = 0; j < ARM_COLS; j++) {
           const s = j / (ARM_COLS - 1);
@@ -895,6 +938,7 @@ export class FishView extends Container {
           pts[j * 2 + 1] = lerp(pts[j * 2 + 1], qy, e);
         }
       }
+      if (this.loose) this.trail(arm, pts, dt, arm.feeding ? e : 0);
       const h = rig.halfH;
       for (let j = 0; j < ARM_COLS; j++) {
         const ja = Math.max(0, j - 1), jb = Math.min(ARM_COLS - 1, j + 1);
@@ -907,6 +951,56 @@ export class FishView extends Container {
         arm.verts[j * 4 + 3] = pts[j * 2 + 1] - ny * h;
       }
       arm.mesh.vertices = arm.verts;
+    }
+  }
+
+  /**
+   * One arm left to the water (`loose`): `pts`, the pose asked for in the view's frame, taken as
+   * where each joint is pulled toward, and handed back as where the joints are. Each joint is
+   * kept in the world from the last frame and carried on by the way it was going, less what the
+   * water takes, then pulled to its pose, hard at the root and barely at the tip, and held to the
+   * pose's length from the joint before it. `lash`, 0 to 1, is how far a feeding arm is thrown:
+   * thrown, it is the pose, or the strike would trail behind where it lands.
+   */
+  private trail(arm: FishView['arms'][number], pts: number[], dt: number, lash: number) {
+    const c = Math.cos(this.rotation), s = Math.sin(this.rotation), kx = this.scale.x, ky = this.scale.y;
+    const wx = (j: number) => this.x + pts[j * 2] * kx * c - pts[j * 2 + 1] * ky * s;
+    const wy = (j: number) => this.y + pts[j * 2] * kx * s + pts[j * 2 + 1] * ky * c;
+    const n = ARM_COLS;
+    const len = arm.rig.len * Math.max(kx, ky);
+    let L = arm.loose;
+    if (!L || Math.hypot(L.x[0] - wx(0), L.y[0] - wy(0)) > len * ARM_JUMP) {
+      L = arm.loose = { x: new Float32Array(n), y: new Float32Array(n), px: new Float32Array(n), py: new Float32Array(n) };
+      for (let j = 0; j < n; j++) { L.x[j] = L.px[j] = wx(j); L.y[j] = L.py[j] = wy(j); }
+    }
+    if (dt > 0) {
+      const keep = Math.exp(-ARM_DRAG * dt);
+      L.x[0] = L.px[0] = wx(0);
+      L.y[0] = L.py[0] = wy(0);
+      for (let j = 1; j < n; j++) {
+        const x = L.x[j], y = L.y[j];
+        L.x[j] += (x - L.px[j]) * keep;
+        L.y[j] += (y - L.py[j]) * keep;
+        L.px[j] = x;
+        L.py[j] = y;
+        const k = lerp(1 - Math.exp(-dt * lerp(ARM_ROOT, ARM_TIP, j / (n - 1))), 1, lash);
+        L.x[j] += (wx(j) - L.x[j]) * k;
+        L.y[j] += (wy(j) - L.y[j]) * k;
+      }
+      // held to its length: each joint drawn back along the line to the one before, as far
+      // from it as the pose has it
+      for (let j = 1; j < n; j++) {
+        const seg = Math.hypot(wx(j) - wx(j - 1), wy(j) - wy(j - 1));
+        const dx = L.x[j] - L.x[j - 1], dy = L.y[j] - L.y[j - 1], d = Math.hypot(dx, dy) || 1;
+        L.x[j] = L.x[j - 1] + dx / d * seg;
+        L.y[j] = L.y[j - 1] + dy / d * seg;
+      }
+    }
+    // back into the view's frame for the strip
+    for (let j = 0; j < n; j++) {
+      const dx = L.x[j] - this.x, dy = L.y[j] - this.y;
+      pts[j * 2] = (dx * c + dy * s) / kx;
+      pts[j * 2 + 1] = (-dx * s + dy * c) / ky;
     }
   }
 
