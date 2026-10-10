@@ -500,7 +500,7 @@ function cropOf(s: Sheet, drawnOn = (i: number) => s.mat[i] !== M.EMPTY || s.dec
 /** A body's rigged arms: the drawn ones where its picture has them (the Squid's), else painted. */
 function armsOf(drawn: string | null, f: Form, pal: Palette, A: PlanArt, g: Genome, res: number, rigged: boolean) {
   if (!rigged) return { arm: null, tentacle: null };
-  const own = drawn ? drawnArms(drawn, f, res) : null;
+  const own = drawn ? drawnArms(drawn, f, res, pal.alpha) : null;
   return own?.arm ? own : { arm: armRig(f, pal, A, g, res), tentacle: null };
 }
 

@@ -427,8 +427,11 @@ export const SPRITES: Record<string, SpriteArt> = {
                     illicium: { at: [0.5, 31], tip: [44.5, 22.5] }, lantern: { at: [0.5, 41], tip: [54.0, 30.0] } },
            markSize: { tapetum: 0.7, foureye: 0.7, mantle: 0 },
            parts: { scale: 1.052, at: { eye: [91.3, 8.2], tail: [5, -9.7] } },
-           arm: { root: 0, tip: 42, axis: 2.5, at: [106, 14], spread: 10, reach: 44 },
-           tentacle: { root: 0, tip: 44, axis: 3.5, reach: 52 },
+           // the crown rooted inside the head and no wider than its front, the arms run on by as
+           // much as they were tucked: at the snout's tip and ten across, the outer roots stood
+           // off a head seven deep there, and their cut ends read as a seam
+           arm: { root: 0, tip: 42, axis: 2.5, at: [100, 15.5], spread: 4.5, reach: 50 },
+           tentacle: { root: 0, tip: 44, axis: 3.5, reach: 58 },
            ramp: [0x79728f, 0x9b8db7, 0xb8b0d8, 0xd6d0ed, 0xe8e4f8, 0xf4f2ff],
            hull: [[102.5, 16, 5.1], [90.5, 15, 7.6], [79.5, 14, 9.3], [67.5, 14.5, 9.8], [55.5, 14.5, 8.9],
                   [43.5, 14.5, 8.1], [32.5, 14.5, 6.4], [20.5, 14, 4.3], [8.5, 14.5, 1.3]] },

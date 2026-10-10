@@ -377,22 +377,32 @@ export function bakeSprite(id: string, g: Genome, plan: Plan, res: number, wound
  * A drawn player body's arms and feeding pair, rigged from its own pictures as a sprite squid's
  * are (`SpriteArt.arm`), in place of the painted ones: null where the body has none drawn.
  */
-export function drawnArms(id: string, f: Form, res: number): { arm: Rig | null; tentacle: Rig | null } {
+export function drawnArms(id: string, f: Form, res: number, alpha = 1): { arm: Rig | null; tentacle: Rig | null } {
   const s = SPRITES[id], all = framesOf(id);
   if (!s?.arm || !all?.arm) return { arm: null, tentacle: null };
   const per = spriteScale(s, f);
-  return { arm: armRig(all.arm, s.arm, s, f, per, res),
-           tentacle: all.tentacle && s.tentacle ? armRig(all.tentacle, s.tentacle, s, f, per, res) : null };
+  return { arm: armRig(all.arm, s.arm, s, f, per, res, alpha),
+           tentacle: all.tentacle && s.tentacle ? armRig(all.tentacle, s.tentacle, s, f, per, res, alpha) : null };
 }
 
+/**
+ * `alpha` is how see-through the body was laid (`lay`): the arms are meshes of their own, so
+ * they are faded in their pixels as the painted arms are, or a glassy body wore solid arms and
+ * the crown read as cut off at the head.
+ */
 function armRig(a: Arm, m: { root: number; tip: number; axis: number; reach: number }, s: SpriteArt,
-                f: Form, per: number, res: number): Rig {
+                f: Form, per: number, res: number, alpha = 1): Rig {
   const crown = s.arm!;
   const reach = m.reach / per;
   const px = (m.tip - m.root) / reach;
   const half = Math.max(m.axis, a.image.height - m.axis);
   const k = res / px;
   const cv = resample(a.image, a.palette, k, Math.ceil((m.tip - m.root) * k), Math.ceil(half * 2 * k), half - m.axis, m.root);
+  if (alpha < 1) {
+    const ctx = cv.getContext('2d')!, img = ctx.getImageData(0, 0, cv.width, cv.height);
+    for (let i = 3; i < img.data.length; i += 4) img.data[i] *= alpha;
+    ctx.putImageData(img, 0, 0);
+  }
   // the view draws a feeding arm at half `len` and the rest at 0.78 / `armPair` of it, about
   // the same: `reach` is the arm as drawn, so `len` is twice it
   return { texture: texture(cv), len: reach * 2, halfH: half / px,
