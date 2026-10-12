@@ -100,10 +100,11 @@ uniform sampler2D uTarget;
 uniform sampler2D uSourceShape;
 uniform sampler2D uTargetShape;
 uniform float uAmount;
+uniform float uShapeAmount;
 out vec4 finalColor;
 void main() {
  vec4 a=texture(uTexture,vUV), b=texture(uTarget,vTargetUV);
- float contour=mix(texture(uSourceShape,vUV).r,texture(uTargetShape,vTargetUV).r,uAmount);
+ float contour=mix(texture(uSourceShape,vUV).r,texture(uTargetShape,vTargetUV).r,uShapeAmount);
  if(contour<128.0/255.0) discard;
  vec3 skin=a.rgb/max(a.a,0.001), disguise=b.rgb/max(b.a,0.001);
  if(b.a<0.01) disguise=skin;
@@ -129,7 +130,7 @@ export class DecorationMimic extends Container {
   private positions = new Float32Array(COLS * 4);
   private sourceUV = new Float32Array(COLS * 4);
   private targetUV = new Float32Array(COLS * 4);
-  private uniforms = new UniformGroup({ uAmount: { value: 0, type: 'f32' } });
+  private uniforms = new UniformGroup({ uAmount: { value: 0, type: 'f32' }, uShapeAmount: { value: 0, type: 'f32' } });
 
   get activePiece(): Piece | null { return this.visible ? this.piece : null; }
 
@@ -152,6 +153,13 @@ export class DecorationMimic extends Container {
     const w = body.canvas.width, h = body.canvas.height;
     const tw = this.target!.source.pixelWidth, th = this.target!.source.pixelHeight;
     const bodyCols = body.vertices.length / 4;
+    const corners = [0, 2, body.vertices.length - 4, body.vertices.length - 2]
+      .map(i => body.point(body.vertices[i], body.vertices[i + 1]));
+    const bodyWidth = Math.max(...corners.map(p => p.x)) - Math.min(...corners.map(p => p.x));
+    const bodyHeight = Math.max(...corners.map(p => p.y)) - Math.min(...corners.map(p => p.y));
+    // Match local features at an animal-sized footprint, including beside a large wreck or kelp.
+    const sizeX = clamp(bounds.w * 1.08, bodyWidth * 0.5, bodyWidth * 1.1) / bounds.w;
+    const sizeY = clamp(bounds.h * 1.08, bodyHeight * 0.7, bodyHeight * 1.2) / bounds.h;
     for (let j = 0; j < COLS; j++) {
       const t = j / (COLS - 1);
       const sx = lerp(source.left + 0.5, source.right - 0.5, t);
@@ -167,11 +175,11 @@ export class DecorationMimic extends Container {
           return lerp(at(lo), at(hi), column - lo);
         };
         const from = body.point(sample(0), sample(1));
-        const toX = (bounds.x + tx / tw * bounds.w) * 1.08 * pulse;
-        const toY = (bounds.y + ty / th * bounds.h) * 1.08;
+        const toX = (bounds.x + tx / tw * bounds.w) * sizeX * pulse;
+        const toY = (bounds.y + ty / th * bounds.h) * sizeY;
         const i = j * 4 + edge * 2;
-        this.positions[i] = lerp(from.x, toX, e);
-        this.positions[i + 1] = lerp(from.y, toY, e);
+        this.positions[i] = lerp(from.x, toX, e * 0.8);
+        this.positions[i + 1] = lerp(from.y, toY, e * 0.8);
         this.sourceUV[i] = u; this.sourceUV[i + 1] = v;
         this.targetUV[i] = tx / tw; this.targetUV[i + 1] = ty / th;
       }
@@ -181,6 +189,7 @@ export class DecorationMimic extends Container {
     this.mesh!.geometry.getBuffer('aTargetUV').update();
     this.mesh!.shader!.resources.uTexture = body.texture.source;
     this.uniforms.uniforms.uAmount = e;
+    this.uniforms.uniforms.uShapeAmount = e * 0.8;
     this.uniforms.update();
     const blink = clock % 7.5;
     this.eyes.visible = e > 0.95 && blink > 6.9 && blink < 7.15;
@@ -210,7 +219,12 @@ export class DecorationMimic extends Container {
     this.targetProfile = silhouetteProfile(canvas);
     this.target = Texture.from(skinPattern(canvas)); this.target.source.scaleMode = 'nearest';
     this.targetShape?.destroy(true);
-    this.targetShape = Texture.from(shapeField(canvas)); this.targetShape.source.scaleMode = 'nearest';
+    const silhouette = document.createElement('canvas'); silhouette.width = canvas.width; silhouette.height = canvas.height;
+    const contour = silhouette.getContext('2d')!;
+    for (let x = this.targetProfile.left; x < this.targetProfile.right; x++) {
+      contour.fillRect(x, this.targetProfile.top[x], 1, this.targetProfile.bottom[x] - this.targetProfile.top[x]);
+    }
+    this.targetShape = Texture.from(shapeField(silhouette)); this.targetShape.source.scaleMode = 'nearest';
     const indices = new Uint32Array((COLS - 1) * 6);
     for (let j = 0; j < COLS - 1; j++) {
       const a = j * 2; indices.set([a, a + 2, a + 1, a + 1, a + 2, a + 3], j * 6);

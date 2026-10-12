@@ -4,7 +4,7 @@ import { Terrain } from '../src/sim/terrain.ts';
 import { speciesById, genomeFor } from '../src/content/species.ts';
 import { tankById } from '../src/content/tanks.ts';
 import { Rng } from '../src/core/util.ts';
-import { atDisguise } from '../src/sim/roles.ts';
+import { atDisguise, chooseDisguise } from '../src/sim/roles.ts';
 import { shapeField } from '../src/render/creature/decoration-mimic.ts';
 
 export function checkOctopusCycle() {
@@ -37,6 +37,8 @@ export function checkOctopusCycle() {
     { kind: 'brain', x: -120, y: surface, h: 40, seed: 23, grow: 'up', flip: false },
     { kind: 'coral', x: 120, y: surface, h: 40, seed: 47, grow: 'up', flip: false },
   ];
+  const picks = [0, 0.8, 0.99].map(random => chooseDisguise(world.decorations, 0, surface, null, random));
+  if (new Set(picks).size < 2) throw Error('Cover choices remain deterministic');
   const c = world.add(speciesById('reefoctopus'), -160, surface - 80);
   c.fade = 1; c.hostile = true;
   player.x = 0; player.y = surface - 80;
@@ -55,5 +57,5 @@ export function checkOctopusCycle() {
     throw Error(`Cycle did not repeat after 5–10 seconds: ${JSON.stringify({ waits, state })}`);
   }
   if (maximumSpeed < 200) throw Error('Hiding movement is not a fast dash');
-  return { waits, maximumSpeed, progressiveHoles: holes, rejectsWrongSurface: true };
+  return { waits, maximumSpeed, progressiveHoles: holes, rejectsWrongSurface: true, variesCover: true };
 }

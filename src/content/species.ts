@@ -264,7 +264,7 @@ export const SPECIES: Species[] = [
   // is drawn (`docs/sprite-prompts-reef.md`); the view draws its eight arms, and walks them.
   // Opaque, unlike the squid: it hides by wearing the rock, not by letting it show through
   { id: 'reefoctopus', name: 'Caribbean Reef Octopus', behavior: 'ambush', plan: 'squid', role: 'charger',
-    moves: 'mimic', zone: 'sunlit', band: 'reef', drawn: 2,
+    moves: 'mimic', zone: 'sunlit', band: 'reef', drawn: 1.25,
     size: [26, 36], hue: [6, 20], accent: 205, speed: 120, bite: 9,
     nutrition: 2.2, weight: 4, finSize: 0.5 },
 

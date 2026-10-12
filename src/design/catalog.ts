@@ -53,7 +53,7 @@ import {
   TURRET_WIND, WANE_FADE, WANE_GONE, WANE_SHOWN, woundedGenome,
   BALL_HOLD, CLOUD, CLOUD_LIFE, CURVE, GULP_DRAW, GULP_GAPE, GULP_WIND, LINE_STUN, LINE_WIND,
   LURE_FAN, LURE_GAP, LURE_HOLD, LURE_MAX, LURE_MIN, LURE_R, RICOCHET, SPRAY, SPRAY_GAP, LASH_REACH, GRAB_REACH, GRAB_HOLD,
-  nearestDisguise,
+  nearestDisguise, chooseDisguise,
 } from '../sim/roles';
 import { chainPiece, SPRITES, spritePoint } from '../content/sprites';
 import type { Fight, FiredKind, Moveset, Role, ShotKind, Species } from '../content/species';
@@ -229,11 +229,11 @@ function octopusCamouflage(): DesignItem {
   const sp = speciesById('reefoctopus');
   const g = genomeFor(sp, new Rng(1847));
   type Cell = Container & { fish: BoardFish; phaseLabel: Text; elapsed: number; bodyY: number;
-    decoration: DecorView; chosen: Piece };
+    decoration: DecorView; chosen: Piece; rhythm: number[]; rng: Rng };
   const smooth = (t: number) => t * t * (3 - 2 * t);
   return {
     id: 'reefoctopus-camouflage', name: 'Reef octopus · camouflage',
-    note: 'Dashes to a wall decoration, copies its pattern with body and arms, hides for 7.5 seconds, unfolds and clutches, then repeats. The opaque copy is 8% larger, with a tiny pulse and squint.',
+    note: 'A smaller octopus with shallow arm webbing. It matches features of a nearby decoration, hides for 5–10 seconds, then unfolds and clutches. Destination and phase lengths vary each cycle.',
     source: 'src/render/creature/fishview.ts', span: g.size * 6, depth: tankById('reef').depth, genome: g,
     make: () => {
       const tank = { ...tankById('reef'), tile: g.size * 0.32 };
@@ -264,26 +264,35 @@ function octopusCamouflage(): DesignItem {
       } });
       cell.phaseLabel.anchor.set(0.5);
       cell.phaseLabel.position.set(0, -g.size * 2);
-      cell.elapsed = 0;
+      cell.elapsed = 0; cell.rhythm = []; cell.rng = new Rng(7183);
       cell.addChild(room.root, cell.decoration.root, cell.fish, cell.phaseLabel);
       cell.on('destroyed', () => { room.destroy(); cell.decoration.destroy(); });
       return cell;
     },
     animate: (view, dt, beat) => {
       const cell = view as Cell, fish = cell.fish.fish;
-      const t = (cell.elapsed += dt) % 12;
-      const arriving = t < 0.5, leaving = t >= 10.8;
-      const travel = arriving ? 1 - smooth(t / 0.5) : leaving ? smooth((t - 10.8) / 1.2) : 0;
+      cell.elapsed += dt;
+      if (!cell.rhythm.length || cell.elapsed >= cell.rhythm[8]) {
+        cell.elapsed = 0;
+        let end = 0;
+        cell.rhythm = [[0.4, 0.7], [0.2, 0.4], [0.25, 0.45], [5, 10], [0.2, 0.35],
+          [0.45, 0.75], [0.65, 1], [0.4, 0.7], [0.4, 0.7]].map(([lo, hi]) => end += cell.rng.range(lo, hi));
+        cell.chosen = chooseDisguise(cell.decoration.pieces, 0, cell.bodyY, cell.chosen, cell.rng.next())!;
+        fish.mimicDecoration = cell.chosen;
+      }
+      const t = cell.elapsed, phase = cell.rhythm.findIndex(end => t < end);
+      const start = phase ? cell.rhythm[phase - 1] : 0;
+      const progress = clamp((t - start) / (cell.rhythm[phase] - start), 0, 1);
+      const arriving = phase === 0, leaving = phase === 8;
+      const travel = arriving ? 1 - smooth(progress) : leaving ? smooth(progress) : 0;
       fish.cling = arriving || leaving ? null : { nx: 0, ny: -1 };
-      fish.camo = t < 0.65 ? 0 : t < 1.05 ? smooth((t - 0.65) / 0.4) : t < 8.55 ? 1
-        : t < 8.9 ? 1 - smooth((t - 8.55) / 0.35) : 0;
-      const windup = t >= 8.9 && t < 9.25, clutch = t >= 9.25 && t < 10.2;
+      fish.camo = phase === 2 ? smooth(progress) : phase === 3 ? 1 : phase === 4 ? 1 - smooth(progress) : 0;
+      const windup = phase === 5, clutch = phase === 6;
       fish.grab(clutch ? { x: g.size * 2.8, y: cell.bodyY - g.size * 0.3 } : null);
-      cell.phaseLabel.text = arriving ? 'Dash to the wall' : t < 0.65 ? 'Settling'
-        : t < 1.05 ? 'Body and arms copy the decoration' : t < 8.55 ? 'Hidden · 7.5 seconds'
-          : t < 8.9 ? 'Unfolding' : windup ? 'Winding up' : clutch ? 'Clutch' : leaving ? 'Dash again' : 'Recovering';
-      fish.animate(dt, arriving || leaving ? 1.2 : 0, beat * 0.5, 0, {
-        ...REST, windup: windup ? (t - 8.9) / 0.35 : 0, strike: clutch ? 1 : 0,
+      cell.phaseLabel.text = ['Dash to cover', 'Settling', 'Matching nearby features', 'Hidden · watching',
+        'Unfolding', 'Winding up', 'Clutch · web spreads', 'Recovering', 'Relocating'][phase];
+      fish.animate(dt, arriving || leaving ? 0.8 : 0, beat * 0.5, 0, {
+        ...REST, windup: windup ? progress : 0, strike: clutch ? 1 : 0,
       });
       fish.place(-g.size * 2.8 * travel, cell.bodyY - g.size * 1.2 * travel, 0, 1);
       fish.show(true, 1, 0xffffff);

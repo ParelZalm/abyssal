@@ -33,6 +33,7 @@ import type { Emitter } from './bake/sheet';
 import type { RoomSurface } from '../room';
 import type { Piece } from '../decor';
 import { DecorationMimic } from './decoration-mimic';
+import { ArmWeb } from './arm-web';
 
 interface Motion {
   /** Columns in the strip. More only pays where the body is long enough to hold a wave. */
@@ -352,6 +353,7 @@ export class FishView extends Container {
   private mimicAmount = 0;
   mimicDecoration: Piece | null = null;
   private decorationMimic: DecorationMimic | null = null;
+  private armWeb: ArmWeb | null = null;
   /** The arm a walker throws at `grip`, from the wind-up until it is home; -1 none. */
   private striker = -1;
   /** How far through a wind-up, 0 to 1, as `animate` was told: the striker draws back on it. */
@@ -552,7 +554,7 @@ export class FishView extends Container {
     this.updateLocalTransform();
     const bodyToMimic = this.localTransform.clone();
     bodyToMimic.tx -= anchorX; bodyToMimic.ty -= anchorY;
-    for (const arm of this.arms) arm.skin?.wear(Texture.WHITE);
+    for (const skin of [...this.arms.map(arm => arm.skin), this.armWeb?.skin]) skin?.wear(Texture.WHITE);
     copy?.update(this.mimicDecoration, this.surface?.depth ?? this.y, this.mimicAmount, this.clock,
       this.baked ? { canvas: this.baked.canvas, texture: this.baked.texture, vertices: this.verts,
         point: (x, y) => bodyToMimic.apply({ x, y }) } : undefined);
@@ -577,7 +579,7 @@ export class FishView extends Container {
     const m = art && s && !this.mimicDecoration && !this.decorationMimic?.activePiece
       ? this.mimicAmount * MIMIC_HIDE : 0;
     const c = Math.cos(this.rotation), sn = Math.sin(this.rotation), kx = this.scale.x, ky = this.scale.y;
-    for (const skin of [this.skin, ...this.arms.map(a => a.skin)]) {
+    for (const skin of [this.skin, ...this.arms.map(a => a.skin), this.armWeb?.skin]) {
       if (!skin) continue;
       const u = skin.uniforms.uniforms;
       const pattern = skin !== this.skin ? this.decorationMimic?.pattern : null;
@@ -678,6 +680,7 @@ export class FishView extends Container {
   destroy(options?: Parameters<Container['destroy']>[0]) {
     this.decorationMimic?.destroy({ children: true });
     this.decorationMimic = null;
+    this.armWeb?.destroy(); this.armWeb = null;
     if (this.baked) { releaseFish(this.baked); this.baked = null; }
     // a mesh does not free its shader, and this one holds the skin's uniforms
     this.skin?.shader.destroy();
@@ -705,6 +708,7 @@ export class FishView extends Container {
     const men = menace(g);
 
     this.mesh?.destroy();
+    this.armWeb?.destroy(); this.armWeb = null;
     for (const a of this.arms) { a.skin?.shader.destroy(); a.mesh.destroy(); }
     this.arms = [];
     this.ghosted = false;
@@ -779,6 +783,9 @@ export class FishView extends Container {
         this.addChild(mesh);
         this.arms.push({ mesh, verts: averts, feeding, rig: own, v: (i / (A.armCount - 1)) * 2 - 1, skin });
       }
+    }
+    if (this.walker && this.arms.length > 1) {
+      this.armWeb = new ArmWeb(this.arms.length); this.addChildAt(this.armWeb.mesh, 0);
     }
     this.skin?.shader.destroy();
     this.skin = livingSkin(this.baked.texture, this.baked.depth / this.baked.halfH, this.baked.legs, this.baked.trail);
@@ -1261,6 +1268,7 @@ export class FishView extends Container {
       }
       arm.mesh.vertices = arm.verts;
     }
+    this.armWeb?.update(this.arms, Math.max(this.windup, this.strike));
   }
 
   /**

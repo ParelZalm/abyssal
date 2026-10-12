@@ -161,6 +161,8 @@ export class Creature {
   disguise: Piece | null = null;
   lastDisguise: Piece | null = null;
   hideTime = 0;
+  hideDash = 5.5;
+  clutchHold = 0.7;
   mimicSettled = false;
   camo = 0;
   flush = 0;

@@ -21,6 +21,16 @@ export function nearestDisguise(pieces: readonly Piece[], x: number, y: number):
   return nearest;
 }
 
+/** Sample a nearby landmark, favouring proximity without choosing the same one every cycle. */
+export function chooseDisguise(pieces: readonly Piece[], x: number, y: number, previous: Piece | null, random: number): Piece | null {
+  const other = pieces.filter(piece => piece !== previous);
+  const candidates = (other.length ? other : pieces).slice().sort((a, b) => dist2(x, y, a.x, a.y) - dist2(x, y, b.x, b.y)).slice(0, 3);
+  if (!candidates.length) return null;
+  const weights = candidates.map(piece => 1 / (1 + dist2(x, y, piece.x, piece.y) / (piece.h * piece.h)));
+  let pick = random * weights.reduce((sum, weight) => sum + weight, 0);
+  return candidates.find((_, i) => (pick -= weights[i]) <= 0) ?? candidates[candidates.length - 1];
+}
+
 /** A held face must match both the target position and the target's growth direction. */
 export function atDisguise(c: { x: number; y: number; cling: { nx: number; ny: number } | null },
                            x: number, y: number, nx: number, ny: number, radius: number) {
@@ -439,7 +449,7 @@ const TAKE_HOLD = 1.7;
 const HOLD_MIN = 1.2;
 const LET_GO = 0.6;
 const SWIM = 0.75;
-const HIDE_DASH = 8;
+
 export const MIMIC_WAIT: [number, number] = [5, 10];
 /** How far out it looks for rock to make for, tiles, when there is none within feel. */
 const SEEK = 10;
@@ -1259,8 +1269,8 @@ export class Roles {
     c.jetCd = Math.max(0, c.jetCd - dt);
     c.clingCd = Math.max(0, c.clingCd - dt);
     if (c.hide && !c.disguise) {
-      const other = this.world.decorations.filter(piece => piece !== c.lastDisguise);
-      c.disguise = nearestDisguise(other.length ? other : this.world.decorations, c.x, c.y);
+      c.disguise = chooseDisguise(this.world.decorations, c.x, c.y, c.lastDisguise, this.world.rng.next());
+      c.hideDash = 4.5 + this.world.rng.next() * 2;
     }
     c.view.mimicDecoration = c.cling ? c.disguise : null;
     // a blow it did not see coming: it blanches, inks and is off the rock
@@ -1282,7 +1292,7 @@ export class Roles {
       } else if (c.attack === 'strike') {
         this.lashHit(c, p);
       } else if (c.attack === 'recover' && c.landed) {
-        if (c.attackLen - c.attackT < GRAB_HOLD) {
+        if (c.attackLen - c.attackT < c.clutchHold) {
           // held, and drawn in toward the crown
           const n = noseOf(c);
           const dx = n.x - p.x, dy = n.y - p.y, l = Math.hypot(dx, dy) || 1;
@@ -1307,7 +1317,7 @@ export class Roles {
     // an arm on the player feels it, seen or not: it does not need to see what it holds
     const felt = c.view.armGap(p.x, p.y) < p.radius * ARM_FEEL;
     if (c.hide && c.mimicSettled && c.camo > 0.9) {
-      if (c.hideTime === 0) c.hideTime = MIMIC_WAIT[0] + Math.random() * (MIMIC_WAIT[1] - MIMIC_WAIT[0]);
+      if (c.hideTime === 0) c.hideTime = MIMIC_WAIT[0] + this.world.rng.next() * (MIMIC_WAIT[1] - MIMIC_WAIT[0]);
       c.hideTime -= dt;
       if (c.hideTime <= 0) { c.hide = false; c.hideTime = 0; c.mimicSettled = false; }
     }
@@ -1315,7 +1325,8 @@ export class Roles {
     if (!c.hide && near && c.roleCd <= 0 && this.free(c)) {
       c.hide = false;
       c.felt = felt;
-      this.begin(c, 'windup', GRAB_WIND);
+      c.clutchHold = 0.45 + this.world.rng.next() * 0.45;
+      this.begin(c, 'windup', 0.45 + this.world.rng.next() * 0.3);
       still();
       this.skin(c, dt, null, tile);
       return;
@@ -1341,12 +1352,14 @@ export class Roles {
         const sameFace = c.cling && c.cling.nx * nx + c.cling.ny * ny > 0.85;
         if (sameFace && normalGap < w * 0.6) {
           const along = (x - c.x) * -c.cling!.ny + (y - c.y) * c.cling!.nx;
-          this.walk(c, dt, p, t, Math.sign(along), HIDE_DASH);
+          this.walk(c, dt, p, t, Math.sign(along), c.hideDash);
         } else {
           c.cling = null; c.clingCd = LET_GO;
           const a = clearHeading(t, c, Math.atan2(y - c.y, x - c.x));
-          const speed = Math.min(HIDE_DASH * tile, Math.hypot(x - c.x, y - c.y) / dt);
-          c.vx = Math.cos(a) * speed; c.vy = Math.sin(a) * speed;
+          const speed = Math.min(c.hideDash * tile, Math.hypot(x - c.x, y - c.y) / dt);
+          const ease = 1 - Math.exp(-dt * 14);
+          c.vx += (Math.cos(a) * speed - c.vx) * ease;
+          c.vy += (Math.sin(a) * speed - c.vy) * ease;
           c.faceToward(x, 0); c.angle = a;
           // Once close to the right face, let the normal hold logic catch it on the next tick.
           if (Math.hypot(x - c.x, y - c.y) < w) c.clingCd = 0;
@@ -1848,7 +1861,7 @@ export class Roles {
       this.strike(c, role);
       this.begin(c, 'strike', role === 'charger'
         ? (moves === 'line' ? LINE_DASH : moves === 'gulp' ? GULP_DRAW : moves === 'camo' ? LASH_OUT
-          : moves === 'mimic' ? GRAB_OUT : DASH_TIME)
+          : moves === 'mimic' ? 0.2 + this.world.rng.next() * 0.1 : DASH_TIME)
         : moves === 'volley' ? SALVO_GAP * (SALVO - 1) + 0.12 : 0.12);
     } else if (c.attack === 'strike') {
       if (moves === 'gulp') {
@@ -1865,7 +1878,7 @@ export class Roles {
       }
       // a lash that missed is let go of at once, and comes back slowly: the opening
       if ((moves === 'camo' || moves === 'mimic') && !c.landed) c.view.grab(null);
-      this.begin(c, 'recover', moves === 'camo' ? LASH_RECOVER : moves === 'mimic' ? GRAB_RECOVER
+      this.begin(c, 'recover', moves === 'camo' ? LASH_RECOVER : moves === 'mimic' ? c.clutchHold + 0.4 + this.world.rng.next() * 0.3
         : role === 'charger' ? CHARGE_RECOVER
         : role === 'turret' ? TURRET_RECOVER : SPIT_RECOVER);
     } else {
