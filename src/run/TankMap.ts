@@ -300,6 +300,7 @@ export class TankMap {
     this.layers.decor.addChild(decor.root);
     this.layers.glow.addChild(decor.glow);
     this.world.terrain = t;
+    this.world.decorations = decor.pieces;
     this.world.pickups.push(...c.pickups);
     c.pickups = [];
     this.current = i;
@@ -627,6 +628,7 @@ export class TankMap {
       // the room being slid into may still be baking; it is finished on arrival (`enter`)
       if ((bake && i === this.current) || view.ready) view.update();
       decor.update(t);
+      if (i === this.current) for (const c of this.world.creatures) c.view.surface = view.surface;
     }
   }
 

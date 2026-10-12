@@ -6,7 +6,7 @@
  * draws today. The `source` field is the file to open when you want to change one —
  * that is the whole point of the page, so keep it accurate when things move.
  */
-import { Container, Graphics, Sprite } from 'pixi.js';
+import { Container, Graphics, Sprite, Text } from 'pixi.js';
 import { formFor, PLAN_FORMS, R, type Plan } from '../content/form';
 import { FishView, REST, type Pose } from '../render/creature/fishview';
 import { GHOST_TINT } from '../render/ghosts';
@@ -16,7 +16,7 @@ import { genomeFor, rangeOf, SPECIES } from '../content/species';
 import { TRAITS, type Rarity, type Trait } from '../content/traits';
 import { BANDS, zoneOf } from '../content/zones';
 import { ROOMS, tankById, TANKS, TEMPO } from '../content/tanks';
-import { PIXEL } from '../render/pixel';
+import { PIXEL, artDensity } from '../render/pixel';
 import { RoomView } from '../render/room';
 import { DECOR_KINDS, DECOR_SETS, DecorView, placeDecor, type DecorKind, type Grow, type Piece } from '../render/decor';
 import { Terrain } from '../sim/terrain';
@@ -42,7 +42,7 @@ import { shotGlow, shotRound, shotTexture } from '../render/shots';
 import { glowTexture } from '../render/textures';
 import { BAR_OVER, ChargeBar } from '../render/tells';
 import { BREACH_LOCK, GHOST_LOCK, GHOST_TELL, GHOSTS, GHOSTS_HURT, INK_FADE, LOB_WIND, LURK, PUNCH_WIND, SNAGGED, RING_SPOKES,
-         RING_WIND, SPACING, WEDGED } from '../sim/bosses';
+  RING_WIND, SPACING, WEDGED } from '../sim/bosses';
 import { PickupView } from '../render/pickups';
 import { BombView } from '../render/bombs';
 import { FUSE, type Bomb } from '../sim/bombs';
@@ -52,7 +52,8 @@ import {
   SALVO, SALVO_GAP, SHOT_SPEED, SPIT_RECOVER, SPIT_WIND, SPOKES, STING_LIFE, SURGE, SWELL, TAUT, TURRET_RECOVER,
   TURRET_WIND, WANE_FADE, WANE_GONE, WANE_SHOWN, woundedGenome,
   BALL_HOLD, CLOUD, CLOUD_LIFE, CURVE, GULP_DRAW, GULP_GAPE, GULP_WIND, LINE_STUN, LINE_WIND,
-  LURE_FAN, LURE_GAP, LURE_HOLD, LURE_MAX, LURE_MIN, LURE_R, RICOCHET, SPRAY, SPRAY_GAP, LASH_REACH,
+  LURE_FAN, LURE_GAP, LURE_HOLD, LURE_MAX, LURE_MIN, LURE_R, RICOCHET, SPRAY, SPRAY_GAP, LASH_REACH, GRAB_REACH, GRAB_HOLD,
+  nearestDisguise,
 } from '../sim/roles';
 import { chainPiece, SPRITES, spritePoint } from '../content/sprites';
 import type { Fight, FiredKind, Moveset, Role, ShotKind, Species } from '../content/species';
@@ -215,11 +216,78 @@ function motionGroup(): DesignGroup {
       });
     }
   }
-  items.push(larvaStroke(), larvaAim(), larvaNook());
+  items.push(larvaStroke(), larvaAim(), larvaNook(), octopusCamouflage());
   return {
     id: 'motion', name: 'Motion',
     note: 'Every animation state, one per cell: idle, swim, turn, attack, hurt, death — and the larva\'s own three, the stroke, the aim and the nook.',
     items,
+  };
+}
+
+/** A visible camouflage cycle on real baked reef rock, using the shipping skin and body mesh. */
+function octopusCamouflage(): DesignItem {
+  const sp = speciesById('reefoctopus');
+  const g = genomeFor(sp, new Rng(1847));
+  type Cell = Container & { fish: BoardFish; phaseLabel: Text; elapsed: number; bodyY: number;
+    decoration: DecorView; chosen: Piece };
+  const smooth = (t: number) => t * t * (3 - 2 * t);
+  return {
+    id: 'reefoctopus-camouflage', name: 'Reef octopus · camouflage',
+    note: 'Dashes to a wall decoration, copies its pattern with body and arms, hides for 7.5 seconds, unfolds and clutches, then repeats. The opaque copy is 8% larger, with a tiny pulse and squint.',
+    source: 'src/render/creature/fishview.ts', span: g.size * 6, depth: tankById('reef').depth, genome: g,
+    make: () => {
+      const tank = { ...tankById('reef'), tile: g.size * 0.32 };
+      const terrain = new Terrain({ id: 'octopus-demo', tank: 'reef', types: ['fight'], rows: [
+        '........................', '........................', '........................',
+        '........................', '########################', '########################',
+        '########################', '########################',
+      ] }, tank, 18, 0, g.size);
+      const room = new RoomView(terrain, 1, 0);
+      room.update();
+      const cell = new Container() as Cell;
+      cell.fish = boardFish(g, sp.plan, sp);
+      cell.fish.fish.surface = room.surface;
+      cell.fish.fish.cling = { nx: 0, ny: -1 };
+      let surface = terrain.y0 + terrain.cell;
+      while (surface < g.size * 2 && !terrain.solidAt(0, surface)) surface += terrain.cell * 0.25;
+      cell.bodyY = surface - g.size * 0.6;
+      const pieces: Piece[] = [
+        { kind: 'brain', x: -g.size * 1.9, y: surface, h: g.size * 1.15, seed: 23, grow: 'up', flip: false },
+        { kind: 'coral', x: g.size * 2.2, y: surface, h: g.size * 1.25, seed: 47, grow: 'up', flip: false },
+      ];
+      cell.decoration = new DecorView(pieces, terrain.cy, artDensity());
+      cell.decoration.update(0);
+      cell.chosen = nearestDisguise(pieces, -g.size * 2.8, cell.bodyY)!;
+      cell.fish.fish.mimicDecoration = cell.chosen;
+      cell.phaseLabel = new Text({ text: 'Resting', style: {
+        fontFamily: 'Pixelify Sans', fontSize: g.size * 0.2, fill: 0xc4dce9,
+      } });
+      cell.phaseLabel.anchor.set(0.5);
+      cell.phaseLabel.position.set(0, -g.size * 2);
+      cell.elapsed = 0;
+      cell.addChild(room.root, cell.decoration.root, cell.fish, cell.phaseLabel);
+      cell.on('destroyed', () => { room.destroy(); cell.decoration.destroy(); });
+      return cell;
+    },
+    animate: (view, dt, beat) => {
+      const cell = view as Cell, fish = cell.fish.fish;
+      const t = (cell.elapsed += dt) % 12;
+      const arriving = t < 0.5, leaving = t >= 10.8;
+      const travel = arriving ? 1 - smooth(t / 0.5) : leaving ? smooth((t - 10.8) / 1.2) : 0;
+      fish.cling = arriving || leaving ? null : { nx: 0, ny: -1 };
+      fish.camo = t < 0.65 ? 0 : t < 1.05 ? smooth((t - 0.65) / 0.4) : t < 8.55 ? 1
+        : t < 8.9 ? 1 - smooth((t - 8.55) / 0.35) : 0;
+      const windup = t >= 8.9 && t < 9.25, clutch = t >= 9.25 && t < 10.2;
+      fish.grab(clutch ? { x: g.size * 2.8, y: cell.bodyY - g.size * 0.3 } : null);
+      cell.phaseLabel.text = arriving ? 'Dash to the wall' : t < 0.65 ? 'Settling'
+        : t < 1.05 ? 'Body and arms copy the decoration' : t < 8.55 ? 'Hidden · 7.5 seconds'
+          : t < 8.9 ? 'Unfolding' : windup ? 'Winding up' : clutch ? 'Clutch' : leaving ? 'Dash again' : 'Recovering';
+      fish.animate(dt, arriving || leaving ? 1.2 : 0, beat * 0.5, 0, {
+        ...REST, windup: windup ? (t - 8.9) / 0.35 : 0, strike: clutch ? 1 : 0,
+      });
+      fish.place(-g.size * 2.8 * travel, cell.bodyY - g.size * 1.2 * travel, 0, 1);
+      fish.show(true, 1, 0xffffff);
+    },
   };
 }
 
@@ -1097,6 +1165,10 @@ const MOVE_NOTES: Record<Moveset, { whole: string; turned: string }> = {
   camo: {
     whole: `Glides along the rock in the rock's colours, all but gone when still. Within ${LASH_REACH} tiles it darkens, throws its tentacles, reels you in, and jets away to hide again.`,
     turned: 'Inks as it turns, and every time it jets; its colour comes back quicker, and it lashes sooner.',
+  },
+  mimic: {
+    whole: `Dashes to a wall beside a decoration. Body and arms copy its pattern and hide for 5–10 seconds, with a tiny pulse and squint. It unfolds, reaches within ${GRAB_REACH} tiles, then clutches you for ${GRAB_HOLD} s. After the attack it dashes to another hiding place and repeats.`,
+    turned: 'Inks as it turns, and every time it jets; its colour comes back quicker, and it reaches sooner.',
   },
   cloak: {
     whole: `Its bolts bend after you at ${CURVE} radians a second for their first second, then fly on.`,

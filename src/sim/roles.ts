@@ -9,6 +9,25 @@ import { chainPiece, SPRITES, spriteScale } from '../content/sprites';
 import { stealthOf } from './organs';
 import type { Terrain } from './terrain';
 import type { World } from './world';
+import type { Piece } from '../content/decoration';
+
+/** The actual nearest decoration, kept as the same seeded object while the octopus settles. */
+export function nearestDisguise(pieces: readonly Piece[], x: number, y: number): Piece | null {
+  let nearest: Piece | null = null, distance = Infinity;
+  for (const piece of pieces) {
+    const d = dist2(x, y, piece.x, piece.y);
+    if (d < distance) { nearest = piece; distance = d; }
+  }
+  return nearest;
+}
+
+/** A held face must match both the target position and the target's growth direction. */
+export function atDisguise(c: { x: number; y: number; cling: { nx: number; ny: number } | null },
+                           x: number, y: number, nx: number, ny: number, radius: number) {
+  return !!c.cling && c.cling.nx * nx + c.cling.ny * ny > 0.85
+    && Math.abs((x - c.x) * -ny + (y - c.y) * nx) < radius * 0.4
+    && Math.abs((x - c.x) * nx + (y - c.y) * ny) < radius * 0.6;
+}
 
 // Every distance a role keeps is in tiles, and every speed in tiles a second: a tank is
 // authored at its animal's scale, so a role reads the same in the nursery as in the deep.
@@ -390,6 +409,63 @@ const SETTLED = 0.9;
 const INKED_CD = 0.7;
 
 /**
+ * The mimic (the Caribbean reef octopus), which walks where the squid glides. It takes hold of
+ * the rock — floor, wall or ceiling, held `HOLD_OFF` of its wall circle off it (`Creature.cling`) —
+ * and dashes beside a decoration to impersonate. It rests for 5–10 seconds as a slightly
+ * larger opaque copy, then unfolds to clutch the player and dashes to another hiding place.
+ * Without decoration it shapes its skin to the rock. It goes the way round the face that brings it nearer; where the
+ * face leads away it lets go and swims across, crown first, to take hold nearer. Inside
+ * `GRAB_REACH` with a clear line it stops and flashes dark through `GRAB_WIND`, its arm drawn
+ * back, and throws that one arm at where the player was at the lock, out in `GRAB_OUT`. An arm
+ * that lands holds the player for `GRAB_HOLD`, drawing it in at `GRAB_PULL` tiles a second, and
+ * comes home through the rest of `GRAB_RECOVER` — the opening. A blow it did not see coming, or
+ * the player on top of it with no arm ready, and it inks and jets off, mantle first, to take
+ * hold of rock somewhere else; turned, it inks every time.
+ */
+const HOLD_OFF = 1.15;
+const PROWL = 1.6;
+/** Within this many of its reach it walks slowly enough to keep most of the rock on it. */
+const STALK = 1.6;
+const STALK_PACE = 0.6;
+/** How hard a walker is held to its distance off the face, a second: the arms' grip. */
+const GRIP = 10;
+/** Past this many wall circles from the rock a walker has lost its hold. */
+const LOST_HOLD = 2.2;
+/** How far ahead along the face, in wall circles, a walker feels for a wall rising out of it. */
+const CORNER = 1.8;
+/** Swimming, it takes hold of rock this many wall circles off it. */
+const TAKE_HOLD = 1.7;
+/** Seconds after taking hold before it may let go to cross, and after letting go before it takes hold. */
+const HOLD_MIN = 1.2;
+const LET_GO = 0.6;
+const SWIM = 0.75;
+const HIDE_DASH = 8;
+export const MIMIC_WAIT: [number, number] = [5, 10];
+/** How far out it looks for rock to make for, tiles, when there is none within feel. */
+const SEEK = 10;
+export const GRAB_REACH = 3.5;
+export const GRAB_WIND = 0.6;
+/**
+ * How near an arm has to come to the player, as a share of its radius, for the octopus to feel it
+ * there (`FishView.armGap`): a touch, a little short of overlapping, since an arm lying still is
+ * swum past as often as into.
+ */
+const ARM_FEEL = 0.3;
+const GRAB_LOCK = 0.2;
+export const GRAB_OUT = 0.25;
+export const GRAB_HOLD = 0.7;
+export const GRAB_RECOVER = 1.2;
+const GRAB_CD: [number, number] = [1.6, 2.6];
+const GRAB_PULL = 3;
+/**
+ * Tiles a second at which an octopus has none of the rock left on it: past a squid's, so a prowl
+ * still wears most of it — it is the jet and the throw that give it away, not the walk.
+ */
+const MIMIC_SPEED = 5;
+const OPEN_MIMIC = 0.25;
+const SHY = 1.2;
+
+/**
  * What a moveset looks like turned: the mackerel flushed red with its jaw and fins up, the
  * pufferfish's spines raised, the nettle's bell hotter, the triggerfish flushed red, the
  * lionfish flared, the moon jelly's gonads hot. A turn is a rebuild of the bake with this, once,
@@ -411,6 +487,7 @@ export function woundedGenome(moves: Moveset, g: Genome): Genome | null {
     // the deep's are all sprites with no turned pair, and turn in what they do: the ricochet,
     // the spray, the ball, the lunge, the break. The reef squid's colour is its camouflage's
     case 'volley': case 'burrow': case 'line': case 'gulp': case 'cloak': case 'lure': case 'chain': case 'camo':
+    case 'mimic':
       return null;
   }
 }
@@ -454,7 +531,8 @@ export function bracedOf(c: Creature) {
 export function chargeOf(c: Creature): { fill: number; locked: boolean } | null {
   // a gulp is not a dash: its tell is the jaw, and a bar that locked would promise a line; nor is
   // a lash, whose tell is the squid darkening out of the rock
-  if (roleOf(c) !== 'charger' || c.attack !== 'windup' || c.species.moves === 'gulp' || c.species.moves === 'camo') return null;
+  if (roleOf(c) !== 'charger' || c.attack !== 'windup' || c.species.moves === 'gulp' || c.species.moves === 'camo'
+    || c.species.moves === 'mimic') return null;
   const done = c.attackLen - c.attackT;
   return { fill: Math.min(1, done / Math.max(0.01, c.attackLen - CHARGE_LOCK)), locked: c.attackT <= CHARGE_LOCK };
 }
@@ -530,6 +608,7 @@ export class Roles {
         if (c.species.moves === 'burrow') this.lurk(c, dt, p, t);
         else if (c.species.moves === 'gulp') this.gulp(c, dt, p, t);
         else if (c.species.moves === 'camo') this.stalk(c, dt, p, t);
+        else if (c.species.moves === 'mimic') this.prowl(c, dt, p, t);
         else this.charger(c, dt, p, t);
         break;
       case 'spitter': this.spitter(c, dt, p, t); break;
@@ -1171,13 +1250,288 @@ export class Roles {
   }
 
   /**
-   * The rock round a body, felt for along sixteen rays out to `FEEL` tiles past its radius:
+   * A reef octopus (see `HOLD_OFF` and the rest above): walking the rock to within an arm of the
+   * player in the rock's own skin, the flash and the one arm thrown, and the jet away.
+   */
+  private prowl(c: Creature, dt: number, p: Creature, t: Terrain) {
+    const tile = t.tile;
+    const d = Math.sqrt(dist2(c.x, c.y, p.x, p.y));
+    c.jetCd = Math.max(0, c.jetCd - dt);
+    c.clingCd = Math.max(0, c.clingCd - dt);
+    if (c.hide && !c.disguise) {
+      const other = this.world.decorations.filter(piece => piece !== c.lastDisguise);
+      c.disguise = nearestDisguise(other.length ? other : this.world.decorations, c.x, c.y);
+    }
+    c.view.mimicDecoration = c.cling ? c.disguise : null;
+    // a blow it did not see coming: it blanches, inks and is off the rock
+    if (c.hp < c.hpWas && c.attack === 'none') {
+      if (c.jetCd <= 0) this.jet(c, p, true);
+      c.camo = 0;
+    }
+    c.hpWas = c.hp;
+    this.hold(c, dt, t);
+    const hang = () => c.strafe(dt, 0, 0, 0, pitched(Math.atan2(p.y - c.y, p.x - c.x), c.face, 0.6));
+    const still = () => { if (c.cling) this.walk(c, dt, p, t, 0, 0); else hang(); };
+    if (this.tick(c, dt)) {
+      if (c.attack === 'windup' && c.attackT > GRAB_LOCK) {
+        const n = noseOf(c), to = Math.hypot(p.x - n.x, p.y - n.y) + p.radius * 0.5;
+        // what an arm felt is in reach however far out along it: kept through the wind-up, since
+        // the arm thrown is drawn up off the rock as it winds
+        c.aimA = Math.atan2(p.y - n.y, p.x - n.x);
+        c.aimD = c.felt ? to : Math.min(to, GRAB_REACH * tile);
+      } else if (c.attack === 'strike') {
+        this.lashHit(c, p);
+      } else if (c.attack === 'recover' && c.landed) {
+        if (c.attackLen - c.attackT < GRAB_HOLD) {
+          // held, and drawn in toward the crown
+          const n = noseOf(c);
+          const dx = n.x - p.x, dy = n.y - p.y, l = Math.hypot(dx, dy) || 1;
+          const k = 1 - Math.exp(-8 * dt), pull = GRAB_PULL * tile * Math.min(1, l / (c.radius * 0.8));
+          p.vx += (dx / l * pull - p.vx) * k;
+          p.vy += (dy / l * pull - p.vy) * k;
+        } else c.view.grab(null);
+      }
+      still();
+      this.skin(c, dt, null, tile);
+      return;
+    }
+    if (c.trick === 'jet') {
+      // gliding off the jet, mantle first, its arms streaming back toward what it fled
+      c.faceToward(p.x, FACE_SLACK * tile);
+      hang();
+      if ((c.trickT -= dt) <= 0) c.trick = '';
+      this.skin(c, dt, null, tile);
+      return;
+    }
+    const sees = t.clearLine(c.x, c.y, p.x, p.y);
+    // an arm on the player feels it, seen or not: it does not need to see what it holds
+    const felt = c.view.armGap(p.x, p.y) < p.radius * ARM_FEEL;
+    if (c.hide && c.mimicSettled && c.camo > 0.9) {
+      if (c.hideTime === 0) c.hideTime = MIMIC_WAIT[0] + Math.random() * (MIMIC_WAIT[1] - MIMIC_WAIT[0]);
+      c.hideTime -= dt;
+      if (c.hideTime <= 0) { c.hide = false; c.hideTime = 0; c.mimicSettled = false; }
+    }
+    const near = felt || (sees && d < GRAB_REACH * tile * 0.9);
+    if (!c.hide && near && c.roleCd <= 0 && this.free(c)) {
+      c.hide = false;
+      c.felt = felt;
+      this.begin(c, 'windup', GRAB_WIND);
+      still();
+      this.skin(c, dt, null, tile);
+      return;
+    }
+    // on top of it with no arm ready: off, rather than be bitten where it sits
+    if (d < SHY * tile && c.roleCd > 0 && c.jetCd <= 0) { this.jet(c, p, c.wounded); return; }
+    if (c.hide && c.disguise) {
+      const piece = c.disguise;
+      const nx = piece.grow === 'left' ? -1 : piece.grow === 'right' ? 1 : 0;
+      const ny = piece.grow === 'up' ? -1 : piece.grow === 'down' ? 1 : 0;
+      const ux = -ny, uy = nx, w = wallR(c);
+      // Beside the original, rather than replacing or covering it: one small size difference is the tell.
+      const side = (c.x - piece.x) * ux + (c.y - piece.y) * uy >= 0 ? 1 : -1;
+      const gap = piece.h * 0.9 + w * 0.35;
+      const x = piece.x + ux * side * gap + nx * HOLD_OFF * w;
+      const y = piece.y + uy * side * gap + ny * HOLD_OFF * w;
+      c.mimicSettled = atDisguise(c, x, y, nx, ny, w);
+      if (c.mimicSettled) {
+        this.walk(c, dt, p, t, 0, 0);
+      } else {
+        c.camo = 0; c.hideTime = 0;
+        const normalGap = Math.abs((x - c.x) * nx + (y - c.y) * ny);
+        const sameFace = c.cling && c.cling.nx * nx + c.cling.ny * ny > 0.85;
+        if (sameFace && normalGap < w * 0.6) {
+          const along = (x - c.x) * -c.cling!.ny + (y - c.y) * c.cling!.nx;
+          this.walk(c, dt, p, t, Math.sign(along), HIDE_DASH);
+        } else {
+          c.cling = null; c.clingCd = LET_GO;
+          const a = clearHeading(t, c, Math.atan2(y - c.y, x - c.x));
+          const speed = Math.min(HIDE_DASH * tile, Math.hypot(x - c.x, y - c.y) / dt);
+          c.vx = Math.cos(a) * speed; c.vy = Math.sin(a) * speed;
+          c.faceToward(x, 0); c.angle = a;
+          // Once close to the right face, let the normal hold logic catch it on the next tick.
+          if (Math.hypot(x - c.x, y - c.y) < w) c.clingCd = 0;
+        }
+      }
+      this.skin(c, dt, null, tile);
+      return;
+    }
+    if (!c.cling) {
+      // in the water: to the nearest rock, to hide, or across toward the player
+      let a: number;
+      if (c.hide) {
+        const r = this.rockNear(c, t);
+        a = r ? Math.atan2(-r.ny, -r.nx) : this.rockFar(c, t) ?? this.way(c, p, t);
+        // straight at it: the feelers would turn it off the very rock it is making for
+        c.drive(dt, this.steer(c, dt, a), SWIM);
+      } else {
+        a = this.steer(c, dt, clearHeading(t, c, this.way(c, p, t)));
+        c.drive(dt, a, SWIM);
+      }
+      this.skin(c, dt, null, tile);
+      return;
+    }
+    if (c.hide || near) {
+      if (c.hide && !c.disguise) c.mimicSettled = !!c.cling;
+      // settled where it took hold, wearing the rock, until its colour has come; or in reach
+      // and waiting on its arm
+      this.walk(c, dt, p, t, 0, 0);
+      this.skin(c, dt, null, tile);
+      // Once it has chosen a hiding place it stays still, impersonating that object,
+      // until prey comes into reach or a blow sends it to another one.
+      return;
+    }
+    // along the face, the way round that brings it nearer, kept a while once chosen
+    const n = c.cling, ux = -n.ny, uy = n.nx;
+    const along = (ux * (p.x - c.x) + uy * (p.y - c.y)) / (d || 1);
+    if (c.guardCd <= 0 && Math.abs(along) > LEAVE && Math.sign(along) !== c.orbit) {
+      c.orbit = along > 0 ? 1 : -1;
+      c.guardCd = ORBIT_TURN;
+    }
+    if (along * c.orbit < LEAVE && c.clingCd <= 0) {
+      // the face leads away: it lets go, pushes off, and swims for the player
+      c.cling = null;
+      c.clingCd = LET_GO;
+      const a = clearHeading(t, c, this.way(c, p, t));
+      c.vx += Math.cos(a) * SWIM * tile * 2;
+      c.vy += Math.sin(a) * SWIM * tile * 2;
+      return;
+    }
+    const pace = d < STALK * GRAB_REACH * tile ? PROWL * STALK_PACE : PROWL;
+    this.walk(c, dt, p, t, c.orbit, along * c.orbit < LEAVE ? 0 : pace);
+    this.skin(c, dt, null, tile);
+  }
+
+  /**
+   * An octopus's hold on the rock: lost when the rock has fallen away under it, taken when it
+   * comes within `TAKE_HOLD` of some, and the face it holds eased toward the one it feels, so a
+   * corner is walked round rather than snapped to.
+   */
+  private hold(c: Creature, dt: number, t: Terrain) {
+    const w = wallR(c);
+    const r = this.rockNear(c, t, 0.8);
+    if (c.cling) {
+      if (!r || this.standOff(c, t, r.nx, r.ny, LOST_HOLD * w) > LOST_HOLD * w) {
+        c.cling = null;
+      } else if ((c.turning -= dt) <= 0) {
+        // not while `walk` turns it on to a wall: in a corner the face it feels is floor and wall
+        // averaged, and easing back to that held it in the corner
+        const k = Math.min(1, dt * 6);
+        const nx = c.cling.nx + (r.nx - c.cling.nx) * k, ny = c.cling.ny + (r.ny - c.cling.ny) * k;
+        const l = Math.hypot(nx, ny) || 1;
+        c.cling = { nx: nx / l, ny: ny / l };
+      }
+    } else if (r && c.clingCd <= 0 && c.trick !== 'jet' && r.d < TAKE_HOLD * w) {
+      c.cling = { nx: r.nx, ny: r.ny };
+      c.clingCd = HOLD_MIN;
+    }
+    // laid along whatever face it holds, wall and ceiling as well as floor
+    c.upright += ((c.cling ? 1 : 0) - c.upright) * Math.min(1, dt * 6);
+  }
+
+  /**
+   * One step of an octopus on the rock: along the face at `pace` tiles a second the way `dir`
+   * says (0 still), held `HOLD_OFF` of its wall circle off it, and turned to lie along it, facing
+   * the way it walks or, still, the player.
+   */
+  private walk(c: Creature, dt: number, p: Creature, t: Terrain, dir: number, pace: number) {
+    const w = wallR(c);
+    const near = this.nearest(c, t, HOLD_OFF * w);
+    if (dir !== 0 && pace > 0) {
+      // rock ahead where the face turns up into a wall: on to it. The face it feels is the floor
+      // and the wall together, a slope between them, and walking that slope was walking into
+      // the wall's foot and standing there. It feels ahead at its own height and down at its
+      // arms', and turns as well off whatever rock ahead of it is already against it: a step
+      // too low for the probes to meet stopped the body as surely as a wall
+      const n = c.cling!, ax = -n.ny * dir, ay = n.nx * dir, low = (HOLD_OFF - 0.5) * w;
+      let tx = 0, ty = 0;
+      if (near && near.d < HOLD_OFF * w * 0.95 && -(near.nx * ax + near.ny * ay) > 0.3) {
+        tx = near.nx;
+        ty = near.ny;
+      } else {
+        for (let r = w * 1.1; r <= w * CORNER; r += w * 0.35) {
+          if (t.solidAt(c.x + ax * r, c.y + ay * r) || t.solidAt(c.x + ax * r - n.nx * low, c.y + ay * r - n.ny * low)) {
+            tx = -ax;
+            ty = -ay;
+            break;
+          }
+        }
+      }
+      if (tx || ty) {
+        c.turning = 0.3;
+        const k = Math.min(1, dt * 5), nx = n.nx + (tx - n.nx) * k, ny = n.ny + (ty - n.ny) * k;
+        const l = Math.hypot(nx, ny) || 1;
+        c.cling = { nx: nx / l, ny: ny / l };
+      }
+    }
+    const n = c.cling!, ux = -n.ny, uy = n.nx;
+    // held off the nearest rock, not only the rock straight under it: a corner nearer than the
+    // face it holds is what the body would run into
+    const off = Math.min(this.standOff(c, t, n.nx, n.ny, LOST_HOLD * w), near?.d ?? Infinity);
+    const gap = clamp(off - HOLD_OFF * w, -w, w);
+    const speed = pace * t.tile;
+    const wx = ux * dir * speed - n.nx * gap * GRIP, wy = uy * dir * speed - n.ny * gap * GRIP;
+    const k = 1 - Math.exp(-8 * dt);
+    c.vx += (wx - c.vx) * k;
+    c.vy += (wy - c.vy) * k;
+    // facing: the way it goes, or, still, toward the player once it is a little past the middle
+    const across = ux * (p.x - c.x) + uy * (p.y - c.y);
+    const was = Math.cos(c.angle) * ux + Math.sin(c.angle) * uy >= 0 ? 1 : -1;
+    const side = dir !== 0 && pace > 0 ? dir : Math.abs(across) > FACE_SLACK * t.tile ? Math.sign(across) : was;
+    const want = Math.atan2(uy * side, ux * side);
+    // turning about along the face is a flip, not a swing up through its back
+    if (side !== was) c.angle = want;
+    else c.angle += angleDelta(c.angle, want) * Math.min(1, dt * 8);
+    c.thrust = pace / PROWL;
+    c.beat += dt * (2 + c.thrust * 3);
+  }
+
+  /** How far the rock is from a body along (-`nx`, -`ny`), out to `max`; `max` past it is none. */
+  private standOff(c: Creature, t: Terrain, nx: number, ny: number, max: number) {
+    const step = t.cell * 0.25;
+    for (let r = 0; r <= max; r += step) if (t.solidAt(c.x - nx * r, c.y - ny * r)) return r;
+    return max + step;
+  }
+
+  /** The nearest rock within `max` of a body's middle: how far, and the way out of it. */
+  private nearest(c: Creature, t: Terrain, max: number): { d: number; nx: number; ny: number } | null {
+    const step = t.cell * 0.25;
+    let d = Infinity, nx = 0, ny = 0;
+    for (let k = 0; k < 24; k++) {
+      const a = (k / 24) * TAU, cx = Math.cos(a), cy = Math.sin(a);
+      for (let r = 0; r < Math.min(d, max); r += step) {
+        if (!t.solidAt(c.x + cx * r, c.y + cy * r)) continue;
+        d = r;
+        nx = -cx;
+        ny = -cy;
+        break;
+      }
+    }
+    return d < Infinity ? { d, nx, ny } : null;
+  }
+
+  /** The way to the nearest rock within `SEEK` tiles, for a body with none in feel; null in open water. */
+  private rockFar(c: Creature, t: Terrain): number | null {
+    let best = Infinity, a = null as number | null;
+    for (let k = 0; k < 16; k++) {
+      const ak = (k / 16) * TAU, cx = Math.cos(ak), cy = Math.sin(ak);
+      for (let r = c.radius; r < Math.min(best, SEEK * t.tile); r += t.cell) {
+        if (!t.solidAt(c.x + cx * r, c.y + cy * r)) continue;
+        best = r;
+        a = ak;
+        break;
+      }
+    }
+    return a;
+  }
+
+  /**
+   * The rock round a body, felt for along sixteen rays out to `feel` tiles past its radius:
    * how near the nearest is, and the way out from all of it, each ray that found rock counted
    * by how close it found it. The nearest ray's own direction alone jumped from one bump of
    * the face to the next, and a squid gliding along it jerked at each.
    */
-  private rockNear(c: Creature, t: Terrain): { d: number; nx: number; ny: number } | null {
-    const reach = c.radius + FEEL * t.tile, step = t.cell;
+  private rockNear(c: Creature, t: Terrain, feel = FEEL): { d: number; nx: number; ny: number } | null {
+    const reach = c.radius + feel * t.tile, step = t.cell;
     let d = Infinity, nx = 0, ny = 0;
     for (let k = 0; k < 16; k++) {
       const a = (k / 16) * TAU, cx = Math.cos(a), cy = Math.sin(a);
@@ -1232,7 +1586,13 @@ export class Roles {
     c.trickT = JET_GLIDE;
     c.jetCd = JET_CD;
     c.camo = 0;
-    c.hide = true;
+    c.hide = true; c.hideTime = 0; c.mimicSettled = false;
+    c.lastDisguise = c.disguise;
+    c.disguise = null;
+    c.view.mimicDecoration = null;
+    // an octopus lets go of the rock it was on, and does not take hold again until it has glided
+    c.cling = null;
+    c.clingCd = LET_GO;
     if (ink) this.world.pulses.push({ x: c.x, y: c.y, r: c.radius * r, kind: 'ink' });
   }
 
@@ -1243,9 +1603,12 @@ export class Roles {
    */
   private skin(c: Creature, dt: number, rock: { d: number } | null, tile: number) {
     const speed = Math.hypot(c.vx, c.vy) / tile;
-    const still = 1 - clamp(speed / CAMO_SPEED, 0, 1);
-    const want = c.attack !== 'none' || c.trick === 'jet' ? 0 : still * this.backdrop(c, rock, tile);
-    const rate = want > c.camo ? CAMO_IN * (c.wounded ? 1.6 : 1) : CAMO_OUT;
+    const mimic = c.species.moves === 'mimic';
+    const still = 1 - clamp(speed / (mimic ? MIMIC_SPEED : CAMO_SPEED), 0, 1);
+    // an octopus wears the rock it holds, and in open water has little to wear
+    const back = mimic ? (c.cling ? 1 : OPEN_MIMIC) : this.backdrop(c, rock, tile);
+    const want = c.attack !== 'none' || c.trick === 'jet' || (mimic && (!c.hide || !c.mimicSettled)) ? 0 : still * back;
+    const rate = want > c.camo ? (mimic ? 10 : CAMO_IN) * (c.wounded ? 1.6 : 1) : CAMO_OUT;
     c.camo += (want - c.camo) * Math.min(1, dt * rate);
     const flush = c.attack === 'windup' ? 1 - c.attackT / c.attackLen : c.attack === 'strike' ? 1 : 0;
     c.flush += (flush - c.flush) * Math.min(1, dt * (flush > c.flush ? 12 : 3));
@@ -1484,7 +1847,8 @@ export class Roles {
     if (c.attack === 'windup') {
       this.strike(c, role);
       this.begin(c, 'strike', role === 'charger'
-        ? (moves === 'line' ? LINE_DASH : moves === 'gulp' ? GULP_DRAW : moves === 'camo' ? LASH_OUT : DASH_TIME)
+        ? (moves === 'line' ? LINE_DASH : moves === 'gulp' ? GULP_DRAW : moves === 'camo' ? LASH_OUT
+          : moves === 'mimic' ? GRAB_OUT : DASH_TIME)
         : moves === 'volley' ? SALVO_GAP * (SALVO - 1) + 0.12 : 0.12);
     } else if (c.attack === 'strike') {
       if (moves === 'gulp') {
@@ -1500,23 +1864,33 @@ export class Roles {
         return true;
       }
       // a lash that missed is let go of at once, and comes back slowly: the opening
-      if (moves === 'camo' && !c.landed) c.view.grab(null);
-      this.begin(c, 'recover', moves === 'camo' ? LASH_RECOVER : role === 'charger' ? CHARGE_RECOVER
+      if ((moves === 'camo' || moves === 'mimic') && !c.landed) c.view.grab(null);
+      this.begin(c, 'recover', moves === 'camo' ? LASH_RECOVER : moves === 'mimic' ? GRAB_RECOVER
+        : role === 'charger' ? CHARGE_RECOVER
         : role === 'turret' ? TURRET_RECOVER : SPIT_RECOVER);
     } else {
       c.attack = 'none';
       // a lunge over, the anglerfish holds where it is and its beat comes round soon
       if (c.trick === 'lunge') { c.trick = ''; c.roleCd = TURRET_RECOVER; return false; }
       if (c.trick === 'gape') c.trick = '';
-      const [a, b] = moves === 'gulp' ? GULP_CD : moves === 'camo' ? LASH_CD : role === 'charger' ? CHARGE_CD
+      const [a, b] = moves === 'gulp' ? GULP_CD : moves === 'camo' ? LASH_CD : moves === 'mimic' ? GRAB_CD
+        : role === 'charger' ? CHARGE_CD
         : role === 'turret' ? TURRET_BEAT : moves === 'volley' ? SALVO_CD : SPIT_CD;
       c.roleCd = (a + Math.random() * (b - a)) * (moves === 'pack' && c.wounded ? FRENZY_CD : 1)
-        * (moves === 'camo' && c.wounded ? INKED_CD : 1);
+        * ((moves === 'camo' || moves === 'mimic') && c.wounded ? INKED_CD : 1);
       // the tentacles home, and away to hide again
       if (moves === 'camo') {
         c.lash = null;
         c.view.grab(null);
         this.jet(c, this.world.player, c.wounded);
+      }
+      // The arm comes home, then the octopus dashes to another hiding place.
+      if (moves === 'mimic') {
+        c.lash = null;
+        c.view.grab(null);
+        c.hide = true; c.hideTime = 0; c.mimicSettled = false;
+        c.lastDisguise = c.disguise; c.disguise = null;
+        c.cling = null; c.clingCd = LET_GO;
       }
       return false;
     }
@@ -1566,7 +1940,7 @@ export class Roles {
     }
     if (c.species.moves === 'wane') c.waneT = SPAWN_EVERY * 0.5;
     // a squid turned empties its ink sac and is gone from the cloud before the stagger ends
-    if (c.species.moves === 'camo') {
+    if (c.species.moves === 'camo' || c.species.moves === 'mimic') {
       c.lash = null;
       c.view.grab(null);
       c.jetCd = 0;
@@ -1693,7 +2067,7 @@ export class Roles {
       }
     } else if (role === 'charger') {
       c.landed = false;
-      if (c.species.moves === 'camo') this.throwLash(c);
+      if (c.species.moves === 'camo' || c.species.moves === 'mimic') this.throwLash(c);
       // out of its hole along the line: the rock is let go of until the body is out of it
       if (c.burrow) {
         c.burrow = 'out';

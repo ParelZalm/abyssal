@@ -30,6 +30,9 @@ import { angleDelta, clamp, hsl, lerp } from '../../core/util';
 import { artDensity, artVersion } from '../pixel';
 import { livingSkin, type LivingSkin } from './living';
 import type { Emitter } from './bake/sheet';
+import type { RoomSurface } from '../room';
+import type { Piece } from '../decor';
+import { DecorationMimic } from './decoration-mimic';
 
 interface Motion {
   /** Columns in the strip. More only pays where the body is long enough to hold a wave. */
@@ -108,6 +111,11 @@ const STRAIGHT = 0.88;
 
 /** Columns per rigged arm. An arm is thin, so it needs length resolution and nothing else. */
 const ARM_COLS = 12;
+/**
+ * A walker's: it coils its arm tips into spirals a turn and more round, and at twelve columns a
+ * coil was a polygon. Only the octopus pays for it.
+ */
+const WALK_COLS = 28;
 
 /**
  * Arms left to the water (`loose`): how fast each joint is pulled back to the pose it is asked
@@ -132,6 +140,72 @@ const CAMO_HIDE = 0.86;
 const CAMO_TINT = 0x5d6b80;
 const CAMO_SHIMMER = 0.08;
 const FLUSH_TINT = 0x8a3a2a;
+
+/**
+ * A reef octopus on the rock (`walker`). It lies along the face it holds with its crown dipped
+ * `CRAWL_TILT` radians toward it, the mantle up off the rock, and walks on its arms: each is
+ * planted on the rock, as long as it is drawn off it, and fanned along the face from a little
+ * behind the crown to most of an arm ahead of it. An arm whose foot has fallen `STEP_FAR` of
+ * an arm behind where it would stand lifts — `STEP_LIFT` of an arm off the rock — and is put
+ * down past that spot over `STEP_TIME`, no more than `STEP_MAX` at once and never two side by
+ * side, so the walk ripples down the crown the way the real animal's does.
+ */
+const CRAWL_TILT = 0.22;
+const STEP_FAR = 0.3;
+const STEP_LIFT = 0.16;
+const STEP_TIME = 0.22;
+const STEP_MAX = 3;
+/**
+ * What each of a walker's arms does past its foot, on its own (`gesture`): `lie` on the rock, its
+ * tip flicked up; `feel`, the tip raised off it and dipping to tap it; or `coil`, the tip rolled
+ * up and back over into a spiral, as a resting octopus's are. `lift` is how far the free part
+ * turns up off the face, radians, `coil` how far its tip turns on down toward the face (under 0,
+ * on up and over), tightening to the tip, `tap` how far the tip sweeps, and `time` how long it
+ * does it, seconds. A coil turned down went into the rock and lay flat on it: a spiral has to
+ * roll up off the face to be seen. Eased between at `GESTURE_EASE` a second, `GESTURE_MAX` arms
+ * at once off lying, or the crown reads as a seizure.
+ */
+const GESTURES = {
+  lie: { lift: 0.05, coil: -0.6, tap: 0, time: [1.5, 4] },
+  feel: { lift: 0.5, coil: 0.5, tap: 0.35, time: [1, 2.5] },
+  coil: { lift: 0.3, coil: -6.5, tap: 0, time: [2, 4.5] },
+} as const;
+/**
+ * A walker's thrown arm, holding: how much of it from the tip winds round what it holds, how far
+ * round, radians, and how fast it winds, a second.
+ */
+const WRAP_TIP = 0.3;
+const WRAP_TURN = Math.PI * 1.6;
+const WRAP_RATE = 6;
+/** A walker's reach follows a changed target over time, and keeps its last aim while recoiling. */
+const ARM_AIM_RATE = 6;
+/** How much of an arm, from its tip, is what coils and taps. */
+const COIL_TIP = 0.35;
+/** Past this much `coil` up and over, an arm is turned so its suckers face up: inside the coil. */
+const COIL_TURN = 2;
+/**
+ * A walker's arm as something to hit (`armGap`): its half-thickness at the root and at the tip,
+ * as shares of the strip's half-height. The strip is a margin wider than the arm drawn in it
+ * (`Rig.halfH`), and the tip runs out to a few pixels a shot should still be able to clip.
+ */
+const ARM_GIRTH = 0.75;
+const ARM_GIRTH_TIP = 0.3;
+type Gesture = keyof typeof GESTURES;
+const GESTURE_EASE = 3;
+const GESTURE_MAX = 2;
+/**
+ * How much of an octopus goes into the rock it wears (`camo`), at most, and how much that
+ * breathes: not all of it, so its own shading carries through as relief and a careful eye
+ * finds it by the shape. How deep under the face the colour is read, in body sizes past the
+ * lip and per unit of height, is the skin's (`living.ts`, *The mimic*).
+ */
+const MIMIC_HIDE = 0.9;
+const MIMIC_LIP = 0.1;
+const MIMIC_SQUASH = 0.4;
+/** Raised skin follows the face's relief, growing and relaxing rather than popping into place. */
+const MIMIC_RELIEF = 1.8;
+const MIMIC_COMPACT = 0.48;
+const MIMIC_SHAPE_RATE = 12;
 
 /**
  * How much of a plan's sway survives turning the animal on its side. A fish swims by
@@ -234,7 +308,17 @@ export class FishView extends Container {
   private chompT = 0;
   /** Rigged arms, one strip each, under the body. Empty for anything without `grasp`. */
   private arms: { mesh: MeshSimple; verts: Float32Array; feeding: boolean; rig: Rig; v: number;
-                  loose?: { x: Float32Array; y: Float32Array; px: Float32Array; py: Float32Array } }[] = [];
+                  loose?: { x: Float32Array; y: Float32Array; px: Float32Array; py: Float32Array };
+                  /** A walker's: where the arm is planted, in the world, and the step it is taking. */
+                  foot?: { x: number; y: number };
+                  step?: { fx: number; fy: number; tx: number; ty: number; t: number };
+                  /** A walker's: what it is doing past its foot, and the shape it has eased to. */
+                  act?: { kind: Gesture; t: number };
+                  shape?: { lift: number; coil: number; tap: number };
+                  /** A walker's: -1 where the strip is drawn mirrored, its suckers kept to the rock. */
+                  flip?: number;
+                  /** A walker's arms wear the rock with the body, so each has a skin of its own. */
+                  skin?: LivingSkin }[] = [];
   /**
    * Whether the arms are left to the water: kept in the world from frame to frame and pulled
    * toward their pose rather than set to it (`trail`), so they stream behind a dart and swing
@@ -244,8 +328,38 @@ export class FishView extends Container {
   /** How far gone into the rock's colour, and how darkened to strike: the squid's (`Creature.camo`, `flush`). */
   camo = 0;
   flush = 0;
+  /**
+   * A reef octopus (`Roles.prowl`): it walks the rock on its arms and wears it. `cling` is the
+   * way out of the face it holds, set from outside each frame (`Creature.cling`), null while it
+   * swims; `surface` is a presentation snapshot supplied by the room view for its footing.
+   */
+  private readonly walker: boolean;
+  /** Columns in each of its arms' strips: `ARM_COLS`, or a walker's `WALK_COLS`. */
+  private readonly cols: number;
+  cling: { nx: number; ny: number } | null = null;
+  surface: RoomSurface | null = null;
+  /** How far laid along the face, 0 swimming to 1 holding, eased; and the last face held. */
+  private clingW = 0;
+  private clingN = { nx: 0, ny: -1 };
+  /** Which way the crown points along the face, in the strip's mirror (`facing`). */
+  private clingFace: 1 | -1 = 1;
+  /** The face under the body this frame, a point on it and the way out: where the arms stand and the mimic reads. */
+  private surf: { x: number; y: number; nx: number; ny: number } | null = null;
+  /** Extension of the exposed skin at each body column, retained while the camouflage relaxes. */
+  private mimicRelief = new Float32Array(0);
+  private mimicNormal = { x: 0, y: -1 };
+  /** The whole-body settling: mantle bunched and arms gathered around the chosen rock. */
+  private mimicAmount = 0;
+  mimicDecoration: Piece | null = null;
+  private decorationMimic: DecorationMimic | null = null;
+  /** The arm a walker throws at `grip`, from the wind-up until it is home; -1 none. */
+  private striker = -1;
+  /** How far through a wind-up, 0 to 1, as `animate` was told: the striker draws back on it. */
+  private windup = 0;
   /** The arms' own clock: `beat` jumps on a boost, and a jump reads as a twitch in an arm. */
   private armT = Math.random() * 10;
+  /** How hard the body is walking, 0 to 1, for what its arms choose to do (`gesture`). */
+  private pace = 0;
   /**
    * Turned inside out, as a vampire squid does (`Creature.trick` 'ball'): set from outside each
    * frame, and eased here, 0 to 1, from the crown flared ahead to every arm swept back over the
@@ -257,7 +371,11 @@ export class FishView extends Container {
   /** How far the feeding pair is out toward `grip`, 0 coiled to 1 fastened. */
   private strike = 0;
   /** What the feeding pair is holding, read for its live world position; null when nothing. */
-  private grip: { x: number; y: number } | null = null;
+  private grip: { x: number; y: number; radius?: number } | null = null;
+  /** The walker's current reach in world space; changing or releasing a catch must not teleport it. */
+  private armAim: { x: number; y: number } | null = null;
+  /** How far a walker's thrown arm has wound its tip round what it holds, 0 to 1. */
+  private wrap = 0;
   /** 1 heading toward +x, -1 toward -x. Set by `place`. */
   private face: 1 | -1 = 1;
   /** The facing the strip is drawn at, which catches up with `face` in `animate`. */
@@ -351,6 +469,8 @@ export class FishView extends Container {
     this.art = species && SPRITES[species.id] ? species.id : undefined;
     this.drawn = species?.drawn ?? 1;
     this.loose = species?.moves === 'camo';
+    this.walker = species?.moves === 'mimic';
+    this.cols = this.walker ? WALK_COLS : ARM_COLS;
     for (const s of [this.aura, this.halo, this.core, this.ember]) {
       s.anchor.set(0.5);
       s.blendMode = 'add';
@@ -376,6 +496,17 @@ export class FishView extends Container {
     // dive either way round, which as a rotation is its negative in the mirrored frame.
     const pitch = drawnAngle(heading, face, upright) * face;
     let r = pitch * this.facing + this.sway + this.reel;
+    if (this.clingW > 0) {
+      // laid along the face, belly to it, whatever way up that is: a pitch only reaches so
+      // far, and a ceiling is the body upside down, which the mirror alone cannot draw. The
+      // crown points the way it heads along the face, and dips to the rock
+      const { nx, ny } = this.clingN, th = Math.atan2(nx, -ny);
+      const along = Math.cos(heading) * Math.cos(th) + Math.sin(heading) * Math.sin(th);
+      if (Math.abs(along) > 0.2) this.clingFace = along > 0 ? 1 : -1;
+      if (this.clingW > 0.5) this.face = this.clingFace;
+      const lay = th + CRAWL_TILT * this.facing + this.reel;
+      r += angleDelta(r, lay) * this.clingW;
+    }
     if (this.nestT > 0) {
       // worked into the crack: sunk back down its length and up again, the tail wriggling
       const e = 1 - this.nestT;
@@ -407,6 +538,63 @@ export class FishView extends Container {
       }
     }
     this.fog.x = x; this.fog.y = y;
+    if (this.walker) { this.dress(); this.wear(); }
+  }
+
+  /** Reshape one continuous mantle silhouette and recolour its skin into the chosen object. */
+  private dress() {
+    if (this.mimicDecoration && !this.decorationMimic) {
+      this.decorationMimic = new DecorationMimic();
+      this.addChild(this.decorationMimic);
+    }
+    const copy = this.decorationMimic;
+    const anchorX = this.surf?.x ?? this.x, anchorY = this.surf?.y ?? this.y;
+    this.updateLocalTransform();
+    const bodyToMimic = this.localTransform.clone();
+    bodyToMimic.tx -= anchorX; bodyToMimic.ty -= anchorY;
+    for (const arm of this.arms) arm.skin?.wear(Texture.WHITE);
+    copy?.update(this.mimicDecoration, this.surface?.depth ?? this.y, this.mimicAmount, this.clock,
+      this.baked ? { canvas: this.baked.canvas, texture: this.baked.texture, vertices: this.verts,
+        point: (x, y) => bodyToMimic.apply({ x, y }) } : undefined);
+    if (copy) {
+      copy.position.copyFrom(this.localTransform.applyInverse({ x: anchorX, y: anchorY }));
+      copy.rotation = -this.rotation;
+      copy.scale.set(1 / this.scale.x, 1 / this.scale.y);
+      this.setChildIndex(copy, this.children.length - 1);
+    }
+    if (this.mesh) { this.mesh.visible = !copy?.visible; this.mesh.alpha = 1; }
+    for (const arm of this.arms) arm.mesh.alpha = this.ghosted ? 0.5 : 1;
+  }
+
+  /**
+   * A walker's skin and arms wearing the rock, as far as `camo` has it, read from the room's
+   * picture under the face it holds: the strip's frame into the world's for the skin to find
+   * each pixel's place, and the face (`surf`).
+   */
+  private wear() {
+    const art = this.surface;
+    const s = this.surf;
+    const m = art && s && !this.mimicDecoration && !this.decorationMimic?.activePiece
+      ? this.mimicAmount * MIMIC_HIDE : 0;
+    const c = Math.cos(this.rotation), sn = Math.sin(this.rotation), kx = this.scale.x, ky = this.scale.y;
+    for (const skin of [this.skin, ...this.arms.map(a => a.skin)]) {
+      if (!skin) continue;
+      const u = skin.uniforms.uniforms;
+      const pattern = skin !== this.skin ? this.decorationMimic?.pattern : null;
+      const patternAmount = pattern && this.decorationMimic?.visible ? this.mimicAmount : 0;
+      u.uPattern = patternAmount;
+      if (patternAmount > 0 && pattern) skin.wear(pattern);
+      u.uMimic = patternAmount > 0 ? 0 : m;
+      if (m > 0 && art && s) {
+        (u.uToWorld as Float32Array).set([c * kx, sn * kx, 0, -sn * ky, c * ky, 0, this.x, this.y, 1]);
+        (u.uRockRect as Float32Array).set([art.x, art.y, 1 / art.w, 1 / art.h]);
+        (u.uRockSize as Float32Array).set([art.texture.source.pixelWidth, art.texture.source.pixelHeight]);
+        (u.uSurf as Float32Array).set([s.x, s.y, s.nx, s.ny]);
+        (u.uMimicDepth as Float32Array).set([this.g.size * MIMIC_LIP, MIMIC_SQUASH]);
+        if (skin.shader.resources.uRock !== art.texture.source) skin.wear(art.texture);
+      }
+      skin.uniforms.update();
+    }
   }
 
   /**
@@ -425,7 +613,8 @@ export class FishView extends Container {
     // the light the hit threw (`Impacts`), and then red, fading. It used to blink at once,
     // which hid the body in the very frames that were meant to show the hit land
     const h = this.hurtT;
-    if (this.camo > 0) {
+    // an octopus wears the rock instead of fading into it (`wear`)
+    if (this.camo > 0 && !this.walker) {
       alpha *= 1 - this.camo * CAMO_HIDE * (1 - CAMO_SHIMMER + Math.sin(this.clock * 2.6) * CAMO_SHIMMER);
       tint = mul(tint, lerpColor(0xffffff, CAMO_TINT, this.camo));
     }
@@ -487,6 +676,8 @@ export class FishView extends Container {
 
   /** The bloom is not a child, so it does not go down with the rest of the view. */
   destroy(options?: Parameters<Container['destroy']>[0]) {
+    this.decorationMimic?.destroy({ children: true });
+    this.decorationMimic = null;
     if (this.baked) { releaseFish(this.baked); this.baked = null; }
     // a mesh does not free its shader, and this one holds the skin's uniforms
     this.skin?.shader.destroy();
@@ -514,7 +705,7 @@ export class FishView extends Container {
     const men = menace(g);
 
     this.mesh?.destroy();
-    for (const a of this.arms) a.mesh.destroy();
+    for (const a of this.arms) { a.skin?.shader.destroy(); a.mesh.destroy(); }
     this.arms = [];
     this.ghosted = false;
     // take the new texture before letting go of the old one, so a rebuild onto the same
@@ -561,12 +752,12 @@ export class FishView extends Container {
     const rig = this.baked.arm, tentacle = this.baked.tentacle;
     if (rig || tentacle) {
       const A = PLAN_ART[this.plan];
-      const auv = new Float32Array(ARM_COLS * 4);
-      const aidx = new Uint32Array((ARM_COLS - 1) * 6);
-      for (let j = 0; j < ARM_COLS; j++) {
-        const u = j / (ARM_COLS - 1);
+      const auv = new Float32Array(this.cols * 4);
+      const aidx = new Uint32Array((this.cols - 1) * 6);
+      for (let j = 0; j < this.cols; j++) {
+        const u = j / (this.cols - 1);
         auv.set([u, 0, u, 1], j * 4);
-        if (j < ARM_COLS - 1) {
+        if (j < this.cols - 1) {
           const a = j * 2;
           aidx.set([a, a + 2, a + 1, a + 1, a + 2, a + 3], j * 6);
         }
@@ -574,14 +765,19 @@ export class FishView extends Container {
       for (let i = 0; i < A.armCount; i++) {
         // the outermost pair are the feeding tentacles, as they were in the painted crown, and
         // drawn from a picture of their own where the sprite has one
-        const feeding = i === 0 || i === A.armCount - 1;
+        // an octopus has eight arms alike, and no feeding pair: any one of them is thrown
+        const feeding = !this.walker && (i === 0 || i === A.armCount - 1);
         const own = (feeding && tentacle) || rig;
         if (!own) continue;
-        const averts = new Float32Array(ARM_COLS * 4);
+        const averts = new Float32Array(this.cols * 4);
+        // a walker's arms wear the rock as its body does: the skin, with nothing of it moving
+        // but the mimic (a ripple across an arm read as the arm tearing)
+        const skin = this.walker ? livingSkin(own.texture, 2) : undefined;
+        if (skin) { skin.uniforms.uniforms.uRipple = 0; skin.uniforms.update(); }
         const mesh = new MeshSimple({ texture: own.texture, vertices: averts, uvs: auv,
-                                      indices: aidx });
+                                      indices: aidx, ...(skin ? { shader: skin.shader } : {}) });
         this.addChild(mesh);
-        this.arms.push({ mesh, verts: averts, feeding, rig: own, v: (i / (A.armCount - 1)) * 2 - 1 });
+        this.arms.push({ mesh, verts: averts, feeding, rig: own, v: (i / (A.armCount - 1)) * 2 - 1, skin });
       }
     }
     this.skin?.shader.destroy();
@@ -800,8 +996,36 @@ export class FishView extends Container {
     // a ghost's arms stacked brighter than its body
     for (const a of this.arms) {
       a.mesh.texture = on ? paled(a.rig.texture) : a.rig.texture;
+      a.skin?.use(a.mesh.texture);
       a.mesh.alpha = on ? 0.5 : 1;
     }
+  }
+
+  /**
+   * How far (`px`, `py`) is from the nearest of a walker's arms, in world units; Infinity for
+   * any other body. An octopus feels with its arms, so they are part of what can be hit and what
+   * touches (`surfaceGap`): measured to the joints as last drawn, each segment as thick as the
+   * strip's arm is there — `ARM_GIRTH` of the strip's half-height at the root, run down to
+   * `ARM_GIRTH_TIP` of it at the tip, as the arm is drawn.
+   */
+  armGap(px: number, py: number): number {
+    if (!this.walker || this.destroyed) return Infinity;
+    let best = Infinity;
+    const k = Math.abs(this.scale.y), last = this.cols - 1;
+    for (const arm of this.arms) {
+      const L = arm.loose;
+      if (!L) continue;
+      const half = arm.rig.halfH * k * ARM_GIRTH;
+      for (let j = 0; j < last; j++) {
+        const ax = L.x[j], ay = L.y[j], ex = L.x[j + 1] - ax, ey = L.y[j + 1] - ay;
+        const len2 = ex * ex + ey * ey;
+        const u = len2 > 0 ? clamp(((px - ax) * ex + (py - ay) * ey) / len2, 0, 1) : 0;
+        const s = (j + u) / last;
+        const d = Math.hypot(px - ax - ex * u, py - ay - ey * u) - half * lerp(1, ARM_GIRTH_TIP, s);
+        if (d < best) best = d;
+      }
+    }
+    return best;
   }
 
   /** Fasten the feeding tentacles on something in the world, followed live; null lets go. */
@@ -825,7 +1049,8 @@ export class FishView extends Container {
     const d = this.baked.depth;
     const n = this.colX.length;
     // a little of the tail's beat survives a straight body, or it reads as a frozen sprite
-    const amp = d * m.amp * SIDE_ON * (0.45 + thrust * 0.75) * (1 - straight * STRAIGHT);
+    const amp = d * m.amp * SIDE_ON * (0.45 + thrust * 0.75) * (1 - straight * STRAIGHT)
+      * (1 - (this.walker ? this.mimicAmount : 0));
     const spineY: number[] = [];
     // A turn bends the whole body into a C rather than rotating a rigid strip about its
     // middle: head and tail both fall to the inside of the turn, so the nose leads into it
@@ -865,8 +1090,63 @@ export class FishView extends Container {
       this.verts[j * 4 + 2] = xs - nx * hw;
       this.verts[j * 4 + 3] = y - ny * hw;
     }
+    if (this.walker) this.mimicShape(dt);
     this.mesh.vertices = this.verts;
     if (this.arms.length) this.poseArms(spineY[0], pulse, thrust, dt);
+  }
+
+  /**
+   * Raised papillae on the mantle: the exposed contour takes the nearby rock's rounded relief.
+   * The underside stays planted and the crown and eye stay clear, so it remains an animal
+   * resting on the face, rather than a copy of its background. The same skin stretches with it.
+   */
+  private mimicShape(dt: number) {
+    const n = this.colX.length, sf = this.surf;
+    if (this.mimicRelief.length !== n) this.mimicRelief = new Float32Array(n);
+    const c = Math.cos(this.rotation), sn = Math.sin(this.rotation);
+    const kx = this.scale.x, ky = this.scale.y;
+    if (sf) {
+      const x = (sf.nx * c + sf.ny * sn) / kx, y = (-sf.nx * sn + sf.ny * c) / ky;
+      const d = Math.hypot(x, y) || 1;
+      this.mimicNormal = { x: x / d, y: y / d };
+    }
+    const normal = this.mimicNormal, ease = 1 - Math.exp(-dt * MIMIC_SHAPE_RATE);
+    const amount = sf && this.surface ? this.camo * this.clingW : 0;
+    this.mimicAmount += (amount - this.mimicAmount) * ease;
+    if (Math.abs(amount - this.mimicAmount) < 0.001) this.mimicAmount = amount;
+    // The decoration morph owns the contour; do not also inflate a rock-shaped mantle.
+    if (this.mimicDecoration || this.decorationMimic?.visible) return;
+    const tangent = { x: -normal.y, y: normal.x };
+    const middle = (this.colX[0] + this.colX[n - 1]) * this.facing / 2;
+    for (let j = 0; j < n; j++) {
+      const s = j / (n - 1);
+      // Clear of the eye at the front, and taper back into the mantle's rounded end.
+      const env = Math.sin(Math.PI * s) ** 2;
+      let target = 0;
+      if (amount > 0 && sf) {
+        const x = this.colX[j] * this.facing;
+        const wx = this.x + x * kx * c, wy = this.y + x * kx * sn;
+        const ux = -sf.ny, uy = sf.nx, along = (wx - sf.x) * ux + (wy - sf.y) * uy;
+        const reach = this.g.size * 0.6;
+        const foot = this.touch(sf.x + ux * along + sf.nx * reach,
+          sf.y + uy * along + sf.ny * reach, sf.nx, sf.ny, reach * 2);
+        const relief = ((foot.x - sf.x) * sf.nx + (foot.y - sf.y) * sf.ny) / this.g.size;
+        // A compact mound whose large lobes come from the chosen face, not a shimmer.
+        target = amount * env * this.baked!.depth * clamp(0.65 + relief * 3, 0.2, MIMIC_RELIEF);
+      }
+      this.mimicRelief[j] += (target - this.mimicRelief[j]) * ease;
+      const i = j * 4;
+      for (const edge of [i, i + 2]) {
+        const along = (this.verts[edge] - middle) * tangent.x + this.verts[edge + 1] * tangent.y;
+        this.verts[edge] -= tangent.x * along * MIMIC_COMPACT * this.mimicAmount;
+        this.verts[edge + 1] -= tangent.y * along * MIMIC_COMPACT * this.mimicAmount;
+      }
+      const cx = (this.verts[i] + this.verts[i + 2]) / 2,
+        cy = (this.verts[i + 1] + this.verts[i + 3]) / 2;
+      const side = (this.verts[i] - cx) * normal.x + (this.verts[i + 1] - cy) * normal.y > 0 ? i : i + 2;
+      this.verts[side] += normal.x * this.mimicRelief[j];
+      this.verts[side + 1] += normal.y * this.mimicRelief[j];
+    }
   }
 
   /**
@@ -878,22 +1158,43 @@ export class FishView extends Container {
   private poseArms(headY: number, pulse: number, thrust: number, dt: number) {
     const n = this.arms.length;
     const A = PLAN_ART[this.plan];
-    this.armT += dt * (1.4 + thrust * 1.6);
+    this.armT += dt * (1.4 + thrust * 1.6) * (1 - (this.walker ? this.mimicAmount : 0));
     const want = this.grip ? 1 : 0;
     // out fast, back slow: the lash is the event, the recoil is just the arm coming home
     this.strike += (want - this.strike) * Math.min(1, dt * (want ? 16 : 4));
     const e = this.strike;
+    this.pace = thrust;
+    // fastened on a body (a point thrown at has no radius), the tip winds round it
+    this.wrap += ((this.grip?.radius ? 1 : 0) - this.wrap) * Math.min(1, dt * WRAP_RATE);
+    if (this.walker) {
+      // the arm that stands furthest forward is the one thrown; home, it finds its footing again
+      if (this.striker < 0 && (this.windup > 0 || this.grip)) this.striker = n - 1;
+      else if (this.striker >= 0 && this.windup <= 0 && !this.grip && e < 0.03) {
+        const arm = this.arms[this.striker];
+        arm.foot = arm.step = undefined;
+        this.striker = -1;
+      }
+    }
     this.cloaked += ((this.cloak ? 1 : 0) - this.cloaked) * Math.min(1, dt * (this.cloak ? 9 : 4));
     const w = this.cloaked;
+    if (this.walker) {
+      if (this.grip) {
+        const aim = this.armAim ??= { x: this.grip.x, y: this.grip.y };
+        const k = 1 - Math.exp(-dt * ARM_AIM_RATE);
+        aim.x += (this.grip.x - aim.x) * k;
+        aim.y += (this.grip.y - aim.y) * k;
+      } else if (e < 0.03) this.armAim = null;
+    }
+    const aim = this.walker ? this.armAim : this.grip;
     let tx = 0, ty = 0;
-    if (this.grip) {
+    if (aim) {
       // into the view's own frame: the mesh lives in R units, rotated with the body
-      const dx = this.grip.x - this.x, dy = this.grip.y - this.y;
+      const dx = aim.x - this.x, dy = aim.y - this.y;
       const c = Math.cos(-this.rotation), s = Math.sin(-this.rotation);
       tx = (dx * c - dy * s) / this.scale.x;
       ty = (dx * s + dy * c) / this.scale.y;
     }
-    const pts: number[] = new Array(ARM_COLS * 2);
+    const pts: number[] = new Array(this.cols * 2);
     for (let i = 0; i < n; i++) {
       const arm = this.arms[i], rig = arm.rig, v = arm.v;
       const ry = headY + v * rig.spread;
@@ -903,10 +1204,10 @@ export class FishView extends Container {
       // inside out: back over the mantle and fanned off it, the top arms up and the bottom down
       let back = Math.PI - v * 0.8;
       const len = rig.len * (arm.feeding ? 0.5 : 0.78 / A.armPair) * (1 + e * 0.12);
-      const step = len / (ARM_COLS - 1);
+      const step = len / (this.cols - 1);
       let x = rx, y = ry;
-      for (let j = 0; j < ARM_COLS; j++) {
-        const s = j / (ARM_COLS - 1);
+      for (let j = 0; j < this.cols; j++) {
+        const s = j / (this.cols - 1);
         pts[j * 2] = x; pts[j * 2 + 1] = y;
         // tips curl in toward the midline, and more so around a catch — the arms wrap it
         const sway = Math.sin(this.armT + i * 1.9 - s * 4.5) * 0.2 * (0.3 + s);
@@ -919,9 +1220,17 @@ export class FishView extends Container {
       }
       // the coil is walked out on the body before it is mirrored, then mirrored with it; the
       // lash is aimed afterwards, since what it is aimed at is where it is on screen
-      for (let j = 0; j < ARM_COLS; j++) pts[j * 2] *= this.facing;
+      for (let j = 0; j < this.cols; j++) pts[j * 2] *= this.facing;
       rx = rig.rootX * this.facing * pulse;
-      if (arm.feeding && e > 0.001) {
+      if (this.walker && this.mimicAmount > 0) {
+        const middle = (this.colX[0] + this.colX[this.colX.length - 1]) * this.facing / 2;
+        const shift = (rx - middle) * MIMIC_COMPACT * this.mimicAmount;
+        for (let j = 0; j < this.cols; j++) pts[j * 2] -= shift;
+        rx -= shift;
+      }
+      if (this.walker) {
+        this.limb(arm, i, pts, dt, e, tx, ty);
+      } else if (arm.feeding && e > 0.001) {
         const dx = tx - rx, dy = ty - ry;
         const d = Math.hypot(dx, dy) || 1;
         // an arm has a length: past it, it points at the prey rather than reaching it. A loose
@@ -929,8 +1238,8 @@ export class FishView extends Container {
         // where it is thrown is where it hits (`Roles.lashHit`)
         const k = this.loose ? 1 : Math.min(1, rig.len / d);
         const wig = Math.sin(this.armT * 3 + i) * d * 0.05;
-        for (let j = 0; j < ARM_COLS; j++) {
-          const s = j / (ARM_COLS - 1);
+        for (let j = 0; j < this.cols; j++) {
+          const s = j / (this.cols - 1);
           const bow = Math.sin(s * Math.PI) * wig;
           const qx = rx + dx * s * k - (dy / d) * bow;
           const qy = ry + dy * s * k + (dx / d) * bow;
@@ -938,10 +1247,10 @@ export class FishView extends Container {
           pts[j * 2 + 1] = lerp(pts[j * 2 + 1], qy, e);
         }
       }
-      if (this.loose) this.trail(arm, pts, dt, arm.feeding ? e : 0);
-      const h = rig.halfH;
-      for (let j = 0; j < ARM_COLS; j++) {
-        const ja = Math.max(0, j - 1), jb = Math.min(ARM_COLS - 1, j + 1);
+      if (this.loose && !this.walker) this.trail(arm, pts, dt, arm.feeding ? e : 0);
+      const h = rig.halfH * (arm.flip ?? 1);
+      for (let j = 0; j < this.cols; j++) {
+        const ja = Math.max(0, j - 1), jb = Math.min(this.cols - 1, j + 1);
         const dx = pts[jb * 2] - pts[ja * 2], dy = pts[jb * 2 + 1] - pts[ja * 2 + 1];
         const l = Math.hypot(dx, dy) || 1;
         const nx = -dy / l, ny = dx / l;
@@ -952,6 +1261,286 @@ export class FishView extends Container {
       }
       arm.mesh.vertices = arm.verts;
     }
+  }
+
+  /**
+   * One of a walker's arms: left to the water as a squid's are (`trail`), and, as far as the body
+   * holds the rock, planted on it instead (`plant`); the striker thrown straight at `grip` (`tx`,
+   * `ty` in the view's frame) as far as the throw is out, `e`. What is drawn is handed back to the
+   * water, so an arm let go of the rock carries on from where it was.
+   */
+  private limb(arm: FishView['arms'][number], i: number, pts: number[], dt: number, e: number, tx: number, ty: number) {
+    this.trail(arm, pts, dt, 0);
+    if (this.clingW > 0.001 && this.surf) {
+      const walk = this.plant(arm, i, pts, dt);
+      for (let j = 0; j < this.cols * 2; j++) pts[j] = lerp(pts[j], walk[j], this.clingW);
+    } else {
+      arm.foot = arm.step = undefined;
+    }
+    // Settled, the arms gather around the mound instead of waving out into the water.
+    // Drawn beneath the mantle, their folded loops become part of the object's silhouette.
+    if (this.mimicAmount > 0 && i !== this.striker && this.baked) {
+      const disguise = this.mimicDecoration ?? this.decorationMimic?.activePiece;
+      let cx = (this.colX[0] + this.colX[this.colX.length - 1]) * this.facing / 2, cy = 0;
+      let width = Math.abs(this.colX[0] - this.colX[this.colX.length - 1]) * 0.27;
+      let depth = this.baked.depth * 0.65;
+      const rootX = pts[0], rootY = pts[1], object = !!disguise && !!this.surf;
+      if (disguise && this.surf) {
+        this.updateLocalTransform();
+        const centre = this.localTransform.applyInverse({
+          x: this.surf.x + this.surf.nx * disguise.h * 0.35,
+          y: this.surf.y + this.surf.ny * disguise.h * 0.35,
+        });
+        cx = centre.x; cy = centre.y;
+        width = depth = disguise.h * 0.1 / Math.max(Math.abs(this.scale.x), Math.abs(this.scale.y));
+      }
+      const start = object ? i * 0.7 : Math.atan2(rootY / depth, (rootX - cx) / width);
+      const turn = object ? Math.PI * 2 : Math.PI * (1.6 + i * 0.06);
+      for (let j = object ? 0 : 1; j < this.cols; j++) {
+        const s = j / (this.cols - 1), a = start + s * turn, join = object ? 1 : Math.min(1, s * 5);
+        pts[j * 2] = lerp(pts[j * 2], lerp(rootX, cx + Math.cos(a) * width, join), this.mimicAmount);
+        pts[j * 2 + 1] = lerp(pts[j * 2 + 1], lerp(rootY, cy + Math.sin(a) * depth, join), this.mimicAmount);
+      }
+    }
+    if (i === this.striker && e > 0.001) {
+      // straight out from the root, and as far as it is thrown: where it is drawn is where it
+      // hits (`Roles.lashHit`)
+      const rx = pts[0], ry = pts[1], dx = tx - rx, dy = ty - ry, d = Math.hypot(dx, dy) || 1;
+      const wig = Math.sin(this.armT * 3 + i) * d * 0.05;
+      // holding, it reaches to the near side of what it holds and its tip winds round it: an
+      // arm that ended on the player's middle read as a spear, not a grip
+      const w = this.wrap, r = ((this.grip?.radius ?? 0) / Math.abs(this.scale.x)) * w;
+      const s0 = 1 - WRAP_TIP * w, near = Math.max(0, d - r) / d, back = Math.atan2(-dy, -dx);
+      for (let j = 0; j < this.cols; j++) {
+        const s = j / (this.cols - 1);
+        let qx: number, qy: number;
+        if (s <= s0) {
+          const f = (s / s0) * near, bow = Math.sin(f * Math.PI) * wig;
+          qx = rx + dx * f - (dy / d) * bow;
+          qy = ry + dy * f + (dx / d) * bow;
+        } else {
+          const a = back + ((s - s0) / (1 - s0)) * WRAP_TURN;
+          qx = tx + Math.cos(a) * r;
+          qy = ty + Math.sin(a) * r;
+        }
+        pts[j * 2] = lerp(pts[j * 2], qx, e);
+        pts[j * 2 + 1] = lerp(pts[j * 2 + 1], qy, e);
+      }
+    }
+    const c = Math.cos(this.rotation), sn = Math.sin(this.rotation), kx = this.scale.x, ky = this.scale.y;
+    // the suckers to the rock, or up where the tip is rolled up and over, so on the inside of
+    // every coil: the strip drawn mirrored where that needs it. Turned only past a margin, or an arm
+    // laid across the normal flickered between the two
+    if (this.clingW > 0.5 && this.surf && i !== this.striker) {
+      const m = this.cols >> 1, a = this.cols >> 2;
+      const dx = pts[(m + a) * 2] - pts[a * 2], dy = pts[(m + a) * 2 + 1] - pts[a * 2 + 1];
+      const l = Math.hypot(dx, dy) || 1;
+      // the face's normal taken into the view's frame, as the points are
+      const nlx = (this.surf.nx * c + this.surf.ny * sn) / kx, nly = (-this.surf.nx * sn + this.surf.ny * c) / ky;
+      const up = (arm.shape?.coil ?? 0) < -COIL_TURN ? -1 : 1;
+      const q = up * (-dy * nlx + dx * nly) / (l * (Math.hypot(nlx, nly) || 1));
+      if (q > 0.25) arm.flip = 1;
+      else if (q < -0.25) arm.flip = -1;
+    }
+    const L = arm.loose;
+    if (!L) return;
+    for (let j = 1; j < this.cols; j++) {
+      const x = this.x + pts[j * 2] * kx * c - pts[j * 2 + 1] * ky * sn;
+      const y = this.y + pts[j * 2] * kx * sn + pts[j * 2 + 1] * ky * c;
+      L.px[j] += x - L.x[j];
+      L.py[j] += y - L.y[j];
+      L.x[j] = x;
+      L.y[j] = y;
+    }
+  }
+
+  /**
+   * A walker's arm on the rock, as points in the view's frame. Where it would stand is under its
+   * place in the fan along the face (`STEP_FAR` and the rest); its foot stays where it was put
+   * down until that has moved `STEP_FAR` away, and then steps. From the root it comes down to
+   * the rock and out to the foot, and what is left of it lies along the rock past the foot, its
+   * tip curled up off it. The striker is drawn back up off the rock through the wind-up.
+   */
+  private plant(arm: FishView['arms'][number], i: number, pts: number[], dt: number): number[] {
+    const sf = this.surf!, nx = sf.nx, ny = sf.ny, ux = -ny, uy = nx, n = this.cols;
+    const c = Math.cos(this.rotation), sn = Math.sin(this.rotation), kx = this.scale.x, ky = this.scale.y;
+    const unit = this.g.size / R * this.swell;
+    // as long as the arm is drawn in the water (`poseArms`): a length of its own, set off the body's,
+    // squeezed the drawn arm's suckers together on the rock and stretched them apart off it
+    const L = arm.rig.len * (0.78 / PLAN_ART[this.plan].armPair) * unit;
+    const half = arm.rig.halfH * unit;
+    const rx = this.x + pts[0] * kx * c - pts[1] * ky * sn, ry = this.y + pts[0] * kx * sn + pts[1] * ky * c;
+    // which way the crown points along the face
+    const fwd = (c * ux + sn * uy) * this.facing >= 0 ? 1 : -1;
+    const hc = (this.x - sf.x) * nx + (this.y - sf.y) * ny;
+    const crown = (rx - sf.x) * ux + (ry - sf.y) * uy;
+    const along = crown + fwd * (arm.v * 0.55 + 0.15) * L;
+    const reach = hc + L * 0.6;
+    // out along the face at the body's height, and down on to it there; a wall met on the way
+    // out is where the foot goes, on its face. Down from inside the wall climbed out of the top
+    // of it, and planted the foot in the water over the body
+    const land = (a: number) => {
+      const t = this.surface, x0 = sf.x + ux * crown + nx * hc, y0 = sf.y + uy * crown + ny * hc;
+      const d = a - crown, s = Math.sign(d);
+      if (t) {
+        const step = t.cell * 0.25;
+        for (let r = step; r <= Math.abs(d); r += step) {
+          if (t.contains(x0 + ux * s * r, y0 + uy * s * r)) {
+            return { x: x0 + ux * s * (r - step), y: y0 + uy * s * (r - step) };
+          }
+        }
+      }
+      return this.touch(x0 + ux * d, y0 + uy * d, nx, ny, reach);
+    };
+    const ideal = land(along);
+    if (!arm.foot) arm.foot = arm.loose ? { x: arm.loose.x[n - 1], y: arm.loose.y[n - 1] } : { ...ideal };
+    let fx: number, fy: number;
+    if (i === this.striker) {
+      arm.step = undefined;
+      const w = Math.max(this.windup, this.strike);
+      fx = lerp(arm.foot.x, rx + nx * L * 0.35 - ux * fwd * L * 0.1, w);
+      fy = lerp(arm.foot.y, ry + ny * L * 0.35 - uy * fwd * L * 0.1, w);
+    } else {
+      if (!arm.step) {
+        const behind = Math.hypot(ideal.x - arm.foot.x, ideal.y - arm.foot.y);
+        const strained = Math.hypot(rx - arm.foot.x, ry - arm.foot.y) > L * 0.98;
+        const busy = this.arms.reduce((k, a) => k + (a.step ? 1 : 0), 0);
+        const beside = this.arms[i - 1]?.step || this.arms[i + 1]?.step;
+        if (strained || (behind > STEP_FAR * L && busy < STEP_MAX && !beside)) {
+          // put down past the spot, by half as far as it fell behind, so the step lasts
+          const over = Math.min(behind, STEP_FAR * L) * 0.5 / (behind || 1);
+          const to = land(along + ((ideal.x - arm.foot.x) * ux + (ideal.y - arm.foot.y) * uy) * over);
+          arm.step = { fx: arm.foot.x, fy: arm.foot.y, tx: to.x, ty: to.y, t: 0 };
+        }
+      }
+      const st = arm.step;
+      if (st) {
+        st.t = Math.min(1, st.t + dt / STEP_TIME);
+        const q = st.t * st.t * (3 - 2 * st.t), lift = Math.sin(st.t * Math.PI) * L * STEP_LIFT;
+        fx = lerp(st.fx, st.tx, q) + nx * lift;
+        fy = lerp(st.fy, st.ty, q) + ny * lift;
+        if (st.t >= 1) { arm.foot = { x: st.tx, y: st.ty }; arm.step = undefined; }
+      } else {
+        fx = arm.foot.x;
+        fy = arm.foot.y;
+      }
+    }
+    // on the rock by its thickness, not sunk through it
+    fx += nx * half * 0.6;
+    fy += ny * half * 0.6;
+    const hR = (rx - fx) * nx + (ry - fy) * ny, du = (fx - rx) * ux + (fy - ry) * uy;
+    const dir = Math.abs(du) > half ? Math.sign(du) : fwd;
+    // down from the root toward the rock, and out along it to the foot
+    const cx = rx - nx * hR * 0.85 + ux * du * 0.3, cy = ry - ny * hR * 0.85 + uy * du * 0.3;
+    const bez = (t: number, k: 0 | 1) => {
+      const a = k ? ry : rx, m = k ? cy : cx, f = k ? fy : fx;
+      return (1 - t) * (1 - t) * a + 2 * (1 - t) * t * m + t * t * f;
+    };
+    let arc = 0;
+    for (let k = 1; k <= 8; k++) arc += Math.hypot(bez(k / 8, 0) - bez((k - 1) / 8, 0), bez(k / 8, 1) - bez((k - 1) / 8, 1));
+    // past the foot the arm is walked out from its heading, so a tip can turn on itself: up off
+    // the face by `lift`, and back in toward the suckers by `coil`, tightening to the tip as a
+    // real one coils. Turning by +a moves the heading toward `-dir` times the face's normal
+    const g = this.gesture(arm, i, dt), rest = L - arc, up = -dir;
+    const head = Math.atan2(uy * dir, ux * dir);
+    const tap = Math.sin(this.armT * 4.5 + i * 1.3) * g.tap;
+    // how far into its tip a point `s` along the arm is: what coils and taps is the tip, wherever
+    // the foot is. Over the whole of what is past the foot, a back arm's coil was a loop the
+    // size of the mantle stood up over it
+    const tipOf = (s: number) => clamp((s - L * (1 - COIL_TIP)) / (L * COIL_TIP), 0, 1);
+    const turn = (s: number) => {
+      const k = (s - arc) / rest, kt = tipOf(s);
+      const rise = k >= 0.35 ? 1 : (k / 0.35) * (k / 0.35) * (3 - 2 * k / 0.35);
+      const ripple = Math.sin(this.armT * 2 + i * 1.7 - k * 6) * 0.12 * k;
+      return head + up * (g.lift * rise + ripple * k + tap * kt - g.coil * kt * kt);
+    };
+    const sub = Math.max(rest / 32, 0.5);
+    const drape = clamp(1 - Math.abs(g.lift) * 2, 0, 1), curled = Math.min(1, Math.abs(g.coil) / 2);
+    let qx = fx, qy = fy, qs = arc;
+    const out = new Array<number>(n * 2);
+    for (let j = 0; j < n; j++) {
+      const sj = (j / (n - 1)) * L;
+      let wx: number, wy: number;
+      if (arc >= L || sj <= arc) {
+        const t = arc >= L ? j / (n - 1) : sj / arc;
+        wx = bez(t, 0);
+        wy = bez(t, 1);
+      } else {
+        while (qs < sj - 1e-6) {
+          const ds = Math.min(sub, sj - qs), a = turn(qs + ds / 2);
+          qx += Math.cos(a) * ds;
+          qy += Math.sin(a) * ds;
+          qs += ds;
+        }
+        // what curls back under the face lies on it instead; and lying, the arm drapes on to the
+        // rock under it, not level off its foot over a dip
+        const below = Math.min(0, (qx - fx) * nx + (qy - fy) * ny);
+        wx = qx - nx * below;
+        wy = qy - ny * below;
+        const sag = drape * (1 - tipOf(sj) * curled);
+        if (sag > 0 && this.surface) {
+          const t = this.surface, step = t.cell * 0.5;
+          let r = 0;
+          while (r < L * 0.3 && !t.contains(wx - nx * (r + step), wy - ny * (r + step))) r += step;
+          if (r < L * 0.3) {
+            wx -= nx * r * sag;
+            wy -= ny * r * sag;
+          }
+        }
+      }
+      const dx = wx - this.x, dy = wy - this.y;
+      out[j * 2] = (dx * c + dy * sn) / kx;
+      out[j * 2 + 1] = (-dx * sn + dy * c) / ky;
+    }
+    return out;
+  }
+
+  /**
+   * What one of a walker's arms does past its foot this frame, eased from what it did: each arm
+   * picks for itself when its last gesture runs out. Walking, the forward arms feel ahead; still,
+   * any may coil or feel. The thrown arm and a stepping one lie while they are busy.
+   */
+  private gesture(arm: FishView['arms'][number], i: number, dt: number) {
+    const busy = i === this.striker || !!arm.step;
+    const act = arm.act ??= { kind: 'lie', t: Math.random() * 2 };
+    if (!busy && (act.t -= dt) <= 0) {
+      const off = this.arms.reduce((k, a) => k + (a.act && a.act.kind !== 'lie' ? 1 : 0), 0);
+      let kind: Gesture = 'lie';
+      if (act.kind === 'lie' && off < GESTURE_MAX) {
+        const r = Math.random();
+        if (this.pace > 0.2) kind = arm.v > -0.2 && r < 0.5 ? 'feel' : 'lie';
+        else kind = r < 0.35 ? 'coil' : r < 0.7 ? 'feel' : 'lie';
+      }
+      const [lo, hi] = GESTURES[kind].time;
+      act.kind = kind;
+      act.t = lo + Math.random() * (hi - lo);
+    }
+    // a step or a throw only holds the gesture off: it is taken up again after
+    const want = GESTURES[busy ? 'lie' : act.kind], g = arm.shape ??= { lift: want.lift, coil: want.coil, tap: want.tap };
+    const k = Math.min(1, dt * GESTURE_EASE);
+    g.lift += (want.lift - g.lift) * k;
+    g.coil += (want.coil - g.coil) * k;
+    g.tap += (want.tap - g.tap) * k;
+    return g;
+  }
+
+  /**
+   * Footing: from (`x`, `y`) down onto the rock along (-`nx`, -`ny`), out to `max`; up out of it
+   * where the point is in the rock, as on a bump or into a corner. Nothing within `max` and it
+   * hangs there, over the edge of a ledge.
+   */
+  private touch(x: number, y: number, nx: number, ny: number, max: number) {
+    const t = this.surface;
+    if (!t) return { x: x - nx * max, y: y - ny * max };
+    const step = t.cell * 0.25;
+    if (t.contains(x, y)) {
+      for (let r = step; r < max; r += step) if (!t.contains(x + nx * r, y + ny * r)) return { x: x + nx * r, y: y + ny * r };
+      return { x, y };
+    }
+    for (let r = step; r <= max; r += step) {
+      if (t.contains(x - nx * r, y - ny * r)) return { x: x - nx * (r - step), y: y - ny * (r - step) };
+    }
+    return { x: x - nx * max, y: y - ny * max };
   }
 
   /**
@@ -966,7 +1555,7 @@ export class FishView extends Container {
     const c = Math.cos(this.rotation), s = Math.sin(this.rotation), kx = this.scale.x, ky = this.scale.y;
     const wx = (j: number) => this.x + pts[j * 2] * kx * c - pts[j * 2 + 1] * ky * s;
     const wy = (j: number) => this.y + pts[j * 2] * kx * s + pts[j * 2 + 1] * ky * c;
-    const n = ARM_COLS;
+    const n = this.cols;
     const len = arm.rig.len * Math.max(kx, ky);
     let L = arm.loose;
     if (!L || Math.hypot(L.x[0] - wx(0), L.y[0] - wy(0)) > len * ARM_JUMP) {
@@ -1038,11 +1627,14 @@ export class FishView extends Container {
     // Idle: a body with nothing to do hangs in the water and breathes — a slow rise and fall
     // and the nose nodding with it. It fades out as the body puts effort in, or every
     // cruising fish would bob like a cork.
-    const rest = 1 - Math.min(1, thrust / 0.35);
+    if (this.walker) this.feel(dt);
+    // on the rock it is held, and does not hang and breathe as a body in the water does
+    const rest = (1 - Math.min(1, thrust / 0.35)) * (1 - this.clingW);
     this.bob = Math.sin(this.clock * 1.6) * this.g.size * 0.05 * rest;
     this.sway = Math.sin(this.clock * 1.1 + 0.7) * 0.05 * rest;
     // the wind-up: drawn back and bunched along the body, and the tail curls harder
     const w = act.windup;
+    this.windup = w;
     this.recoil = this.g.size * 0.14 * w * w;
     sx *= 1 - w * 0.12;
     sy *= 1 + w * 0.08;
@@ -1113,14 +1705,33 @@ export class FishView extends Container {
     const grey = this.dazed > 0.5 && !this.ghosted;
     if (grey !== this.armsGrey) {
       this.armsGrey = grey;
-      for (const a of this.arms) a.mesh.texture = grey ? greyed(a.rig.texture) : a.rig.texture;
+      for (const a of this.arms) {
+        a.mesh.texture = grey ? greyed(a.rig.texture) : a.rig.texture;
+        a.skin?.use(a.mesh.texture);
+      }
     }
     // a strike is thrown straight: the charge drove the wave to its widest, so a gulper's
     // dash wriggled harder than its cruise when it should go like a thrown spear. Held
     // through most of it, and let go over its last quarter as the swim comes back
-    const straight = Math.min(1, k * 4);
+    // and a walker on the rock is held along it: its arms walk it, not a swim
+    const straight = Math.max(Math.min(1, k * 4), this.clingW * 0.85);
     // the stroke's tail sweeps wider than the cruise's: the snap is what the eye reads as a kick
     this.pose(beat, bank, thrust * (1 + w * 0.9) + b * 0.7, dt, straight);
+  }
+
+  /** A walker's hold this frame: laid along the face as far as it holds it, and the face found under it. */
+  private feel(dt: number) {
+    this.clingW += ((this.cling ? 1 : 0) - this.clingW) * Math.min(1, dt * 8);
+    if (this.cling) this.clingN = this.cling;
+    this.surf = null;
+    const t = this.surface;
+    if (this.clingW <= 0.001 || !t) return;
+    const { nx, ny } = this.clingN, step = t.cell * 0.25;
+    for (let r = 0; r <= this.g.size * 1.5; r += step) {
+      if (!t.contains(this.x - nx * r, this.y - ny * r)) continue;
+      this.surf = { x: this.x - nx * r, y: this.y - ny * r, nx, ny };
+      return;
+    }
   }
 
   private skinWith(texture: Baked['texture']) {

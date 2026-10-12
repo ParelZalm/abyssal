@@ -8,6 +8,14 @@ plays and a patch is a fix or a balance pass.
 
 ## [Unreleased]
 
+- **The reef octopus.** A new reef hostile dashes to a wall beside a decoration and reshapes
+  into a slightly larger copy. Its body and eight arms adopt the same markings; a tiny pulse
+  and occasional squint give it away. After hiding for 5–10 seconds it unfolds, flashes dark
+  and throws an arm to clutch the player, then dashes to another hiding place and repeats.
+  Its arms can be hit and feel the player touching them. A surprise hit sends it off in ink.
+  Camouflage stays opaque, its contour changes continuously, and holes between branches open
+  progressively. The design board shows the whole cycle.
+
 - **The reef squid.** A new hostile in the reef that acts like a real squid. It settles against
   the rock and fades into it, then creeps along the rock's edge toward you, half seen. A squid
   in the rock's colours gives no light away either. Close enough, it stops, flushes rust red and
