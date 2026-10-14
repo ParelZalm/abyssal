@@ -91,8 +91,16 @@ export function wallR(c: Creature) {
  * caller compares the gap with a small reach, and on a long body that circle stands half
  * its length off its back: a barracuda's dash hit a player a hundred units above it, over a
  * body twenty deep. Eight capsules a body is cheap at a room's few dozen.
+ *
+ * An octopus's arms are part of it (`FishView.armGap`): it feels with them, so a shot or a bite
+ * on an arm lands, and a body that swims into one is felt. `arms` false measures the body alone.
  */
-export function surfaceGap(c: Creature, px: number, py: number): number {
+export function surfaceGap(c: Creature, px: number, py: number, arms = true): number {
+  const body = hullGap(c, px, py);
+  return arms ? Math.min(body, c.view.armGap(px, py)) : body;
+}
+
+function hullGap(c: Creature, px: number, py: number): number {
   const h = hullOf(c);
   const k = c.drawnSize / R;
   const dx = px - c.x, dy = py - c.y;

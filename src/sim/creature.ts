@@ -3,6 +3,7 @@ import { armourOf, maxHp, type Genome } from '../content/genome';
 import { hunts, type Species } from '../content/species';
 import { drawnAngle } from '../content/form';
 import { angleDelta, clamp, TAU } from '../core/util';
+import type { Piece } from '../content/decoration';
 import { guardedOf, organsOf, swimOf, type Organ, type SwimMods } from './organs';
 
 /** Forward drag coefficient: terminal speed works out to genome.speed × throttle. */
@@ -156,11 +157,30 @@ export class Creature {
    * stalks again — as it arrives, and after every jet.
    */
   hide = true;
+  /** The nearest decoration chosen as a disguise, held until the octopus abandons its hiding place. */
+  disguise: Piece | null = null;
+  lastDisguise: Piece | null = null;
+  hideTime = 0;
+  hideDash = 5.5;
+  clutchHold = 0.7;
+  mimicSettled = false;
   camo = 0;
   flush = 0;
   lash: { x: number; y: number } | null = null;
   jetCd = 0;
   hpWas = NaN;
+  /**
+   * A reef octopus on the rock (`Roles.prowl`): the way out of the face it clings to, eased, as
+   * a unit vector — the view lays the body along the face from it and plants the arms on it —
+   * or null while it swims. `clingCd` seconds before it may take hold of rock again, so a body
+   * leaving one face does not take hold of it again on the way off. `turning` while it turns
+   * on to a wall it has walked into, when the face it feels is still the corner's average.
+   */
+  cling: { nx: number; ny: number } | null = null;
+  clingCd = 0;
+  turning = 0;
+  /** An octopus's throw is at what one of its arms felt, so it reaches as far as that arm did. */
+  felt = false;
   /**
    * How bright an anglerfish's lure burns past its own, 0 to 1 (`Roles`' lure): up through the
    * wind-up, full while its sparks hang (`litT` seconds of that left), and down after.
@@ -531,6 +551,7 @@ export class Creature {
     this.view.flare = this.lit;
     this.view.camo = this.camo;
     this.view.flush = this.flush;
+    this.view.cling = this.cling;
     this.view.place(this.x, this.y, this.angle, this.face, this.upright);
   }
 

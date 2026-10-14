@@ -368,6 +368,19 @@ export const SPRITES: Record<string, SpriteArt> = {
                 tentacle: { root: 4, tip: 419, axis: 20, reach: 190 },
                 hull: [[192.5, 17, 7], [170.5, 16.5, 9], [148.5, 18.5, 14], [126.5, 19, 15.3], [104.5, 19, 14.4],
                        [82.5, 19, 12.8], [60.5, 18.5, 10.6], [38.5, 18.5, 6.4], [16.5, 18, 7.6]] },
+  // `npm run sprite -- reefoctopus-sprite.png --id reefoctopus --key green --pitch 8 --keep
+  // 0,0,128,96`, and its arm `npm run sprite -- reefoctopus-arm-sprite.png --id reefoctopus-arm
+  // --key green --pitch 8`. Both were exported on an exact 8× grid, and `--fringe` took the blue
+  // sheen for bleed; the strike is the whole body flushed, so it is kept whole. The body without
+  // its arms, which leave from inside the closed stump at the crown (`at`) and are one picture
+  // rigged eight times, walked on the rock (`FishView.plant`). `reach` puts an arm at about a body
+  // and a tenth: at the body's own pixel scale (164) it was nearly two, true to the animal, and
+  // with eight of them the octopus spread over half the room. No lights: nothing on it glows, and
+  // it is meant to be lost against the rock
+  reefoctopus: { w: 99, h: 48, snout: 98, tail: 4, axis: 28,
+                 arm: { root: 2, tip: 166, axis: 7.5, at: [90, 30], spread: 10, reach: 105 },
+                 hull: [[94.5, 31, 6.8], [83.5, 30, 11.9], [72.5, 25, 12.8], [61.5, 24.5, 13.2], [51.5, 25.5, 15.7],
+                        [40.5, 26.5, 17.4], [29.5, 25.5, 17.4], [18.5, 28, 13.6], [7.5, 28, 7.6]] },
   // The player's bodies (`BODIES`), keyed by the body's name rather than a species'. The larva's
   // frames are its bare body, and its parts are drawn apart (`docs/sprite-prompts-player.md`):
   // `npm run sprite -- larva-sprite.png --id larva --key green --fringe`, then

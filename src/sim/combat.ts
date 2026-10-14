@@ -281,7 +281,8 @@ export class Combat {
     // under the player still landed. A drifter drawn from a sprite has its tentacles in its hull
     const r = att.radius * 0.7 + p.radius * 0.5;
     const trails = att.species.role === 'drifter' && !SPRITES[att.species.id]?.hull;
-    if (surfaceGap(att, p.x, p.y) > p.radius * 0.35 && (!trails || dist2(att.x, att.y, p.x, p.y) > r * r)) return;
+    // an octopus's arms feel what they touch and do not hurt it: the arm it throws does (`Roles.prowl`)
+    if (surfaceGap(att, p.x, p.y, false) > p.radius * 0.35 && (!trails || dist2(att.x, att.y, p.x, p.y) > r * r)) return;
     const got = this.hitPlayer(att, p, att.species.role === 'drifter' ? 'touch' : 'bite');
     // a dash ends on what it found; a gulper's draw goes on to its snap, which is its bite
     if (got && att.attack === 'strike' && att.species.moves !== 'gulp') {

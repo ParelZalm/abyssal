@@ -180,8 +180,17 @@ function dome(dx: number, dy: number, r: number) {
  *   the tank rather than on it;
  * - past the room's own edge the rock sinks to black, so the letterbox is cave.
  */
+/** A snapshot for creature presentation, independent of live simulation terrain. */
+export interface RoomSurface {
+  texture: Texture; x: number; y: number; w: number; h: number;
+  cell: number; depth: number;
+  contains(x: number, y: number): boolean;
+}
+
 export class RoomView {
   readonly root = new Container();
+  surface: RoomSurface | null = null;
+  private surfaceKey = "";
   private readonly sprite = new Sprite();
   /** A grate across each door, shown while it is shut, and which door each is. */
   private readonly gates: { side: Side; sprite: Sprite }[] = [];
@@ -240,6 +249,7 @@ export class RoomView {
       sprite.tint = this.terrain.locked ? 0xffffff : own === 'key' ? KEY_TINT : SEAL_TINT;
     }
     for (const { side, sprite } of this.plugs) sprite.visible = this.terrain.shut.get(side) === 'crack';
+    this.snapshotSurface();
   }
 
   /**
@@ -266,8 +276,26 @@ export class RoomView {
   }
 
   destroy() {
+    this.surface = null;
     this.sprite.texture.destroy(true);
     this.root.destroy({ children: true });
+  }
+
+  /** Copy the occupied geometry when the room art or its doors change. */
+  private snapshotSurface() {
+    if (!this.surface) return;
+    const t = this.terrain, key = `${this.baked}:${t.locked}:${[...t.shut].join(';')}`;
+    if (key === this.surfaceKey) return;
+    this.surfaceKey = key;
+    const { x, y, w, h, cell } = this.surface;
+    const cols = Math.ceil(w / cell), rows = Math.ceil(h / cell), occupied = new Uint8Array(cols * rows);
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      occupied[j * cols + i] = +t.solidAt(x + (i + 0.5) * cell, y + (j + 0.5) * cell);
+    }
+    this.surface = { ...this.surface, contains: (px, py) => {
+      const i = Math.floor((px - x) / cell), j = Math.floor((py - y) / cell);
+      return i >= 0 && j >= 0 && i < cols && j < rows && occupied[j * cols + i] === 1;
+    } };
   }
 
   private *bake(): Generator<void> {
@@ -277,6 +305,10 @@ export class RoomView {
     const worldW = (t.cols + m * 2) * t.tile, worldH = (t.rows + m * 2) * t.tile;
     const ox = t.x0 - m * t.tile, oy = t.y0 - m * t.tile;
     show(this.sprite, yield* paint(t, d, ox, oy, worldW, worldH), ox, oy, worldW, worldH);
+    this.surfaceKey = "";
+    this.surface = { texture: this.sprite.texture, x: ox, y: oy, w: worldW, h: worldH,
+      cell: t.cell, depth: t.cy, contains: () => false };
+    this.snapshotSurface();
     for (const plug of this.plugs) {
       // baked wider than it is shown, so the light reaching into the rock round it is measured
       // from the water it is measured from in the room's own bake, and the two meet unseen

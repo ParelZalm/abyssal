@@ -30,6 +30,12 @@
  *   back along the ground and comes forward lifted, the root held, and the stroke runs from
  *   the tail to the head a leg behind the next, as a mantis shrimp's legs and swimmerets beat
  *   and a centipede's go. Also by whole texels per held frame, so a leg bends in steps.
+ * - **The mimic.** A reef octopus settled on the rock wears it (`uMimic`): each pixel of it
+ *   takes the colour of the rock just under the face it holds, below that pixel, read from the
+ *   room's own baked picture (`rockOf`), and keeps the body's light and dark as relief. The face
+ *   is a line (`uSurf`), and a pixel's height off it is squeezed into the rock's top layer, the
+ *   lit lip and the growth on it: deeper in, the room's bake has the rock gone dark, and a body
+ *   read from there was a black hole in the reef. In world space, so it is the rock's own grid.
  * - **Trails.** What hangs behind a drifter's bell (`SpriteArt.trail`) is sent a wave on each
  *   pulse, root to tip: held at the bell, swinging most at the tips, a strand a little behind
  *   the one above it. Without it the bell pulsed and the tentacles hung as if painted on.
@@ -38,7 +44,7 @@
  * body on screen is one. The strip was batched before this, but each bake is a texture of its
  * own, so a school of distinct animals was already close to a call apiece.
  */
-import { GlProgram, Shader, UniformGroup, type Texture } from 'pixi.js';
+import { GlProgram, Shader, Texture, UniformGroup } from 'pixi.js';
 import type { Baked } from './fishbake';
 
 // GLSL 300 es, unlike `FramePass`: the edge blend is sized with `fwidth`, which ES 1.0 only
@@ -51,13 +57,16 @@ uniform mat3 uWorldTransformMatrix;
 uniform vec4 uWorldColorAlpha;
 uniform mat3 uTransformMatrix;
 uniform vec4 uColor;
+uniform mat3 uToWorld;
 out vec2 vUV;
 out vec4 vColor;
+out vec2 vWorld;
 
 void main() {
   mat3 m = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
   gl_Position = vec4((m * vec3(aPosition, 1.0)).xy, 0.0, 1.0);
   vUV = aUV;
+  vWorld = (uToWorld * vec3(aPosition, 1.0)).xy;
   vColor = uColor * uWorldColorAlpha;
 }
 `;
@@ -66,8 +75,16 @@ const fragment = `#version 300 es
 precision mediump float;
 in vec2 vUV;
 in vec4 vColor;
+in vec2 vWorld;
 out vec4 finalColor;
 uniform sampler2D uTexture;
+uniform sampler2D uRock;
+uniform vec4 uRockRect;
+uniform vec2 uRockSize;
+uniform float uMimic;
+uniform float uPattern;
+uniform vec4 uSurf;
+uniform vec2 uMimicDepth;
 uniform vec2 uSize;
 uniform float uBeat;
 uniform float uClock;
@@ -83,6 +100,13 @@ uniform vec4 uLegs;
 uniform vec2 uTrail;
 
 float hash(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+
+// the room's rock at a world point, on its own texel grid; clear where it is water
+vec4 rock(vec2 w) {
+  vec2 t = (w - uRockRect.xy) * uRockRect.zw;
+  if (t.x < 0.0 || t.y < 0.0 || t.x >= 1.0 || t.y >= 1.0) return vec4(0.0);
+  return texture(uRock, (floor(t * uRockSize) + 0.5) / uRockSize);
+}
 
 vec4 texel(vec2 t) {
   // outside the bake there is nothing: clamping would smear the edge texel into the gap a
@@ -174,6 +198,33 @@ void main() {
   vec4 c = mix(mix(texel(b), texel(b + vec2(1.0, 0.0)), w.x),
                mix(texel(b + vec2(0.0, 1.0)), texel(b + vec2(1.0, 1.0)), w.x), w.y);
   finalColor = c * vColor;
+  // the mimic: the rock under the face, below this pixel, with the body's own shading over it.
+  // Untinted, as the rock is: a tint on the body would set it apart from what it wears
+  if (uMimic > 0.0 && c.a > 0.0) {
+    vec2 n = uSurf.zw, u = vec2(-n.y, n.x), rel = vWorld - uSurf.xy;
+    vec2 foot = uSurf.xy + u * dot(rel, u);
+    float h = max(dot(rel, n), 0.0);
+    vec4 r = rock(foot - n * (uMimicDepth.x + h * uMimicDepth.y));
+    // a thin ledge, read through: the lip itself
+    if (r.a < 0.5) r = rock(foot - n * uMimicDepth.x);
+    // the face is a line only near where it was found: under a step down from it, on down to
+    // the rock below, or the part of the body over the step wore nothing
+    for (int k = 1; k <= 8 && r.a < 0.5; k++) r = rock(foot - n * uMimicDepth.x * float(1 + k * 2));
+    if (r.a > 0.5) {
+      float lum = dot(c.rgb / c.a, vec3(0.3, 0.59, 0.11));
+      // This is opaque skin taking on a material, not the water showing through it.
+      // Keep the raised object readable even when the sampled rock is in deep shadow.
+      vec3 stone = r.rgb / r.a;
+      float stoneLum = dot(stone, vec3(0.3, 0.59, 0.11));
+      stone *= max(1.0, 0.16 / max(stoneLum, 0.001));
+      vec3 worn = stone * clamp(0.65 + lum * 0.8, 0.65, 1.25) * c.a * vColor.a;
+      finalColor.rgb = mix(finalColor.rgb, worn, uMimic);
+    }
+  }
+  if (uPattern > 0.0 && c.a > 0.01) {
+    vec3 marking = texture(uRock, vec2(fract(cuv.x * 2.0), cuv.y)).rgb;
+    finalColor.rgb = mix(finalColor.rgb, marking * c.a * vColor.a, uPattern);
+  }
   // dazed (the Angler's glow): the body drained toward its own grey, a little dimmed. A tint only
   // multiplies, so it could darken a red animal but never take the red out of it
   finalColor.rgb = mix(finalColor.rgb, vec3(dot(finalColor.rgb, vec3(0.3, 0.59, 0.11)) * 0.85), uGrey);
@@ -198,6 +249,8 @@ export interface LivingSkin {
   uniforms: UniformGroup;
   /** Point the skin at another bake of the same crop — the jaw opening. */
   use(texture: Texture): void;
+  /** The picture the mimic reads the rock from (`rockOf`). */
+  wear(texture: Texture): void;
 }
 
 /**
@@ -229,12 +282,25 @@ export function livingSkin(texture: Texture, body: number, legs: Baked['legs'] =
     uLegs: { value: new Float32Array(legs ?? [0, 0, 0, 0]), type: 'vec4<f32>' },
     // what trails behind a sprite's bell, waved on the pulse (`Baked.trail`); off at zero width
     uTrail: { value: new Float32Array(trail ?? [0, 0]), type: 'vec2<f32>' },
+    // the mimic (`FishView`'s, for a reef octopus): how far, 0..1; the strip's frame to the
+    // world's; the room's rock picture's corner and one over its size, and its texels; the face
+    // held, as a point on it and the way out; and how deep under it the colour is read, past the
+    // lip and per unit of height
+    uMimic: { value: 0, type: 'f32' },
+    uPattern: { value: 0, type: 'f32' },
+    uToWorld: { value: new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]), type: 'mat3x3<f32>' },
+    uRockRect: { value: new Float32Array([0, 0, 1, 1]), type: 'vec4<f32>' },
+    uRockSize: { value: new Float32Array([1, 1]), type: 'vec2<f32>' },
+    uSurf: { value: new Float32Array([0, 0, 0, -1]), type: 'vec4<f32>' },
+    uMimicDepth: { value: new Float32Array([0, 0]), type: 'vec2<f32>' },
   });
   const shader = Object.assign(
-    new Shader({ glProgram: program, resources: { uTexture: texture.source, living: uniforms } }),
+    new Shader({ glProgram: program,
+                 resources: { uTexture: texture.source, uRock: Texture.WHITE.source, living: uniforms } }),
     { texture });
   return {
     shader, uniforms,
     use(t) { shader.resources.uTexture = t.source; },
+    wear(t) { shader.resources.uRock = t.source; },
   };
 }

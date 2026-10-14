@@ -12,10 +12,10 @@ export type Role = 'charger' | 'spitter' | 'turret' | 'drifter';
  * move that makes it this animal and not another of its role, what it turns into below half
  * its health, and what its death leaves. The nursery's: a mackerel's pack, an archerfish's
  * volley, a pufferfish's balloon, a sea nettle's bloom. The reef's: a ribbon eel's burrow, a
- * triggerfish's jet, a lionfish's herd, a moon jelly's wane, a reef squid's camo. The deep's: a barracuda's line, a
+ * triggerfish's jet, a lionfish's herd, a moon jelly's wane, a reef squid's camo, a reef octopus's mimic. The deep's: a barracuda's line, a
  * gulper eel's gulp, a vampire squid's cloak, an anglerfish's lure, a siphonophore's chain.
  */
-export type Moveset = 'pack' | 'volley' | 'balloon' | 'bloom' | 'burrow' | 'jet' | 'herd' | 'wane' | 'camo'
+export type Moveset = 'pack' | 'volley' | 'balloon' | 'bloom' | 'burrow' | 'jet' | 'herd' | 'wane' | 'camo' | 'mimic'
   | 'line' | 'gulp' | 'cloak' | 'lure' | 'chain';
 /**
  * What a body fires: a jet of water, a spine, a blob of light — and the mantis shrimp's
@@ -258,6 +258,15 @@ export const SPECIES: Species[] = [
     zone: 'sunlit', band: 'reef', drawn: 2,
     size: [24, 36], hue: [24, 40], accent: 12, speed: 140, bite: 8,
     nutrition: 2.0, weight: 5, finSize: 1.4, translucent: 0.3, stealth: 0.4 },
+
+  // a Caribbean reef octopus: it walks the rock on its arms in the rock's own colours and
+  // pattern, and takes what comes in reach with one of them. A squid plan until its own picture
+  // is drawn (`docs/sprite-prompts-reef.md`); the view draws its eight arms, and walks them.
+  // Opaque, unlike the squid: it hides by wearing the rock, not by letting it show through
+  { id: 'reefoctopus', name: 'Caribbean Reef Octopus', behavior: 'ambush', plan: 'squid', role: 'charger',
+    moves: 'mimic', zone: 'sunlit', band: 'reef', drawn: 1.25,
+    size: [26, 36], hue: [6, 20], accent: 205, speed: 120, bite: 9,
+    nutrition: 2.2, weight: 4, finSize: 0.5 },
 
   { id: 'reefshark', name: 'Reef Shark', behavior: 'hunter', plan: 'shark',
     zone: 'sunlit', band: 'reef', bleed: 700,

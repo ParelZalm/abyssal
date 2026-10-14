@@ -16,6 +16,7 @@ import { type Bomb, Bombs } from './bombs';
 import { Spawner } from './spawn';
 import type { Terrain } from './terrain';
 import { collideHull, surfaceGap, WALL_R, wallR } from './hull';
+import type { Piece } from '../content/decoration';
 
 /** Seconds a body takes to resolve out of the water. */
 const FADE_IN = 0.9;
@@ -212,6 +213,8 @@ export class World {
   playerHeld = false;
   /** The room's rock, which every body is kept out of. Null in open water. */
   terrain: Terrain | null = null;
+  /** The current room's decorative objects; a mimic chooses one, but they still never block. */
+  decorations: readonly Piece[] = [];
   /** Species id of a guardian whose tell started this frame, for the first-time toast. */
   tellBy: string | null = null;
   /** A boss's set piece that began this frame — a move, or the room catching it — for its first-time toast. */

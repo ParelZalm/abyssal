@@ -13,29 +13,14 @@ import { lightAt, waterColor } from './water';
  * a room's colour lives (`docs/media/reference/`): the rock is dark stone, and the sponges,
  * anemones, weed and coral on it are the red, violet and green in the frame. None of it
  * blocks — an obstacle is rock (`Terrain`) — so it is placed and drawn here, in the render
- * layer, and the simulation never hears of it. Each tank grows its own set (`DECOR_SETS`).
+ * layer. Mimics may choose a piece to impersonate; decoration still never blocks.
+ * Each tank grows its own set (`DECOR_SETS`).
  */
-export type DecorKind = 'sponge' | 'anemone' | 'kelp' | 'coral' | 'brain' | 'grass' | 'bulb' | 'crate'
-  | 'fan' | 'wreck' | 'tubeworm' | 'crinoid' | 'glass' | 'weed' | 'chain' | 'net' | 'threads'
-  | 'barnacle';
+import { type DecorKind, type Grow, type Piece } from '../content/decoration';
+export type { DecorKind, Grow, Piece } from '../content/decoration';
 
 export const DECOR_KINDS: DecorKind[] = ['sponge', 'anemone', 'kelp', 'coral', 'brain', 'grass', 'bulb',
   'crate', 'fan', 'wreck', 'tubeworm', 'crinoid', 'glass', 'weed', 'chain', 'net', 'threads', 'barnacle'];
-
-/** Which way a piece grows from its face: up off a floor, down from a ceiling, out of a wall. */
-export type Grow = 'up' | 'down' | 'left' | 'right';
-
-/** One placed piece: where its base sits on a face, which way it grows, how big it is, and its own seed. */
-export interface Piece {
-  kind: DecorKind;
-  x: number;
-  y: number;
-  /** World length from its base to its tip; the width follows from the kind. */
-  h: number;
-  seed: number;
-  flip: boolean;
-  grow: Grow;
-}
 
 type Rgb = [number, number, number];
 
@@ -721,6 +706,16 @@ const GROW_DIR: Record<Grow, [number, number]> = { up: [0, -1], down: [0, 1], le
 /** How a standing piece's sprite, painted upright, is turned to grow each way. */
 const GROW_TURN: Record<Grow, number> = { up: 0, down: Math.PI, left: -Math.PI / 2, right: Math.PI / 2 };
 
+/** A piece's picture and resting placement, shared by room decorations and disguises. */
+export function bakeDecoration(piece: Piece, density: number, depth: number) {
+  const texture = bakePiece(piece, density, depth), sways = !!KINDS[piece.kind].sways;
+  const sink = piece.h * (KINDS[piece.kind].sink ?? SINK), [dx, dy] = GROW_DIR[piece.grow];
+  return { texture, sways, dx, dy, x: piece.x - dx * sink, y: piece.y - dy * sink,
+    rotation: sways ? Math.atan2(dy, dx) : GROW_TURN[piece.grow],
+    sx: sways ? piece.h / texture.width : (piece.flip ? -1 : 1) / density, sy: 1 / density,
+    ax: sways ? 0 : 0.5, ay: sways ? 0.5 : 1 };
+}
+
 /** Points along a swaying piece: enough that the bend reads as a curve and not as joints. */
 const ROPE_POINTS = 9;
 
@@ -752,7 +747,7 @@ export class DecorView {
   private baked = -1;
 
   /** `density` pins the bake, as `RoomView`'s does, for the design board. */
-  constructor(private readonly pieces: Piece[], private readonly depth: number,
+  constructor(readonly pieces: Piece[], private readonly depth: number,
               private readonly density?: number) {
     // a light at a share of the way from a piece's base to its tip, whichever way it grows
     const at = (p: Piece, k: number, r: number, color: number, a: number): Light => {
@@ -812,12 +807,9 @@ export class DecorView {
     const rank = (p: Piece) => (p.kind === 'wreck' ? 2 : 0) + (KINDS[p.kind].sways ? 1 : 0);
     const sorted = [...this.pieces].sort((a, b) => rank(b) - rank(a));
     for (const piece of sorted) {
-      const tex = bakePiece(piece, d, this.depth);
-      const sink = piece.h * (KINDS[piece.kind].sink ?? SINK);
-      const [dx, dy] = GROW_DIR[piece.grow];
-      // the base goes into the face a little, back along the way it grows
-      const bx = piece.x - dx * sink, by = piece.y - dy * sink;
-      if (KINDS[piece.kind].sways) {
+      const picture = bakeDecoration(piece, d, this.depth);
+      const { texture: tex, x: bx, y: by, dx, dy } = picture;
+      if (picture.sways) {
         // a rope in texel space from its holdfast outward, scaled back to the world by its container
         const n = ROPE_POINTS;
         const points = Array.from({ length: n }, (_, i) =>
@@ -830,10 +822,10 @@ export class DecorView {
         this.placed.push({ piece, node: rope, points, phase: (piece.seed % 628) / 100 });
       } else {
         const s = new Sprite(tex);
-        s.anchor.set(0.5, 1);
+        s.anchor.set(picture.ax, picture.ay);
         s.position.set(bx, by);
-        s.rotation = GROW_TURN[piece.grow];
-        s.scale.set((piece.flip ? -1 : 1) / d, 1 / d);
+        s.rotation = picture.rotation;
+        s.scale.set(picture.sx, picture.sy);
         this.root.addChild(s);
         this.placed.push({ piece, node: s, phase: 0 });
       }

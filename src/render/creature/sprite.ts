@@ -61,6 +61,9 @@ import giantsquidRest from './sprites/giantsquid.png';
 import giantsquidStrike from './sprites/giantsquid-strike.png';
 import giantsquidTentacle from './sprites/giantsquid-tentacle.png';
 import giantsquidArm from './sprites/giantsquid-arm.png';
+import reefoctopusRest from './sprites/reefoctopus.png';
+import reefoctopusStrike from './sprites/reefoctopus-strike.png';
+import reefoctopusArm from './sprites/reefoctopus-arm.png';
 import larvaRest from './sprites/larva.png';
 import larvaStrike from './sprites/larva-strike.png';
 import larvaTail from './sprites/larva-tail.png';
@@ -137,6 +140,7 @@ const SOURCES: Record<string, Sources> = {
   nettle: { rest: nettleRest, wounded: nettleWounded },
   vampiresquid: { rest: vampireRest, strike: vampireStrike, arm: vampireArm },
   giantsquid: { rest: giantsquidRest, strike: giantsquidStrike, arm: giantsquidArm, tentacle: giantsquidTentacle },
+  reefoctopus: { rest: reefoctopusRest, strike: reefoctopusStrike, arm: reefoctopusArm },
   larva: { rest: larvaRest, strike: larvaStrike,
            parts: { tail: larvaTail, back: larvaBack, belly: larvaBelly, pectoral: larvaPectoral, eye: larvaEye },
            marks: marksFrom('larva') },
